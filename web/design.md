@@ -198,7 +198,11 @@ face has a true one and a synthesised italic is a tell.
   ink-ground command, so the hot-shadow exception written that afternoon died the same day —
   its record lives in ⑤ below). The measured constraint that remains: **an ink shadow on an ink
   ground draws nothing** (`/device`, 1,170 of 10,184 px, a stepped silhouette) — so a command
-  simply never sits on an ink ground.
+  simply never sits on an ink ground. **Two readings that are NOT violations** (2026-08-20,
+  found by grepping this very sentence): an `inset Npx 0 0` box-shadow drawing a left rule is a
+  §3 **rule** wearing box-shadow's syntax so the box does not move — judge it against the rule
+  weights, not this bullet; and LIFT's hover offset is `6px + its own 3px lift = 9px` — derived
+  from the lift, not a second number. A grep for `box-shadow` is not a grep for depth effects.
 - **Rule weights — three component weights, plus one texture hairline:** `3px ink` between a colour
   block and what pins over it; `1.5px ink` between rows and table rows; `2px ink` around a field or
   a ghost control; **`1px` exists only inside a texture ground** (the reveal table band's top rule)
