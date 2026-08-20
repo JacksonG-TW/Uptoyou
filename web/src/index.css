@@ -332,6 +332,29 @@
   }
 }
 
+/* §2 · the ladder, tier 3 — **甲, owner-ruled 2026-08-20 night** (`spec-home-wide.md`). At ≥1920
+   the whole home composition scales as one object, so the ladder steps with it: the 27-inch render
+   is the 1440 design printed larger rather than the 1440 design floating in paper.
+
+   **Fixed values, not clamps, and that is the reference page's own shape.** Tiers 1 and 2 ramp
+   because they cover a range a person actually resizes through; ≥1920 is a monitor class, not a
+   range, and the values below are the ones the owner ruled from the render. There is a step at
+   1920 — tier 2's display resolves to ~47px there and this sets 66 — and it is deliberate: a ramp
+   from 1920 would make the 27-inch case depend on the window's exact width, which is the thing
+   the ruling exists to stop.
+
+   `--text-answer` and `--text-sum` are the REVEAL's tokens and are deliberately not moved here:
+   that screen has its own wide block (`reveal.css`, ≥2100) and this spec is the home's. */
+@media (min-width: 1920px) {
+  html[lang] {
+    --text-display: 66px;
+    --text-temp:    52px;
+    --text-lead:    29px;
+    --text-body:    22px;
+    --text-note:    17px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

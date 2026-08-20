@@ -7,7 +7,20 @@
    soup would be correct and unreviewable.
    Colour and type come from the theme in `index.css`; nothing here invents a value. */
 
-.col { width: min(1200px, 88vw); margin: 0 auto; }
+/* **`--col` and `--lift-d` are tokens because 甲 scales them** (owner-ruled 2026-08-20 night,
+   `spec-home-wide.md`). Both were literals repeated across this file until the ≥1920 tier needed
+   to move them in one place.
+
+   **`--lift-d` holds a LENGTH, not the whole shadow, and the spec's own `--lift: 8px 8px 0` shape
+   is why.** The tile's hover offset is `rest + its own 3px lift` — that is the derivation §3 was
+   amended to state this evening. A token holding the finished shadow leaves the hover as a typed
+   `9px`, so at ≥1920 the rest would step to 8 while the hover stayed 9 and the tile would lift
+   **1px instead of 3** — the derivation broken silently, at exactly the width nobody re-measures.
+   Holding the length puts the `+ 3px` in the CSS where it cannot drift, which is the same shape as
+   `--die` and its derived `translateZ` in `reveal.css`. */
+:root { --col: min(1200px, 88vw); --lift-d: 6px; }
+
+.col { width: var(--col); margin: 0 auto; }
 
 /* ── masthead ─────────────────────────────────────────────────────────────── */
 .mast {
@@ -32,9 +45,19 @@
      480px is swept, not chosen: at 620 the page measures 0.222 mean saturation / 22.1% high-sat
      against ceilings of 0.20 and 20%. The break is between 510 and 540; 510 passes at exactly
      0.200, which is the "holds only at the ceiling" shape the type ladder exists to forbid. */
-  .col   { min-height: calc(100vh - 180px); display: flex; flex-direction: column; }
-  .hero  { grid-template-columns: 46fr 54fr; gap: 44px; margin-top: 52px;
-           flex: 1 1 auto; max-height: 480px; margin-block: auto; align-items: stretch; }
+  /* **The foot joins the centred group — 甲's change 1a, and it applies at EVERY width ≥900**
+     (owner-ruled 2026-08-20 night). The dead bands the owner screenshotted on a 27-inch monitor
+     came from the hero centring ALONE with `margin-block: auto` while the footnote and act sat
+     outside `.col` entirely, in ordinary flow below it. All the slack collected in two places and
+     the act ended up 1,365 px down a 1,440 viewport.
+
+     Now: `min-height: 100vh` (the `- 180px` was the retired BAR's reservation), the hero takes
+     `margin-top: auto`, the foot takes `margin-bottom: auto`, and the two autos SPLIT the slack —
+     masthead stays at the top, hero and foot centre together as one object. */
+  .col   { min-height: 100vh; display: flex; flex-direction: column; }
+  .hero  { grid-template-columns: 46fr 54fr; gap: 44px; margin-top: auto;
+           flex: 1 1 auto; max-height: 480px; align-items: stretch; }
+  .homeFoot { margin-bottom: auto; }
   /* the weather settles to the collage's foot rather than trailing the body copy */
   .heroL .wx { margin-top: auto; }
 }
@@ -64,7 +87,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 .collage { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px;
            align-items: start; position: relative; padding-right: 8px; }
 .cell { position: relative; border: 2px solid var(--color-ink);
-        box-shadow: 6px 6px 0 var(--color-ink); overflow: hidden;
+        box-shadow: var(--lift-d) var(--lift-d) 0 var(--color-ink); overflow: hidden;
         line-height: 0; background: var(--color-ink); }
 .cell img { position: absolute; inset: 0; display: block;
             width: 100%; height: 100%; object-fit: cover; }
@@ -99,8 +122,11 @@ h1.headline .lit { color: var(--color-hot-ink); }
    Derived from this surface's own language rather than imported: the tile already carries a HARD
    offset shadow with no blur, and the idiomatic hover for a hard-shadow object is the one that
    reads as it leaving the page. The tile moves `-3px, -3px` and the shadow's offset grows by the
-   same 3 (`6px → 9px`), so the gap between object and shadow widens by exactly the distance the
-   object travelled. Nothing scales, nothing rotates.
+   same 3, so the gap between object and shadow widens by exactly the distance the object
+   travelled. Nothing scales, nothing rotates. **The offset is written as `--lift-d + 3px` rather
+   than as a number** (it was `6px → 9px` until 甲 gave `--lift-d` a second value at ≥1920, where
+   the same pair is `8px → 11px`): a typed hover offset would have kept saying 9 while the rest
+   moved to 8, i.e. a 1px lift at the one width nobody re-measures.
 
    **On the CELL and never on the `<img>`.** The collage swaps photographs every 10 s; an effect
    bound to the image drops mid-hover the moment the picture changes under the cursor.
@@ -122,7 +148,9 @@ h1.headline .lit { color: var(--color-hot-ink); }
    would have gone on being true-sounding and false. */
 @media (hover: hover) {
   .cell { transition: transform 120ms ease-out, box-shadow 120ms ease-out; }
-  .cell:hover { transform: translate(-3px, -3px); box-shadow: 9px 9px 0 var(--color-ink); }
+  /* The offset is `rest + the lift` and it is COMPUTED, never typed — see `--lift-d`. */
+  .cell:hover { transform: translate(-3px, -3px);
+                box-shadow: calc(var(--lift-d) + 3px) calc(var(--lift-d) + 3px) 0 var(--color-ink); }
   /* §5 rule 3 — the end state is kept and the transition is dropped. `HV-3` is a DIFFERENTIAL for
      the same reason `HC-6` is: asserting only "no transition under reduce" passes identically on a
      build where hover does nothing at all. */
@@ -132,7 +160,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 .tag {
   position: absolute; right: 34px; bottom: -14px; z-index: 2;
   background: var(--color-hot); color: var(--color-on-hot);
-  border: 2px solid var(--color-ink); box-shadow: 6px 6px 0 var(--color-ink);
+  border: 2px solid var(--color-ink); box-shadow: var(--lift-d) var(--lift-d) 0 var(--color-ink);
   padding: 10px 18px; text-align: center; line-height: 1.6;
 }
 .tag b { display: block; font-size: var(--text-display); font-weight: 900; line-height: 1;
@@ -166,10 +194,15 @@ h1.headline .lit { color: var(--color-hot-ink); }
    clear Y* is asked of the glyphs — `Range.selectNodeContents(el).getBoundingClientRect()` — never
    of the border box. (The evaluator's probe made this call on 2026-08-19; the correction is kept
    here because the next reading of a clearance starts from the right edge or repeats it.) */
-.shape { width: min(1200px, 88vw); margin: 40px auto 0;
+/* **The width is gone because the box moved inside `.col`** (甲's 1a). Both this line and the act
+   used to sit OUTSIDE the column, in flow below it, which is why each carried a copy of the
+   column's own width. Inside `.homeFoot` they inherit it, and a repeated literal that no longer has a
+   reason is how two widths come to disagree. The gaps (40 / 28) are unchanged — 1a regroups the
+   boxes, it does not re-space them. */
+.shape { margin-top: 40px;
          font-size: var(--text-note); color: var(--color-muted); }
 
-/* ── the pinned bar ───────────────────────────────────────────────────────── */
+/* ── the act ──────────────────────────────────────────────────────────────── */
 /* The act sits in the column, under the supported-shape line. The BAR that used to carry it was
    retired 2026-08-20 (option 乙); `.act` itself is in `index.css` because three screens share it. */
 /* `homeAct`, not `.home .act-row` — **the home renders a fragment and there is no `.home`
@@ -177,8 +210,10 @@ h1.headline .lit { color: var(--color-hot-ink); }
    page's left edge instead of the text column's. Caught by measuring `left`, which read 0 against
    the copy's 120. Every class in `app/web/src` is global (no CSS modules), so a screen-specific
    name has to be distinctive on its own — the same reason this file has `dieCell` and not `cell`.
-   The width is the copy's own, so the act starts exactly where the sentence above it starts. */
-.homeAct { width: min(1200px, 88vw); margin: 28px auto 0; }
+   **The width literal is gone with 甲's 1a** — the act moved inside `.col` and inherits the
+   column, so it still starts exactly where the sentence above it starts, now by containment
+   rather than by a repeated number. */
+.homeAct { margin-top: 28px; }
 
 /* ── the weather (W-2, owner-ruled) ───────────────────────────────────────────
    The rejected treatment ran six facts together with dots at one weight — a data dump wearing a
@@ -290,3 +325,38 @@ h1.headline .lit { color: var(--color-hot-ink); }
 [data-slot="select-content"] { border: 2px solid var(--color-ink); box-shadow: none;
                                background: var(--color-paper); }
 [data-slot="select-item"] { font-size: var(--text-body); }
+
+/* ═══ 甲 · at ≥1920 the whole composition scales as ONE object ═══════════════════════════════
+   **Owner-ruled 2026-08-20 night** from the rendered three-way (`home-w-a/b/c.html`);
+   `spec-home-wide.md` carries the value table and the diagnosis. The complaint was a 27-inch
+   screenshot: the 1440 design floating in paper rather than printed larger. 乙 (rhythm only) and
+   丙 (right-bleed collage) are the rejected branches — 丙 because bigger photographs move the
+   measured chroma, which is also why 甲 raises the hero cap only where the column grew with it.
+
+   **The chroma ceiling holds by construction, not by re-measurement** (spec §2): the 480 cap at
+   1440 exists because growing the food photography grew page saturation past 0.20 / 20% (swept,
+   break between 510 and 540). At ≥1920 a 640-cap hero sits in a 1680 column, so the photo's share
+   of the viewport is at or below the 1440 share. **Widen any of these values and the sweep re-runs
+   — the ceiling is a measurement, not a margin.**
+
+   The type ladder's tier 3 is in `index.css` beside tiers 1 and 2, not here: it is the ladder's
+   own table and splitting it across two files is how a tier comes to be edited in one place.
+
+   **No `margin` on `.hero` in this block, and this is a trap rather than a preference** — the
+   evaluator hit it building the candidate. `margin-top: auto` is what centres the group; any
+   margin declared here replaces it and the whole slack falls below the act instead of splitting.
+
+   **The act's SINK shadow stays 4px.** `--lift-d` is the ambient hard offset on images and the
+   count tag; the act's depth is the ruled command recipe (`design.md` ⑤) and does not scale with
+   the composition — a command that grew its shadow with the window would be a second recipe. */
+@media (min-width: 1920px) {
+  :root    { --col: min(1680px, 76vw); --lift-d: 8px; }
+  h1.headline { font-size: 86px; }
+  .hero    { max-height: 640px; gap: 60px; }
+  .wxicon  { width: 58px; height: 58px; }
+  .collage { gap: 22px 26px; }
+  .mast    { padding: 18px 26px; margin-top: 26px; }
+  .eyebrow { padding: 9px 16px; }
+  .homeAct .act { padding: 16px 52px; }
+  .tag     { padding: 13px 24px; right: 42px; bottom: -18px; }
+}

@@ -106,36 +106,52 @@ export default function App() {
 
           <div className="heroR"><Collage /></div>
         </div>
-      </div>
 
-      {/* **D110 — the supported shape, stated on the home page** (owner-ruled 2026-08-19).
-          It sits BELOW the approved frame rather than inside it: every object the pixel gate
-          measures is above it and in flow, so this adds a line without moving one.
+        {/* **The foot — footnote + act as one group, INSIDE the column** (甲's change 1a,
+            owner-ruled 2026-08-20 night from the rendered three-way; `spec-home-wide.md`).
 
-          **The shape, never the reason.** A circle holds twelve and a person proposes three; the
-          36 pairs underneath are the arithmetic that produced those two numbers and they are ours,
-          not the reader's — a home page that explained itself would be teaching the mechanism the
-          owner already ruled off this screen. D20's register holds: it says what a circle holds,
-          never what anyone should do about it.
+            These two were siblings of `.col` in ordinary flow below it until tonight, each
+            carrying its own copy of the column's width. That is what produced the dead bands the
+            owner screenshotted on a 27-inch monitor: the hero centred alone inside the column
+            while the foot sat outside it, so at 2560×1440 the act landed 1,365 px down. Inside
+            the flex column, `.hero { margin-top: auto }` and `.homeFoot { margin-bottom: auto }`
+            split the slack and the two centre together as one object.
 
-          Both limits are enforced, and this line is why neither refusal is a surprise — the 11th
-          seat is refused at join and the 4th place at propose, and a person who read this knows
-          before they hit either. */}
-      <p className="shape" data-part="shape">
-        一個圈子最多 10 人，每人最多提 3 家店。
-      </p>
+            **The wrapper is what makes them one group.** Two independent `margin-bottom: auto`
+            siblings would each claim the slack and the footnote would drift off the act. */}
+        <div className="homeFoot">
 
-      {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. One
-          filled control, and its label follows device state: a person with no key would otherwise
-          land on a home whose only primary action points where they cannot go.
+        {/* **D110 — the supported shape, stated on the home page** (owner-ruled 2026-08-19).
+            It used to sit BELOW the approved frame rather than inside it, so that it added a line
+            without moving one — that reasoning retired with 甲, which moved the whole foot into the
+            column and made the built page the new baseline (`spec-home-wide.md` §3).
 
-          It sits directly under the supported-shape line, which is the last thing the home says
-          before it asks for something — the sentence answers *can I use this?* and the act is
-          *then start*. */}
-      <div className="act-row homeAct">
-        <button type="button" className="act" data-part="enter">
-          {hasDevice ? '這一餐' : '貼上鑰匙'}
-        </button>
+            **The shape, never the reason.** A circle holds twelve and a person proposes three; the
+            36 pairs underneath are the arithmetic that produced those two numbers and they are ours,
+            not the reader's — a home page that explained itself would be teaching the mechanism the
+            owner already ruled off this screen. D20's register holds: it says what a circle holds,
+            never what anyone should do about it.
+
+            Both limits are enforced, and this line is why neither refusal is a surprise — the 11th
+            seat is refused at join and the 4th place at propose, and a person who read this knows
+            before they hit either. */}
+        <p className="shape" data-part="shape">
+          一個圈子最多 10 人，每人最多提 3 家店。
+        </p>
+
+        {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. One
+            filled control, and its label follows device state: a person with no key would otherwise
+            land on a home whose only primary action points where they cannot go.
+
+            It sits directly under the supported-shape line, which is the last thing the home says
+            before it asks for something — the sentence answers *can I use this?* and the act is
+            *then start*. */}
+        <div className="act-row homeAct">
+          <button type="button" className="act" data-part="enter">
+            {hasDevice ? '這一餐' : '貼上鑰匙'}
+          </button>
+        </div>
+        </div>
       </div>
     </>
   )
