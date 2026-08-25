@@ -7,6 +7,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { device, doorHref } from './lib/round'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -20,7 +21,9 @@ export default function App() {
   const [township, setTownship] = useState('63000040')   // 中山區, the demo circle's district
   const [weather, setWeather] = useState<Weather | null>(null)
   const [error, setError] = useState('')
-  const hasDevice = Boolean(localStorage.getItem('upto_token') && localStorage.getItem('upto_circle'))
+  /* `device()` rather than two `getItem`s: the same helper the rest of the surface uses to answer
+     "is this browser a seat", so the door and the screens cannot disagree about what a key is. */
+  const hasDevice = Boolean(device())
 
   useEffect(() => {
     let live = true
@@ -63,8 +66,20 @@ export default function App() {
             <h1 className="headline" data-part="headline">
               <span>今天吃什麼</span><span className="lit">讓骰子決定</span>
             </h1>
+            {/* **「各自提店」, not 「一人提一家」 — a contradiction on this very screen** (evaluator,
+                from the 2026-08-20 re-gate shots at 1440 and 2560). The lead said one place each
+                while the shape line 40 px below it says 每人最多提 3 家店. Same screen, two rules.
+                D110 already fixed exactly this on the round screen; the home kept the old wording.
+
+                **The lead now states the shape without a number and lets the cap line own it.**
+                Naming 3 twice would be the other failure — a page repeating its own limit reads as
+                a page arguing with itself, and the cap belongs where the refusal is explained.
+                Rhythm and length are unchanged, so the type block does not move.
+
+                `擲` is left alone: D108's question about that verb is open on this line as on the
+                round's note, and answering it here would be improvising a ruling. */}
             <p className="say" data-part="bodyline">
-              一人提一家，權重一次算清，兩顆骰子擲一次就定案。沒有人要先犧牲，也沒有人要當壞人。
+              各自提店，權重一次算清，兩顆骰子擲一次就定案。沒有人要先犧牲，也沒有人要當壞人。
             </p>
 
             <div className="wx" data-part="weather">
@@ -145,11 +160,25 @@ export default function App() {
 
             It sits directly under the supported-shape line, which is the last thing the home says
             before it asks for something — the sentence answers *can I use this?* and the act is
-            *then start*. */}
+            *then start*.
+
+            **It is an `<a>`, not a `<button>` — conditional routing, 2026-08-21**
+            (`spec-conditional-routing.md`). Until now it carried no handler and went nowhere; it
+            now carries a destination computed from two local facts, and a destination belongs in
+            an `href` so middle-click, open-in-new-tab and the status bar all tell the truth —
+            Back.tsx's argument, applied to the door.
+
+            **The label still follows device state, deliberately**: `貼上鑰匙` without a key is the
+            honest door, because the press is about to ask for one. A fixed 這一餐 (the flow map's
+            wording) promises a meal and delivers a form.
+
+            `doorHref()` reads `localStorage` only, so it is safe during render and the markup is
+            right on the first paint rather than after an effect. The box must not move — the act's
+            fidelity at 1440 and 2560 is gated (G10) and `.act` already styles an inline-block. */}
         <div className="act-row homeAct">
-          <button type="button" className="act" data-part="enter">
+          <a className="act" data-part="enter" href={doorHref()}>
             {hasDevice ? '這一餐' : '貼上鑰匙'}
-          </button>
+          </a>
         </div>
         </div>
       </div>

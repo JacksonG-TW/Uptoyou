@@ -17,11 +17,16 @@
      readable at desktop and changes nothing at 430, where 88vw already wins. */
   width: min(720px, 88vw);
   margin: 0 auto;
-  /* No act and no reserved band. The pinned BAR was retired from all three carriers on
-     2026-08-20 (option 乙), so there is nothing left to reserve for anywhere — this screen was
-     simply the first that never had one. It is a screen a person leaves by the switcher rather
-     than by an act, and D25 requires the values arrive already filled in, so there is nothing here
-     to commit. */
+  /* **An act at the foot, and no reserved band.** The pinned BAR was retired from all three
+     carriers on 2026-08-20 (option 乙), so nothing is reserved for anywhere; the act this screen
+     grew on 2026-08-21 (`spec-conditional-routing.md` §4) is in ordinary flow at the end of the
+     content, which is why the bottom padding below is the only space it needs.
+
+     **The act commits nothing** — every value was written the moment it was tapped (A1: one 204
+     per press) and D25 has them arriving already filled in. It stamps the routing fact and leaves.
+     This paragraph read "No act and no reserved band. It is a screen a person leaves by the
+     switcher" until the screen became 首次必經; the switcher sentence was true and is now half of
+     the story. */
   padding-block: 20px 32px;
 }
 

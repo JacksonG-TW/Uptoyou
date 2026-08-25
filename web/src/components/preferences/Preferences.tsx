@@ -4,6 +4,12 @@ import {
   device, fetchPreferences, postPreference, pct, taipeiMonth,
   type Band, type Device, type Kind, type Preferences as InForce,
 } from '@/lib/preferences'
+/* **The stamp helpers live in `lib/round.ts` and are imported, never re-implemented here.**
+   `spec-conditional-routing.md` §3 makes one key answer one question for the whole surface; a
+   second copy of the comparison is how the door and the screen start disagreeing about what
+   "seen" means. (`lib/preferences.ts` already carries its own duplicate `device()` — that one is
+   flagged, not multiplied.) */
+import { markPrefSeen, prefSeen } from '@/lib/round'
 
 /**
  * A2 — the private preference screen. Built to `idea & img/evaluator/spec-preference-screen.md`
@@ -74,6 +80,11 @@ export default function Preferences() {
   const [inForce, setInForce] = useState<InForce | null>(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
+  /* **Read once, at mount, and never re-read.** The act stamps and then navigates; a live read
+     would flip this sentence out from under the person in the frame between the two, which is a
+     screen rearranging itself as a reward for pressing something. The lazy initialiser also keeps
+     it off StrictMode's second render. */
+  const [firstVisit] = useState(() => !prefSeen())
   const month = taipeiMonth()
 
   const load = useCallback(async (d: Device) => {
@@ -113,16 +124,19 @@ export default function Preferences() {
     [dev, busy, load],
   )
 
-  if (!dev) {
-    return (
-      <main className="prefs" data-screen="preferences">
-        <h1 className="prefsTitle">我的偏好</h1>
-        <p className="prefsNote" data-part="pref-nodevice">
-          這台裝置還沒有鑰匙，所以沒有可以填的偏好。
-        </p>
-      </main>
-    )
-  }
+  /* **The door check — `spec-conditional-routing.md` §1 and §6's G6.** A typed `/preferences`
+     with no key used to end at a true, useless sentence: the person needs the device screen and
+     the screen already knew it. Now it sends them, with `replace` so the back arrow does not
+     return to a screen that bounces again.
+
+     **In an effect, not during render**, for the same reason the round screen gives: a navigation
+     started mid-render is a render-phase side effect, and StrictMode's double invoke fires it
+     twice. One blank frame is the price. */
+  useEffect(() => {
+    if (!dev) window.location.replace('/device')
+  }, [dev])
+
+  if (!dev) return <main className="prefs" data-screen="preferences" />
 
   const budget = inForce?.budget ?? null
   const avoidedCategories = new Set((inForce?.avoid_categories ?? []).map((a) => a.value))
@@ -196,6 +210,21 @@ export default function Preferences() {
           h1 is worse than one whose wording may change, so it carries the plainest description
           of what is on it and no branding. */}
       <h1 className="prefsTitle">我的偏好</h1>
+      {/* **The first visit says what the order is** (`spec-conditional-routing.md` §4). This screen
+          is now 首次必經 — a person arrives here on the way to somewhere else and is owed the shape
+          of the trip. It states the order and D17's default (nothing persists unless a keep-toggle
+          is flipped) and advises nothing, which is D20's register.
+
+          **Only on the first visit.** A returning person came here on purpose; repeating the
+          orientation would tell them the surface has not noticed they have been.
+
+          Rejected: a welcome line (the surface states, it does not greet) and any line naming
+          「訪客」 — the word is the owner's and the person never chose it. */}
+      {firstVisit && (
+        <p className="prefsNote" data-part="pref-first">
+          先選這一餐要避開的，再進去提店。這台裝置沒有存下任何東西。
+        </p>
+      )}
       <p className="prefsNote">只有你看得到，也只有這台裝置寫得動。</p>
 
       {error && <p className="prefsErr" data-part="pref-error">{error}</p>}
@@ -462,6 +491,31 @@ export default function Preferences() {
           </p>
         )}
       </section>
+
+      {/* **The way forward** (`spec-conditional-routing.md` §4). One command, the ruled `.act`
+          recipe — hot ground, ink text, ink SINK — label 這一餐.
+
+          **It submits nothing.** Every value on this screen was already written the moment it was
+          tapped (A1: one 204 per press, no "save"), so this act only stamps the routing fact and
+          leaves. Calling it 送出 would claim work it does not do.
+
+          **Always present, not only on the first visit.** The screen is 首次必經，之後隨時可回, and
+          a person who came back on purpose also wants a door out that is not the switcher.
+
+          **A `<button>`, not the home's `<a>`.** The home's act is pure navigation and belongs in
+          an `href`; this one writes local state first, and a middle-click on a link would open a
+          tab that never got the stamp and bounced straight back here. `assign`, not `replace`:
+          this screen IS somewhere to come back to now, so it keeps its history entry. */}
+      <div className="act-row">
+        <button
+          type="button"
+          className="act"
+          data-part="pref-done"
+          onClick={() => { markPrefSeen(dev.circle); window.location.assign('/round') }}
+        >
+          這一餐
+        </button>
+      </div>
     </main>
   )
 }

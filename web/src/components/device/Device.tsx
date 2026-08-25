@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { device, remember, verify } from '@/lib/round'
+import { device, doorHref, remember, verify } from '@/lib/round'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
@@ -35,7 +35,17 @@ export default function DeviceScreen() {
       // its own words instead of in this one's — which is where the person can actually act.
       await verify(d)
       remember(d)
-      window.location.href = '/'
+      /* **Forward, not home** (`spec-conditional-routing.md` §1). Landing back on the home after a
+         successful paste made the person press the same act again to learn where they were being
+         sent; the key check has just answered that question, so the screen answers it.
+
+         `remember` has already cleared the stamp if this key is for a different circle, so
+         `doorHref()` reads the post-paste truth: `/preferences` on a circle this device has not
+         been through, `/round` on one it has.
+
+         **`replace`, not `href`** — the back arrow must not return to a device screen that would
+         bounce a now-keyed person straight out again (§1's closing rule, D107's back affordance). */
+      window.location.replace(doorHref())
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)

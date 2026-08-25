@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  device, openRound, propose, roll, searchPlaces, materialise, subscribe,
+  device, prefSeen, openRound, propose, roll, searchPlaces, materialise, subscribe,
   type Candidate, type Device, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { Input } from '@/components/ui/input'
@@ -125,13 +125,25 @@ export default function Round() {
     }
   }, [dev, roundId, busy])
 
-  if (!dev) {
-    return (
-      <main className="round" data-screen="round">
-        <p className="roundNote">這台裝置還沒有鑰匙。</p>
-      </main>
-    )
-  }
+  /* **The door check — `spec-conditional-routing.md` §1.** A typed `/round` used to end at a
+     sentence with nowhere to go: true, and useless, because the thing the person needs is the
+     device screen and the screen knew it. Now the screen sends them.
+
+     Two facts, in order: no key → `/device`; key but this circle's preferences never seen →
+     `/preferences`. Both `replace`, never `href`, so the back arrow does not return to a screen
+     that immediately bounces again.
+
+     **In an effect, not during render.** A navigation started while React is rendering is a side
+     effect in the render phase; under StrictMode's double invoke it fires twice, and it can run
+     before the tree it belongs to is committed. One blank frame is the price and it is the right
+     one — the alternative is a screen that flashes content the person is not entitled to. */
+  useEffect(() => {
+    if (!dev) window.location.replace('/device')
+    else if (!prefSeen()) window.location.replace('/preferences')
+  }, [dev])
+
+  if (!dev || !prefSeen()) return <main className="round" data-screen="round" />
+
 
   return (
     <main className="round" data-screen="round">
@@ -148,6 +160,18 @@ export default function Round() {
           fix is determined; D108 forbids a phrasing without supplying the replacement, and which
           word replaces 擲 is a wording choice the evaluator gates. */}
       <p className="roundNote">每人最多提三家。提完了就擲，兩顆骰子一次定案。</p>
+
+      {/* **The pool rule, stated** (`spec-conditional-routing.md` §5, ruling ③). D70: a place is
+          one entry in the pool however many people proposed it, and a repeat proposal succeeds
+          quietly — so without this line the quiet 200 reads as "it worked, and it counted again".
+
+          **Its own sentence, not folded into the line above.** That line is the cap and A5's
+          walkthrough asserts it by text; two facts in one sentence would make one of them
+          unassertable. D20's register: it states the mechanism and stops — 「請不要重複提」 was
+          rejected for advising. */}
+      <p className="roundNote" data-part="round-pool-rule">
+        同一家店不管幾個人提，都只算一份。多提不會提高中選的機會。
+      </p>
 
       <label className="roundSearch">
         <span className="roundLabel">找一家店</span>
