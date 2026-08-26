@@ -677,6 +677,21 @@ shown to work on a phone; it has been shown to photograph well on a laptop.
 
 **Do not read a green 1440 gate as a green product.**
 
+### The switcher's corner at ultra-wide — ruled 2026-08-21 by the evaluator under `D101`'s delegation
+
+**The switcher and the back arrow stay pinned to the viewport's corners at every width. No code
+change.** Measured at 2560: the home composition scales as one object (9ad903d, 甲) and centres,
+so the 273px switcher strip sits 167px clear of the column's right edge — visibly detached from
+the composition. **That detachment is correct, not a defect.** The switcher is demo scaffolding
+(`D107`: it disappears with the demo), and scaffolding that aligns itself to the composition
+reads as product. Chrome belongs to the window; the page belongs to the page. The back arrow
+pins the opposite corner, and moving one without the other would split the pair.
+
+**Rejected: aligning the switcher to the scaled column's right edge at ≥1920.** It looks tidier
+in a screenshot and it costs a media query plus a claim — that this control is part of the
+composition — which `D107` says is false. The day the switcher dies, nothing about the
+composition has to be re-ruled.
+
 ---
 
 ## 8 · What each screen is measured against
