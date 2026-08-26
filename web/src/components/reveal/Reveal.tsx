@@ -39,12 +39,21 @@ import {
  * this screen: it does not measure a thing that is happening, it *is* the thing that is happening,
  * and its whole content is that nothing else is.
  *
- * **500 since `RV-20` (2026-08-20), and the history is the point.** 700 was tuned against a signal
- * that fired 637 ms early, and then measured against an instrument that watched one cube inside a
- * group that could still be moving. **A number tuned twice against instruments that missed a mover
- * has no claim left**, so it was re-ruled from a corrected measurement rather than nudged. The
- * paragraphs below are the 700 argument, kept because the reasoning about the tail is still true
- * and only the number moved.
+ * **1000 since the owner watched it — D109's amendment, evaluator's number (2026-08-26).** He
+ * passed the tumble and asked for one thing: 「顯示最終骰子結果停頓一下再縮小」. The hold was not
+ * missing, it was too short to read as a pause — 500 measured **386–468 ms on screen**, because the
+ * timer runs from composed stillness and gives back whatever confirming stillness cost. So this is
+ * a number that failed a person rather than an instrument, and the fix is the number, not the
+ * mechanism: the constraints below are unchanged and the shrink's own spring is untouched (the ask
+ * was the pause, ruled by the evaluator, not a slower retreat).
+ *
+ * **500 since `RV-20` (2026-08-20), and that history is still the point.** 700 was tuned against a
+ * signal that fired 637 ms early, and then measured against an instrument that watched one cube
+ * inside a group that could still be moving. **A number tuned twice against instruments that missed
+ * a mover has no claim left**, so it was re-ruled from a corrected measurement rather than nudged —
+ * and the same discipline applies now: 1000 comes from a measurement of what 500 actually put on
+ * the screen, not from doubling a number that felt small. The paragraphs below are the original 700
+ * argument, kept because the reasoning about the tail is still true and only the number has moved.
  *
  * **700 and not the prototype's 380, and the number came from frames rather than from taste.** The
  * die reports itself landed when `motion`'s animation resolves, and that resolution runs
@@ -62,7 +71,7 @@ import {
  * prohibition half of D111's rule held at 380 and holds now. What was missing was the positive
  * half, the visible pause, and that is what this buys.
  */
-const HOLD_MS = 500
+const HOLD_MS = 1000
 
 /** **How long a total absence of animation frames means the sequence is not coming.** Not a guess
  *  at how long the dice take — that number is what `RV-19` forbids. Two seconds of *silence* is far
