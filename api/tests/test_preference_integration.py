@@ -698,6 +698,64 @@ async def scenario(test_url: str) -> None:
           all(row.value in preference_module.CATEGORIES for row in categories_in_force),
           [row.value for row in categories_in_force])
 
+    # ---- A2's aged budget row (G9–G11): the expired state the product cannot reach ----------
+    #
+    # `expires_on` is computed from `now()` at write time (D25), so **no sequence of API calls can
+    # produce an expired band** — the state A2's gate lines are about is unreachable through the
+    # product. `upto.fixture` writes it, and this asserts it **through the endpoint**: what the
+    # evaluator opens is the screen, and a fixture checked only by the query that wrote it proves
+    # nothing about what the screen shows.
+    from upto import fixture  # noqa: PLC0415
+
+    amy_token = "t-" + pysecrets.token_urlsafe(24)
+    async with Session() as session:
+        await session.execute(
+            text("insert into device_secret (principal_id, secret_sha256) values (:p, :h)"),
+            {"p": second_principal, "h": sha256(amy_token.encode()).hexdigest()},
+        )
+        await session.commit()
+
+    check("the fixture writes an aged band",
+          await fixture.expired_budget(second_member, "tight", 1) == 0)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as amy:
+        body = (
+            await amy.get(path, headers={"Authorization": "Bearer {}".format(amy_token)})
+        ).json()
+    check("and the member's own screen reads it as in force",
+          body.get("budget", {}).get("value") == "tight", body.get("budget"))
+    check("flagged expired (D25's re-affirmation prompt has something to show)",
+          body.get("budget", {}).get("expired") is True, body.get("budget"))
+    # **`persist` is forced true and this is why.** `upto.privacy.erase` deletes every
+    # `persist = false` row nightly, so a `false` fixture would be correct when written and gone by
+    # morning — the gate state would erase itself with nothing to say it had.
+    check("and persisted, so the nightly erasure does not take it away overnight",
+          body.get("budget", {}).get("persist") is True, body.get("budget"))
+
+    # Re-running is safe: `valid_from` is deterministic, so 0022's unique index refuses the second
+    # write and the fixture reports the row already there rather than failing.
+    check("a second run writes nothing and does not fail",
+          await fixture.expired_budget(second_member, "tight", 1) == 0)
+    # An older row would never be in force, so the fixture refuses instead of writing something
+    # invisible — the absence is given a shape (D112) rather than reading as success.
+    check("and an even older one is refused rather than written unseen",
+          await fixture.expired_budget(second_member, "tight", 2) == 1)
+    # Outside the retention window the erasure job would delete it, so the argument is refused
+    # rather than the fixture being written with a deletion date.
+    check("a row outside the retention window is refused",
+          await fixture.expired_budget(second_member, "tight", 13) == 1)
+    async with Session() as session:
+        budget_rows = (
+            await session.execute(
+                text("select count(*) from preference where member_id = :m and kind = 'budget'"),
+                {"m": second_member},
+            )
+        ).scalar()
+    check("exactly one budget row exists after all four calls — every refusal rolled back",
+          budget_rows == 1, budget_rows)
+
     await engine.dispose()
 
     if FAILURES:
