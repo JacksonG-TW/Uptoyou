@@ -245,6 +245,17 @@ async def scenario(test_url: str) -> None:
         check("and it is not expired today", body["budget"]["expired"] is False,
               body["budget"])
 
+        # **A2-G13c: the payload states the server's month so no client derives one.** The
+        # assertion that matters is not the format — it is that `month` and `expires_on` come from
+        # the same boundary. A field that merely looks like a month can be derived from a second
+        # clock and agree with the first one for every day but the last of a month, which is the
+        # only day anybody would notice. So this compares them.
+        check("the payload states the server's own month (A2-G13c)",
+              len(body.get("month", "")) == 7 and body["month"][4] == "-", body.get("month"))
+        check("and it is the same boundary `expires_on` was computed against, not a second clock",
+              body["budget"]["expires_on"][:7] == body["month"],
+              (body.get("month"), body["budget"]["expires_on"]))
+
         # --- a set of avoided categories, and un-avoiding one ------------------------
         for value in ("火鍋", "燒烤"):
             answer = await client.post(

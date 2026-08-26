@@ -92,6 +92,26 @@ values (
 returning id
 """
 
+# **The month the server's own expiry boundary falls in, `YYYY-MM`** — the evaluator's ask at
+# A2-G13c, and the field a per-device acknowledgement is compared against.
+#
+# **Derived from `date_trunc('month', now())`, the same expression `INSERT` computes `expires_on`
+# from — never from a timezone conversion.** The field exists so a client can stop keeping a second
+# clock; one derived a different way from the boundary it describes is a second clock with a nicer
+# name, and it would disagree exactly at a month end, which is the only moment anybody looks.
+#
+# **What that boundary actually is today, measured 2026-08-26: UTC.** The database session's
+# `TimeZone` is `UTC`, so every `expires_on` in this table was computed against the UTC month —
+# a band written in Taipei at 00:30 on the first of a month is stamped as if it were still the
+# previous month, and for the eight hours before each UTC month end the server and a Taipei member
+# disagree about which month it is. **Whether the boundary should be Taipei is a real question and
+# it is the owner's, not this field's** — it changes when a budget lapses. This field takes no
+# position: it reports the boundary in use, so the day the boundary moves, it moves with it and no
+# client has to be told.
+
+SERVER_MONTH = "select to_char(date_trunc('month', now()), 'YYYY-MM') as month"
+
+
 # The latest row per key, which is what "in force" means once nothing is edited. `distinct on` is
 # the shape the index `ix_preference_in_force` was built for: (member_id, kind, valid_from desc).
 IN_FORCE_BUDGET = """
@@ -346,6 +366,7 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
                 text(IN_FORCE_AVOID), {"member_id": member_id, "kind": KIND_INGREDIENT}
             )
         ).all()
+        month = (await session.execute(text(SERVER_MONTH))).one()
         coverage = (await session.execute(text(CATEGORY_COVERAGE))).one()
         ingredient_coverage = (await session.execute(text(INGREDIENT_COVERAGE))).one()
         breadth = (
@@ -364,6 +385,12 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             ).all()
         }
     return {
+        # **The server's month, so the client compares rather than derives (A2-G13c).** A screen
+        # that acknowledges a band "for this month" needs to know which month the server means, and
+        # a browser deriving one from its own clock is the two-clock arrangement D25 refuses inside
+        # the database — the same argument, one layer out. See `SERVER_MONTH` for which boundary
+        # this is and for the question it deliberately does not answer.
+        "month": month.month,
         # **D22's breadth, with its denominator stated in the payload rather than assumed.** The
         # evaluator refuses an unstated denominator at the gate and is right to: the same share
         # means three different things over three candidate pools, and a warning nobody can check
