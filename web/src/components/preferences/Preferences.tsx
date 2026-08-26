@@ -271,8 +271,16 @@ export default function Preferences() {
         {/* C · the keep choice, per preference. It appears once there is a preference to keep, and
             renders NOT KEPT until an explicit act — D17's default is expressed by the payload, not
             by this markup. Keeping re-posts the same band with `persist: true`, which appends a new
-            row; there is no field to edit. */}
-        {budget && (
+            row; there is no field to edit.
+
+            **It is hidden while the band is expired** (A2-G9, evaluator 2026-08-26, under D101's
+            visual-autonomy delegation). The store appends rather than edits, so a tap here posts a
+            fresh row carrying `budget.value` — and a fresh row is valid *this* month. The expired
+            band would be re-affirmed as a side effect of an act labelled 「下個月也留著」, which is
+            the one thing the expired state exists to make the member do deliberately. Hiding the
+            control is the whole fix: no payload changes, and it returns the moment the band is
+            re-affirmed by tapping it, because `budget.expired` goes false with the new row. */}
+        {budget && !budget.expired && (
           <button
             type="button"
             className="keep"
