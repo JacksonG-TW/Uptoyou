@@ -66,8 +66,14 @@ export default function Evidence({
   const grid = ev ? cells(ev, places) : []
   const seats = Object.keys(places)
 
+  /* **The state follows the payload, like everything else on this screen.** It was the literal
+     string `operator`, so a member's DOM announced itself as the operator's while carrying none of
+     the operator's numbers — a reader (or a gate) checking the attribute got the wrong answer, and
+     telling the two states apart is the one thing it is for (evaluator 2026-08-26). `ev` is null
+     for a member because nothing arrived; that absence is the same signal every numeric column
+     here is already gated on. */
   return (
-    <section className="evidence" data-part="evidence" data-state="operator">
+    <section className="evidence" data-part="evidence" data-state={ev ? 'operator' : 'member'}>
       {/* ALLOC36 — beside the table as evidence, never above it as decoration. Cells are ≥ 36 px
           square (§3's rescue floor): below that the colour blocks stop being countable and the
           figure reads as a texture rather than as thirty-six things. */}

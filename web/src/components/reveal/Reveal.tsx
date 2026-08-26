@@ -270,13 +270,39 @@ export default function Reveal({ roundId }: { roundId: number }) {
   }, [dev, roundId])
 
   /**
-   * The sweep. **It starts with the tumble and it is over when the tumble is over** — the schedule
-   * divides `--tumble` into whole cycles, so the last step ends as the dice stop and the highlight
-   * clears into the landed state rather than stopping on a row.
+   * The sweep. **It starts with the tumble and it runs until the dice actually land** — not until
+   * `--tumble` elapses, which is a different moment and was the defect (`RV-13`, evaluator
+   * 2026-08-26, measured on 11/11 rolls).
+   *
+   * **The two clocks, and why the schedule could not have been right.** `--tumble` is a CSS
+   * duration, 1400 ms; the dice land when `motion`'s spring resolves, ~2.5–2.7 s from load. The
+   * schedule was built to fill `--tumble` exactly and then stopped, leaving the last row it
+   * happened to be on lit for the remaining 1.0–1.4 s — one row dwelling four to five times longer
+   * than every other, which is §0c's equal-dwell constraint failing by construction rather than by
+   * tuning. The comment here used to say 「the last step ends as the dice stop」; it was describing
+   * an intention, and the instrument found that no run had ever done it.
+   *
+   * **The fix is to keep stepping.** When the schedule runs out it is extended by another whole
+   * shuffled cycle at the same dwell, so every visit is the same length whenever the spring
+   * happens to resolve. `--tumble` stops being the sweep's length and becomes only what sets the
+   * dwell, which is the one thing it was ever measuring.
+   *
+   * **Its cost, stated rather than hidden: the final cycle is cut off wherever landing falls, so
+   * across a whole roll some rows are visited once more than others (±1).** Equal *visits* is
+   * therefore approximate now where it used to be exact. That is the right trade and not merely
+   * the convenient one: the truncation point is set by a spring that has never seen the pool, so
+   * the extra visit carries no information about which row wins — the honesty constraint is about
+   * correlation with the winner, and there is none. Equal *dwell*, which is what a person can
+   * actually see and what `RV-13` measures, is now exact instead of broken.
+   *
+   * **Rejected: clearing the highlight when the schedule ends.** It also fixes the dwell, and it is
+   * one line. But it leaves 1.0–1.4 s of tumbling dice beside a dead list — the sweep would stop
+   * before the mechanism it is supposed to be in sync with, and 「in sync」 is the other half of the
+   * same constraint. A fix that trades one half of a rule for the other is not a fix.
    *
    * **A row lit at the moment of landing would be the animation pointing at an answer**, which is
    * the one thing §0c forbids however random the order was that got it there. So `landed` clears it
-   * unconditionally, before anything else is read.
+   * unconditionally, before anything else is read — and that is what ends the sweep now.
    */
   useEffect(() => {
     if (!data || landed) { setSweep(null); return }
@@ -288,12 +314,23 @@ export default function Reveal({ roundId }: { roundId: number }) {
     // an effect that was skipped by rule, or an effect that was built and does not work.
     if (!order) { setSkipped(ids.length < 2 ? 'one-row' : 'too-many-rows'); return }
     setSkipped(null)
+    // The dwell is still `--tumble` divided by one schedule's worth of steps: the token sets how
+    // fast the sweep moves, and nothing else reads it. The length is set by `landed`.
     const dwell = total / order.length
     let i = 0
     setSweep(order[0])
     const h = window.setInterval(() => {
       i += 1
-      if (i >= order.length) { window.clearInterval(h); return }
+      // Out of schedule and the dice are still going: extend by another whole cycle rather than
+      // stop. Same boundary rule as `sweepOrder`'s — a row may not open a cycle it just closed,
+      // which would read as one double-length dwell and undo what this effect is here to fix.
+      if (i >= order.length) {
+        const next = shuffled(ids)
+        if (next[0] === order[order.length - 1]) {
+          ;[next[0], next[1]] = [next[1], next[0]]
+        }
+        order.push(...next)
+      }
       setSweep(order[i])
     }, dwell)
     return () => window.clearInterval(h)

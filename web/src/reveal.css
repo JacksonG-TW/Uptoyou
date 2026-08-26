@@ -754,11 +754,26 @@
     margin-top: 40px; max-width: calc(100% - 460px);
     display: block; text-align: left; gap: 0;
   }
+  /* **The operator's headline stops short of the operator's column, not the member's.**
+     `460px` above is the member's right column (400px) plus its gutter. The operator's column is
+     `min(680px, 46vw)` — 662px at 1440 — so the headline kept the member's allowance and ran
+     underneath a table sitting on `z-index: 2`: three rows painted over 摩斯漢堡（松山民生東路4段）
+     (evaluator 2026-08-26, `probes/walkthrough/a3-operator-landed-r498.png`). The width now
+     derives from the same expression the column does, so the two cannot drift apart again —
+     change `.right:has(.evNum)` and this follows.
+     **Rejected: starting the table right of the answer block.** It moves the evidence for a
+     defect in the headline, and the table's left edge is what makes its columns readable against
+     the list above it. Narrowing the thing that overflowed is the smaller true statement. */
+  .reveal:has(.evNum) .answer { max-width: calc(100% - min(680px, 46vw) - 60px); }
   .reveal .winner {
     font-size: 104px; line-height: 1.06; letter-spacing: -.02em;
     min-height: 0; padding-block: 0; display: block; text-align: left;
   }
-  .reveal .sentence { margin-top: 34px; font-size: 20px; text-align: left; }
+  /* **No `font-size` here.** It carried `20px`, which overrode `--text-lead` (21.98px at 1440)
+     with a number nobody could trace back to the ladder — `RV-3`, evaluator 2026-08-26. The
+     wide composition changes where the sentence sits and how it aligns; it has no reason to
+     change how big it is, and the token is the only thing allowed to answer that. */
+  .reveal .sentence { margin-top: 34px; text-align: left; }
 
   /* ── the right column ─────────────────────────────────────────────────────
      The list sits beside the dice from the first frame, which is what makes the sweep legible as
