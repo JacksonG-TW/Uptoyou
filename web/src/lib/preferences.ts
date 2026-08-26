@@ -68,6 +68,17 @@ export type Coverage = {
 }
 
 export type Preferences = {
+  /** **`YYYY-MM`, and the only month this screen is allowed to know** (A2-G13c, `4caed3d`).
+   *
+   *  It is the month the server's own expiry boundary falls in — derived from the same
+   *  `date_trunc('month', now())` that computed every `expires_on` — so `month` and
+   *  `budget.expires_on.slice(0, 7)` cannot disagree. Backend measured the database session's
+   *  `TimeZone` as **UTC**, so it is the UTC month, **not** Taipei's; the two are the same value
+   *  except for the eight hours before each UTC month end. **Never convert it, and never derive a
+   *  month here.** A conversion re-creates the two-clock defect at precisely the boundary this
+   *  field exists to close, and would look correct in every test but one evening a month. If the
+   *  boundary is ever ruled to be Taipei, this value moves and the client needs no change. */
+  month: string
   breadth: {
     /** **`zeroed`, not `removed`, and the rename is a correction rather than a preference.** An
      *  avoidance sets a place's weight to ZERO (D103/D45); it never takes the place out of
@@ -166,13 +177,6 @@ export async function postPreference(
   })
   if (r.status === 204) return
   throw await said(r, '寫入失敗')
-}
-
-/** `YYYY-MM` in Taipei, which is the boundary the database computed `expires_on` against. Reading
- *  the browser's own month would put two clocks on one question. */
-export function taipeiMonth(now = new Date()): string {
-  const taipei = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000)
-  return `${taipei.getFullYear()}-${String(taipei.getMonth() + 1).padStart(2, '0')}`
 }
 
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on

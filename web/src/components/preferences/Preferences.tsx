@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   BANDS, BAND_LABEL, CATEGORIES, INGREDIENTS,
-  device, fetchPreferences, postPreference, pct, taipeiMonth,
+  device, fetchPreferences, postPreference, pct,
   type Band, type Device, type Kind, type Preferences as InForce,
 } from '@/lib/preferences'
 /* **The stamp helpers live in `lib/round.ts` and are imported, never re-implemented here.**
@@ -39,7 +39,12 @@ import { markPrefSeen, prefSeen } from '@/lib/round'
  *  the budget for the same reason. */
 type RowState = 'off' | 'on' | 'asking'
 
-/** Which avoided ingredients this device has affirmed, and in which Taipei month.
+/** Which avoided ingredients this device has affirmed, and in which server month.
+ *
+ * **The month is the server's (`payload.month`), never this device's** (A2-G13c). It used to be
+ * computed here from the browser's clock, which put two clocks on one question; the stamp stays
+ * device-side — only this browser knows it is new — but the value it is stamped with comes from
+ * the payload.
  *
  * **This is device state on purpose and it is not a cache of the server.** The carry rule for an
  * ingredient is the strictest of the three: *never carried in silently — on a new month or a new
@@ -85,7 +90,6 @@ export default function Preferences() {
      screen rearranging itself as a reward for pressing something. The lazy initialiser also keeps
      it off StrictMode's second render. */
   const [firstVisit] = useState(() => !prefSeen())
-  const month = taipeiMonth()
 
   const load = useCallback(async (d: Device) => {
     try {
@@ -194,6 +198,13 @@ export default function Preferences() {
     (inForce?.avoid_categories ?? []).filter((a) => a.persist).map((a) => a.value),
   )
   const ack = readAck()
+  /* **The server's month or nothing — this screen never derives one** (A2-G13c, `4caed3d`).
+     `null` while the payload has not arrived, and `null` if a response ever arrives without the
+     field. Both fall to `asking`, because `ack[value] === null` is false for every stored stamp:
+     an absent month means the safety re-ask fires, which is the conservative direction for an
+     allergy and leaves the defect visible instead of hiding it (owner-side rule, recorded in A2's
+     ticket). A device-computed fallback here would look correct and be wrong once a month. */
+  const month = inForce?.month ?? null
   const ingredientState = new Map<string, RowState>(
     (inForce?.avoid_ingredients ?? []).map((a) => [
       a.value,
@@ -446,7 +457,9 @@ export default function Preferences() {
                     // person to re-affirm a choice they are still looking at. The carry rule is
                     // about arriving on a NEW device or in a NEW month, not about the tap that
                     // created the row.
-                    if (next === 'avoid') writeAck(g, month)
+                    // No month, no stamp: writing one under a guessed value is the two-clock
+                    // defect wearing the fix's clothes. The row simply asks again.
+                    if (next === 'avoid' && month) writeAck(g, month)
                     void write(`ing:${g}`, {
                       kind: 'avoid_ingredient', value: g,
                       stance: next, persist: keptIngredients.has(g),
