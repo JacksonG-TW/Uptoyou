@@ -28,7 +28,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from .api_common import (
-    SINGLE_BRAND,
+    SINGLE_BRAND_GROUPED,
     STOREFRONT,
     compose_names,
     place_names,
@@ -206,9 +206,22 @@ async def search_places(
                         "left join lateral ("
                         + STOREFRONT.format(registry="rp.registry_no")
                         + ") storefront on true "
-                        "left join lateral ("
-                        + SINGLE_BRAND.format(company="rp.name")
-                        + ") brand on true "
+                        # **D93's grouped join, owner-ruled 2026-08-27 — the request path's
+                        # only rewrite.** This was a `LATERAL` re-evaluated once per candidate
+                        # row: M8 measured 35,533 executions per keystroke against a 288-row
+                        # table and 93% of the query's buffers. It is now one grouped scan of
+                        # that table, joined on `company_name`. The rule is unchanged and lives
+                        # in `_SINGLE_BRAND_RULE`, shared with the per-row form, so the two
+                        # spellings cannot drift.
+                        #
+                        # **The filter still sits above this join**, which is why D93's trigram
+                        # index stays rejected: `brand.brand_name ilike …` in the `where` below
+                        # reads a join output, not a base column, so no index on `rp.name` is
+                        # reachable. This rewrite removes the N+1, not the scan — and the scan
+                        # was never the cost.
+                        "left join ("
+                        + SINGLE_BRAND_GROUPED
+                        + ") brand on brand.company_name = rp.name "
                         "where rp.publication_id = :pub "
                         "and (rp.name ilike '%' || :q || '%' "
                         "  or brand.brand_name ilike '%' || :q || '%' "
