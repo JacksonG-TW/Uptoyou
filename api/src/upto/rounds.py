@@ -327,7 +327,8 @@ async def roll(round_id: int, request: Request) -> dict:
                 {"r": round_id},
             )
 
-        pinned = await load_contributions(session, round_id)
+        loaded = await load_contributions(session, round_id)
+        pinned = loaded.contributions
         pool = (
             (
                 await session.execute(
@@ -400,7 +401,10 @@ async def roll(round_id: int, request: Request) -> dict:
         else:
             dice = (secrets.randbelow(6) + 1, secrets.randbelow(6) + 1)
         winner = place_for(table, dice[0], dice[1])
-        await write_roll(session, round_id, pinned, weights, winner, dice)
+        await write_roll(
+            session, round_id, pinned, weights, winner, dice,
+            forecast_baseline=loaded.forecast_baseline,
+        )
         await session.commit()
         full = await _closed_body(session, round_id, dice, winner, weights, viewer=member)
         # **D53's push carries the member shape, because a broadcast has no credential.** One event

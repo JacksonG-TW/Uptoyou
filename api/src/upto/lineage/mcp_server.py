@@ -89,7 +89,13 @@ TOOLS: Dict[str, Dict[str, Any]] = {
             "close, whether sha256 of the DECODED seed equals that commitment, the deciding member "
             "id, every member's derived pair, and whether the pair stored on the round equals the "
             "pair the seed produces. Member ids only, never nicknames. An open round reveals no seed "
-            "and says so. The seed is 32 bytes written as hex — decode before hashing."
+            "and says so. The seed is 32 bytes written as hex — decode before hashing. "
+            "It also names the rain baseline (A12/D71): the reading every rain factor in the round "
+            "was measured against, its township and probability, and whether every factor came from "
+            "the same publication. That reading has no contribution row of its own — the driest "
+            "township produces none (D43) — so without it a round's rain arithmetic could not be "
+            "reconstructed from its own rows. `rain_baseline: null` means no comparison happened, "
+            "which is not the same as a comparison that found no difference."
         ),
         "inputSchema": {
             "type": "object",

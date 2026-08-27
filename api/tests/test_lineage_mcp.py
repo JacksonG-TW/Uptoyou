@@ -274,5 +274,42 @@ class TimeLabels(unittest.TestCase):
         self.assertEqual(queries._time_label(queries.OBSERVATION_DATASET), "retrieved_at")
 
 
+class TheRainBaselineIsNameable(unittest.TestCase):
+    """A12 / RR-8 — the reading a round's rain factors were measured against.
+
+    D71 is relative: a place's factor is `1 − gap/120` against the pool's lowest 降雨機率, and the
+    place standing on that lowest reading produces **no contribution at all** (D43). So the number
+    every factor is a gap from is recorded nowhere a contribution can point at, and without
+    revision 0030 a round's rain arithmetic could not be reconstructed from its own rows.
+    """
+
+    def test_explain_round_says_it_names_the_baseline(self):
+        described = server.TOOLS["explain_round"]["description"]
+        self.assertIn("rain baseline", described)
+        self.assertIn("rain_baseline: null", described,
+                      "the absent case must be described, or null reads as zero")
+
+    def test_the_baseline_table_is_declared_readable(self):
+        self.assertIn("round_forecast_baseline", queries.READABLE_TABLES)
+
+    def test_the_value_is_joined_and_not_copied(self):
+        """D28: nothing derived is stored. The probability lives in the publication, and the
+        composite FK is what guarantees it is still there to read — so the query joins for it."""
+        self.assertIn("forecast_reading", queries.ROUND_BASELINE)
+        self.assertIn("r.value as probability", queries.ROUND_BASELINE)
+
+    def test_the_factors_themselves_are_not_read_here(self):
+        """**The boundary said this before the author did.** Reporting the factors beside the
+        baseline meant selecting from `weight_contribution`, and both structural guards fired: the
+        table is outside `READABLE_TABLES` and `reason` is a forbidden subject. A filter to
+        `contributor = 'weather'` narrows the rows without narrowing the reach, which is exactly
+        what a structural guard exists to refuse."""
+        self.assertNotIn("weight_contribution", queries.ROUND_BASELINE)
+        self.assertNotIn("weight_contribution", " ".join(
+            value for name, value in vars(queries).items()
+            if isinstance(value, str) and name.isupper()
+        ))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

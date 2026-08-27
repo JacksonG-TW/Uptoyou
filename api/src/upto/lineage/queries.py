@@ -55,6 +55,11 @@ READABLE_TABLES = frozenset(
         # arithmetic rather than a fact about people being disclosed.
         "round",
         "member",
+        # **Added 2026-08-27 for A12/RR-8 (revision 0030).** It holds a round id and the primary key
+        # of one `forecast_reading` row — no member, no preference, no reason. The reading it names
+        # is the one every rain factor in the round was measured against, and the place standing on
+        # it produces no contribution (D43), so nothing else in the schema can name it.
+        "round_forecast_baseline",
     }
 )
 
@@ -421,6 +426,20 @@ def refuse(subject: str) -> None:
     )
 
 
+# A12 / RR-8 — the reading every rain factor in a round was measured against (revision 0030).
+# **Joined to `forecast_reading` for the value rather than storing a copy of it (D28):** the number
+# lives in the publication, and the composite FK is what guarantees it is still there to read.
+ROUND_BASELINE = """
+select b.township_code, b.publication_id, b.element, b.measure, b.slot_start,
+       r.value as probability, p.detected_at as publication_detected_at
+  from round_forecast_baseline b
+  join forecast_reading r
+    on r.publication_id = b.publication_id and r.township_code = b.township_code
+   and r.element = b.element and r.measure = b.measure and r.slot_start = b.slot_start
+  join forecast_publication p on p.id = b.publication_id
+ where b.round_id = :round_id
+"""
+
 async def explain_round(session, round_id: int) -> Answer:
     """D108's verification, recomputed rather than asserted — the point of the whole mechanism.
 
@@ -522,6 +541,49 @@ async def explain_round(session, round_id: int) -> Answer:
             "pair_derived_from_seed": list(draw.pair_for_member(seed, member_id)),
             "counts": member_id == decider,
         })
+
+    # **A12 / RR-8 — the reading the rain factors were measured against, named.** D71 is relative:
+    # a place's factor is `1 − gap/120` against the pool's lowest 降雨機率, and the place standing
+    # on that lowest reading produces no contribution at all (D43). So without this the round's
+    # arithmetic could not be reconstructed from its own rows — every factor would be a gap from a
+    # number nothing recorded. Revision 0030 pins it; this reports it.
+    baseline = (
+        await session.execute(text(ROUND_BASELINE), {"round_id": round_id})
+    ).mappings().first()
+    if baseline is None:
+        # **An absence with a shape (D112), and it is not the same as a baseline of zero.** No
+        # reference place, no township, no reading for the hour, or a publication carrying none of
+        # the pool's townships — in every case nothing was compared, which is a different fact from
+        # a comparison that found no difference.
+        rows.append({
+            "rain_baseline": None,
+            "note": "no rain comparison happened in this round — no baseline reading was recorded. "
+                    "A round whose townships all held the same probability DOES record one and "
+                    "stores no factors; this is the other case.",
+        })
+    else:
+        rows.append({
+            "rain_baseline_township": baseline["township_code"],
+            "rain_baseline_probability": baseline["probability"],
+            "rain_baseline_publication_id": baseline["publication_id"],
+            "rain_baseline_slot_start": baseline["slot_start"],
+            "rain_baseline_measure": baseline["measure"],
+            "rain_baseline_publication_detected_at": baseline["publication_detected_at"],
+            # **The factors themselves are deliberately not read here, and the boundary said so
+            # first.** Reporting them meant selecting from `weight_contribution`, and both of this
+            # module's structural guards fired: the table is outside `READABLE_TABLES` and the word
+            # `reason` is in `FORBIDDEN_SUBJECTS`. That table holds a member's private preference
+            # rows, and a filter to `contributor = 'weather'` narrows the rows without narrowing the
+            # *reach* — the guard is structural precisely so a well-meaning filter cannot open it.
+            # The baseline is what RR-8 asked for; a caller who has the round's factors can check
+            # them against it, and `test_engine_load_integration.py` asserts the one-publication
+            # rule where the credential to see contributions exists.
+            "note": "every rain factor in this round is 1 − (that township's 降雨機率 − {}) / 120, "
+                    "clamped at 0.5. The baseline township itself carries no record (D43).".format(
+                        baseline["probability"]
+                    ),
+        })
+
     return Answer(question=question, found=True,
                   detail={"status": row["status"], "member_count": len(ids)},
                   rows=rows, note=decode)

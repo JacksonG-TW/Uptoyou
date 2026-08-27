@@ -86,6 +86,7 @@ async def write_roll(
     weights: dict[int, Decimal],
     winning_place_id: int,
     dice: tuple[int, int],
+    forecast_baseline: "ForecastPin | None" = None,
 ) -> None:
     """Store contributions, weights, the dice and the close. Raises before writing on any mismatch."""
     if not (1 <= dice[0] <= 6 and 1 <= dice[1] <= 6):
@@ -190,6 +191,37 @@ async def write_roll(
                 f" {pin_values})"
             ),
             params,
+        )
+
+    # **A12 / revision 0030: the reading every rain factor in this round was measured against.**
+    # It has no contribution to hang from — the place standing on the pool's lowest 降雨機率
+    # produces no record (D43) — so D24's pin lives in its own row. Written here, in the same
+    # transaction as the contributions and before the close, so a round cannot end up holding
+    # factors whose baseline is not named.
+    #
+    # **`None` means no comparison happened**, and no row is written: a pool with no reference
+    # place, no township, or a publication carrying none of them. A round where every township
+    # held the same number *does* write one — a comparison happened and found no difference, which
+    # is a different fact from no comparison at all (D112).
+    #
+    # **Defaulted to `None` so the two callers that never load weather do not have to say so**, and
+    # deliberately not defaulted anywhere the loader is involved: `rounds.py` passes what the walk
+    # produced, whatever that is.
+    if forecast_baseline is not None:
+        await session.execute(
+            text(
+                "insert into round_forecast_baseline "
+                "(round_id, publication_id, township_code, element, measure, slot_start) "
+                "values (:r, :p, :t, :e, :m, :s)"
+            ),
+            {
+                "r": round_id,
+                "p": forecast_baseline.publication_id,
+                "t": forecast_baseline.township_code,
+                "e": forecast_baseline.element,
+                "m": forecast_baseline.measure,
+                "s": forecast_baseline.slot_start,
+            },
         )
 
     for place_id, weight in weights.items():

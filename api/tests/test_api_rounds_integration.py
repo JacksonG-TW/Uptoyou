@@ -283,6 +283,23 @@ async def scenario(test_url: str) -> None:
         # The driest township carries nothing at all — no row, no sentence, no factor of 1.0.
         assert result["panel"][str(dry)]["factors"] == [], result["panel"][str(dry)]
 
+        # **A12 / RR-8 through the real endpoint: the round stored the reading its factors were
+        # measured against.** 晴天的店's township is the pool minimum and produces no contribution,
+        # so this row is the only thing in the schema that can name the number every gap was taken
+        # from. Asserted here rather than only in the loader's own test because the ruling was about
+        # what a round *stores*, and the endpoint is what stores it.
+        async with Session() as session:
+            baseline = (
+                await session.execute(
+                    text("select township_code, publication_id, slot_start "
+                         "from round_forecast_baseline where round_id = :r"),
+                    {"r": round_id},
+                )
+            ).one_or_none()
+        assert baseline is not None, "the roll stored no rain baseline"
+        assert baseline.township_code == "63000020", baseline
+        assert baseline.publication_id == weather_pub, baseline
+
         # D69: the retry gets the stored result, dice and all, in the same shape.
         again = await client.post(f"/rounds/{round_id}/roll", headers=auth)
         assert again.status_code == 200

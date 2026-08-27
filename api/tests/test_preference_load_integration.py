@@ -226,7 +226,8 @@ async def scenario(test_url: str) -> None:
         circle, members, places, preferences, round_id, place_pub = await seed(session)
 
     async with Session() as session:
-        pinned = await load_contributions(session, round_id)
+        loaded = await load_contributions(session, round_id)
+        pinned = loaded.contributions
 
     # Every record is a preference record: there is no weather in this database.
     assert all(p.contribution.channel == "private" for p in pinned), (

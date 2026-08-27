@@ -177,7 +177,8 @@ async def scenario(test_url: str) -> None:
     # retired step (≥70 → ×0.8) the same fixture gave ×0.8 and the 30% place was below a
     # threshold; now it is the baseline the other place is measured against.
     async with Session() as session:
-        pinned = await load_contributions(session, round_id)
+        loaded = await load_contributions(session, round_id)
+        pinned = loaded.contributions
     assert len(pinned) == 1, f"expected one record, got {len(pinned)}"
     record = pinned[0]
     assert record.contribution.place_id == rainy
@@ -187,12 +188,16 @@ async def scenario(test_url: str) -> None:
     # **Every pin comes from one publication, which a relative rule needs and an absolute one did
     # not.** A gap assembled from two publications is partly an artifact of when each was ingested.
     assert len({p.pin.publication_id for p in pinned}) == 1, "pins span publications"
-    # **What this test cannot yet assert, stated rather than left as a silent hole (D112):** the
-    # reading that supplied the pool minimum — 信義's 30% — is pinned by nothing, because the place
-    # standing on it produces no contribution (D43) and a contribution carries exactly one source
-    # pin (`ck_contribution_exactly_one_source`). It survives transitively: its publication cannot
-    # be deleted while 松山's row pins a reading in the same publication. Making that direct needs
-    # a schema decision (a baseline pin, or a round-level one) and is with the owner.
+    # **The reading the whole round was measured against — 信義's 30% — is named (RR-8, revision
+    # 0030).** It has no contribution to hang from: the place standing on it produces no record
+    # (D43) and a contribution carries exactly one source pin. Before the baseline table it survived
+    # only transitively, because its publication cannot be deleted while 松山's row pins a reading
+    # in it — real protection, and not an answer to *which reading was the baseline*.
+    assert loaded.forecast_baseline is not None, "the pool minimum's reading is not named"
+    assert loaded.forecast_baseline.township_code == "63000020", loaded.forecast_baseline
+    assert loaded.forecast_baseline.slot_start == SLOT
+    assert loaded.forecast_baseline.publication_id == record.pin.publication_id, \
+        "the baseline and the contributions must come from one publication"
 
     # End to end: the loaded records feed the fold and the write half lands whole.
     weights = {
@@ -203,9 +208,21 @@ async def scenario(test_url: str) -> None:
     }
     assert weights == {rainy: Decimal("0.583"), sunny: Decimal("1"), local: Decimal("1")}
     async with Session() as session:
-        await write_roll(session, round_id, pinned, weights, winning_place_id=sunny, dice=(2, 5))
+        await write_roll(session, round_id, pinned, weights, winning_place_id=sunny, dice=(2, 5),
+                         forecast_baseline=loaded.forecast_baseline)
         await session.commit()
     async with Session() as session:
+        baseline_row = (
+            await session.execute(
+                text(
+                    "select township_code, publication_id, slot_start "
+                    "from round_forecast_baseline where round_id = :r"
+                ),
+                {"r": round_id},
+            )
+        ).one_or_none()
+        assert baseline_row is not None, "the round stored no baseline"
+        assert baseline_row.township_code == "63000020", baseline_row
         stored = (
             await session.execute(
                 text(

@@ -29,6 +29,8 @@ fold's product is order-independent, so the synthetic ids never leak into anythi
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import text
 
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
@@ -50,7 +52,27 @@ def _probability(value) -> int | None:
         return None
 
 
-async def load_contributions(session, round_id: int) -> list[PinnedContribution]:
+@dataclass(frozen=True)
+class LoadedRound:
+    """What one round's walk produced: the records, and the reading they were measured against.
+
+    **The baseline is not a contribution and could not be carried as one.** Since D71 became
+    relative (A12) every rain factor is a gap from the pool's lowest 降雨機率, and the place
+    standing on that lowest reading produces no record at all (D43). So the reading the whole round
+    was measured against is named here and stored by `write_roll` in `round_forecast_baseline`
+    (revision 0030) — D24's pin for a row that has no contribution to hang from.
+
+    **`forecast_baseline` is `None` when no comparison happened** — no reference place, no township,
+    no reading for the hour, or a publication that carries none of the pool's townships. That is a
+    different fact from *a comparison happened and every township matched*, which records a baseline
+    and produces no contributions. D112: the two must not collapse into one absence.
+    """
+
+    contributions: tuple[PinnedContribution, ...]
+    forecast_baseline: "ForecastPin | None"
+
+
+async def load_contributions(session, round_id: int) -> LoadedRound:
     """One round's pool, walked once; returns every pinned record the fold will see."""
     round_row = (
         await session.execute(
@@ -160,8 +182,24 @@ async def load_contributions(session, round_id: int) -> list[PinnedContribution]
                     continue  # A value that will not parse is not a dry township we invented.
                 readings[place_id] = reading
 
+    baseline: ForecastPin | None = None
     if readings:
         pool_minimum = min(_probability(r.value) for r in readings.values())
+        # **The baseline reading, named once and pinned even though nothing points at it.** Ties are
+        # ordinary — M13 measured the 12 townships holding one value in 56.4% of hours — so the
+        # choice among equal readings is made by township code, deterministically. Any of them is
+        # the same number; a stable rule is what lets a replay name the same row twice.
+        cheapest = min(
+            (r for r in readings.values() if _probability(r.value) == pool_minimum),
+            key=lambda r: r.township_code,
+        )
+        baseline = ForecastPin(
+            publication_id=cheapest.publication_id,
+            township_code=cheapest.township_code,
+            element=cheapest.element,
+            measure=cheapest.measure,
+            slot_start=cheapest.slot_start,
+        )
         for place_id in sorted(readings):
             reading = readings[place_id]
             contribution = rain_contribution(
@@ -285,4 +323,4 @@ async def load_contributions(session, round_id: int) -> list[PinnedContribution]
             flush=True,
         )
 
-    return pinned
+    return LoadedRound(contributions=tuple(pinned), forecast_baseline=baseline)
