@@ -422,10 +422,13 @@ async def scenario(test_url: str) -> None:
         # --- A1's Done condition, as a probe over real rolls (owner-ruled 2026-08-18) ----
         #
         # **Not "tests green": a measurable, user-visible outcome.** One member avoids 火鍋; the
-        # circle rolls repeatedly with a 火鍋 place and a 西式 place both in the pool; the 火鍋
-        # place must win **zero** times, because D45's absorbing zero gives it zero of the 36
-        # outcomes rather than merely fewer. The numbers are printed so the claim is a measurement
-        # and not a test name.
+        # circle rolls repeatedly with a 火鍋 place and a 西式 place both in the pool.
+        #
+        # **A1's Done line read "the 火鍋 place must win zero times" and A13 inverted it.** Under
+        # D45's absorbing zero the place held zero of the 36 outcomes; since D103 was reopened
+        # (2026-08-27) one objection in a room of five costs it a fifth, so it holds 16 of 36 and
+        # **must be able to win**. The numbers are printed so the claim stays a measurement and not
+        # a test name — and the printed tally is what a reader checks the inversion against.
         #
         # **火鍋 is re-avoided here, and the first draft of this probe forgot to.** The test
         # un-avoided 火鍋 a few lines up to prove `allow` works, so at this point the member avoids
@@ -447,6 +450,25 @@ async def scenario(test_url: str) -> None:
         check("and it is back in what is in force",
               [r["value"] for r in body["avoid_categories"]] == ["火鍋"],
               body["avoid_categories"])
+
+        # **A13: four more seats, so the room has five people in it.** D103's discount is `1 − 1/N`
+        # and N is the round's pinned seats, so a one-member circle gives `1 − 1/1 = 0` — the old
+        # veto, reached by the formula. This probe would therefore have gone on passing its original
+        # "zero wins" assertion while testing none of the change. The seats carry no preferences of
+        # their own; they exist to be counted.
+        async with Session() as session:
+            for nickname in ("Bo", "Cai", "Ding", "Er"):
+                extra_principal = (
+                    await session.execute(
+                        text("insert into principal default values returning id")
+                    )
+                ).scalar_one()
+                await session.execute(
+                    text("insert into member (principal_id, circle_id, nickname) "
+                         "values (:p, :c, :n)"),
+                    {"p": extra_principal, "c": circle, "n": nickname},
+                )
+            await session.commit()
 
         rolls = 20
         winners: dict = {}
@@ -470,8 +492,8 @@ async def scenario(test_url: str) -> None:
             winner = answer_body["winning_place_id"]
             winners[winner] = winners.get(winner, 0) + 1
             # D72's table is the truth of the draw, so the allocation is the stronger statement:
-            # an avoided place holds **zero of the 36 outcomes**, not merely fewer, which is why
-            # zero wins is a property rather than twenty lucky rolls.
+            # since A13 an avoided place holds **fewer** of the 36 outcomes rather than none, and
+            # the exact count is a property while the win tally is a sample.
             allocation = answer_body["allocation"]
 
         hot_pot = categorised["火鍋"]
@@ -481,26 +503,43 @@ async def scenario(test_url: str) -> None:
                 rolls, winners.get(hot_pot, 0), winners.get(western, 0)
             )
         )
-        check("D22/A1 Done: an avoided category wins ZERO rolls out of {}".format(rolls),
-              winners.get(hot_pot, 0) == 0, winners)
-        check("and the place nobody avoided won all of them",
-              winners.get(western, 0) == rolls, winners)
-        check("D72's table gives the avoided place 0 of the 36 outcomes — a property, not luck",
-              allocation.get(str(hot_pot), 0) == 0, allocation)
-        check("and the other place all 36",
-              allocation.get(str(western), 0) == 36, allocation)
+        # **A13 inverts A1's Done line.** It read "an avoided category wins ZERO rolls"; D103 as
+        # reopened makes one objection in a room of five a discount of a fifth, so the place has to
+        # stay genuinely reachable. **The deterministic half first:** at weights 0.8 and 1.0 D72's
+        # table hands 火鍋 16 of the 36 outcomes and 西式 20 — that is arithmetic, not a sample.
+        check("A13: the avoided place keeps a real share of the 36 — a property, not luck",
+              allocation.get(str(hot_pot), 0) == 16, allocation)
+        check("and the place nobody avoided holds the rest", allocation.get(str(western), 0) == 20,
+              allocation)
+        # **The sampled half, and its flake probability is stated rather than hoped over.** With
+        # 16/36 per roll, twenty rolls miss 火鍋 entirely with probability (20/36)^20 ≈ 8e-6. That is
+        # the price of asserting the thing the owner actually ruled — that the place can still win —
+        # and it is named here so a one-in-a-hundred-thousand red run is recognised rather than
+        # debugged.
+        check("A13 Done: an avoided category can still win, and did".format(rolls),
+              winners.get(hot_pot, 0) > 0, winners)
+        # **The "wins more often" comparison was written here and removed the same hour, because it
+        # is not a property — it is a coin flip.** At 16 against 20 of the 36, twenty rolls put the
+        # avoided place ahead perhaps a third of the time; the first run of it failed at 12 to 8 and
+        # the test was right to. The ordering that IS deterministic is the allocation's, asserted
+        # above and again here: fewer outcomes, every round, by arithmetic.
+        check("and holds fewer of the 36 than the place nobody avoided — every round",
+              allocation.get(str(hot_pot), 0) < allocation.get(str(western), 0), allocation)
 
         async with Session() as session:
+            # **The stored effect is 0.8, not 0** — five seats, one objection (A13). Matched on the
+            # value rather than on "not null" so a future N that silently changed the arithmetic
+            # would fail here instead of passing a looser predicate.
             pinned_rows = (
                 await session.execute(
                     text(
                         "select count(*) from weight_contribution "
                         "where contributor = 'preference' and preference_id is not null "
-                        "and channel = 'private' and effect = 0"
+                        "and channel = 'private' and effect = 0.8"
                     )
                 )
             ).scalar()
-            zero_weights = (
+            still_vetoed = (
                 await session.execute(
                     text(
                         "select count(*) from proposal where place_id = :p and weight = 0"
@@ -508,13 +547,23 @@ async def scenario(test_url: str) -> None:
                     {"p": hot_pot},
                 )
             ).scalar()
-        print("  {} preference contribution(s) written, each pinning its version; "
-              "{} of {} rounds recorded the 火鍋 place at weight 0".format(
-                  pinned_rows, zero_weights, rolls))
+            discounted = (
+                await session.execute(
+                    text(
+                        "select count(*) from proposal where place_id = :p and weight = 0.8"
+                    ),
+                    {"p": hot_pot},
+                )
+            ).scalar()
+        print("  {} preference contribution(s) written at 0.8, each pinning its version; "
+              "the 火鍋 place was recorded at weight 0.8 in {} of {} rounds and at 0 in {}".format(
+                  pinned_rows, discounted, rolls, still_vetoed))
         check("every roll pinned the preference version it read (D24/D25)",
               pinned_rows == rolls, pinned_rows)
-        check("and stored the avoided place at weight zero",
-              zero_weights == rolls, zero_weights)
+        check("A13: the avoided place is stored DISCOUNTED, at 1 − 1/5",
+              discounted == rolls, discounted)
+        check("and never at zero — the veto is gone, not merely smaller",
+              still_vetoed == 0, still_vetoed)
 
     # --- a version a round pinned cannot be erased (D24, D25) ------------------------
     async with Session() as session:

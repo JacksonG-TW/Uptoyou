@@ -276,17 +276,25 @@ async def scenario(test_url: str) -> None:
         "filtered in the wrong order"
     )
 
-    # Every record is the absorbing zero, and the reason names the category for its owner alone.
+    # **Every record is `1 − 1/4 = 0.750` (A13/D103 as reopened), not the absorbing zero.** The
+    # fixture seats four — Kevin, Amy, Ben, Dana — so the number is written out and the seat count
+    # is asserted beside it: a fixture that quietly gained a fifth member would otherwise turn this
+    # into a silently different, silently passing test.
+    assert len(members) == 4, members
     for p in pinned:
-        assert p.contribution.effect == Decimal("0"), p.contribution
+        assert p.contribution.effect == Decimal("0.750"), p.contribution
         assert p.reason_visibility == "represented_member", p.reason_visibility
     assert {p.contribution.reason for p in on_hotpot} == {"避開的類型：火鍋"}, (
         "two members avoiding one category read the same sentence, because the sentence is "
         "about the category and not about the member"
     )
 
-    # Two zeros on one place is still zero — the fold is idempotent under an absorbing factor, so
-    # the plural pass cannot make a place *more* avoided than one member already made it.
+    # **Two objections now compound, and that is the change A13 made.** Under the absorbing zero
+    # the plural pass could not make a place *more* avoided than one member already had — two zeros
+    # are still zero, and the fold was idempotent under it. A discount is not: 0.75 × 0.75 = 0.5625
+    # on 火鍋, which two people avoid, against 0.750 on 麵食, which one does. The second objection
+    # costs something, which is what the room-proportional rule is for. D45's private bound [0, 1]
+    # is what stops any number of them reaching zero.
     weights = {
         place_id: fold(
             place_id, [p.contribution for p in pinned if p.contribution.place_id == place_id]
@@ -294,15 +302,17 @@ async def scenario(test_url: str) -> None:
         for place_id in places.values()
     }
     assert weights == {
-        places["hotpot"]: Decimal("0"),
-        places["noodle"]: Decimal("0"),
+        places["hotpot"]: Decimal("0.562500"),
+        places["noodle"]: Decimal("0.750"),
         places["sushi"]: Decimal("1"),
         places["local"]: Decimal("1"),
     }, weights
 
     # And it lands: three private rows, each with its own member and its own pinned version.
-    # The winner is 壽司店 because a zero-weight winner is refused by D45 — which is itself the
-    # avoidance working, so the choice of winner here is not an accident of the fixture.
+    # **The winner is 壽司店 by the fixture's choice now, not by refusal.** It used to be the only
+    # legal winner — D45 refuses a zero-weight one, and the avoidance made every other place zero.
+    # Since A13 every place carries a positive weight and any of them could win; the roll is not
+    # being exercised here, so a fixed winner keeps the assertion about what is *stored*.
     async with Session() as session:
         await write_roll(
             session, round_id, pinned, weights, winning_place_id=places["sushi"], dice=(3, 4)
@@ -351,7 +361,7 @@ async def scenario(test_url: str) -> None:
         "A1's loader pass: one place avoided by two members carries two records with two "
         "members and two pinned versions; a member with two avoidances produces one record "
         "each; no row, an `allow`, an unavoided category and no category all produce nothing; "
-        "two zeros fold to zero; the three rows land in the private channel and their pinned "
+        "two objections compound to 0.5625 at four seats (A13); the three rows land in the private channel and their pinned "
         "versions refuse deletion"
     )
 

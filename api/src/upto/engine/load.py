@@ -76,7 +76,7 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
     """One round's pool, walked once; returns every pinned record the fold will see."""
     round_row = (
         await session.execute(
-            text("select circle_id, target_hour, status from round where id = :r"),
+            text("select circle_id, target_hour, status, seat_ids from round where id = :r"),
             {"r": round_id},
         )
     ).one_or_none()
@@ -262,10 +262,31 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
     for row in avoided_rows:
         by_member.setdefault(row.member_id, {})[row.value] = row.id
 
+    # **N for D103's discount: the seats pinned at the round's open, never live membership.** An
+    # avoided category costs a place `1 − 1/N` (A13), so N is arithmetic the round's result depends
+    # on — and reading `member` here is the bug revision 0027 exists for, one table over: the
+    # discount would move whenever the circle's membership changed, so a closed round's weights
+    # would stop reconciling and an open round's odds would shift under a member who joined
+    # mid-round. A round with no pinned seats predates 0027 and falls back, because there is
+    # nothing honest to reconstruct — the same fallback, and the same reason, as the roll's.
+    seat_ids = list(round_row.seat_ids or [])
+    if not seat_ids:
+        seat_ids = list(
+            (
+                await session.execute(
+                    text("select id from member where circle_id = :c order by id"),
+                    {"c": round_row.circle_id},
+                )
+            )
+            .scalars()
+            .all()
+        )
+    member_count = len(seat_ids)
+
     for member_id, avoided in sorted(by_member.items()):
         for row in pool:
             contribution = avoid_contribution(
-                next_id, row.place_id, row.category, avoided.keys()
+                next_id, row.place_id, row.category, avoided.keys(), member_count
             )
             if contribution is None:
                 continue

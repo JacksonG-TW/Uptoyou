@@ -8,12 +8,17 @@ Below that — no category, or a category the member said nothing about — **no
 which is D43's no-record-no-effect, so the panel shows nothing for a place the member's
 preferences left alone.
 
-**Why zero and not a large reduction.** D45's worked example is the whole argument: contributions
-multiply, and multiplication has an absorbing zero, so once a factor is `0` no later factor
-recovers it. Under addition a paying restaurant could cancel an avoidance — *a veto that can be
-bought back is not a veto*. An avoid is the one thing in this product that is meant to be
-absolute, and `private`'s range `[0, 1]` exists precisely so this channel may zero and may never
-lift.
+**A category is a discount and an ingredient is a veto, and the difference is the whole of D103 as
+reopened 2026-08-27.** This paragraph used to argue the opposite for both — *why zero and not a
+large reduction* — and the argument was sound for the case it was made about: contributions
+multiply, multiplication has an absorbing zero, so a paying restaurant can never cancel a veto, and
+`private`'s range `[0, 1]` exists so this channel may zero and may never lift. **That reasoning is
+untouched and still governs `avoid_ingredient`.** What the owner reversed is which of the two an
+avoided *category* is: a taste is not an allergy, one person's dislike of 火鍋 should cost a 火鍋
+place a share of its odds rather than remove it from the room, and the share is the room's own size
+— `1 − 1/N`. See `discount_for`. The bought-back objection does not apply, because the bound that
+stops a commercial factor lifting a private one is the channel's, not the zero's: `commercial` is
+capped at 1.5 and folds after `private` is clamped, so a discount cannot be purchased away either.
 
 **A place with no category produces nothing, and that is neutrality rather than a penalty.** Only
 a small share of the reference list carries a category yet — **8.92%, 3,254 rows of 36,499, with
@@ -62,15 +67,52 @@ database leak, because the `preference` row itself already states the same fact 
 
 from __future__ import annotations
 
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Collection, Optional
 
 from upto.engine.fold import Contribution
 
 CONTRIBUTOR_NAME = "preference"
 
-# D45's absorbing zero, and the reason `private` is the only channel allowed to reach it.
-AVOID_EFFECT = Decimal("0")
+# numeric(4,3), mirrored from the column and from `fold._EFFECT_QUANTUM`.
+_QUANTUM = Decimal("0.001")
+
+
+def discount_for(member_count: int) -> Decimal:
+    """`1 − 1/N` — what one member's avoidance costs a place, D103 as reopened 2026-08-27.
+
+    **An avoided category is a discount, not a veto (owner-ruled).** It used to be D45's absorbing
+    zero: one person avoiding 火鍋 removed every 火鍋 place from the draw for everyone. The rule is
+    now proportional to the room — at five people one objection costs a place a fifth of its odds,
+    and the place stays genuinely reachable.
+
+    **N is the round's members and it is the loader's to supply (D44, D108).** This function never
+    queries and never sees the pool; it is handed one place, one member's set, and the count. The
+    count is the seats **pinned at the round's open**, never live membership — reading `member` at
+    roll time is the bug revision 0027 exists for.
+
+    **N = 1 gives exactly 0, and that is right rather than a corner to guard.** A round of one
+    person is that person's decision, so their avoidance is a veto — the old behaviour, reached by
+    the formula instead of by a special case.
+
+    **Two avoiders multiply and the arithmetic is D45's, not this function's.** At five members two
+    objections give 0.8 × 0.8 = 0.64, folded by the private channel and clamped into [0, 1] — where
+    0.64 already sits, so nothing clamps. Three at five give 0.512, and the channel bound is what
+    stops any number of them reaching zero by accident.
+
+    **`avoid_ingredient` is NOT this and stays an absorbing zero.** Somebody who does not eat 甲殼類
+    does not eat it at four people or forty; there is no room size that makes a fifth of a shellfish
+    acceptable. That pass produces nothing today (no place carries ingredient data — see
+    `upto.engine.load`), and when it does it takes the veto, not this discount.
+    """
+    if member_count < 1:
+        raise ValueError(
+            "a round has at least one member — N is the seats pinned at open (D108), and a count "
+            "of {} means the caller read something other than that".format(member_count)
+        )
+    return (Decimal(1) - Decimal(1) / Decimal(member_count)).quantize(
+        _QUANTUM, rounding=ROUND_HALF_UP
+    )
 
 # D13's third column: who may see the reason. `table` is refused for this channel by a CHECK on
 # `weight_contribution`, so the value is named here rather than left to a caller's default.
@@ -82,12 +124,14 @@ def avoid_contribution(
     place_id: int,
     category: Optional[str],
     avoided: Collection[str],
+    member_count: int,
 ) -> Contribution | None:
     """One place, one member's avoided set, one record or nothing (D43, D44).
 
     `category` is the place's generated category (D39) or `None` when it has not been classified
     and when the place is `circle-local`. `avoided` is the categories this member has a preference
-    row in force for — a set, because a member may avoid more than one.
+    row in force for — a set, because a member may avoid more than one. `member_count` is the
+    round's N (D108's pinned seats) and produces `discount_for`'s `1 − 1/N`.
     """
     if category is None:
         return None
@@ -98,6 +142,6 @@ def avoid_contribution(
         place_id=place_id,
         channel="private",
         contributor=CONTRIBUTOR_NAME,
-        effect=AVOID_EFFECT,
+        effect=discount_for(member_count),
         reason="避開的類型：{}".format(category),
     )
