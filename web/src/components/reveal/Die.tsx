@@ -115,16 +115,44 @@ const RED = new Set([1, 4])
  * given back before the landing.
  */
 const THROW = [
-  { turnx: 1080, turny: 720,  turnz: -360, hold: -62 },
-  { turnx: 720,  turny: 1440, turnz: 360,  hold: 62 },
+  { turnx: 1080, turny: 720,  turnz: -360, hold: -62, ms: 3400 },
+  { turnx: 720,  turny: 1440, turnz: 360,  hold: 62,  ms: 3700 },
 ] as const
 
-/** How far short of the landing angle the tumble stops, so the spring has something to rock over.
- *  Small on purpose: a spring's overshoot is a percentage of the distance it is given, and a spring
- *  handed 1080° would rock a quarter-turn past the face. Handed 34°, it rocks about 3° — a die
- *  settling onto a face, which is the thing the owner said the timed version was not. */
-const ROCK_X = 34
-const ROCK_Y = 26
+/**
+ * **The two throws' lengths, and they are deliberately different** (§0c amendment A, 2026-08-27:
+ * 「骰子的動畫改動非常好」 — the deceleration made visible). Two dice that stop on the same frame
+ * read as one object with two halves; 300 ms apart reads as two dice thrown by a person.
+ *
+ * **Exported, because the sweep's schedule is derived from them rather than from a second clock.**
+ * §0c's binding (3) on the slot machine is that the light and the dice stop within 120 ms of each
+ * other; the only way to promise that is for one number to feed both. `SEQUENCE_MS` is the longer
+ * throw — the moment the composed image is still.
+ */
+export const SEQUENCE_MS = Math.max(...THROW.map((t) => t.ms))
+
+/**
+ * The deceleration curve, and it is the whole of amendment A.
+ *
+ * `cubic-bezier(.12, .72, .18, 1)` — steep out of the throw, long tail into the face. **One finite
+ * motion, no re-target**: the keyframe is `whole turns + the face's own angle`, so the last turn
+ * settles square-on onto `SHOW[value]` because the arithmetic lands there, not because anything
+ * snaps at the end.
+ *
+ * **What this replaces, and why the replacement is simpler rather than richer.** The build before
+ * it was three animations in a chain — a 1.05 s tween that stopped 34° short, a spring that rocked
+ * over the face, and a third spring that gave the clearance back. It met every honesty constraint
+ * and the owner still called it 突兀: three motions, each ending, is not a die coming to rest. The
+ * rock existed to make a spring settle look like a die settling; a long ease-out does not need one.
+ */
+const DECELERATE = [0.12, 0.72, 0.18, 1] as const
+
+/** Where in the motion the die gives back its clearance — the last 28%, once it is turning slowly
+ *  enough that growing does not read as a lurch, and late enough that the two cubes are past each
+ *  other. **The clearance itself is unchanged**: the separation is spent while they are wide and
+ *  returned before the landing, which is what keeps `design.md`'s gap exact in the landed frame. */
+const GIVE_BACK_AT = 0.72
+
 
 /** How far below its resting place, and how much smaller, the die **sits while it spins**. **This
  *  is the clearance D109's camera used to provide** — a cube presents its body diagonal while it
@@ -231,61 +259,40 @@ export default function Die(
     const beat = () => { if (beating && alive) { onProgress?.(); requestAnimationFrame(beat) } }
     requestAnimationFrame(beat)
     void (async () => {
-      // **Rotation only — the die spins where it stands.** Since the in-place ruling the tween
-      // carries no `x`, `y` or `scale`: the cube is already lifted, already held apart and already
-      // small, placed there by `initial` before the first paint. It spins about its own centre and
-      // nothing translates until the settle gives the three offsets back.
+      // **ONE finite motion, fast then slow, ending square-on** — §0c amendment A.
       //
-      // **The clearance did not go with the travel.** D109's camera used to provide the headroom
-      // with a dolly; retracting the camera took it, and the first spring build ran the dice
-      // straight off the top of the window — measured, not guessed. `FLY_Y` and `FLY_SCALE` are
-      // still what keeps the body diagonal on screen; they are simply held for the whole spin now
-      // instead of being arrived at.
+      // The rotation keyframes are `whole turns + the face's own angle`, so the die arrives at
+      // `SHOW[value]` because that is where the arithmetic ends. Nothing snaps, nothing re-targets,
+      // and there is no second animation in flight when the sequence claims to be over — which is
+      // what the three-stage chain before it could never quite promise.
       //
-      // A tween and not a spring: a spring's settling time does not depend on how far it travels,
-      // so three whole turns on a spring stiff enough to feel crisp is a blur, and one loose enough
-      // to read overshoots by a quarter-turn.
+      // **A tween and not a spring, and the reason is unchanged:** a spring's settling time does
+      // not depend on how far it travels, so three whole turns on a spring stiff enough to feel
+      // crisp is a blur, and one loose enough to read overshoots by a quarter-turn. The curve does
+      // the slowing.
+      //
+      // **The clearance is given back inside the same motion, not after it.** `x`, `y` and `scale`
+      // hold their thrown values until `GIVE_BACK_AT` and then arrive — one call, so there is still
+      // exactly one animation on this element from the first frame to the last. The earlier build
+      // ran the arrival as its own spring and measured 27.7 px of cube-on-cube intersection when it
+      // overlapped the rock; here the die is turning slowly and is already nearly square-on by the
+      // time it grows.
+      const hold = { duration: t.ms / 1000, ease: DECELERATE, times: [0, GIVE_BACK_AT, 1] }
       await animate(
         scope.current,
-        { rotateX: [0, TX - ROCK_X], rotateY: [0, TY - ROCK_Y], rotateZ: [0, t.turnz] },
-        { duration: 1.05, ease: [0.16, 0.62, 0.3, 1] },
+        {
+          rotateX: [0, TX], rotateY: [0, TY], rotateZ: [0, t.turnz],
+          x: [t.hold, t.hold, 0],
+          y: [FLY_Y, FLY_Y, 0],
+          scale: [FLY_SCALE, FLY_SCALE, 1],
+        },
+        {
+          duration: t.ms / 1000,
+          ease: DECELERATE,
+          x: hold, y: hold, scale: hold,
+        },
       )
       if (!alive) return
-      // **The rock, then the arrival — sequential, and the order is the collision fix.**
-      // While the die rocks it is still at `FLY_SCALE` and still held apart, so a cube 34° off its
-      // face cannot reach its neighbour. It arrives at full size only once it is square-on and
-      // narrow. The earlier build ran both together and measured 27.7 px of intersection.
-      await animate(
-        scope.current,
-        { rotateX: TX, rotateY: TY },
-        { type: 'spring', stiffness: 260, damping: 18, mass: 1 },
-      )
-      if (!alive) return
-      // **Critically damped, and the last thing to move.** D111's hold begins when the dice have
-      // stopped, so what ends the sequence has to end when it says it does.
-      //
-      // Measured on the version this replaces, where the body sprang slowly UNDERNEATH the rock:
-      // `animate().finished` resolved at 1653 ms and the element's own matrix was still translating
-      // — **2.03 px, not a sub-pixel tail** — until 1962 ms. A zero-duration snap afterwards did
-      // not stop it; the running spring simply won. So the fix is not a stronger terminator, it is
-      // **not having a long slow animation still in flight when the sequence claims to be over.**
-      await animate(
-        scope.current,
-        { x: 0, y: 0, scale: 1 },
-        { type: 'spring', stiffness: 260, damping: 34, mass: 1, restDelta: 0.25, restSpeed: 2 },
-      )
-      if (!alive) return
-      // **The stop is OBSERVED, not inferred from the promise, and that is the whole of D111's
-      // first clause working.** Measured across four builds: `animate().finished` resolves
-      // **290–350 ms before this element's own matrix stops changing**, and the residual is a ~2 px
-      // translation — small, but not the sub-pixel tail it first looked like. Two rest thresholds
-      // shortened it; a zero-duration snap was simply out-run by the animation still in flight;
-      // re-sequencing so the last spring is short and critically damped did not close it either.
-      //
-      // So the sequence stops guessing. It watches the element until its computed transform has
-      // been identical for three consecutive frames, and only then reports. **The hold that follows
-      // is then a hold after a real stop rather than after a promise about one** — and the same
-      // frames a person sees are the ones the rule is measured on.
       const stillAt = await stillness(scope.current)
       beating = false
       if (alive) onLanded?.(stillAt)

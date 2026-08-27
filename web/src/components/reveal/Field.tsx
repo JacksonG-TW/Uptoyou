@@ -38,22 +38,69 @@ const DRIFT = [
   { d: 7.4, delay: -2.6, x: [0, -6, 0], y: [0, 8, 0] },
 ]
 
-/** The two printed faces: which corner each bleeds off, and its fixed angle. **Fixed, never
- *  random** — a ground that lands differently on every load reads as a glitch, and this one is a
- *  record of a result rather than an effect. */
-const POSTER = [
-  { className: 'posterA', rotate: -5 },
-  { className: 'posterB', rotate: 4 },
-]
+/**
+ * **The ground's six tilted dice** — §0c amendment D, owner 2026-08-27: 「綠底＋不同角度的立體骰子，
+ * 我認為很棒，可以按照你說的四色」. Replaces the two flat poster faces.
+ *
+ * Positions, sizes and angles are `design-proposals/reveal-ground.html` §五's, which is the page
+ * the ruling was made from. `x`/`y` are percentages of the stage, `s` is the cube's edge as a
+ * percentage of the stage's width, `r` is the flat rotation of the whole cube's box, `rx`/`ry` the
+ * 3-D turn of the cube inside it. **Fixed, never random** — a ground that lands differently on
+ * every load reads as a glitch, and this one is a record of a result.
+ */
+const GROUND = [
+  { x: -6, y: -20, s: 19, r: -8,  rx: -22, ry: 28 },
+  { x: 82, y: -12, s: 17, r: 11,  rx: 18,  ry: -30 },
+  { x: 48, y: 62,  s: 11, r: -14, rx: -26, ry: 22 },
+  { x: -4, y: 66,  s: 14, r: 5,   rx: 16,  ry: 34 },
+  { x: 86, y: 54,  s: 15, r: -4,  rx: -20, ry: -24 },
+  { x: 66, y: 84,  s: 9,  r: 16,  rx: 24,  ry: 18 },
+] as const
 
-function PosterFace({ value, className, rotate }: { value: number; className: string; rotate: number }) {
+/** The face opposite each value — a real die's pairs sum to seven. Used to REFUSE a side, never to
+ *  pick one: a cube showing 3 and 4 at once is not a die, and a ground made of impossible dice is
+ *  decoration pretending to be evidence. */
+const OPPOSITE: Record<number, number> = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 }
+
+/** The two sides a cube may show beside `value`: any neighbour, never the opposite face. The mock's
+ *  own derivation, kept rather than re-invented so the built ground and the ruled page agree. */
+function neighbours(value: number): [number, number] {
+  const a = (value % 6) + 1
+  const b = OPPOSITE[a] === value ? ((value + 1) % 6) + 1 : ((value + 2) % 6) + 1
+  return [a, b]
+}
+
+function Pips({ value }: { value: number }) {
   return (
-    <span className={`poster ${className}`} style={{ transform: `rotate(${rotate}deg)` }}>
+    <>
       {Array.from({ length: 9 }, (_, i) => i + 1).map((cell) => (
-        <span key={cell} className="posterCell">
-          {PIPS[value]?.includes(cell) && <i className="posterPip" />}
-        </span>
+        <i key={cell} className={PIPS[value]?.includes(cell) ? 'p' : undefined} />
       ))}
+    </>
+  )
+}
+
+function GroundCube({ value, at }: { value: number; at: (typeof GROUND)[number] }) {
+  const [side, top] = neighbours(value)
+  return (
+    <span
+      className="cube3"
+      style={{
+        left: `${at.x}%`, top: `${at.y}%`,
+        width: `${at.s}%`, aspectRatio: '1',
+        transform: `rotate(${at.r}deg)`,
+        // **The half-depth is a percentage of the cube's own width**, so the six faces close at
+        // every size without a second number per cube. `--half` is what the stylesheet's
+        // `translateZ` reads; typing a pixel depth here is how a cube comes apart when the stage
+        // is scaled (`--k`).
+        ['--half' as string]: '50cqw',
+      }}
+    >
+      <span className="c" style={{ transform: `rotateX(${at.rx}deg) rotateY(${at.ry}deg)` }}>
+        <span className="f front"><Pips value={value} /></span>
+        <span className="f right"><Pips value={side} /></span>
+        <span className="f top"><Pips value={top} /></span>
+      </span>
     </span>
   )
 }
@@ -84,11 +131,16 @@ export default function Field({ dice, staged }: { dice?: readonly number[]; stag
       {!staged && <span className="tableBand" />}
       {/* **Gated on `staged` AND on the values existing.** Two conditions rather than one: `staged`
           is the screen's own state and `dice` is what the server stored, and a ground drawn from a
-          state without a value is exactly the ground that could answer first. */}
+          state without a value is exactly the ground that could answer first (`RV-16`).
+
+          **Six cubes, and each front face is one of this round's two stored values — three each.**
+          Rejected in the ruling: all six values, which would have the ground assert numbers that
+          were never rolled. The two visible sides are real neighbours of the front, so every cube
+          on the page is a die that could exist. */}
       {staged && dice && dice.length >= 2 && (
-        <span className="posters">
-          {POSTER.map((p, i) => (
-            <PosterFace key={p.className} value={dice[i]} className={p.className} rotate={p.rotate} />
+        <span className="posters" data-part="ground-dice">
+          {GROUND.map((at, i) => (
+            <GroundCube key={`${at.x}-${at.y}`} value={dice[i % 2]} at={at} />
           ))}
         </span>
       )}

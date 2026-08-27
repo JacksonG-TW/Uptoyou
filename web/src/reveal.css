@@ -118,40 +118,60 @@
   border-top: 1px solid currentColor;
 }
 
-/* ── the printed pair, staged state ────────────────────────────────────────────────────────
-   This round's REAL dice, poster-scale, in a darker step of the flood's own colour. The ground
-   repeats the truth and never invents it: these are the stored values, so nothing appears before
-   landed and `RV-16` is untouched.
+/* ── the ground's six tilted dice, staged state ────────────────────────────────────────────
+   §0c amendment D (owner 2026-08-27). This round's REAL pair, three cubes each, drawn as tilted
+   3-D dice in a darker step of the flood's own colour. The ground repeats the truth and never
+   invents it: these are the stored values, so nothing appears before landed and `RV-16` is
+   untouched, and each cube's two visible sides are real neighbours of its front face — never the
+   opposite one, because a die showing 3 and 4 at once is not a die.
 
    **Under the text layer, always.** `.field` is `z-index: 0` and every sibling is 1, so copy is the
-   brightest thing on the screen by construction rather than by tuning an opacity. */
+   brightest thing on the screen by construction rather than by tuning an opacity.
+
+   **`container-type: inline-size` on the cube is what makes `50cqw` mean *half of this cube*.** The
+   half-depth has to be half of the cube's own edge or the six faces do not close, and the edge is a
+   percentage of the stage — so a pixel written here would come apart the moment `--k` scales the
+   stage. One rule, every size. */
 .reveal .posters { position: absolute; inset: 0; }
-.reveal .poster {
+.reveal .cube3 {
   position: absolute;
-  inline-size: 340px; block-size: 340px;
-  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-  padding: 26px;
-  box-sizing: border-box;
-  /* **4px so a face reads as a face.** Cropped bare dots read as blobs — the rubric's named slop —
-     and the border is what carries the shape while the tile bleeds off the edge. */
-  border: 4px solid var(--flood-deep, currentColor);
+  container-type: inline-size;
+  perspective: 1400px;
   color: var(--flood-deep, currentColor);
 }
-/* Bleeding off OPPOSITE edges, so the two read as one printed sheet rather than as a pair of
-   stickers placed on it. */
-.reveal .posterA { left: -84px; bottom: -96px; }
-.reveal .posterB { right: -104px; top: -86px; }
-.reveal .posterCell { display: grid; place-items: center; }
-.reveal .posterPip {
-  inline-size: 54px; block-size: 54px; border-radius: 50%;
-  background: currentColor;
+.reveal .cube3 .c {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
 }
+.reveal .cube3 .f {
+  position: absolute; inset: 0;
+  display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 5%; padding: 10%;
+  box-sizing: border-box;
+  /* **3px so a face reads as a face.** Cropped bare dots read as blobs — the rubric's named slop —
+     and the border is what carries the shape at the sizes the small cubes run to. */
+  border: 3px solid currentColor;
+  background: var(--flood, transparent);
+  backface-visibility: hidden;
+}
+.reveal .cube3 .f i { display: block; }
+.reveal .cube3 .f i.p { background: currentColor; border-radius: 50%; }
+.reveal .cube3 .f.front { transform: translateZ(var(--half)); }
+/* The two sides sit back at .6, so the front face is unambiguously the value the cube states. */
+.reveal .cube3 .f.right { transform: rotateY(90deg) translateZ(var(--half)); opacity: .6; }
+.reveal .cube3 .f.top   { transform: rotateX(90deg) translateZ(var(--half)); opacity: .6; }
 
 /* Every flood face names its own deep step; one recipe, four colours, no per-colour design. */
-.reveal[data-face="hot"]    { --flood-deep: var(--color-flood-hot-deep); }
-.reveal[data-face="cobalt"] { --flood-deep: var(--color-flood-cobalt-deep); }
-.reveal[data-face="jade"]   { --flood-deep: var(--color-flood-jade-deep); }
-.reveal[data-face="sun"]    { --flood-deep: var(--color-flood-sun-deep); }
+/* **`--flood` beside `--flood-deep`, one line each.** The ground's cube faces have to be painted
+   the flood's own colour rather than left transparent: a transparent face lets the halftone show
+   through the cube, and a cube you can see the paper through is not an object sitting on it. The
+   `background` above sets the page; this names the same colour for anything that has to repaint
+   it. Four colours, one recipe, no per-colour design — and the ground follows the winner's face,
+   never a fixed jade. */
+.reveal[data-face="hot"]    { --flood: var(--color-flood-hot);    --flood-deep: var(--color-flood-hot-deep); }
+.reveal[data-face="cobalt"] { --flood: var(--color-flood-cobalt); --flood-deep: var(--color-flood-cobalt-deep); }
+.reveal[data-face="jade"]   { --flood: var(--color-flood-jade);   --flood-deep: var(--color-flood-jade-deep); }
+.reveal[data-face="sun"]    { --flood: var(--color-flood-sun);    --flood-deep: var(--color-flood-sun-deep); }
 
 /* ── A7 · the die's own space ────────────────────────────────────────────────
    **D109's camera was retracted by the owner on 2026-08-19 (「這些動畫沒有達到我的標準」) and this
@@ -719,8 +739,48 @@
    floor exists so the mechanism is readable, and under staging the mechanism is 300 px — bigger
    than it has ever been — at exactly the moment it is the subject.** What shrinks afterwards is a
    record of a number already read. */
+/* **`--k` is DECLARED, and the declaration is what makes it readable.** An unregistered custom
+   property computes to its token stream, so `getComputedStyle(...).getPropertyValue('--k')` hands
+   back the literal `clamp(...)` text and `parseFloat` returns NaN — which is exactly how the first
+   build of this put the tumbling dice 104 px off centre while every CSS-side length was right.
+   `@property` gives it a type, so it computes to a used length and `Reveal.tsx` can read the stage
+   unit instead of re-deriving the formula in a second place. */
+@property --k {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 1px;
+}
+
 @media (min-width: 1100px) {
-  .reveal { --stage-pad: 104px; --die: 300px; }
+  /* ══ E · the stage scale, owner-ruled 2026-08-27 (1440 擠、2560 散) ══════════
+     **`--k` is one stage unit, and it is a LENGTH rather than a number.** CSS cannot divide a
+     length by a length, so a unitless ratio from `vw`/`vh` is not expressible; dividing by the
+     unitless 1440 and 900 gives px, and every length below is then `calc(N * var(--k))` where N
+     is the number this composition was ruled at. At 1440×900 `--k` is exactly 1px and every box
+     is bit-identical to the build before this — which is what `RV-24` measures at 0 px.
+
+     `min()` of the two axes keeps the 16:10 stage: an ultra-wide window shows paper margins
+     rather than a stretched composition. Clamped 0.85–1.6, so a small laptop does not crush the
+     type and a television does not turn 104 px into a billboard.
+
+     **Not `transform: scale`, and the spec says why:** text would blur and every layout metric —
+     including the ones the gates read — would report the pre-scale box. Scaling the lengths keeps
+     the page a page. */
+  .reveal {
+    --k: clamp(0.85px, min(100vw / 1440, 100vh / 900), 1.6px);
+    --stage-pad: calc(104 * var(--k));
+    --die: calc(300 * var(--k));
+    /* **The type ladder joins the stage, and the numbers are 1440's own computed values.** The
+       global tokens are viewport clamps that grow with `vw` and then cap — so on a 2560 screen the
+       headline scaled and the body text did not, and the composition's proportions drifted, which
+       is the half of 「1440 擠、2560 散」 a die size cannot fix. Re-stating them as `1440's value ×
+       --k` makes the whole stage one object. At k = 1 these ARE the global values to the fourth
+       decimal (21.9764 / 17.9764 / 13.986 — `19.37 + 0.181 × 14.4` and its siblings), so nothing
+       moves at the gated width. */
+    --text-lead: calc(21.9764 * var(--k));
+    --text-body: calc(17.9764 * var(--k));
+    --text-note: calc(13.986 * var(--k));
+  }
 
   /* The canvas. The reveal stops being a column and becomes a composition; everything inside is
      placed against this box rather than stacked. */
@@ -737,7 +797,7 @@
   .reveal .stage {
     position: relative;
     width: 100%; min-height: 100vh; box-sizing: border-box;
-    padding: 238px var(--stage-pad) 72px;
+    padding: calc(238 * var(--k)) var(--stage-pad) calc(72 * var(--k));
   }
 
   /* ── the dice group ───────────────────────────────────────────────────────
@@ -746,18 +806,18 @@
      same 104, and a group that shrank about its centre would sit 190 px to the right of them and
      read as a third column. */
   .reveal .group {
-    position: absolute; left: var(--stage-pad); top: 96px;
+    position: absolute; left: var(--stage-pad); top: calc(96 * var(--k));
     transform-origin: top left;
     z-index: 2;
   }
-  .reveal .dice { gap: 56px; min-height: var(--die); }
+  .reveal .dice { gap: calc(56 * var(--k)); min-height: var(--die); }
 
   /* ── the left column ─────────────────────────────────────────────────────── */
   /* The column's own width stops short of the right column and its gutter, so a long name wraps
      inside the composition rather than running under the list. */
   .reveal .decider { margin: 0; max-width: 62ch; letter-spacing: .16em; opacity: .72; }
   .reveal .answer {
-    margin-top: 40px; max-width: calc(100% - 460px);
+    margin-top: calc(40 * var(--k)); max-width: calc(100% - 460 * var(--k));
     display: block; text-align: left; gap: 0;
   }
   /* **The operator's headline stops short of the operator's column, not the member's.**
@@ -770,16 +830,18 @@
      **Rejected: starting the table right of the answer block.** It moves the evidence for a
      defect in the headline, and the table's left edge is what makes its columns readable against
      the list above it. Narrowing the thing that overflowed is the smaller true statement. */
-  .reveal:has(.evNum) .answer { max-width: calc(100% - min(680px, 46vw) - 60px); }
+  .reveal:has(.evNum) .answer {
+    max-width: calc(100% - min(680 * var(--k), 46vw) - 60 * var(--k));
+  }
   .reveal .winner {
-    font-size: 104px; line-height: 1.06; letter-spacing: -.02em;
+    font-size: calc(104 * var(--k)); line-height: 1.06; letter-spacing: -.02em;
     min-height: 0; padding-block: 0; display: block; text-align: left;
   }
   /* **No `font-size` here.** It carried `20px`, which overrode `--text-lead` (21.98px at 1440)
      with a number nobody could trace back to the ladder — `RV-3`, evaluator 2026-08-26. The
      wide composition changes where the sentence sits and how it aligns; it has no reason to
      change how big it is, and the token is the only thing allowed to answer that. */
-  .reveal .sentence { margin-top: 34px; text-align: left; }
+  .reveal .sentence { margin-top: calc(34 * var(--k)); text-align: left; }
 
   /* ── the right column ─────────────────────────────────────────────────────
      The list sits beside the dice from the first frame, which is what makes the sweep legible as
@@ -789,8 +851,11 @@
      column is as wide as its content needs and no CSS anywhere has to know which credential is
      looking — the same rule `Evidence` follows one level up, where every numeric column is gated
      on the payload rather than on a flag. */
-  .reveal .right { position: absolute; right: var(--stage-pad); top: 96px; width: 400px; z-index: 2; }
-  .reveal .right:has(.evNum) { width: min(680px, 46vw); }
+  .reveal .right {
+    position: absolute; right: var(--stage-pad); top: calc(96 * var(--k));
+    width: calc(400 * var(--k)); z-index: 2;
+  }
+  .reveal .right:has(.evNum) { width: min(680 * var(--k), 46vw); }
 
   /* ══ 甲改 · the centred composition, owner-confirmed 2026-08-26 ═══════════════
      **The complaint the old composition earned: the dice tumbled off to one side of a column
@@ -809,7 +874,7 @@
      **Every state change here is `transform` or `opacity` and nothing else** — `D91`'s zero-shift
      clause binds this sequence, and the boxes are where they are from the first painted frame. */
   .reveal:not(:has(.evNum)) .right {
-    left: 50%; right: auto; margin-left: -200px; top: 520px;
+    left: 50%; right: auto; margin-left: calc(-200 * var(--k)); top: calc(520 * var(--k));
     transition: transform .9s cubic-bezier(.22, 1.1, .36, 1);
   }
   /* **The list rises on the FLOOD's cue, not on the retreat's** — the colour arriving and the list
@@ -822,7 +887,7 @@
        name and put the list through the middle of a three-line one. The fallback is the mock's
        own 380 px, so a browser that never runs the observer gets the composition it was ruled
        from. */
-    transform: translateY(calc(var(--list-top, 380px) - 520px));
+    transform: translateY(calc(var(--list-top, calc(380 * var(--k))) - 520 * var(--k)));
   }
 
   /* The flowing column centres itself. **It stays in FLOW and that is deliberate**: the note on
@@ -837,9 +902,11 @@
      Rejected: narrowing the answer until it clears. It would have to come down to ~600 px, and a
      104 px headline in 600 px turns every branch name into three lines to protect a corner that
      has empty space beside it anyway. */
-  .reveal:not(:has(.evNum)) .stage { padding-top: calc(96px + var(--die) * 0.42 + 48px); }
+  .reveal:not(:has(.evNum)) .stage {
+    padding-top: calc(96 * var(--k) + var(--die) * 0.42 + 48 * var(--k));
+  }
   .reveal:not(:has(.evNum)) .decider {
-    position: absolute; left: 50%; top: 118px; transform: translateX(-50%);
+    position: absolute; left: 50%; top: calc(118 * var(--k)); transform: translateX(-50%);
     max-width: none; text-align: center;
     /* **It is on screen from the first frame and it stays there — `D108`.** The mock fades it in
        at the stage; that is the one thing this line may not do, because naming the deciding seat
@@ -851,13 +918,13 @@
   .reveal:not(:has(.evNum))[data-stage="rolling"] .decider,
   .reveal:not(:has(.evNum))[data-stage="staged"] .decider,
   .reveal:not(:has(.evNum))[data-stage="flooded"] .decider {
-    transform: translateX(-50%) translateY(322px);
+    transform: translateX(-50%) translateY(calc(322 * var(--k)));
   }
   .reveal:not(:has(.evNum)) .answer {
-    margin: 0 auto; max-width: 760px; text-align: center;
+    margin: 0 auto; max-width: calc(760 * var(--k)); text-align: center;
   }
   .reveal:not(:has(.evNum)) .winner { text-align: center; }
-  .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: 26px; }
+  .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: calc(26 * var(--k)); }
   /* The hole the absolute list sits in, reserved from the list's own measured height rather than
      from a number — `--list-h` is set by `Reveal.tsx`; the fallback is one screen's worth of a
      five-place round, so a browser that never runs the observer still gets a readable page. */
@@ -865,7 +932,8 @@
      measured height, and the gutter below. Reserved rather than hoped for — `.under` is in flow and
      the list is not, so nothing else would keep them apart. */
   .reveal:not(:has(.evNum)) .under {
-    margin-top: calc(var(--list-h, 300px) + 168px); max-width: 760px; margin-inline: auto;
+    margin-top: calc(var(--list-h, calc(300 * var(--k))) + 168 * var(--k));
+    max-width: calc(760 * var(--k)); margin-inline: auto;
   }
   .reveal:not(:has(.evNum)) .commit { text-align: center; }
   /* The act is a row inside a centred column, so the ROW has to centre too — `text-align` cannot
@@ -879,7 +947,7 @@
      result the left column has just announced, so putting them under it is where a reader looking
      for them would look — and it fills the hole with evidence that already exists instead of with
      larger type or invented content. */
-  .reveal .under { margin-top: 72px; max-width: calc(100% - 460px); }
+  .reveal .under { margin-top: calc(72 * var(--k)); max-width: calc(100% - 460 * var(--k)); }
   .reveal .pairs { width: 100%; background: none; color: inherit; padding: 0; }
   .reveal .pairs .pairsH { color: inherit; opacity: .6; }
   .reveal .pairRow { border-top-color: color-mix(in oklab, currentColor 26%, transparent); }
@@ -899,4 +967,11 @@
   .reveal .evTable tr[data-sweep="on"] .evPlace {
     background: color-mix(in oklab, currentColor 16%, transparent);
   }
+  /* **C · the light hands over to the weight.** The winner's row stays lit through the stop, the
+     hold and the entrance, and fades out over 600 ms exactly as the bold arrives at ③ — so the row
+     is never unmarked for a frame and never carries both marks for long. The transition is here
+     rather than on the lit rule so it applies to the CLEARING; during the sweep the light steps
+     from row to row in one frame, which is what a slot machine does. */
+  .reveal .evTable .evPlace { transition: background-color .6s ease-out; }
+  .reveal .evTable tr[data-sweep="on"] .evPlace { transition: none; }
 }

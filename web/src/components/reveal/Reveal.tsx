@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import Die from './Die'
+import Die, { SEQUENCE_MS } from './Die'
 import Evidence from './Evidence'
 import Field from './Field'
 import Pairs from './Pairs'
@@ -130,88 +130,87 @@ const WATCHDOG_MS = 2000
  */
 const ROLLING_FALLBACK_X = 288
 
-/** The gutter between the answer block and the places list in the staged column. One number, used
- *  by the measurement below and by `.under`'s reservation in CSS, so the two cannot disagree. */
-const LIST_GUTTER_PX = 72
+/** The gutter between the answer block and the places list in the staged column, **in stage units,
+ *  not pixels** (§0c amendment E). One number, used by the measurement below and by `.under`'s
+ *  reservation in CSS, so the two cannot disagree; multiplied by `--k` at the point of use, so it
+ *  is 72 px at 1440 and grows with everything else. */
+const LIST_GUTTER = 72
 const STAGED = { x: 0, y: 0, scale: 0.42 }
 
-const TARGET_DWELL_MS = 120
+/**
+ * **The slot machine — §0c amendment B, the owner reversing his own 08-19 rule** (「選取條可以減速
+ * 停在贏家上，並且一開始就從最上面的店家開始往下滾動，像拉霸機一樣」).
+ *
+ * The light starts on the FIRST row and runs downward, cyclic, on the dice's own ease-out — fast,
+ * then slowing — and its last and longest step lands on the stored winner and stays there.
+ *
+ * **Why this is not `D91`'s forbidden case.** The outcome is committed at open (`D108`) and stored
+ * before a frame animates, so a light decelerating onto the winner *displays a decided result*.
+ * §0c's old rule was written against a screen where the animation looked like the mechanism; since
+ * the seed commit it visibly is not. The argument is in the spec and was adopted there — it is not
+ * a licence taken here.
+ *
+ * **What still binds, and all three are built rather than hoped for:**
+ *
+ * 1. *The end is the stored result.* The last index is chosen so `steps − 1 ≡ winner (mod n)`. The
+ *    schedule cannot end anywhere else, on any roll.
+ * 2. *The timing may not leak the answer.* `total` is a constant and the curve is normalised over
+ *    the step count, so a winner on row 0 and a winner on row 4 take **exactly the same time**. A
+ *    sweep that stopped sooner for an early row would announce the answer before the light did,
+ *    which is the D91 violation this rule is actually about. The step *count* does differ with the
+ *    winner's row — and that is not a second channel: it is the position of the light itself, which
+ *    a person can already see. What must not differ is the duration, and it does not.
+ * 3. *One clock.* `total` is `SEQUENCE_MS`, the longer of the two throws, imported from `Die` —
+ *    the same number the dice are animated on. Deriving it from `--tumble` (a CSS duration nothing
+ *    animates on any more) or from a typed constant is how the light and the dice drift apart, and
+ *    the gate allows 120 ms between them.
+ *
+ * **The cost, which the owner heard and reaffirmed:** the light now reads as choosing. The seed,
+ * the commitment and the dice remain the truth, and the reveal prints all three.
+ */
+const SWEEP_CYCLES = 3
 
-/** **The floor, and it is the evaluator's instrument that sets it, not taste.** The tumble is
- *  gated from video at ~25 fps, so a frame is 40 ms; a dwell under two frames cannot be told apart
- *  from a dropped frame, and *equal dwell per row* stops being a claim anyone can confirm or
- *  refute. Their floor is 80 ms and this is 90, because a schedule that lands exactly on an
- *  instrument's limit is one rounding away from being unmeasurable. */
-const FLOOR_DWELL_MS = 90
-
-/** The tumble's length, read from `--tumble` on the reveal's own element rather than typed here.
- *  The CSS animation and this schedule must divide the *same* number: a second copy drifting by
- *  even 50 ms truncates the sweep's last cycle, and a truncated cycle is one row visited fewer
- *  times than its neighbours — §0c's unequal dwell, arriving as a rounding error instead of as a
- *  decision. Falls back to the value in `reveal.css` if the property is ever absent. */
-function tumbleMs(el: HTMLElement | null): number {
-  const raw = el ? getComputedStyle(el).getPropertyValue('--tumble').trim() : ''
-  if (raw.endsWith('ms')) return parseFloat(raw) || 1400
-  if (raw.endsWith('s')) return (parseFloat(raw) || 1.4) * 1000
-  return 1400
-}
-
-/** Fisher–Yates, on a copy. Used for decoration and for nothing else — the roll itself was decided
- *  by the server before this file ran, which is the whole of `D91`. */
-function shuffled<T>(xs: readonly T[]): T[] {
-  const a = xs.slice()
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
-  }
-  return a
-}
+/** How much longer the last step is than the first. **8, and it is the deceleration a person
+ *  actually sees**: at five places that is a light stepping every ~50 ms at the throw and every
+ *  ~390 ms as it settles. The gate asks for the last ≥ 2× the first; this is well past it, because
+ *  2× is the floor for *measuring* deceleration and not the point at which it reads as one. */
+const SWEEP_RAMP = 8
 
 /**
- * The sweep's order — **§0c's three constraints, built rather than tuned.**
+ * The whole schedule, as the start time of each step. **Pure and total** — no clock, no DOM, no
+ * randomness — so the gate's questions about it can be answered by reading it rather than by
+ * filming it. Step `i` lights row `i mod n`; the array's length is what makes the last one the
+ * winner.
  *
- * **Equal visits and equal dwell, exactly.** The schedule is whole cycles of a permutation of every
- * row, so each row is visited the same number of times; the dwell is the tumble divided by the step
- * count, so each visit is the same length. Not *approximately* — a schedule that merely aims at
- * equality has to be measured to be believed, and `RV-13` is an honesty line rather than a
- * tolerance.
+ * **The intervals ramp linearly from `d0` to `8 × d0`, and the ramp is what makes the two hard
+ * properties true by construction rather than by tuning:**
  *
- * **The order is uniformly random and the winner is not consulted.** This function is not given the
- * winning place and could not favour it if it tried. **The tempting extra step — forbidding the
- * winner from the final position, so the sweep visibly does not stop on the answer — is refused,
- * and it is worth saying why**: that is also a correlation with the winner, merely negative, and a
- * gate looking for *does the order correlate* would find it just as surely. Zero correlation is a
- * uniform shuffle and nothing else. Landing last on the winner one roll in `n` is what chance looks
- * like, and engineering that away would be the lie the constraint exists to prevent.
+ * - *Monotonic, always.* `d(k) = d0 + k × step` with a positive step is non-decreasing for every
+ *   pool size and every winner. A curve evaluated at `i / steps` is not: it has to be checked.
+ * - *The winner lights at `total`, whatever row it is.* The intervals are made to SUM to `total`,
+ *   so the last step starts exactly when the dice stop — the same instant on every roll. This is
+ *   the leak check, and it is the one thing here that has to be exact: a schedule whose last step
+ *   lands at `ease((steps−1)/steps) × total` finishes sooner when the winner sits high in the list,
+ *   which announces the answer in the timing before the light gets there. **Measured on the first
+ *   build of this, which did exactly that: 3137–3224 ms across six rolls, and the spread tracked
+ *   the winner's row.**
  *
- * The one adjustment: a row is never allowed to appear twice in a row across a cycle boundary,
- * which would read as a single double-length dwell. That is a fact about consecutive positions and
- * carries no information about which row it is.
+ * **A note for whoever compares this to `reveal-o-a2.html`.** The mock's schedule is
+ * `ease(i/steps) × total` with `ease = 1 − (1 − x)^2.6`, and its comment says 「early steps ~90 ms,
+ * last ones ~500 ms」. That function's derivative is *largest at zero*, so it does the opposite: the
+ * mock's light starts slow and ends fast. This build follows the ruling's words — 減速 — and not
+ * the mock's arithmetic. Flagged to the evaluator rather than silently matched.
  */
-function sweepOrder(ids: readonly string[], total: number): string[] | null {
-  if (ids.length < 2) return null
-  // **A pool too large to sweep honestly is not swept, and the surface says so.** One whole cycle
-  // at the floor needs `n × 90 ms`; past about fifteen places that exceeds the tumble, and the
-  // three ways out are all worse than stopping. Going faster makes the dwell unmeasurable — the
-  // effect would still *look* fine, which is the point. Visiting a subset makes the visits
-  // unequal, which is the constraint itself. Stretching the tumble makes the animation's length a
-  // function of the pool size, so a big round takes visibly longer to decide and the reader has
-  // every reason to think the size mattered. **And a strobe across twenty rows in 1.4 s does not
-  // read as choosing anyway** — it reads as noise, so the honest option is also the better-looking
-  // one, which is not always how this goes.
-  if (ids.length * FLOOR_DWELL_MS > total) return null
-  const fits = Math.floor(total / (FLOOR_DWELL_MS * ids.length))
-  const wanted = Math.round(total / (TARGET_DWELL_MS * ids.length))
-  const cycles = Math.max(1, Math.min(wanted, fits))
-  const order: string[] = []
-  for (let c = 0; c < cycles; c++) {
-    const next = shuffled(ids)
-    if (order.length > 0 && next[0] === order[order.length - 1]) {
-      ;[next[0], next[1]] = [next[1], next[0]]
-    }
-    order.push(...next)
-  }
-  return order
+function slotSchedule(n: number, winnerIndex: number, total: number): number[] | null {
+  if (n < 2 || winnerIndex < 0 || winnerIndex >= n) return null
+  const steps = SWEEP_CYCLES * n + winnerIndex + 1
+  const gaps = steps - 1
+  // sum of a linear ramp d0 … R·d0 over `gaps` terms = gaps × d0 × (1 + R) / 2
+  const d0 = (2 * total) / (gaps * (1 + SWEEP_RAMP))
+  const grow = gaps > 1 ? (SWEEP_RAMP - 1) * d0 / (gaps - 1) : 0
+  const times = [0]
+  for (let k = 0; k < gaps; k++) times.push(times[k] + d0 + k * grow)
+  return times
 }
 
 export default function Reveal({ roundId }: { roundId: number }) {
@@ -255,7 +254,12 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const [answered, setAnswered] = useState(false)
   /** Why the sweep did not run, when it did not. Published on the element for the same reason
    *  `landedBy` is: an absent effect and a broken effect look identical in a recording. */
-  const [skipped, setSkipped] = useState<'one-row' | 'too-many-rows' | null>(null)
+  /** **`too-many-rows` is gone with the equal-dwell rule it belonged to.** The slot machine's
+   *  schedule is normalised over its own step count, so a large pool makes the steps shorter
+   *  rather than making the schedule impossible; there is no cap left to hit. `no-winner` replaces
+   *  it: a payload whose winner is not in its own places list is a broken payload, and a sweep that
+   *  quietly ran anyway would end on a row chosen by an accident. */
+  const [skipped, setSkipped] = useState<'one-row' | 'no-winner' | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const root = useRef<HTMLElement | null>(null)
   const group = useRef<HTMLDivElement | null>(null)
@@ -332,71 +336,70 @@ export default function Reveal({ roundId }: { roundId: number }) {
   }, [dev, roundId])
 
   /**
-   * The sweep. **It starts with the tumble and it runs until the dice actually land** — not until
-   * `--tumble` elapses, which is a different moment and was the defect (`RV-13`, evaluator
-   * 2026-08-26, measured on 11/11 rolls).
+   * The sweep — the slot machine. See `slotSchedule` above for the rule and for why it is allowed
+   * to stop on the answer.
    *
-   * **The two clocks, and why the schedule could not have been right.** `--tumble` is a CSS
-   * duration, 1400 ms; the dice land when `motion`'s spring resolves, ~2.5–2.7 s from load. The
-   * schedule was built to fill `--tumble` exactly and then stopped, leaving the last row it
-   * happened to be on lit for the remaining 1.0–1.4 s — one row dwelling four to five times longer
-   * than every other, which is §0c's equal-dwell constraint failing by construction rather than by
-   * tuning. The comment here used to say 「the last step ends as the dice stop」; it was describing
-   * an intention, and the instrument found that no run had ever done it.
+   * **`rAF`, not `setInterval`.** The steps are 60 ms apart at the start and ~500 ms at the end, so
+   * a fixed interval cannot express them; and the gate measures the last step against the dice's
+   * stillness to 120 ms, which a timer chain's accumulated drift would spend on its own.
    *
-   * **The fix is to keep stepping.** When the schedule runs out it is extended by another whole
-   * shuffled cycle at the same dwell, so every visit is the same length whenever the spring
-   * happens to resolve. `--tumble` stops being the sweep's length and becomes only what sets the
-   * dwell, which is the one thing it was ever measuring.
-   *
-   * **Its cost, stated rather than hidden: the final cycle is cut off wherever landing falls, so
-   * across a whole roll some rows are visited once more than others (±1).** Equal *visits* is
-   * therefore approximate now where it used to be exact. That is the right trade and not merely
-   * the convenient one: the truncation point is set by a spring that has never seen the pool, so
-   * the extra visit carries no information about which row wins — the honesty constraint is about
-   * correlation with the winner, and there is none. Equal *dwell*, which is what a person can
-   * actually see and what `RV-13` measures, is now exact instead of broken.
-   *
-   * **Rejected: clearing the highlight when the schedule ends.** It also fixes the dwell, and it is
-   * one line. But it leaves 1.0–1.4 s of tumbling dice beside a dead list — the sweep would stop
-   * before the mechanism it is supposed to be in sync with, and 「in sync」 is the other half of the
-   * same constraint. A fix that trades one half of a rule for the other is not a fix.
-   *
-   * **A row lit at the moment of landing would be the animation pointing at an answer**, which is
-   * the one thing §0c forbids however random the order was that got it there. So `landed` clears it
-   * unconditionally, before anything else is read — and that is what ends the sweep now.
+   * **It does not stop at `landed`, and that is amendment C.** The winner's light is held through
+   * the stop, through the 1000 ms hold and through the entrance, and hands over to the row's bold
+   * weight at ③ — cleared by the effect below, not by this one. `landed` is no longer in this
+   * effect's dependencies at all: re-running it on the landing is what used to blank the row.
    */
   useEffect(() => {
-    if (!data || landed) { setSweep(null); return }
+    if (!data) { setSweep(null); return }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const ids = Object.keys(data.places)
-    const total = tumbleMs(root.current)
-    const order = sweepOrder(ids, total)
+    const winnerIndex = ids.indexOf(String(data.winning_place_id))
+    const times = slotSchedule(ids.length, winnerIndex, SEQUENCE_MS)
     // **Never a silent cap.** A recording with no sweep in it should say which of the two it is —
     // an effect that was skipped by rule, or an effect that was built and does not work.
-    if (!order) { setSkipped(ids.length < 2 ? 'one-row' : 'too-many-rows'); return }
+    if (!times) { setSkipped(ids.length < 2 ? 'one-row' : 'no-winner'); return }
     setSkipped(null)
-    // The dwell is still `--tumble` divided by one schedule's worth of steps: the token sets how
-    // fast the sweep moves, and nothing else reads it. The length is set by `landed`.
-    const dwell = total / order.length
+    let t0: number | null = null
     let i = 0
-    setSweep(order[0])
-    const h = window.setInterval(() => {
-      i += 1
-      // Out of schedule and the dice are still going: extend by another whole cycle rather than
-      // stop. Same boundary rule as `sweepOrder`'s — a row may not open a cycle it just closed,
-      // which would read as one double-length dwell and undo what this effect is here to fix.
-      if (i >= order.length) {
-        const next = shuffled(ids)
-        if (next[0] === order[order.length - 1]) {
-          ;[next[0], next[1]] = [next[1], next[0]]
-        }
-        order.push(...next)
+    let raf = 0
+    const tick = (now: number) => {
+      // **`t0` is the first animation frame, not the moment the effect ran.** The effect runs
+      // inside the render that the round's close triggered, and the first frame after it can be
+      // 100 ms later — a schedule started from `performance.now()` is already four steps behind
+      // when it gets its first frame.
+      if (t0 === null) t0 = now
+      const t = now - t0
+      // **One step per frame, and never a catch-up loop.** The loop this replaces advanced `i`
+      // while it was behind, so a late first frame made the light jump straight to row 3 — rows
+      // 0,1,2 were set in the same React batch and only the last of them ever rendered. Measured:
+      // 3–4 of the opening steps never appeared, on every roll. §0c's binding is that the light
+      // starts on the first row and visits them **in order**; a dropped row breaks the visible
+      // rule, where a stalled frame merely delays the light — so if the machine is too busy to
+      // keep up, the sweep runs late rather than incomplete, and the gate's 120 ms to the dice
+      // will say so honestly.
+      if (i < times.length && t >= times[i]) {
+        setSweep(ids[i % ids.length])
+        i += 1
       }
-      setSweep(order[i])
-    }, dwell)
-    return () => window.clearInterval(h)
-  }, [data, landed])
+      // The loop ends with the last row lit. Nothing clears it here.
+      if (i < times.length) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [data])
+
+  /**
+   * **C · the light hands over to the weight.** The winner's row stays lit from the stop until the
+   * answer arrives, then fades as the bold does — the same moment, so the row is never unmarked
+   * for a frame and never doubly marked for long. Cleared at `ANSWER_AFTER_STAGED_MS`; the 600 ms
+   * fade is the stylesheet's, on the row's own background.
+   *
+   * Owner's words: 「選取條可以在結果揭示時顯示久一點」 — about 2.4 s lit after the dice stop.
+   */
+  useEffect(() => {
+    if (!staged) return
+    const h = window.setTimeout(() => setSweep(null), ANSWER_AFTER_STAGED_MS)
+    return () => window.clearTimeout(h)
+  }, [staged])
 
   /**
    * **The two measured numbers of the composition** (甲改), both read from the real boxes rather
@@ -416,7 +419,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
       const r = root.current
       if (!r) return
       if (group.current) {
-        const pad = parseFloat(getComputedStyle(r).getPropertyValue('--stage-pad')) || 0
+        // **The pad is read off the element, not out of the custom property.** `--stage-pad` is a
+        // `calc()` on `--k` and computes to its token stream unless it is declared; the group's own
+        // used `left` is the same number and cannot be anything else.
+        const pad = parseFloat(getComputedStyle(group.current).left) || 0
         // `offsetWidth` is the untransformed box, which is what centring is about — reading the
         // rect would fold in whatever the retreat spring is doing at that instant.
         const w = group.current.offsetWidth
@@ -432,6 +438,9 @@ export default function Reveal({ roundId }: { roundId: number }) {
       // and the flat number puts the list straight through the middle of it. So the column's
       // order is kept by DERIVING the position: the list starts a gutter below whatever the
       // headline actually needed. A long name pushes it down the page rather than into the text.
+      // `--k` is one stage unit as a length — see `reveal.css`'s E block. Everything measured here
+      // is already in real pixels; only the numbers this file *types* have to be multiplied.
+      const k = parseFloat(getComputedStyle(r).getPropertyValue('--k')) || 1
       if (answerBox.current) {
         // **`offsetTop`/`offsetHeight`, never the rect.** The answer sits 26 px low under its own
         // entrance transform until ③, and a rect folds that in — the list would be placed against
@@ -439,7 +448,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
         // right). The offset pair is the untransformed box, measured against `.stage`, which is
         // this element's offset parent.
         const top = Math.round(
-          answerBox.current.offsetTop + answerBox.current.offsetHeight + LIST_GUTTER_PX,
+          answerBox.current.offsetTop + answerBox.current.offsetHeight + LIST_GUTTER * k,
         )
         r.style.setProperty('--list-top', `${top}px`)
       }
