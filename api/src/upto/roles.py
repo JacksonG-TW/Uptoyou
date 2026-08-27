@@ -175,11 +175,26 @@ _PASSWORD_VARS = {
 
 
 def ensure() -> int:
-    """Create or re-password the four login roles. Run as the owner, before the grants."""
+    """Create or re-password the four login roles. Run as the owner, before the grants.
+
+    **asyncpg, not psycopg2, and not because it is tidier.** H1 rules the synchronous driver out of
+    this codebase entirely, and the api image carries only `asyncpg` — the first version of this
+    function used `psycopg2` (copied from `init.sh`, where the *Airflow* image happens to have it)
+    and `split_boot_check.sh` failed a second time with `ModuleNotFoundError` inside `migrate`. Two
+    fresh-clone failures from one ruling, both invisible on a machine where the work had already
+    been done by hand.
+
+    **The password is quoted by the server, not by us.** PostgreSQL does not accept bind parameters
+    in `CREATE ROLE` — it is a utility statement, so a real prepared statement fails, which is why
+    the psycopg2 version appeared to work (that driver interpolates client-side). `quote_literal`
+    is Postgres's own escaping, asked of the server and pasted back; the role names are this
+    module's own constants and never come from outside.
+    """
+    import asyncio
     import os
     import sys
 
-    import psycopg2
+    import asyncpg
 
     from .db import DATABASE_URL_VAR
 
@@ -187,29 +202,42 @@ def ensure() -> int:
     if not url:
         print("roles: {} is not set".format(DATABASE_URL_VAR), file=sys.stderr)
         return 1
-    # psycopg2 speaks libpq; the app's URL carries SQLAlchemy's async driver suffix.
-    connection = psycopg2.connect(url.replace("+asyncpg", ""))
-    connection.autocommit = True
-    with connection.cursor() as cursor:
-        for name, variable in _PASSWORD_VARS.items():
-            password = os.environ.get(variable)
-            if not password:
-                print(
-                    "roles: no password for {} in {}. Every name in .env.example must carry a "
-                    "value — a role without one cannot log in, and revision 0032 would grant to "
-                    "an identity nobody can use.".format(name, variable),
-                    file=sys.stderr,
+
+    async def run() -> int:
+        # asyncpg speaks libpq's URL; SQLAlchemy's driver suffix is not part of it.
+        connection = await asyncpg.connect(url.replace("+asyncpg", ""))
+        try:
+            for name, variable in _PASSWORD_VARS.items():
+                password = os.environ.get(variable)
+                if not password:
+                    print(
+                        "roles: no password for {} in {}. Every name in .env.example must carry a "
+                        "value — a role without one cannot log in, and revision 0032 would grant "
+                        "to an identity nobody can use.".format(name, variable),
+                        file=sys.stderr,
+                    )
+                    return 1
+                quoted = await connection.fetchval("select quote_literal($1)", password)
+                exists = await connection.fetchval(
+                    "select 1 from pg_roles where rolname = $1", name
                 )
-                return 1
-            cursor.execute("select 1 from pg_roles where rolname = %s", (name,))
-            if cursor.fetchone() is None:
-                cursor.execute('create role "{}" with login password %s'.format(name), (password,))
-                print("roles: created {}".format(name))
-            else:
-                cursor.execute('alter role "{}" with login password %s'.format(name), (password,))
-                print("roles: {} already existed — password set from the environment".format(name))
-    connection.close()
-    return 0
+                verb = "alter" if exists else "create"
+                await connection.execute(
+                    '{} role "{}" with login password {}'.format(verb, name, quoted)
+                )
+                print(
+                    "roles: {} {}".format(
+                        name,
+                        "already existed — password set from the environment"
+                        if exists
+                        else "created",
+                    )
+                )
+            return 0
+        finally:
+            await connection.close()
+
+    return asyncio.run(run())
 
 
 if __name__ == "__main__":
