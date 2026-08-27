@@ -278,6 +278,14 @@ async def handle(message: Dict[str, Any]) -> Dict[str, Any] | None:
             return _error(request_id, INVALID_PARAMS, "no tool named {!r}".format(name))
         try:
             payload = await _call(name, params.get("arguments") or {})
+            # **Serialization belongs inside the `try`, and it was not until 2026-08-27.**
+            # `_tool_text` calls `json.dumps`, so a payload carrying a value it cannot encode raised
+            # *past* this handler: the process printed a traceback and sent **no reply at all** for
+            # that id, and a client waiting on it simply hangs. That is strictly worse than an
+            # error — a caller can read an error and say what broke. The `except Exception` below
+            # already claimed the transport survives one bad call; this line is what makes the claim
+            # true. Found by an un-`isoformat`ed datetime in `explain_round`'s new baseline row.
+            text_payload = _tool_text(payload)
         except queries.LineageRefused as refused:
             # A refusal is an answer, not a transport failure. `isError` marks it so a model
             # does not read it as data, and the message says why rather than "not permitted".
@@ -291,7 +299,7 @@ async def handle(message: Dict[str, Any]) -> Dict[str, Any] | None:
             return _error(request_id, INVALID_PARAMS, str(bad))
         except Exception as failure:  # noqa: BLE001 — the transport must survive one bad call
             return _error(request_id, INTERNAL_ERROR, "{}: {}".format(type(failure).__name__, failure))
-        return _result(request_id, _tool_text(payload))
+        return _result(request_id, text_payload)
 
     return _error(request_id, METHOD_NOT_FOUND, "unsupported method {!r}".format(method))
 

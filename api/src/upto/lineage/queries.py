@@ -566,9 +566,15 @@ async def explain_round(session, round_id: int) -> Answer:
             "rain_baseline_township": baseline["township_code"],
             "rain_baseline_probability": baseline["probability"],
             "rain_baseline_publication_id": baseline["publication_id"],
-            "rain_baseline_slot_start": baseline["slot_start"],
+            # **`.isoformat()`, like every other timestamp in this module.** Shipped without it on
+            # 2026-08-27 and `explain_round` died on `json.dumps` for every round holding a
+            # baseline — the evaluator found it within the hour. The convention is explicit at each
+            # site rather than a serializer default, so a missed one is a crash and not a silently
+            # different format; this is what that costs when it is missed.
+            "rain_baseline_slot_start": baseline["slot_start"].isoformat(),
             "rain_baseline_measure": baseline["measure"],
-            "rain_baseline_publication_detected_at": baseline["publication_detected_at"],
+            "rain_baseline_publication_detected_at":
+                baseline["publication_detected_at"].isoformat(),
             # **The factors themselves are deliberately not read here, and the boundary said so
             # first.** Reporting them meant selecting from `weight_contribution`, and both of this
             # module's structural guards fired: the table is outside `READABLE_TABLES` and the word

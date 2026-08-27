@@ -311,5 +311,47 @@ class TheRainBaselineIsNameable(unittest.TestCase):
         ))
 
 
+class OneBadCallNeverCostsTheReply(unittest.TestCase):
+    """A tool whose answer cannot be encoded must come back as an ERROR, never as silence.
+
+    **Measured, not imagined (2026-08-27).** `explain_round`'s new baseline row carried a raw
+    `datetime`; `_tool_text` calls `json.dumps`, and that call sat *outside* the handler that claims
+    "the transport must survive one bad call". So the process printed a traceback and sent **no
+    reply at all** for that request id — the evaluator's client had nothing to read and simply
+    waited. An error a caller can read is strictly better than silence, and this is the test that
+    keeps the claim honest.
+    """
+
+    def dispatch(self, payload):
+        original = server._call
+
+        async def stub(name, arguments):
+            return payload
+
+        server._call = stub
+        try:
+            return asyncio.run(server.handle({
+                "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+                "params": {"name": "run_history", "arguments": {}},
+            }))
+        finally:
+            server._call = original
+
+    def test_an_unencodable_answer_becomes_an_error_with_its_id(self):
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        reply = self.dispatch({"rows": [{"when": datetime(2026, 8, 27, tzinfo=timezone.utc)}]})
+        self.assertIsNotNone(reply, "no reply is the failure this test exists for")
+        self.assertEqual(reply["id"], 7)
+        self.assertEqual(reply["error"]["code"], server.INTERNAL_ERROR)
+        self.assertIn("TypeError", reply["error"]["message"])
+
+    def test_an_encodable_answer_still_comes_back_as_a_result(self):
+        """The guard must not turn every answer into an error — the boring half, asserted."""
+        reply = self.dispatch({"rows": [{"when": "2026-08-27T00:00:00+00:00"}]})
+        self.assertIn("result", reply)
+        self.assertNotIn("error", reply)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
