@@ -169,14 +169,30 @@ async def scenario(test_url: str) -> None:
         await session.commit()
 
     # The load: exactly one record, on the rainy place, pinned to the 80% reading.
+    #
+    # **A12 / D71 as reopened 2026-08-27 — the numbers here are relative now.** 80% over 松山 and
+    # 30% over 信義: the pool's lowest is 30, so 松山's gap is 50 and its factor is
+    # `1 − 50/120 = 0.583`. 信義 IS the minimum, so it gets **no record at all** (D43) — which is
+    # why one record is still the right count, for a different reason than before. Under the
+    # retired step (≥70 → ×0.8) the same fixture gave ×0.8 and the 30% place was below a
+    # threshold; now it is the baseline the other place is measured against.
     async with Session() as session:
         pinned = await load_contributions(session, round_id)
     assert len(pinned) == 1, f"expected one record, got {len(pinned)}"
     record = pinned[0]
     assert record.contribution.place_id == rainy
-    assert record.contribution.effect == Decimal("0.8")
-    assert record.contribution.reason == "降雨機率80%"
+    assert record.contribution.effect == Decimal("0.583"), record.contribution.effect
+    assert record.contribution.reason == "這區降雨機率較高（80%）", record.contribution.reason
     assert record.pin.township_code == "63000010" and record.pin.slot_start == SLOT
+    # **Every pin comes from one publication, which a relative rule needs and an absolute one did
+    # not.** A gap assembled from two publications is partly an artifact of when each was ingested.
+    assert len({p.pin.publication_id for p in pinned}) == 1, "pins span publications"
+    # **What this test cannot yet assert, stated rather than left as a silent hole (D112):** the
+    # reading that supplied the pool minimum — 信義's 30% — is pinned by nothing, because the place
+    # standing on it produces no contribution (D43) and a contribution carries exactly one source
+    # pin (`ck_contribution_exactly_one_source`). It survives transitively: its publication cannot
+    # be deleted while 松山's row pins a reading in the same publication. Making that direct needs
+    # a schema decision (a baseline pin, or a round-level one) and is with the owner.
 
     # End to end: the loaded records feed the fold and the write half lands whole.
     weights = {
@@ -185,7 +201,7 @@ async def scenario(test_url: str) -> None:
         ).weight
         for place in (rainy, sunny, local)
     }
-    assert weights == {rainy: Decimal("0.8"), sunny: Decimal("1"), local: Decimal("1")}
+    assert weights == {rainy: Decimal("0.583"), sunny: Decimal("1"), local: Decimal("1")}
     async with Session() as session:
         await write_roll(session, round_id, pinned, weights, winning_place_id=sunny, dice=(2, 5))
         await session.commit()

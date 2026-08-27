@@ -126,6 +126,27 @@ async def scenario(test_url: str) -> None:
                 )
             )
         ).scalar_one()
+        # **A second reference place, in a drier township — required since A12.** D71 is relative
+        # now: a pool whose reference places all sit in one township has nothing to compare, every
+        # gap is 0, and no rain record exists at all. With only 雨中的店 this test went on passing
+        # while testing none of the weather path.
+        await session.execute(
+            text(
+                "insert into reference_place (publication_id, registry_no, origin, name, "
+                "name_raw, address, address_raw, township_code, township_name) "
+                "values (:pub, 'A-22222222-00001-1', 'reference', '晴天的店', '晴天的店', "
+                "'x', 'x', '63000020', 'x')"
+            ),
+            {"pub": place_pub},
+        )
+        dry = (
+            await session.execute(
+                text(
+                    "insert into place (origin, registry_no) "
+                    "values ('reference', 'A-22222222-00001-1') returning id"
+                )
+            )
+        ).scalar_one()
         locals_ = []
         for name in ("巷口麵店", "小林拉麵", "阿宗麵線"):
             locals_.append(
@@ -166,6 +187,15 @@ async def scenario(test_url: str) -> None:
             ),
             {"pub": weather_pub, "s": slot_start, "e": slot_start + timedelta(hours=3)},
         )
+        await session.execute(
+            text(
+                "insert into forecast_reading (publication_id, township, township_code, "
+                "element, slot_start, slot_end, measure, value) "
+                "values (:pub, 'x', '63000020', '3小時降雨機率', :s, :e, "
+                "'ProbabilityOfPrecipitation', '30')"
+            ),
+            {"pub": weather_pub, "s": slot_start, "e": slot_start + timedelta(hours=3)},
+        )
         await session.commit()
 
     auth = {"Authorization": f"Bearer {token}"}
@@ -194,7 +224,7 @@ async def scenario(test_url: str) -> None:
 
         # Proposals: 201 new, 200 repeat (D70), 404 for a place this circle cannot see,
         # 409 for the fourth by one member (§3.0).
-        for place in (rainy, locals_[0], locals_[1]):
+        for place in (rainy, dry, locals_[0]):
             created = await client.post(
                 f"/rounds/{round_id}/proposals", json={"place_id": place}, headers=auth
             )
@@ -233,21 +263,25 @@ async def scenario(test_url: str) -> None:
         assert result["status"] == "closed"
         d1, d2 = result["dice"]
         assert 1 <= d1 <= 6 and 1 <= d2 <= 6 and result["sum"] == d1 + d2
+        # 80% over 松山 against 30% over 信義: gap 50, `1 − 50/120 = 0.583` (A12/D71). 晴天的店 IS
+        # the pool minimum, so it carries no record and stays at 1 — D43, not an oversight.
         assert result["weights"] == {
-            str(rainy): "0.8",
+            str(rainy): "0.583",
+            str(dry): "1",
             str(locals_[0]): "1",
-            str(locals_[1]): "1",
-        }
+        }, result["weights"]
         assert sum(result["allocation"].values()) == 36
         assert result["allocation"][str(result["winning_place_id"])] > 0
         # The panel's evidence rides in the result: the rainy place carries its factor in
         # D46's order, and the weather sentence stays behind ('none' visibility, D13).
         rainy_panel = result["panel"][str(rainy)]
         assert rainy_panel["factors"] == [
-            {"channel": "contextual", "contributor": "weather", "effect": "0.8", "reason": None}
-        ]
+            {"channel": "contextual", "contributor": "weather", "effect": "0.583", "reason": None}
+        ], rainy_panel
         assert rainy_panel["clamps"] == []
         assert result["panel"][str(locals_[0])]["factors"] == []
+        # The driest township carries nothing at all — no row, no sentence, no factor of 1.0.
+        assert result["panel"][str(dry)]["factors"] == [], result["panel"][str(dry)]
 
         # D69: the retry gets the stored result, dice and all, in the same shape.
         again = await client.post(f"/rounds/{round_id}/roll", headers=auth)

@@ -36,6 +36,19 @@ from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin
 from upto.engine.weather import rain_contribution
 
 
+def _probability(value) -> int | None:
+    """A 降雨機率 reading as an integer, or `None` if it will not parse.
+
+    **Never coerced to 0.** The values are stored as text and a reading that will not parse read
+    as 0% is a dry township this loader invented — and under a relative rule an invented dry
+    township becomes the pool minimum and moves every other place.
+    """
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+
+
 async def load_contributions(session, round_id: int) -> list[PinnedContribution]:
     """One round's pool, walked once; returns every pinned record the fold will see."""
     round_row = (
@@ -61,6 +74,27 @@ async def load_contributions(session, round_id: int) -> list[PinnedContribution]
 
     pinned: list[PinnedContribution] = []
     next_id = 1
+
+    # --- D71 as reopened 2026-08-27 (A12): the rain pass, relative and therefore two-phase ------
+    #
+    # **The factor is a difference now, so no place can be decided alone.** `gap = this township's
+    # 降雨機率 − the lowest in the pool`, and the lowest is not known until every pool place has
+    # been resolved. D44 still holds — the *contributor* sees one place — so the minimum is computed
+    # here and handed in beside the probability, exactly as `probability` already was.
+    #
+    # **One publication for the whole pool, and this is new.** Under the old absolute step each
+    # township's reading could come from whichever publication was latest for it; comparing two
+    # readings taken at different times was harmless because nothing was compared. A relative rule
+    # cannot afford it: a gap assembled from two publications is partly an artifact of when each
+    # was ingested, and the panel would print it as weather. So one publication is chosen for the
+    # round — D57's latest-wins, unchanged — and every reading comes from it.
+    #
+    # **A township that publication does not carry gets no record**, the same neutrality D28 gives
+    # a `circle-local` place. M13 measured this as real rather than theoretical: 24.5% of rain
+    # groups hold fewer than 12 townships, so a publication missing a pool township is ordinary.
+    # The alternative — reaching into an older publication for the missing one — is the mixing this
+    # comment exists to refuse.
+    townships: dict[int, str] = {}
     for row in pool:
         if row.origin != "reference":
             continue  # D28: no township, no reading, no record — neutral.
@@ -76,41 +110,78 @@ async def load_contributions(session, round_id: int) -> list[PinnedContribution]
         ).scalar_one_or_none()
         if township_code is None:
             continue  # An address that never parsed costs its row a nudge and nothing else.
-        reading = (
+        townships[row.place_id] = township_code
+
+    readings: dict[int, object] = {}
+    if townships:
+        codes = sorted(set(townships.values()))
+        publication_id = (
             await session.execute(
                 text(
-                    "select fr.publication_id, fr.township_code, fr.element, fr.measure, "
-                    "fr.slot_start, fr.value "
-                    "from forecast_reading fr "
-                    "join forecast_publication fp on fp.id = fr.publication_id "
-                    "where fr.township_code = :tc "
-                    "and fr.measure = 'ProbabilityOfPrecipitation' "
+                    "select fp.id from forecast_publication fp "
+                    "join forecast_reading fr on fr.publication_id = fp.id "
+                    "where fr.measure = 'ProbabilityOfPrecipitation' "
+                    "and fr.township_code = any(:codes) "
                     "and fr.slot_start <= :hour "
                     "and (fr.slot_end is null or fr.slot_end > :hour) "
-                    "order by fp.detected_at desc limit 1"
+                    "group by fp.id, fp.detected_at "
+                    "order by fp.detected_at desc, fp.id desc limit 1"
                 ),
-                {"tc": township_code, "hour": target_hour},
+                {"codes": codes, "hour": target_hour},
             )
-        ).one_or_none()
-        if reading is None:
-            continue  # No reading for the hour: not nudged is simply not nudged.
-        contribution = rain_contribution(next_id, row.place_id, int(reading.value))
-        if contribution is None:
-            continue
-        pinned.append(
-            PinnedContribution(
-                contribution=contribution,
-                pin=ForecastPin(
-                    publication_id=reading.publication_id,
-                    township_code=reading.township_code,
-                    element=reading.element,
-                    measure=reading.measure,
-                    slot_start=reading.slot_start,
-                ),
-                reason_visibility="none",
+        ).scalar_one_or_none()
+        if publication_id is not None:
+            rows = (
+                await session.execute(
+                    text(
+                        "select fr.publication_id, fr.township_code, fr.element, fr.measure, "
+                        "fr.slot_start, fr.value from forecast_reading fr "
+                        "where fr.publication_id = :pub "
+                        "and fr.measure = 'ProbabilityOfPrecipitation' "
+                        "and fr.township_code = any(:codes) "
+                        "and fr.slot_start <= :hour "
+                        "and (fr.slot_end is null or fr.slot_end > :hour) "
+                        "order by fr.township_code, fr.slot_start desc"
+                    ),
+                    {"pub": publication_id, "codes": codes, "hour": target_hour},
+                )
+            ).all()
+            # Narrowest slot first per township — `slot_end is null` rows can overlap a real one,
+            # and the later `slot_start` is the one that actually covers the hour.
+            by_code: dict = {}
+            for reading in rows:
+                by_code.setdefault(reading.township_code, reading)
+            for place_id, code in townships.items():
+                reading = by_code.get(code)
+                if reading is None:
+                    continue  # This publication does not carry that township. Neutral.
+                if _probability(reading.value) is None:
+                    continue  # A value that will not parse is not a dry township we invented.
+                readings[place_id] = reading
+
+    if readings:
+        pool_minimum = min(_probability(r.value) for r in readings.values())
+        for place_id in sorted(readings):
+            reading = readings[place_id]
+            contribution = rain_contribution(
+                next_id, place_id, _probability(reading.value), pool_minimum
             )
-        )
-        next_id += 1
+            if contribution is None:
+                continue  # D43: this place sits in the driest township — no difference, no record.
+            pinned.append(
+                PinnedContribution(
+                    contribution=contribution,
+                    pin=ForecastPin(
+                        publication_id=reading.publication_id,
+                        township_code=reading.township_code,
+                        element=reading.element,
+                        measure=reading.measure,
+                        slot_start=reading.slot_start,
+                    ),
+                    reason_visibility="none",
+                )
+            )
+            next_id += 1
 
     # --- A1: the private preferences of this circle's members -------------------------------
     #
