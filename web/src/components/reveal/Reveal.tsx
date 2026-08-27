@@ -73,6 +73,39 @@ import {
  */
 const HOLD_MS = 1000
 
+/**
+ * **The stage arrives in three steps, not one — D109's second amendment (owner, 2026-08-26:
+ * 「有點突兀，像是突然就出現結果」), evaluator's numbers under D101's delegation.**
+ *
+ * The complaint was not about any single movement. Everything downstream of `staged` fired on the
+ * same frame — the retreat, the flood and the answer at once — so the screen changed completely
+ * between two frames and gave the eye three things to follow and no order to follow them in.
+ * **The fix is sequence, not slowness**: the same movements, in the order a person would read
+ * them, each starting as the previous one finishes.
+ *
+ *   ① `staged`   +0 ms     the dice retreat to the read position (the existing spring, ~900 ms)
+ *   ② `flooded`  +900 ms   the ground takes the winner's colour; the list settles into it
+ *   ③ `answered` +1400 ms  decider · winner · sentence · act rise; the winning row goes bold
+ *
+ * **The offsets are from `staged`, and `staged` still flips at the hold's end** — `RV-20` measures
+ * that edge and is untouched by everything here.
+ *
+ * **Why timers and not the retreat's own completion callback.** `motion` resolves a spring
+ * **290–350 ms before the element is actually at rest** — measured four ways across four builds,
+ * and it is what `HOLD_MS`'s note above is about. So `onAnimationComplete` would start the flood
+ * while the dice were still visibly moving, which is precisely the constraint `RV-21` gates
+ * (「group at rest before the colour begins」). A timer at the spring's *measured* rest is the
+ * honest instrument here, and the dishonest-looking one would have been the callback.
+ *
+ * **Rejected: `transition-delay` in CSS.** Fewer moving parts, and it puts the sequence where the
+ * durations already live. But then no DOM signal marks ② and ③, so the gate has to infer them from
+ * paint, and reduced motion has to zero every delay separately — a rule that decays the first time
+ * someone adds a fourth element. Explicit states cost two timers and give the evaluator two
+ * attributes to read.
+ */
+const FLOOD_AFTER_STAGED_MS = 900
+const ANSWER_AFTER_STAGED_MS = 1400
+
 /** **How long a total absence of animation frames means the sequence is not coming.** Not a guess
  *  at how long the dice take — that number is what `RV-19` forbids. Two seconds of *silence* is far
  *  past any frame gap a running browser produces (a 60 Hz tab pings every ~16 ms; even a heavily
@@ -205,6 +238,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
    * claimed it yet.
    */
   const [staged, setStaged] = useState(false)
+  /** ② and ③ of the staged sequence — see `FLOOD_AFTER_STAGED_MS`. Separate booleans rather than
+   *  one enum because each is read on its own by a different part of the tree, and a comparison
+   *  like `stage >= 'flooded'` on a string union is the kind of ordering nobody can see is wrong. */
+  const [flooded, setFlooded] = useState(false)
+  const [answered, setAnswered] = useState(false)
   /** Why the sweep did not run, when it did not. Published on the element for the same reason
    *  `landedBy` is: an absent effect and a broken effect look identical in a recording. */
   const [skipped, setSkipped] = useState<'one-row' | 'too-many-rows' | null>(null)
@@ -350,7 +388,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
    *  through. */
   useEffect(() => {
     if (!landed) return
-    if (landedBy === 'reduced') { setStaged(true); return }
+    // **Reduced motion applies all three at once, instantly** (evaluator's ruling, 2026-08-26):
+    // there is no tumble to separate them from and no sequence to read, so the end state is the
+    // whole animation — §5 rule 3's 「the end states still apply」.
+    if (landedBy === 'reduced') { setStaged(true); setFlooded(true); setAnswered(true); return }
     // **The beat runs from composed stillness, so it is `HOLD_MS` on the screen and not
     // `HOLD_MS` plus whatever the instrument cost.** Clamped at zero: if confirming took longer
     // than the whole beat the answer is *stage now*, never *stage in the past*.
@@ -358,6 +399,17 @@ export default function Reveal({ roundId }: { roundId: number }) {
     const h = window.setTimeout(() => setStaged(true), Math.max(0, HOLD_MS - spent))
     return () => window.clearTimeout(h)
   }, [landed, landedBy])
+
+  /** ② and ③, measured from `staged` itself rather than from the hold — so a long confirm eats
+   *  into the hold (which is what `HOLD_MS − spent` is for) and never into the sequence a person
+   *  is watching. Both clear on unmount and on any re-run, so a second roll cannot leave a timer
+   *  from the first one alive. */
+  useEffect(() => {
+    if (!staged || answered) return
+    const a = window.setTimeout(() => setFlooded(true), FLOOD_AFTER_STAGED_MS)
+    const b = window.setTimeout(() => setAnswered(true), ANSWER_AFTER_STAGED_MS)
+    return () => { window.clearTimeout(a); window.clearTimeout(b) }
+  }, [staged, answered])
 
   const sign = useCallback(async () => {
     if (!dev || signing) return
@@ -405,15 +457,22 @@ export default function Reveal({ roundId }: { roundId: number }) {
       className="reveal"
       data-screen="reveal"
       data-state={landed ? 'landed' : 'rolling'}
-      data-stage={staged ? 'staged' : 'rolling'}
+      data-stage={answered ? 'answered' : flooded ? 'flooded' : staged ? 'staged' : 'rolling'}
       data-landed-by={landedBy ?? undefined}
       data-sweep-skipped={skipped ?? undefined}
       // **The flood moves with the stage, not with the stop.** Flooding the instant the dice
       // settle would put a full-screen colour change inside the beat, and the beat's entire
-      // content is that nothing has reacted yet. The screen reacts once, after it.
-      data-face={staged && face ? face : undefined}
+      // content is that nothing has reacted yet. The screen reacts after it — and since D109's
+      // second amendment it reacts in three steps, so the colour waits for the dice to be at
+      // rest (②) instead of moving with them.
+      //
+      // **The list settles on this same cue and needs no gate of its own**: the flood repaints
+      // the ground and `color: inherit` carries every row with it. One attribute, one moment.
+      data-face={flooded && face ? face : undefined}
     >
-      <Field dice={data?.dice} staged={staged} />
+      {/* The ground's printed pair belongs to the flood, not to the retreat — it is the colour
+          arriving, drawn in the flood's own darker step. */}
+      <Field dice={data?.dice} staged={flooded} />
 
       <div className="stage">
 
@@ -482,10 +541,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
       <m.div
         className="answer"
         data-part="answer"
-        aria-hidden={!staged}
-        inert={!staged}
+        aria-hidden={!answered}
+        inert={!answered}
         initial={false}
-        animate={{ opacity: staged ? 1 : 0, y: reduce || staged ? 0 : 26 }}
+        animate={{ opacity: answered ? 1 : 0, y: reduce || answered ? 0 : 26 }}
         transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 24, mass: 1 }}
       >
         {/* **`sum` is in the member payload and is deliberately NOT rendered.** It is an innocent
@@ -612,7 +671,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
           in the air would be the answer available in numbers beside an animation withholding it —
           the same argument that keeps the revealed seed until the landing. */}
       <div className="under">
-      {staged && data && <Pairs rolls={data.rolls ?? []} />}
+      {answered && data && <Pairs rolls={data.rolls ?? []} />}
 
       {/* ── D108 · the commitment, and the seed that opens it ──────────────────────────────
           **The hash is shown throughout; the seed only once the dice have landed.** The commitment
@@ -629,7 +688,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
       {data?.seed_commit && (
         <p className="commit" data-part="seed-commit">
           這一輪的結果在開局時就固定了 · {data.seed_commit}
-          {staged && data.revealed_seed && (
+          {answered && data.revealed_seed && (
             <><br />種子 · {data.revealed_seed}</>
           )}
         </p>

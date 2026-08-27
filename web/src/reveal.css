@@ -625,8 +625,14 @@
    It arrived with `D105`'s amendment, which put the list on the member screen beside an answer
    region built to hide exactly this — the hiding mechanism and the new element were correct
    separately and wrong together. A7's sweep is what surfaced it, because the sweep drew the eye to
-   the rows for the first time. */
-.reveal[data-state="landed"] .evPlace[data-won="yes"] .evNameInk { font-weight: 900; }
+   the rows for the first time.
+
+   **It moved from `[data-state="landed"]` to `[data-stage="answered"]` with D109's second
+   amendment (2026-08-26).** `landed` is the dice stopping; the mark belongs with the headline that
+   names the same place, and the headline is ③. On the old rule the row went bold the instant the
+   dice stopped — a full second before the answer it was echoing existed on screen, which is the
+   same leak this rule was written to close, one stage further along. Same fix, later cue. */
+.reveal[data-stage="answered"] .evPlace[data-won="yes"] .evNameInk { font-weight: 900; }
 
 /* **The row reserves the BOLD box from its first painted frame, so the mark cannot reflow it.**
    `D91`'s zero-shift clause binds the whole tumble→land sequence, and the mark lands inside it.
