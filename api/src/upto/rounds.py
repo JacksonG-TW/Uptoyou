@@ -35,10 +35,12 @@ from .api_common import (
     deciding_member_for,
     for_credential,
     panel_for,
+    place_display,
     place_names,
     resolve_credential,
     resolve_member,
     result_body,
+    winner_headline_for,
     seats_for,
     trip_for,
 )
@@ -237,13 +239,19 @@ async def _closed_body(
     a `represented_member` reason is shown to that member and to nobody else — including to an
     operator, who audits the arithmetic rather than the people.
     """
+    # A16: one composition, two readings — `places` keeps every row's composed name, and the
+    # headline is the winner's shortened form (registered rung only). Composed here, at the same
+    # single assembly point as `trip` and `panel`, so the roll response, D69's retry and the SSE
+    # close cannot disagree about what the headline says.
+    display = await place_display(session, weights.keys())
     body = result_body(
         round_id,
         dice,
         winning_place_id,
         weights,
-        await place_names(session, weights.keys()),
+        {key: value["name"] for key, value in display.items()},
         allocate({p: w for p, w in weights.items()}),
+        winner_headline=winner_headline_for(display, winning_place_id),
     )
     # B2: `None` until somebody signs, and the same shape wherever a trip appears — nickname and
     # time, never the signer's id (H3). Read here rather than assembled, so the reveal, the SSE

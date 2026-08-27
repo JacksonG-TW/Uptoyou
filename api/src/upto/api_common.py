@@ -176,8 +176,8 @@ async def compose_names(session, rows) -> dict[str, dict]:
     return out
 
 
-async def place_names(session, place_ids) -> dict[int, str]:
-    """Display names, most specific source first: a circle-local row's own words; the
+async def place_display(session, place_ids) -> dict[int, dict]:
+    """Display names with their rung, most specific source first: a circle-local row's own words; the
     storefront sign for the site (D78); the brand when the company names exactly one (D77);
     the registered name from the latest publication — then D92's bracket when that base name
     is shared by other sign-less sites of the same company (`compose_names`)."""
@@ -222,7 +222,32 @@ async def place_names(session, place_ids) -> dict[int, str]:
             for row in rows
         ),
     )
-    return {key: value["name"] for key, value in composed.items()}
+    return composed
+
+
+async def place_names(session, place_ids) -> dict[int, str]:
+    """Just the strings, for every caller that needs nothing but what a person reads."""
+    return {key: value["name"] for key, value in (await place_display(session, place_ids)).items()}
+
+
+# --- A16 / D92 as amended: the winner's headline --------------------------------------------
+#
+# **One line of the reveal is shortened and nothing else is.** `places` above keeps the composed
+# name for every row including the winner, so the proposal list, the operator table and the panel
+# are untouched; this is a separate field because the two strings are genuinely different answers to
+# two different questions — *what is this place called* and *what does the headline say*.
+#
+# **Composed here rather than in the browser**, for D92's own reason: the same place must read the
+# same on every screen, and the authored token list belongs in git behind `tools/server_copy.py`'s
+# gate rather than in a bundle. `upto.headline` holds the list and the argument.
+def winner_headline_for(display: dict, winning_place_id: int):
+    """The headline string for the winner, or `None` when the winner is not in `display`."""
+    from . import headline as headline_module  # noqa: PLC0415  (pure module, lean header)
+
+    entry = display.get(winning_place_id)
+    if entry is None:
+        return None
+    return headline_module.headline(entry.get("name"), entry.get("name_source"))
 
 
 def result_body(
@@ -232,6 +257,7 @@ def result_body(
     weights: dict[int, object],
     names: dict[int, str],
     allocation: dict[int, int],
+    winner_headline: str | None = None,
 ) -> dict:
     return {
         "round_id": round_id,
@@ -244,6 +270,10 @@ def result_body(
         # The table is the truth of the draw (D72): each place's share of the 36 outcomes.
         "allocation": {str(p): n for p, n in allocation.items()},
         "places": {str(p): n for p, n in names.items()},
+        # A16: the shortened form of the winner's name, for the reveal's one headline line. `None`
+        # when the caller did not compute one — a shape the surface must handle by falling back to
+        # `places[winning_place_id]`, never by rendering an empty headline.
+        "winner_headline": winner_headline,
     }
 
 # --- B2 / item 9: the trip, read the same way everywhere it appears ------------------------
@@ -376,6 +406,10 @@ def deciding_member_for(seats: list) -> dict | None:
 
 
 MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places", "trip",
+               # A16: the headline is the member's line before it is anyone's — the operator table
+               # reads `places`. Named here because this list is a whitelist and a new field is
+               # operator-only until it is.
+               "winner_headline",
                # D108: the seat list, the decider and the commitment are all member-visible — they
                # are what the fairness claim is made of, so withholding them from a member would
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is

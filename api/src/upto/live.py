@@ -31,6 +31,7 @@ from .api_common import (
     SINGLE_BRAND_GROUPED,
     STOREFRONT,
     compose_names,
+    place_display,
     place_names,
     for_credential,
     deciding_member_for,
@@ -39,6 +40,7 @@ from .api_common import (
     resolve_credential,
     resolve_member,
     result_body,
+    winner_headline_for,
     trip_for,
 )
 from .db import session_factory
@@ -119,13 +121,17 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         ).all()
         weights = {row.place_id: row.weight for row in stored}
         dice = (last.die1, last.die2) if last.die1 is not None else None
+        # A16: the snapshot carries the same headline the roll response did — one composition,
+        # read twice, so a reconnecting client's reveal reads identically to the live one.
+        display = await place_display(session, weights.keys())
         last_result = result_body(
             last.id,
             dice,
             last.winning_place_id,
             weights,
-            await place_names(session, weights.keys()),
+            {key: value["name"] for key, value in display.items()},
             allocate(weights) if weights else {},
+            winner_headline=winner_headline_for(display, last.winning_place_id),
         )
         # **B2, and this is the half D56 makes necessary.** Nothing is pushed when a trip is signed
         # (D53), so a client that was not connected at the moment — or that reconnected since — would
