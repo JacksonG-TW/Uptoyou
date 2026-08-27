@@ -33,6 +33,7 @@ from sqlalchemy import text
 
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
 from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin
+from upto.engine.weather import REASON_VISIBILITY as WEATHER_VISIBILITY
 from upto.engine.weather import rain_contribution
 
 
@@ -178,7 +179,7 @@ async def load_contributions(session, round_id: int) -> list[PinnedContribution]
                         measure=reading.measure,
                         slot_start=reading.slot_start,
                     ),
-                    reason_visibility="none",
+                    reason_visibility=WEATHER_VISIBILITY,
                 )
             )
             next_id += 1

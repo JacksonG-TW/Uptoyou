@@ -43,6 +43,19 @@ from upto.engine.fold import CHANNEL_BOUNDS, Contribution
 
 CONTRIBUTOR_NAME = "weather"
 
+# **D13's third column, declared beside the sentence it governs rather than as a literal at the
+# call site.** `none` is nobody's: the contextual channel's reason reaches no screen — not the
+# member's and not the operator's (`api_common` nulls it for both) — and D20 is why. The sentence
+# still has to exist and still has to be right, because it is H8's record and what the lineage tool
+# reads back; it is simply not copy a person meets.
+#
+# **`tools/server_copy.py` reads this constant to decide whether the strings below are member-facing
+# copy.** That is the whole reason it is a module constant and not a literal in `load.py`: the
+# audience is decided here, by whoever writes the sentence, and the gate derives it instead of
+# holding a list of filenames. `upto.engine.preference` carries the same constant with the other
+# answer, and a contributor with no constant at all is treated as visible — the safe direction.
+REASON_VISIBILITY = "none"
+
 # The two anchors, as one number. `1 − 60/120 = 0.5`: gap 60 (M13's largest measured range) lands
 # exactly on D45's contextual floor. Named because re-measuring the range is a later M13 re-run and
 # this is where that one number lands.
