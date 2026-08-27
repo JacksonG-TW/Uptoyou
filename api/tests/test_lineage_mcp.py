@@ -353,5 +353,48 @@ class OneBadCallNeverCostsTheReply(unittest.TestCase):
         self.assertNotIn("error", reply)
 
 
+class TheTripIsReadForItsIdAndNeverForItsSigner(unittest.TestCase):
+    """A14 / LT-8 — `trip` joins the readable set, and the boundary is structural not remembered.
+
+    The table holds `member_id`, the person who signed. **Who signed is a fact about a person and no
+    part of checking a weight** — the same trade that keeps nicknames out of `explain_round`, where
+    a member id may be read because it is an *input to the arithmetic* and a person attached to a
+    fact may not. A comment saying "do not select member_id" is a thing a later edit walks past; an
+    assertion is not.
+    """
+
+    def statements(self):
+        return [
+            value for name, value in vars(queries).items()
+            if isinstance(value, str) and name.isupper() and "select" in value.lower()
+        ]
+
+    def test_no_statement_that_reads_trip_also_reads_a_member(self):
+        for statement in self.statements():
+            if " trip " not in statement.lower() and "from trip" not in statement.lower():
+                continue
+            with self.subTest(statement=statement[:60]):
+                self.assertNotIn("member_id", statement.lower(), statement)
+                self.assertNotIn("nickname", statement.lower(), statement)
+
+    def test_the_trip_table_is_declared_readable(self):
+        self.assertIn("trip", queries.READABLE_TABLES)
+
+    def test_the_place_comes_from_round_and_is_not_copied_onto_the_trip(self):
+        """D106: a trip's place is the signed round's stored winner. A `place_id` on `trip` would
+        be the drift D28 refuses, so the query joins for it and this asserts it still does."""
+        self.assertIn("winning_place_id", queries.ROUND_LAST_TRIP)
+        self.assertIn("join round", queries.ROUND_LAST_TRIP)
+
+    def test_it_is_bounded_by_the_round_s_close(self):
+        """**The bound is what makes the answer reproducible.** The loader saw the circle's latest
+        signature at roll time; a trip signed afterwards — including the one signing this very
+        round — is not what the arithmetic used. A verifier reading a different question from the
+        thing it verifies is worse than no verifier, which this module has already learnt once in
+        its own decider."""
+        self.assertIn("signed_at <=", queries.ROUND_LAST_TRIP)
+        self.assertIn("closed_at", queries.ROUND_LAST_TRIP)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

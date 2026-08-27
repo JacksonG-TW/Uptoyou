@@ -54,6 +54,19 @@ class ObservationPin:
 
 
 @dataclass(frozen=True)
+class TripPin:
+    """The trip a D114 record was computed from — one id, like a preference version.
+
+    A trip is one row and its identity is its own key (D106: one per round, `round_id` UNIQUE), so
+    there is nothing composite to carry. `ON DELETE RESTRICT` on the FK is what makes the pin mean
+    something: the row saying the circle went there cannot be deleted while a round's arithmetic
+    leans on it.
+    """
+
+    trip_id: int
+
+
+@dataclass(frozen=True)
 class PreferencePin:
     """The preference **version** actually read — one id, and that is the whole point of it.
 
@@ -169,6 +182,12 @@ async def write_roll(
         elif isinstance(pin, PreferencePin):
             pin_columns = "preference_id"
             params |= {"s1": pin.preference_id}
+            pin_values = ":s1"
+        elif isinstance(pin, TripPin):
+            # Revision 0031, the fourth source. The `else` below is why adding one is safe: an
+            # unhandled pin raises rather than being written into whichever column came last.
+            pin_columns = "trip_id"
+            params |= {"s1": pin.trip_id}
             pin_values = ":s1"
         else:
             # **Named rather than defaulted.** This used to be a bare `else` that treated anything

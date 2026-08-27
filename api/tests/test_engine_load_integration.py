@@ -242,10 +242,86 @@ async def scenario(test_url: str) -> None:
     ]
     assert status == "closed"
 
+    # --- A14 / D114: the place the circle went to last time is ×0.5 in the next round ---------
+    #
+    # **The signature is what makes a trip, not the roll.** The round above closed on 晴天的店 and
+    # produced no trip, so at this point D114 must contribute **nothing** — a rolled-but-unsigned
+    # round is not evidence about where the circle has been. That absence is asserted first,
+    # because it is the half a filter could quietly relax; the presence after signing is the easy
+    # half.
+    async with Session() as session:
+        second = (
+            await session.execute(
+                text("insert into round (circle_id, target_hour, target_hour_typed) "
+                     "values (:c, :h, true) returning id"),
+                {"c": circle, "h": MEAL},
+            )
+        ).scalar_one()
+        for place in (rainy, sunny, local):
+            await session.execute(
+                text("insert into proposal (round_id, place_id, member_id) "
+                     "values (:r, :p, :m)"),
+                {"r": second, "p": place, "m": member},
+            )
+        await session.commit()
+    async with Session() as session:
+        before_signing = await load_contributions(session, second)
+    assert not [
+        p for p in before_signing.contributions if p.contribution.contributor == "last_trip"
+    ], "an unsigned previous winner produced a D114 record — only a signature makes a trip"
+
+    async with Session() as session:
+        trip_id = (
+            await session.execute(
+                text("insert into trip (round_id, circle_id, member_id) "
+                     "values (:r, :c, :m) returning id"),
+                {"r": round_id, "c": circle, "m": member},
+            )
+        ).scalar_one()
+        await session.commit()
+    async with Session() as session:
+        after_signing = await load_contributions(session, second)
+    trips = [p for p in after_signing.contributions if p.contribution.contributor == "last_trip"]
+    assert len(trips) == 1, [p.contribution for p in trips]
+    record = trips[0]
+    # The trip's place is the **signed round's stored winner** (D106), which is 晴天的店 — never the
+    # place the trip row points at, because it points at no place.
+    assert record.contribution.place_id == sunny, record.contribution
+    assert record.contribution.effect == Decimal("0.500"), record.contribution
+    assert record.contribution.channel == "contextual"
+    assert record.contribution.reason.startswith("上次去過（"), record.contribution.reason
+    assert record.pin.trip_id == trip_id, record.pin
+    assert record.reason_visibility == "none"
+    # And the pin lands in its own column, which is what revision 0031 exists for.
+    async with Session() as session:
+        weights_2 = {
+            place: fold(
+                place,
+                [p.contribution for p in after_signing.contributions
+                 if p.contribution.place_id == place],
+            ).weight
+            for place in (rainy, sunny, local)
+        }
+        await write_roll(session, second, after_signing.contributions, weights_2,
+                         winning_place_id=local, dice=(3, 3),
+                         forecast_baseline=after_signing.forecast_baseline)
+        await session.commit()
+    async with Session() as session:
+        pinned_trip = (
+            await session.execute(
+                text("select place_id, trip_id from weight_contribution "
+                     "where round_id = :r and contributor = 'last_trip'"),
+                {"r": second},
+            )
+        ).all()
+    assert [(r.place_id, r.trip_id) for r in pinned_trip] == [(sunny, trip_id)], pinned_trip
+
     await engine.dispose()
     print(
         "ticket 15: the loader nudges the rainy township only, pins the exact reading, "
-        "leaves the dry and the local place neutral, and its output rolls end to end"
+        "leaves the dry and the local place neutral, and its output rolls end to end; "
+        "A14: an unsigned winner contributes nothing and a signed trip's place carries ×0.5 "
+        "pinned to the trip row"
     )
 
 

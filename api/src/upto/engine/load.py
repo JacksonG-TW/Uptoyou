@@ -34,9 +34,35 @@ from dataclasses import dataclass
 from sqlalchemy import text
 
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
-from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin
+from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin, TripPin
 from upto.engine.weather import REASON_VISIBILITY as WEATHER_VISIBILITY
+from upto.engine.trip import REASON_VISIBILITY as TRIP_VISIBILITY
+from upto.engine.trip import last_trip_contribution
 from upto.engine.weather import rain_contribution
+
+
+# A14 / D114 — the circle's most recently **signed** trip, and the place it names.
+#
+# **The place is the signed round's stored winner and never a copy (D106).** `trip` carries no
+# `place_id` on purpose, so this joins `round` for it; a column here would be the drift D28 refuses.
+#
+# **Ordered by `signed_at`, which is the signature and not the meal.** A round rolled long ago and
+# signed this morning is the circle's last trip, because what D114 leans on is the act of saying
+# «we went», not the hour the dice fell.
+#
+# **The roll's previous winner is not here and cannot be reached from here.** A round can be rolled
+# and never signed — nobody went, or nobody said so — and a roll that produced no meal is not
+# evidence about where the circle has been. This query starts at `trip`, so an unsigned round is
+# invisible to it by construction rather than by a filter someone could relax.
+LAST_TRIP = """
+select t.id, r.winning_place_id,
+       (t.signed_at at time zone 'Asia/Taipei')::date as went_on
+  from trip t
+  join round r on r.id = t.round_id
+ where t.circle_id = :circle_id
+ order by t.signed_at desc, t.id desc
+ limit 1
+"""
 
 
 def _probability(value) -> int | None:
@@ -218,6 +244,36 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
                         slot_start=reading.slot_start,
                     ),
                     reason_visibility=WEATHER_VISIBILITY,
+                )
+            )
+            next_id += 1
+
+    # --- A14 / D114: the place the circle went to last time --------------------------------
+    #
+    # **One row at most, on one place, and only when that place is in this round's pool.** The
+    # contributor is handed a yes-or-no (D44) — it never sees the pool and cannot tell a trip from a
+    # winner, which is the point: only this query knows, and it starts at `trip`.
+    #
+    # **The date is Taipei's** (D25's 2026-08-27 amendment): the record says which day the circle
+    # went, and which day is a question about the people rather than about the session's timezone.
+    last_trip = (
+        await session.execute(text(LAST_TRIP), {"circle_id": round_row.circle_id})
+    ).one_or_none()
+    if last_trip is not None and last_trip.winning_place_id is not None:
+        for row in pool:
+            contribution = last_trip_contribution(
+                next_id,
+                row.place_id,
+                row.place_id == last_trip.winning_place_id,
+                last_trip.went_on,
+            )
+            if contribution is None:
+                continue  # D43: every other place in the pool, and there is nothing to say.
+            pinned.append(
+                PinnedContribution(
+                    contribution=contribution,
+                    pin=TripPin(trip_id=last_trip.id),
+                    reason_visibility=TRIP_VISIBILITY,
                 )
             )
             next_id += 1

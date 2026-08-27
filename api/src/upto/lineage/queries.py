@@ -60,6 +60,13 @@ READABLE_TABLES = frozenset(
         # is the one every rain factor in the round was measured against, and the place standing on
         # it produces no contribution (D43), so nothing else in the schema can name it.
         "round_forecast_baseline",
+        # **Added 2026-08-27 for A14/LT-8 (D114).** Read for `id`, `round_id` and `signed_at` and
+        # for nothing else — the table also holds `member_id`, the signer, and **who signed is a
+        # fact about a person that verification does not need**. Same trade as the one that keeps
+        # nicknames out of `explain_round`: an id that is an *input to the arithmetic* may be read,
+        # a person attached to a fact may not. `test_lineage_mcp.py` asserts no statement naming
+        # `trip` also names `member_id`, so the boundary is structural rather than remembered.
+        "trip",
     }
 )
 
@@ -440,6 +447,28 @@ select b.township_code, b.publication_id, b.element, b.measure, b.slot_start,
  where b.round_id = :round_id
 """
 
+# A14 / LT-8 — the trip a round's D114 factor was measured against (revision 0031).
+#
+# **`signed_at <= closed_at`, which is what makes this reproducible.** The loader ran at roll time
+# and saw the circle's latest signature *then*; a trip signed afterwards — including the one signing
+# this very round — is not what the arithmetic used, and reporting it would be a verifier answering
+# a different question from the thing it verifies. That mistake has already been made once here, in
+# `explain_round`'s own decider (see below), and it is the reason this carries a bound at all.
+#
+# **`member_id` is deliberately not selected.** `trip` holds the signer; who signed is a fact about
+# a person and no part of checking a weight. The place comes from `round` (D106: a trip's place is
+# the signed round's stored winner, never a copy).
+ROUND_LAST_TRIP = """
+select t.id, t.round_id, t.signed_at, r.winning_place_id
+  from trip t
+  join round r on r.id = t.round_id
+ where t.circle_id = (select circle_id from round where id = :round_id)
+   and t.signed_at <= (select closed_at from round where id = :round_id)
+ order by t.signed_at desc, t.id desc
+ limit 1
+"""
+
+
 async def explain_round(session, round_id: int) -> Answer:
     """D108's verification, recomputed rather than asserted — the point of the whole mechanism.
 
@@ -588,6 +617,33 @@ async def explain_round(session, round_id: int) -> Answer:
                     "clamped at 0.5. The baseline township itself carries no record (D43).".format(
                         baseline["probability"]
                     ),
+        })
+
+    # **A14 / LT-8 — the trip D114's factor was measured against, named.** Like the rain baseline
+    # above, this reports the **input** rather than the record: the lineage tool cannot read
+    # `weight_contribution` at all (the table is outside `READABLE_TABLES` and `reason` is a
+    # forbidden subject), so "which record" is a question for a caller holding the credential to see
+    # contributions. What is answerable here is which trip the round's arithmetic stood on.
+    last_trip = (
+        await session.execute(text(ROUND_LAST_TRIP), {"round_id": round_id})
+    ).mappings().first()
+    if last_trip is None:
+        rows.append({
+            "last_trip": None,
+            "note": "this circle had signed no trip when the round closed, so D114 contributed "
+                    "nothing. That is not the same as a trip whose place was not proposed — in "
+                    "that case a trip is named here and still produces no record.",
+        })
+    else:
+        rows.append({
+            "last_trip_id": last_trip["id"],
+            "last_trip_round_id": last_trip["round_id"],
+            # H49: every timestamp in this module is `.isoformat()`-ed at its own call site.
+            "last_trip_signed_at": last_trip["signed_at"].isoformat(),
+            "last_trip_place_id": last_trip["winning_place_id"],
+            "note": "D114 gives that place ×0.5 in any round whose pool contains it. If it was not "
+                    "proposed, the round carries no last-trip record and this line still names the "
+                    "trip — the two absences are different (D112).",
         })
 
     return Answer(question=question, found=True,
