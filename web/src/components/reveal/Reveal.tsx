@@ -116,13 +116,23 @@ const WATCHDOG_MS = 2000
 /**
  * The dice group's two places, as transforms from its resting CSS position.
  *
- * `ROLLING` puts it centred and full size; `STAGED` is the identity, which is the left column at
- * `--stage-pad`. **Derived from the stylesheet's own numbers rather than typed twice** — the
- * group is 2×300 + 56 = 656 wide, so centring it in a 1440 canvas puts its left edge at 392, and
- * it sits 114 px lower while it tumbles. Change the composition in CSS and these two lines are the
- * ones that have to move with it; there is no third copy.
+ * `STAGED` is the identity — the read position, the left column at `--stage-pad`, which is what
+ * the stylesheet says and what the final frame must not depend on an animation for.
+ *
+ * **`ROLLING`'s x is MEASURED, not typed** (甲改, evaluator 2026-08-26: the tumbling group sits on
+ * the viewport's true centre). It used to be the constant 288, which is right only because
+ * 104 + 288 = 392 = (1440 − 656) / 2 — three numbers from three places agreeing at one width and
+ * nowhere else. Now it is computed from the group's own `offsetWidth` (a transform does not change
+ * it) and the viewport, so the tumble is centred at every width and a change to `--die` or the
+ * dice gap cannot silently un-centre it. `RV-23` measures exactly that, ±2 px.
+ *
+ * y is 0: the group tumbles at the CSS `top` the composition gives it, no longer 114 px below it.
  */
-const ROLLING = { x: 288, y: 114, scale: 1 }
+const ROLLING_FALLBACK_X = 288
+
+/** The gutter between the answer block and the places list in the staged column. One number, used
+ *  by the measurement below and by `.under`'s reservation in CSS, so the two cannot disagree. */
+const LIST_GUTTER_PX = 72
 const STAGED = { x: 0, y: 0, scale: 0.42 }
 
 const TARGET_DWELL_MS = 120
@@ -248,6 +258,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const [skipped, setSkipped] = useState<'one-row' | 'too-many-rows' | null>(null)
   const timer = useRef<number | undefined>(undefined)
   const root = useRef<HTMLElement | null>(null)
+  const group = useRef<HTMLDivElement | null>(null)
+  const list = useRef<HTMLDivElement | null>(null)
+  const answerBox = useRef<HTMLDivElement | null>(null)
+  /** Where the tumbling group has to be so it is centred on the viewport — see `STAGED` above. */
+  const [rollX, setRollX] = useState(ROLLING_FALLBACK_X)
 
   /** **The dice landing is observed, not predicted.** `animationend` from the cube's own `tumble`
    *  is the moment the tumble is over; a `setTimeout` matching the CSS duration is a second clock
@@ -383,6 +398,61 @@ export default function Reveal({ roundId }: { roundId: number }) {
     return () => window.clearInterval(h)
   }, [data, landed])
 
+  /**
+   * **The two measured numbers of the composition** (甲改), both read from the real boxes rather
+   * than typed: where the tumbling group must sit to be centred, and how tall the places list is.
+   *
+   * The list's height becomes `--list-h` on the root, and the staged column reserves its hole with
+   * it. **The mock reserved that hole with a fixed 440 px margin, and a fixed margin is wrong here
+   * for a reason a static page cannot show:** the list is as long as the round's pool, which runs
+   * from two places to D110's ten, so the number that looks right in a mock puts the seal on top of
+   * the list in one round and a hand's width below it in another.
+   *
+   * A `ResizeObserver` rather than a one-shot read, because the list arrives with the payload and
+   * grows again when the sweep's rows render.
+   */
+  useEffect(() => {
+    const measure = () => {
+      const r = root.current
+      if (!r) return
+      if (group.current) {
+        const pad = parseFloat(getComputedStyle(r).getPropertyValue('--stage-pad')) || 0
+        // `offsetWidth` is the untransformed box, which is what centring is about — reading the
+        // rect would fold in whatever the retreat spring is doing at that instant.
+        const w = group.current.offsetWidth
+        if (w > 0) setRollX(Math.round((window.innerWidth - w) / 2 - pad))
+      }
+      if (list.current) {
+        r.style.setProperty('--list-h', `${Math.round(list.current.offsetHeight)}px`)
+      }
+      // **Where the list may sit once the answer is on screen: under it, never through it.**
+      // The mock puts the staged list at a flat 380 px, which is 「140 px up from 520」 and is
+      // right for the name it happened to draw. Measured with a real one — STARBUCKS COFFEE
+      // （北投湖山路） wraps to three lines of the 104 px headline — the answer block runs to 667
+      // and the flat number puts the list straight through the middle of it. So the column's
+      // order is kept by DERIVING the position: the list starts a gutter below whatever the
+      // headline actually needed. A long name pushes it down the page rather than into the text.
+      if (answerBox.current) {
+        // **`offsetTop`/`offsetHeight`, never the rect.** The answer sits 26 px low under its own
+        // entrance transform until ③, and a rect folds that in — the list would be placed against
+        // a box that is about to move, and land 26 px out of true (measured: 765 where 739 was
+        // right). The offset pair is the untransformed box, measured against `.stage`, which is
+        // this element's offset parent.
+        const top = Math.round(
+          answerBox.current.offsetTop + answerBox.current.offsetHeight + LIST_GUTTER_PX,
+        )
+        r.style.setProperty('--list-top', `${top}px`)
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    const ro = new ResizeObserver(measure)
+    if (group.current) ro.observe(group.current)
+    if (list.current) ro.observe(list.current)
+    if (answerBox.current) ro.observe(answerBox.current)
+    return () => { window.removeEventListener('resize', measure); ro.disconnect() }
+  }, [data])
+
   /** The beat. Long enough to read as a stop rather than as a stutter — the prototype's own
    *  proportion, 6% of a 6.4 s loop. Reduced motion has no stages to separate, so it goes straight
    *  through. */
@@ -496,9 +566,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
           Transform only, so the retreat reflows nothing: the name's box, the list's box and the
           bar are exactly where they were before the dice moved. */}
       <m.div
+        ref={group}
         className="group"
         data-part="dice-group"
-        animate={reduce ? { x: 0, y: 0, scale: 1 } : staged ? STAGED : ROLLING}
+        animate={reduce ? { x: 0, y: 0, scale: 1 } : staged ? STAGED : { x: rollX, y: 0, scale: 1 }}
         transition={
           reduce
             ? { duration: 0 }
@@ -539,6 +610,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
       )}
 
       <m.div
+        ref={answerBox}
         className="answer"
         data-part="answer"
         aria-hidden={!answered}
@@ -655,7 +727,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
           **No proposer name on any row** (owner-ruled 2026-08-19, separately): the winning place
           would reveal whose pick won, and a repeat winner becomes a pattern about a person. The
           spec's §0b still calls that question open — it was ruled after that line was written. */}
-      <div className="right" data-part="right-column">
+      <div className="right" data-part="right-column" ref={list}>
       {data && (
         <Evidence
           ev={evidence}

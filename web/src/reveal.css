@@ -467,7 +467,7 @@
 /* §5 rule 3 — reduced motion removes the tumble and both transitions, and **the end states still
    apply, instantly**. Not "no animation and no answer": the landed state is the state. */
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .reveal .answer, .reveal .cube { transition: none; }
+  .reveal, .reveal .answer, .reveal .cube, .reveal .right, .reveal .decider { transition: none; }
   /* **All three of A7's moving parts, and the third is the one that would have been missed.** The
      cube's spin and the camera's swing are obvious; the sweep across the list is JavaScript and
      cannot be stopped from here, so `Reveal.tsx` asks the same media query before it schedules a
@@ -791,6 +791,87 @@
      on the payload rather than on a flag. */
   .reveal .right { position: absolute; right: var(--stage-pad); top: 96px; width: 400px; z-index: 2; }
   .reveal .right:has(.evNum) { width: min(680px, 46vw); }
+
+  /* ══ 甲改 · the centred composition, owner-confirmed 2026-08-26 ═══════════════
+     **The complaint the old composition earned: the dice tumbled off to one side of a column
+     nobody was reading yet, and the list sat in the opposite corner.** The eye had to hold two
+     places at once during the only part of the screen that is a mechanism. So while it rolls,
+     everything is on one vertical axis — the group on the viewport's true centre, the list
+     directly under it — and the whole sequence is read in one glance.
+
+     **`:not(:has(.evNum))` — this is the MEMBER composition and the operator keeps the two
+     columns.** They genuinely fight: the operator's table is `min(680px, 46vw)` = 662 px at 1440
+     and a centred 760 px answer would run straight under it (the defect fixed on 2026-08-26,
+     re-created from the other side). The operator screen is an instrument read side by side, not
+     a result read down the middle, so it keeps what it has. Named here rather than discovered:
+     if the two are ever to be one composition, that is a ruling, not a media query.
+
+     **Every state change here is `transform` or `opacity` and nothing else** — `D91`'s zero-shift
+     clause binds this sequence, and the boxes are where they are from the first painted frame. */
+  .reveal:not(:has(.evNum)) .right {
+    left: 50%; right: auto; margin-left: -200px; top: 520px;
+    transition: transform .9s cubic-bezier(.22, 1.1, .36, 1);
+  }
+  /* **The list rises on the FLOOD's cue, not on the retreat's** — the colour arriving and the list
+     settling into it are one event (the evaluator's 「the list settling on the same cue」), and the
+     retreat is already carrying the eye elsewhere at ①. */
+  .reveal:not(:has(.evNum))[data-stage="flooded"] .right,
+  .reveal:not(:has(.evNum))[data-stage="answered"] .right {
+    /* **`--list-top` is measured, and the spec's flat −140 px is why.** It is the answer block's
+       real bottom plus a gutter, set by `Reveal.tsx`; the mock's number was right for a short
+       name and put the list through the middle of a three-line one. The fallback is the mock's
+       own 380 px, so a browser that never runs the observer gets the composition it was ruled
+       from. */
+    transform: translateY(calc(var(--list-top, 380px) - 520px));
+  }
+
+  /* The flowing column centres itself. **It stays in FLOW and that is deliberate**: the note on
+     `.stage` above records what absolute positioning cost here — the page stopped being able to
+     grow, and the commitment and the revealed seed sat behind the bar with no scroll that could
+     reach them. The mock is absolute because a mock has no content it has not seen. */
+  /* **The column starts below the retreated dice, not beside them.** The mock puts the answer at
+     150 and its own name fitted; measured with a real one, a two-line 摩斯漢堡（中山林森北路）
+     centred in 760 px reaches x 365 while the corner record ends at 380, so the first glyph sat on
+     top of a die. Derived from the record's own box — 96 top + `--die` at the staged 42% + a
+     gutter — so a change to `--die` moves the column with it instead of re-creating the collision.
+     Rejected: narrowing the answer until it clears. It would have to come down to ~600 px, and a
+     104 px headline in 600 px turns every branch name into three lines to protect a corner that
+     has empty space beside it anyway. */
+  .reveal:not(:has(.evNum)) .stage { padding-top: calc(96px + var(--die) * 0.42 + 48px); }
+  .reveal:not(:has(.evNum)) .decider {
+    position: absolute; left: 50%; top: 118px; transform: translateX(-50%);
+    max-width: none; text-align: center;
+    /* **It is on screen from the first frame and it stays there — `D108`.** The mock fades it in
+       at the stage; that is the one thing this line may not do, because naming the deciding seat
+       before any dice are seen is the ruling's own honesty mechanism. So it only MOVES: while the
+       dice roll it sits in the gap between them and the list, where it reads as a caption on the
+       mechanism; at the answer it takes its place at the head of the column. */
+    transition: transform .6s ease-out;
+  }
+  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider,
+  .reveal:not(:has(.evNum))[data-stage="staged"] .decider,
+  .reveal:not(:has(.evNum))[data-stage="flooded"] .decider {
+    transform: translateX(-50%) translateY(322px);
+  }
+  .reveal:not(:has(.evNum)) .answer {
+    margin: 0 auto; max-width: 760px; text-align: center;
+  }
+  .reveal:not(:has(.evNum)) .winner { text-align: center; }
+  .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: 26px; }
+  /* The hole the absolute list sits in, reserved from the list's own measured height rather than
+     from a number — `--list-h` is set by `Reveal.tsx`; the fallback is one screen's worth of a
+     five-place round, so a browser that never runs the observer still gets a readable page. */
+  /* The hole the absolute list sits in: the gutter above it (72, `LIST_GUTTER_PX`), the list's own
+     measured height, and the gutter below. Reserved rather than hoped for — `.under` is in flow and
+     the list is not, so nothing else would keep them apart. */
+  .reveal:not(:has(.evNum)) .under {
+    margin-top: calc(var(--list-h, 300px) + 168px); max-width: 760px; margin-inline: auto;
+  }
+  .reveal:not(:has(.evNum)) .commit { text-align: center; }
+  /* The act is a row inside a centred column, so the ROW has to centre too — `text-align` cannot
+     reach it, it is a flex container. Measured before this: the seal and its question sat as a
+     pair centred on x 490 in a column centred on 720. */
+  .reveal:not(:has(.evNum)) .act-row { justify-content: center; }
 
   /* ── the lower left ───────────────────────────────────────────────────────
      **The evaluator left the lower half empty on purpose and asked for a proposal; this is it.**
