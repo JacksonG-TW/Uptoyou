@@ -170,6 +170,23 @@
   --color-flood-jade-deep: #007A51;
   --color-flood-sun-deep: #D19E00;
 
+  /* **The `-deep` step's text companions.** The four above are the first `--color-flood-*` tokens
+     that are NOT aliases of a hue — there is no `--color-cobalt-deep` for `--color-flood-cobalt-deep`
+     to alias — so the contrast gate's rule 3 (`test_web_contrast.py`) fires and asks each of them
+     for the text colour that clears 4.5:1 on it. These are that answer, measured per face rather
+     than chosen: no single value serves all four, exactly as the four floods above.
+     **Today the deep step is used as INK on the flood, not as a ground under type** (`reveal.css`
+     paints the cube borders and pips `currentColor` = `--flood-deep`), so nothing reads these yet.
+     They are declared anyway, and that is the point of the rule: the day a line of copy sits on a
+     deep ground the colour is already decided and already checked, instead of being picked by eye
+     at that moment. Measured here: onflood-hot-deep on flood-hot-deep 4.64 · onflood-cobalt-deep on
+     flood-cobalt-deep 9.26 · onflood-jade-deep on flood-jade-deep 5.29 · onflood-sun-deep on
+     flood-sun-deep 7.73 — and each figure is re-checked by the gate on every commit. */
+  --color-onflood-hot-deep: #101114;
+  --color-onflood-cobalt-deep: #FFFDF7;
+  --color-onflood-jade-deep: #FFFDF7;
+  --color-onflood-sun-deep: #101114;
+
   /* the die is an OBJECT, not a surface — identical in both schemes. `pipred` is its
      own token and never follows an accent that flips (reusing the accent measured
      2.74:1 on a bone face in dark, under the 3:1 floor for a graphical object). */
