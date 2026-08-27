@@ -21,6 +21,10 @@
 set -e
 
 if [ "${UPTO_BOOTSTRAP:-}" = "1" ]; then
+    # The four login roles first: revision 0032 grants to them and cannot create them, because a
+    # migration cannot hold a password. See `upto/roles.py` for why this is not in airflow/init.sh.
+    echo "entrypoint: ensuring the four service roles (D115)"
+    python -m upto.roles
     echo "entrypoint: applying migrations"
     alembic upgrade head
     echo "entrypoint: seeding the township-station map"

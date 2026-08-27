@@ -145,3 +145,74 @@ def grants() -> dict:
 
     lineage = {t: READ for t in sorted(READABLE_TABLES)}
     return {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS)}
+
+
+# ---------------------------------------------------------------------------
+# Creating the roles, and why it happens HERE rather than in `airflow/init.sh`.
+#
+# **A15 first put role creation in `init.sh`, and `split_boot_check.sh` caught it on the first
+# fresh clone it ever saw.** `migrate` waits only on `db`, `airflow-init` waits only on `db`, and
+# nothing orders the two — so on a stack that had never run before, revision 0032 reached its GRANTs
+# before the roles existed and the whole boot failed with `service "migrate" didn't complete
+# successfully: exit 1`. On the developer's machine it had worked, because the roles had been
+# created by hand minutes earlier. **That is the gate doing exactly its job**, and the fix is not an
+# ordering edge between the product's schema and Airflow's bootstrap — it is putting the roles where
+# they belong.
+#
+# So: the **owner** creates them, in the same one-shot service that owns database bootstrap and
+# immediately before the migration that grants to them. `init.sh` keeps what is actually its own —
+# the Airflow Connections that carry two of these credentials to the DAGs.
+#
+# **Idempotent, and `alter` on every run is the point:** a rotated password in `.env` takes effect
+# on the next `up`, the same property the Connections have.
+
+_PASSWORD_VARS = {
+    API: "UPTO_API_DB_PASSWORD",
+    INGEST: "UPTO_INGEST_DB_PASSWORD",
+    LINEAGE: "UPTO_LINEAGE_DB_PASSWORD",
+    ERASURE: "UPTO_ERASURE_DB_PASSWORD",
+}
+
+
+def ensure() -> int:
+    """Create or re-password the four login roles. Run as the owner, before the grants."""
+    import os
+    import sys
+
+    import psycopg2
+
+    from .db import DATABASE_URL_VAR
+
+    url = os.environ.get(DATABASE_URL_VAR)
+    if not url:
+        print("roles: {} is not set".format(DATABASE_URL_VAR), file=sys.stderr)
+        return 1
+    # psycopg2 speaks libpq; the app's URL carries SQLAlchemy's async driver suffix.
+    connection = psycopg2.connect(url.replace("+asyncpg", ""))
+    connection.autocommit = True
+    with connection.cursor() as cursor:
+        for name, variable in _PASSWORD_VARS.items():
+            password = os.environ.get(variable)
+            if not password:
+                print(
+                    "roles: no password for {} in {}. Every name in .env.example must carry a "
+                    "value — a role without one cannot log in, and revision 0032 would grant to "
+                    "an identity nobody can use.".format(name, variable),
+                    file=sys.stderr,
+                )
+                return 1
+            cursor.execute("select 1 from pg_roles where rolname = %s", (name,))
+            if cursor.fetchone() is None:
+                cursor.execute('create role "{}" with login password %s'.format(name), (password,))
+                print("roles: created {}".format(name))
+            else:
+                cursor.execute('alter role "{}" with login password %s'.format(name), (password,))
+                print("roles: {} already existed — password set from the environment".format(name))
+    connection.close()
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(ensure())

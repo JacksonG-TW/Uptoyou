@@ -270,6 +270,12 @@ services:
     environment:
       UPTO_BOOTSTRAP: "1"
       UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # The four login roles are created here, by the owner, immediately before the migration that
+      # grants to them — see `upto/roles.py`. These are read for that and for nothing else.
+      UPTO_API_DB_PASSWORD: ${UPTO_API_DB_PASSWORD}
+      UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
+      UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
+      UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
       # The seed writes `township_station`, which is the pipeline's table — so it uses the
       # pipeline's role rather than the owner's, even here.
       UPTO_INGEST_DATABASE_URL: postgresql+asyncpg://upto_ingest:${UPTO_INGEST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
