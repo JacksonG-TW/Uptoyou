@@ -157,7 +157,7 @@ export default function Preferences() {
    * has just tapped 花生 and is shown nothing would reasonably conclude they are now protected from
    * it. **They are not, and silence is what would tell them they were.**
    */
-  const stat = (list: { value: string; zeroed: number; share: number }[] | undefined) =>
+  const stat = (list: { value: string; touched: number; share: number }[] | undefined) =>
     new Map((list ?? []).map((a) => [a.value, a]))
   const catStat = stat(inForce?.avoid_categories)
   const ingStat = stat(inForce?.avoid_ingredients)
@@ -182,17 +182,32 @@ export default function Preferences() {
    * all, so the choice does not act.** Those are opposite meanings and the false one is the
    * reassuring one, on the single kind the owner ruled about because 「過敏是會致死的」.
    *
-   * **It keys on the kind's COVERAGE and never on `zeroed === 0`**, and the distinction is the
-   * whole rule. A category avoidance that genuinely zeroes nothing at 42.6% coverage HAS been
+   * **It keys on the kind's COVERAGE and never on `touched === 0`**, and the distinction is the
+   * whole rule. A category stance that genuinely reaches nothing at 42.6% coverage HAS been
    * measured, and 「0 家」 is then the true answer. Zero-because-measured and
    * no-measurement-exists must not render the same way, which is exactly the absent-subject
    * failure we have found all day — arriving here in the one place it costs more than a wrong
    * verdict.
+   *
+   * **The two kinds no longer say the same thing, because they no longer DO the same thing**
+   * (A13 / `spec-avoid-discount.md` AD-9, evaluator 2026-08-27). An ingredient is still ×0, so
+   * 抽不到 stays true for it and stays. A category is now a discount of `1 − 1/N` — a 火鍋 place
+   * can still be drawn — so 抽不到 became a false statement on every category row overnight, and
+   * the honest phrase is 比較少中. **This is why one helper became two rather than growing a
+   * flag**: the whole content of each is its verb, and a shared function with a boolean would put
+   * the two claims one typo apart.
    */
-  const zeroLine = (a: { zeroed: number; share: number } | undefined, coverage: number) => {
+  const touchedLine = (a: { touched: number; share: number } | undefined, coverage: number) => {
+    if (!a) return null
+    if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此比較少中。'
+    return `${a.touched.toLocaleString('en-US')} 家會比較少中（${pct(a.share)}）`
+  }
+  /** The ingredient half, unchanged and deliberately so: ×0 means 抽不到 and that is still what
+   *  happens. The two helpers differing IS the fact the screen is reporting. */
+  const zeroLine = (a: { touched: number; share: number } | undefined, coverage: number) => {
     if (!a) return null
     if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此抽不到。'
-    return `${a.zeroed.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
+    return `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
   }
   const keptCategories = new Set(
     (inForce?.avoid_categories ?? []).filter((a) => a.persist).map((a) => a.value),
@@ -333,7 +348,7 @@ export default function Preferences() {
                   {on && <span className="rowState">避開</span>}
                   {on && (
                     <span className="rowStat" data-part="pref-stance-stat" data-shape={(inForce?.category_coverage.share ?? 0) > 0 ? 'count' : 'why'}>
-                      {zeroLine(catStat.get(c), inForce?.category_coverage.share ?? 0)}
+                      {touchedLine(catStat.get(c), inForce?.category_coverage.share ?? 0)}
                     </span>
                   )}
                 </button>
@@ -371,6 +386,17 @@ export default function Preferences() {
           </p>
         )}
 
+        {/* **A13's sentence, verbatim from the ruling (AD-9).** The mechanism changed under the
+            screen: a category used to zero a place and now discounts it by `1 − 1/N`. Everything
+            else here reports numbers; this reports what the numbers now MEAN, once, in the place a
+            reader meets them — and it says the part a member would otherwise have to infer, that
+            the effect shrinks as the table fills. D20 holds: it states, it does not advise. */}
+        {inForce && (
+          <p className="prefsNote" data-part="pref-category-discount">
+            避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
+          </p>
+        )}
+
         {/* D22's breadth. **Stated, never called "crossed"** — the payload's `threshold` is null
             because D22 names no line, and a screen that invented one would be warning against a
             number nobody ruled. So while the threshold is null this renders as a plain statement of
@@ -403,7 +429,7 @@ export default function Preferences() {
             decides whether a person is told they have narrowed themselves.
 
             **It cannot fire today and that is expected, not a bug.** `breadth.share` is capped by
-            categorised coverage — an uncategorised place can never be zeroed by a category
+            categorised coverage — an uncategorised place can never be touched by a category
             avoidance — and coverage is 42.62%, so 0.5 is unreachable until the classifier passes
             half. **Its never-rendering is not evidence that it works**, and no fixture here fakes
             coverage to make it appear.
@@ -415,13 +441,13 @@ export default function Preferences() {
           <p className="prefsWarn" data-part="pref-breadth-warning">
             你目前的選擇，讓這個圈子提得出來的
             {' '}{inForce.breadth.proposable.toLocaleString('en-US')} 家裡，
-            超過一半抽不到。
+            超過一半會受影響。
           </p>
         )}
 
-        {inForce && inForce.breadth.zeroed > 0 && (
+        {inForce && inForce.breadth.touched > 0 && (
           <p className="prefsNote" data-part="pref-breadth">
-            這些選擇目前讓 {inForce.breadth.zeroed.toLocaleString('en-US')} 家抽不到，
+            這些選擇目前碰到 {inForce.breadth.touched.toLocaleString('en-US')} 家，
             範圍是這個圈子提得出來的 {inForce.breadth.proposable.toLocaleString('en-US')} 家
             （{pct(inForce.breadth.share)}）。
           </p>

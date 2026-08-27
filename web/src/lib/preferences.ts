@@ -42,12 +42,12 @@ export type Kind = 'budget' | 'avoid_category' | 'avoid_ingredient'
 export type Stance = 'avoid' | 'allow'
 
 /**
- * One stance the member holds. **`zeroed` and `share` are per-stance and always present** — every
+ * One stance the member holds. **`touched` and `share` are per-stance and always present** — every
  * kind carries them, so the screen special-cases none: ingredients report `0` and `0.0` today
  * because nothing carries ingredient data (D103), and the day that changes the number moves on its
  * own with no code here to remember.
  *
- * **Never sum these for a total.** They happen to add up to `breadth.zeroed` today because D38's
+ * **Never sum these for a total.** They happen to add up to `breadth.touched` today because D38's
  * categories are disjoint — verified by backend, 14,658 = 14,658 — but `breadth` is the authority
  * and this list is the breakdown. If a kind ever overlaps, adding them would overstate the truth at
  * exactly the moment it mattered.
@@ -56,7 +56,7 @@ export type Avoidance = {
   value: string
   persist: boolean
   valid_from: string
-  zeroed: number
+  touched: number
   share: number
 }
 
@@ -80,13 +80,20 @@ export type Preferences = {
    *  boundary is ever ruled to be Taipei, this value moves and the client needs no change. */
   month: string
   breadth: {
-    /** **`zeroed`, not `removed`, and the rename is a correction rather than a preference.** An
-     *  avoidance sets a place's weight to ZERO (D103/D45); it never takes the place out of
-     *  anything. The place stays proposable, can still be proposed and still appears in the pool —
-     *  it simply holds no cells on the dice table, so no roll can land on it. The old name was the
-     *  only thing in the system saying otherwise, and it was enough to put a wrong mechanism into a
-     *  spec another session wrote from reading the payload. */
-    zeroed: number
+    /** **`touched` — the third name this field has had, and each rename was a correction.**
+     *  `removed` until 2026-08-19, `zeroed` until 2026-08-27, `touched` now (backend `fdf1a06`,
+     *  D22 re-derived).
+     *
+     *  A place is never *removed*: it stays proposable, can still be proposed and still appears in
+     *  the pool. And since A13 a category no longer *zeroes* anything either — it discounts by
+     *  `1 − 1/N`, so a 火鍋 place can still be drawn. What the number counts is the share of the
+     *  proposable set that any of the member's stances **reaches at all**, whatever it does on
+     *  arrival: an ingredient's ×0 and a category's discount each count one place.
+     *
+     *  **The name is load-bearing and the history is why.** A field called `zeroed` reads as
+     *  *cannot be drawn* to every screen and every spec that meets it — which is how 「拿掉」 got
+     *  into a spec once already. */
+    touched: number
     proposable: number
     share: number
     /** Stated by the API, never composed here. A share whose denominator the screen invents is
