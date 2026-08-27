@@ -405,11 +405,12 @@ python3 api/tests/test_cwa_ingest.py    # and test_fda_ingest, test_fia_ingest, 
 python3 api/tests/test_weight_fold.py   # test_classify, test_web_surface, test_evaluate_draw …
 ```
 
-Integration tests build and drop their own database inside the stack:
+Integration tests build and drop their own database, in the test-only service that holds the
+owner's credential — never in `api`, which connects as a role that cannot `create database`:
 
 ```sh
-docker compose exec api python /srv/tests/test_place_ingest_integration.py
-docker compose exec api python /srv/tests/test_business_tax_integration.py
+docker compose run --rm tests python /srv/tests/test_place_ingest_integration.py
+docker compose run --rm tests python /srv/tests/test_business_tax_integration.py
 ```
 
 ## Scope

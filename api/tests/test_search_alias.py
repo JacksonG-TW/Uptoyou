@@ -35,7 +35,13 @@ from upto.seed.aliases import ALIASES, AUTHOR, OWNER_RULED, PAIRING  # noqa: E40
 
 # The only two modules allowed to name the table: the search that reads it, and the seed that
 # writes it. **A module added here is a bound being widened and belongs in a ruling, not a diff.**
-MAY_NAME_THE_TABLE = {"live.py", "aliases.py"}
+# `live.py` runs the search; `aliases.py` is the authored seed. **`roles.py` joined on 2026-08-27
+# with A15/D115** and it is a different kind of naming: it lists every table in a GRANT map, so it
+# names `search_alias` in order to say *which role may touch it*, not in order to read it. Excluding
+# it does not weaken the bound — a grant map that could silently omit a table is a worse failure than
+# the one this sweep guards, and `test_role_grants.py` refuses any table in `public` without a line
+# there. The two tests pull in opposite directions on purpose, and this comment is the seam.
+MAY_NAME_THE_TABLE = {"live.py", "aliases.py", "roles.py"}
 
 # D113: "the table stays small (common foreign-branded chains; there is no completeness claim)".
 # A ceiling rather than a target — it exists so that growth has to argue with this file.
