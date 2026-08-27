@@ -286,10 +286,10 @@ async def ingest_once(
     11 left no `ingest_run` row on any path, so its daily no-ops — twenty-nine in thirty (D34) —
     were as unrecoverable as item 10's were before `runlog` was written.
     """
-    from ..db import session_factory
+    from ..db import pipeline_session_factory
     from .fda_store import PlaceStore
 
-    Session = session_factory(url)
+    Session = pipeline_session_factory(url)
     started = runlog.now()
     # Lineage over a scheduled run and over a hand-triggered one are different answers to "why
     # does this row exist" — item 10's DAG sets this, and item 11's now does as well.

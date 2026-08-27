@@ -249,6 +249,66 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # A15 / D115 — the one-shot bootstrap: migrations and the township seed, as the owner.
+  #
+  # **This exists so `docker compose up` stays sufficient (§6) while the serving container stops
+  # holding the owner's credential.** `alembic` does DDL and the seed writes a reference table;
+  # `upto_api` can do neither, by design. `api` waits on this with `service_completed_successfully`,
+  # the same shape `airflow-scheduler` already uses for `airflow-init`, so a failed migration means
+  # the API never starts — the guarantee the old in-container entrypoint gave, one container
+  # earlier.
+  #
+  # It runs and exits. `restart: "no"` is explicit because the default would restart a completed
+  # one-shot for ever.
+  migrate:
+    <<: *logging
+    restart: "no"
+    networks:
+      - data
+    build:
+      context: ./api
+    environment:
+      UPTO_BOOTSTRAP: "1"
+      UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # The seed writes `township_station`, which is the pipeline's table — so it uses the
+      # pipeline's role rather than the owner's, even here.
+      UPTO_INGEST_DATABASE_URL: postgresql+asyncpg://upto_ingest:${UPTO_INGEST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+    command: ["true"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # A15 / D115 — the build-and-drop tests, and the only place the OWNER's credential lives.
+  #
+  # **Why a whole service for it.** Every integration test does `create database …`, which
+  # `upto_api` cannot do. Putting the owner's URL back into the `api` container would have kept the
+  # tests running and made the boundary theatre: a shell there could `psql` as the superuser, and
+  # 「`TRUNCATE preference` is refused」 would be true only because psql had been handed the narrow
+  # URL. This service is what makes that Done line mean what it says — **the api container holds no
+  # owner credential at all**.
+  #
+  # **`profiles: ["test"]` keeps it out of `docker compose up`.** It is never started with the
+  # stack, never listens, and has no healthcheck; it exists to be `run --rm`. Same image as `api`,
+  # so it is the same code — a test image that could drift from the served one would be worse than
+  # no isolation.
+  #
+  #     docker compose run --rm tests python /srv/tests/test_role_grants.py
+  #
+  # It joins `data` only: a test has no business on the edge network.
+  tests:
+    <<: *logging
+    profiles: ["test"]
+    networks:
+      - data
+    build:
+      context: ./api
+    environment:
+      # The owner. Alembic and `create database` need it; nothing served does.
+      UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+
   api:
     <<: *logging
     # A11 — peak 143.3 MiB, reached by M1's five real ingests. **1.5x is 215m; 512m on purpose** — the
@@ -266,7 +326,19 @@ services:
       # Async driver end to end (H1): a synchronous driver blocks the event loop, and
       # while it is blocked nobody is served — not the other four people in the room,
       # not the open SSE streams, not the health check.
-      UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # A15 / D115 — three URLs in one container, because this container is the entry point for
+      # three different things. `UPTO_DATABASE_URL` keeps its name and is the **server's** alone,
+      # so `upto.db.database_url()` is untouched; the pipeline CLIs and the lineage tool each read
+      # their own below and pick it up through `pipeline_session_factory` / `lineage_session_factory`.
+      #
+      # **`POSTGRES_USER` is no longer here and that is the ruling.** It is the owner — Alembic, the
+      # build-and-drop tests, an operator's psql — and no service connects as it. A shell in this
+      # container can no longer `TRUNCATE preference`.
+      #
+      # A psql-usable DSN is derived, never stored twice: `psql "${UPTO_DATABASE_URL/+asyncpg/}"`.
+      UPTO_DATABASE_URL: postgresql+asyncpg://upto_api:${UPTO_API_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      UPTO_INGEST_DATABASE_URL: postgresql+asyncpg://upto_ingest:${UPTO_INGEST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      UPTO_LINEAGE_DATABASE_URL: postgresql+asyncpg://upto_lineage:${UPTO_LINEAGE_DB_PASSWORD}@db:5432/${POSTGRES_DB}
     # Exactly one worker, and the reason lives here rather than in a comment somewhere
     # else (H2): live room state is per-process, and a second worker means two people in
     # the same room can be served different rooms. The no-cache rule forbids the usual
@@ -275,6 +347,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      # A15: the schema is somebody else's job now, and the API waits for it rather than doing it.
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"]
       interval: 5s
@@ -408,6 +483,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       UPTO_CWA_API_KEY: ${UPTO_CWA_API_KEY}
+      # A15 / D115 — read by `init.sh` to create the four roles and the two new Connections, and by
+      # nothing else. A task reads its database credential from its **Connection** (D33), never from
+      # here; these are the bootstrap layer that puts the credential into the Connection once.
+      UPTO_API_DB_PASSWORD: ${UPTO_API_DB_PASSWORD}
+      UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
+      UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
+      UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
       # A10's alert channel. Read by `init.sh` once, to create the `telegram_alerts` Connection;
       # no task reads them afterwards (D33). `:-` because absent is legal — a stack with no bot
       # runs with alerting off rather than refusing to start.

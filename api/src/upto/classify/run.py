@@ -62,7 +62,7 @@ from upto.classify.classify import Classified, NoSignal, classify_name, classify
 from upto.classify.model import MODEL, available, ask, take_samples
 from upto.classify.transport import reset_retries, retries_spent
 from upto.classify.prompt import PROMPT_VERSION, RAG_PROMPT_VERSION
-from upto.db import dispose_all, session_factory
+from upto.db import dispose_all, pipeline_session_factory
 
 BATCH = 25
 
@@ -259,7 +259,7 @@ async def pending(session, township_code: str) -> list[tuple[int, str]]:
 
 async def main(township_code: str, rag: bool = False, embed_key: str = "bge",
                k: int = 5) -> int:
-    Session = session_factory()
+    Session = pipeline_session_factory()
     retrieve_many = None
     embed_model = None
     try:

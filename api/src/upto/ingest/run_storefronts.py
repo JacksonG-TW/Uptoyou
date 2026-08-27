@@ -131,10 +131,10 @@ async def ingest_once(
     url: Optional[str] = None,
 ) -> Verdict:
     """Fetch, then hand the sheet to the sequencing above with a real database behind it."""
-    from ..db import session_factory
+    from ..db import pipeline_session_factory
     from .storefront_store import StorefrontStore
 
-    Session = session_factory(url)
+    Session = pipeline_session_factory(url)
     started = runlog.now()
     invoked_by = os.environ.get("UPTO_INVOKED_BY") or "cli"
 

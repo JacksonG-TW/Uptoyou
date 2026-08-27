@@ -40,7 +40,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert
 
-POSTGRES_CONNECTION = "upto_postgres"
+# A15 / D115 as amended: this job runs as `upto_erasure` — SELECT and DELETE on `preference`,
+# SELECT on `weight_contribution` so it can leave a version some round pinned alone (D24), and
+# nothing else in the database. Owner-ruled against running it as `upto_api`: a scheduled
+# deletion holds exactly the capability it needs. It is NOT `upto_ingest` — that role may not
+# touch `preference` at all, which is the point of the split.
+POSTGRES_CONNECTION = "upto_erasure_postgres"
 
 
 def _database_url() -> str:

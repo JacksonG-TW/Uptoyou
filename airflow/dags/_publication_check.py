@@ -67,7 +67,9 @@ from __future__ import annotations
 # files call `make_check_task` at parse time, so inside Airflow the import happens exactly as
 # early as it ever did.
 
-POSTGRES_CONNECTION = "upto_postgres"
+# A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
+# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+POSTGRES_CONNECTION = "upto_ingest_postgres"
 
 # A drop of this share or more against the previous publication fails the check. See the docstring:
 # chosen to be obviously safe, to be moved once there is history to move it from.

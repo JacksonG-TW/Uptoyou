@@ -213,10 +213,10 @@ async def check_against_ingested(session) -> list[str]:
 async def load(url: str | None = None) -> int:
     from sqlalchemy import text
 
-    from ..db import session_factory
+    from ..db import pipeline_session_factory
 
     check_self_consistent()
-    async with session_factory(url)() as session:
+    async with pipeline_session_factory(url)() as session:
         notes = await check_against_ingested(session)
         for note in notes:
             print("seed: note —", note)

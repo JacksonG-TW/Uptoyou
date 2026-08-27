@@ -16,6 +16,7 @@ environment variable is only the fallback the API uses.
 """
 
 import os
+import sys
 from typing import Dict
 
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
@@ -66,6 +67,67 @@ def engine_for(url: str | None = None) -> AsyncEngine:
 
 def session_factory(url: str | None = None) -> async_sessionmaker:
     return async_sessionmaker(engine_for(url), expire_on_commit=False)
+
+
+# A15 / D115 — the three roles, and which variable each tool reads.
+#
+# **`DATABASE_URL_VAR` above is the SERVER's, and since A15 it is the server's alone.** The api
+# container is the entry point for three different things — uvicorn, the pipeline CLIs and the
+# lineage tool — so one variable cannot serve all three without handing every one of them the
+# widest role. Each tool names its own below; `engine_for` already took an explicit URL, which is
+# the door D33 built for exactly this ("a caller may pass a URL it just read from a Connection").
+INGEST_URL_VAR = "UPTO_INGEST_DATABASE_URL"
+LINEAGE_URL_VAR = "UPTO_LINEAGE_DATABASE_URL"
+
+
+def _role_url(variable: str, what: str) -> str:
+    """The URL for one role, or the owner's with a loud line saying the fallback fired.
+
+    **The fallback exists for the build-and-drop integration tests and for nothing else.** Those
+    create their own database, run as its owner and set only `UPTO_DATABASE_URL` — A15 keeps them
+    that way on purpose, because a test that had to be granted before it could run would be
+    asserting the grants rather than the behaviour.
+
+    **It is loud because a silent one would undo D115.** A production container missing its
+    variable would otherwise quietly connect as the widest role available and every refusal this
+    ticket exists to produce would stop happening, with nothing on any screen. So the fallback
+    prints, and `test_role_grants.py` asserts that in the *running* stack all three variables are
+    set — the fallback's correctness in a test and its absence in production are two different
+    checks and both are made.
+    """
+    url = os.environ.get(variable)
+    if url:
+        return _checked(url)
+    print(
+        "db: {} is not set — {} is falling back to {}, which is the OWNER's connection. "
+        "That is correct only in a build-and-drop test; in the stack it means the role split "
+        "(D115) is not in force for this process.".format(variable, what, DATABASE_URL_VAR),
+        file=sys.stderr,
+        flush=True,
+    )
+    return database_url()
+
+
+def pipeline_session_factory(url: str | None = None) -> async_sessionmaker:
+    """`upto_ingest` — the six ingest CLIs, the classifier, the seed CLIs.
+
+    An explicit `url` still wins — that is a DAG handing over what it read from its Airflow
+    Connection (D33), and it is the path the five source CLIs already take.
+
+    D115: this role may not read `member`, `principal`, `preference`, `round`, `proposal`,
+    `weight_contribution`, `trip`, `member_roll` or `device_secret`. **The pipeline never sees a
+    person** (§3.0, D14), and since A15 the database is what says so rather than a habit.
+    """
+    return session_factory(url or _role_url(INGEST_URL_VAR, "the pipeline"))
+
+
+def lineage_session_factory(url: str | None = None) -> async_sessionmaker:
+    """`upto_lineage` — SELECT on exactly what `queries.READABLE_TABLES` names.
+
+    H20's boundary was a Python list; since A15 it is a GRANT, and the list is the second line.
+    A tool that reaches past it now fails at the database rather than at a code review.
+    """
+    return session_factory(url or _role_url(LINEAGE_URL_VAR, "the lineage tool"))
 
 
 async def dispose_all() -> None:

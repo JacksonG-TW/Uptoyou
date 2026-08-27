@@ -236,10 +236,10 @@ async def ingest_once(
     written after the attempt in its own transaction — the no-op path has just rolled its
     transaction back, and a failure has no transaction to ride on.
     """
-    from ..db import session_factory
+    from ..db import pipeline_session_factory
     from .business_tax_store import BusinessTaxStore
 
-    Session = session_factory(url)
+    Session = pipeline_session_factory(url)
     started = runlog.now()
     # A scheduled run and a hand-triggered one are different answers to "why does this row
     # exist" — absent, every run records itself as `cli`, which is a wrong fact.

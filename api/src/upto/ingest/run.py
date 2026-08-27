@@ -16,7 +16,7 @@ import asyncio
 import os
 import sys
 
-from ..db import session_factory
+from ..db import pipeline_session_factory
 from .cwa import FORECAST_DATASET, OBSERVATION_DATASET, CwaUnavailable, fetch_publication
 from . import runlog
 from .store import store_publication
@@ -48,7 +48,7 @@ async def ingest_once(datasets=(FORECAST_DATASET, OBSERVATION_DATASET)) -> int:
             # thing as last time is not — that distinction is the whole of D42, and the two
             # are recorded differently because inferred from an absence they look alike.
             print("{}: FAILED — {}".format(dataset_id, failure), file=sys.stderr)
-            async with session_factory()() as session:
+            async with pipeline_session_factory()() as session:
                 await runlog.record(
                     session,
                     runlog.RunRecord(
@@ -58,11 +58,11 @@ async def ingest_once(datasets=(FORECAST_DATASET, OBSERVATION_DATASET)) -> int:
                 )
             failures += 1
             continue
-        async with session_factory()() as session:
+        async with pipeline_session_factory()() as session:
             result = await store_publication(session, publication)
         # Ticket 09: a run that wrote nothing has to be answerable, so the row is written on
         # every outcome rather than only when something landed.
-        async with session_factory()() as session:
+        async with pipeline_session_factory()() as session:
             await runlog.record(
                 session,
                 runlog.RunRecord(

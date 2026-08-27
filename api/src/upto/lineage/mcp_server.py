@@ -186,9 +186,9 @@ async def _call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     # be tested without a database.
     hour = _hour(arguments["hour"]) if "hour" in arguments else None
 
-    from ..db import session_factory
+    from ..db import lineage_session_factory
 
-    async with session_factory()() as session:
+    async with lineage_session_factory()() as session:
         if name == "explain_round":
             answer = await queries.explain_round(session, arguments["round_id"])
         elif name == "forecast_reading_source":

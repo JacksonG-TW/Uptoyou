@@ -123,7 +123,7 @@ ALIASES: tuple[tuple[str, str, date, str, str], ...] = (
 async def apply(list_only: bool = False) -> int:
     from sqlalchemy import text
 
-    from ..db import dispose_all, session_factory
+    from ..db import dispose_all, pipeline_session_factory
 
     if list_only:
         for alias, registered, authored, basis, note in ALIASES:
@@ -132,7 +132,7 @@ async def apply(list_only: bool = False) -> int:
         print("{} alias(es); nothing written".format(len(ALIASES)))
         return 0
 
-    Session = session_factory()
+    Session = pipeline_session_factory()
     try:
         async with Session() as session:
             for alias, registered, authored, basis, note in ALIASES:
