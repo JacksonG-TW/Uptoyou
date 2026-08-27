@@ -294,8 +294,8 @@ async def scenario(test_url: str) -> None:
         check("a member may avoid MORE THAN ONE category",
               [r["value"] for r in body["avoid_categories"]] == ["火鍋", "燒烤"],
               body["avoid_categories"])
-        check("and D22's breadth counts what those settings actually zero — 1 of 2",
-              (body["breadth"]["zeroed"], body["breadth"]["proposable"]) == (1, 2),
+        check("and D22's breadth counts what those settings actually touch — 1 of 2",
+              (body["breadth"]["touched"], body["breadth"]["proposable"]) == (1, 2),
               body["breadth"])
 
         answer = await client.post(
@@ -330,14 +330,19 @@ async def scenario(test_url: str) -> None:
         check("D22's breadth counts the proposable set and says what it counted",
               breadth["proposable"] == 2 and "proposable set" in breadth["denominator"],
               breadth)
-        check("and 燒烤 alone removes none of the two categorised places",
-              breadth["zeroed"] == 0, breadth)
+        check("and 燒烤 alone touches none of the two categorised places",
+              breadth["touched"] == 0, breadth)
         # **The name is asserted, because the name was the defect.** `removed` taught a mechanism the
         # product does not have — an avoidance zeroes a place's weight (D103/D45) and never takes it
         # out of the proposable set — and a session writing a spec against this payload wrote 「拿掉」
         # from reading the old field. A field name is a claim about behaviour; this pins the claim.
-        check("breadth reports `zeroed` and not `removed`",
-              "zeroed" in breadth and "removed" not in breadth, sorted(breadth))
+        # **The field has been renamed twice and the test names every retired spelling.** `removed`
+        # was read as *taken out of the set*, `zeroed` as *cannot be drawn*; since D103 was reopened
+        # a category discounts by `1 − 1/N` and does neither, and D22's 「碰到」 ruling made the
+        # question *what did my stances touch*. Asserting the old names are absent is what stops a
+        # helpful alias being reintroduced for a client that has not moved.
+        check("breadth reports `touched` and neither `zeroed` nor `removed`",
+              "touched" in breadth and not {"zeroed", "removed"} & set(breadth), sorted(breadth))
         # And the denominator still travels with it (D22): a share whose base is unstated means three
         # different things over three candidate pools.
         check("breadth still names its denominator", bool(breadth.get("denominator")), breadth)
@@ -347,12 +352,12 @@ async def scenario(test_url: str) -> None:
         # seat list: a surface that computes it can compute it wrong.
         check("breadth states whether the line was crossed rather than leaving it to the client",
               isinstance(breadth.get("crossed"), bool), breadth)
-        # **The ceiling: an uncategorised place can never be zeroed by a category avoidance**, so
+        # **The ceiling: an uncategorised place can never be touched by a category stance**, so
         # `breadth.share` can never exceed the categorised share. Measured 2026-08-19 by avoiding all
         # ten of D38's categories at once: 15,555 of 36,499 = 0.4262, exactly `category_coverage.share`.
         # **That is why threshold 0.5 cannot be crossed until the classifier passes 50% coverage**, and
         # it is asserted here so the relationship is a property rather than an observation somebody made
-        # once. If this ever fails, either an uncategorised place is being zeroed or the two figures have
+        # once. If this ever fails, either an uncategorised place is being touched or the two figures have
         # stopped sharing a denominator.
         check("breadth.share cannot exceed the categorised share",
               breadth["share"] <= body["category_coverage"]["share"] + 1e-9,

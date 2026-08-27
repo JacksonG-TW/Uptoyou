@@ -209,8 +209,11 @@ select 0 as with_ingredient,
 # from) and the latest publication unscoped (counts thousands nobody in the circle would propose, so
 # the proportion reads reassuringly small and means nothing).
 #
-# **The numerator can only count places that have a category**, because only a categorised place can
-# be avoided — which is why the coverage figure below sits beside it rather than in the markup.
+# **The numerator can only count places that have a category**, because only a categorised place is
+# reachable by a category stance — which is why the coverage figure below sits beside it rather than
+# in the markup. That ceiling is about today's data, not about the definition: D22's 「碰到」 asks
+# what the member's stances touch, and the ingredient half touches nothing only because no place
+# carries ingredient data.
 BREADTH = """
 with latest as (
     select id from place_publication order by detected_at desc, id desc limit 1
@@ -228,13 +231,27 @@ proposable as (
      where p.origin = 'circle-local' and p.circle_id = :circle_id
 )
 select count(*) as proposable,
-       -- **`zeroed`, not `removed` — renamed 2026-08-19 because the old name taught the wrong
-       -- mechanism.** An avoidance sets a place's weight to zero (D103/D45); the place stays in the
-       -- proposable set, can still be proposed, and still appears in the pool. It simply holds no
-       -- cells on the dice table, so no roll can land on it. The evaluator wrote 「拿掉」 in a spec
-       -- from reading this field and the owner caught it — the name was the only thing that told it
-       -- otherwise.
-       count(*) filter (where category = any(:avoided)) as zeroed
+       -- **`touched`, and this is the field's second rename for the same reason: the name is a
+       -- claim about behaviour.** It was `removed` until 2026-08-19 (a place is never removed — it
+       -- stays proposable and stays in the pool), then `zeroed` until 2026-08-27, when D103 was
+       -- reopened and a category stopped zeroing anything: it now discounts by `1 − 1/N`. A field
+       -- still called `zeroed` would have gone on being read as *cannot be drawn* by every screen
+       -- and every spec, which is exactly how 「拿掉」 got into a spec the first time.
+       --
+       -- **`touched` is D22 as the owner ruled it on 2026-08-27 — 「碰到」: the share of the
+       -- proposable set any of this member's stances reaches at all**, whatever it does when it
+       -- gets there. An ingredient's ×0 and a category's discount each count one place, because
+       -- the question the number answers is *how much of the room have I had an opinion about*,
+       -- not *how much have I killed*.
+       count(*) filter (
+           where category = any(:avoided)
+           -- **The ingredient half is a stated gap, not an omission.** `place` carries no
+           -- ingredient column — there is no source and none planned (D103) — so no predicate can
+           -- be written here yet and this counts zero of them for a reason rather than by silence.
+           -- The day a source arrives it becomes `or <the join>` on this line and `touched`'s
+           -- definition does not move; `filter` counts a row once, so a place both stances reach
+           -- is one place and not two.
+       ) as touched
   from proposable
 """
 
@@ -264,7 +281,7 @@ proposable as (
       from place p
      where p.origin = 'circle-local' and p.circle_id = :circle_id
 )
-select category, count(*) as zeroed
+select category, count(*) as touched
   from proposable
  where category = any(:avoided)
  group by category
@@ -402,7 +419,7 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             )
         ).one()
         per_stance = {
-            row.category: row.zeroed
+            row.category: row.touched
             for row in (
                 await session.execute(
                     text(BREADTH_BY_STANCE),
@@ -424,16 +441,17 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
         # line" and names no number**, so the line is unruled and this payload will not invent
         # one. A screen may state the share; it may not say "crossed" until there is a line.
         "breadth": {
-            # **`zeroed` rather than `removed`.** The mechanism is zero weight, never exclusion: an
-            # avoided place stays proposable and stays in the pool, and holds no cells on the dice
-            # table so no roll can land on it. The old name was read as *taken out of the set* by the
-            # session writing the spec against it, which is the strongest possible evidence that a
-            # field name is a claim about behaviour and not a label.
-            "zeroed": breadth.zeroed,
+            # **`touched`, renamed from `zeroed` on 2026-08-27 with D22's 「碰到」 ruling.** The
+            # field has now been renamed twice for the same reason, and that is the lesson rather
+            # than the churn: `removed` was read as *taken out of the set*, `zeroed` as *cannot be
+            # drawn*, and since D103 was reopened a category neither removes nor zeroes — it
+            # discounts by `1 − 1/N`. A field name is a claim about behaviour, and the claim has to
+            # be re-checked every time the behaviour moves.
+            "touched": breadth.touched,
             "proposable": breadth.proposable,
             "share": 0.0
             if not breadth.proposable
-            else round(breadth.zeroed / breadth.proposable, 4),
+            else round(breadth.touched / breadth.proposable, 4),
             "denominator": "the circle's proposable set — every reference place in the current "
                            "publication, plus this circle's own places",
             # **0.5, owner-ruled 2026-08-19 (`f51aec0`), applied to the member's COMBINED breadth** —
@@ -447,7 +465,7 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             # not `>=`, so a member sitting exactly on half is not warned about it.
             "crossed": bool(
                 breadth.proposable
-                and (breadth.zeroed / breadth.proposable) > 0.5
+                and (breadth.touched / breadth.proposable) > 0.5
             ),
         },
         # **What an avoid can currently reach.** Not decoration: only a place with a category can be
@@ -511,15 +529,16 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
         # number a member can actually act on: the combined figure tells them they have narrowed a lot
         # and not which choice did it.
         #
-        # **`zeroed` here and `zeroed` in `breadth` are the same word for the same thing on purpose**,
-        # and neither is `removed`: an avoidance sets a place's weight to zero (D103/D45), the place
-        # stays proposable, and it simply holds no cells on the dice table.
+        # **`touched` here and `touched` in `breadth` are the same word for the same thing on
+        # purpose.** Neither is `removed` and neither is `zeroed` any more: a category stance
+        # discounts a place by `1 − 1/N` (D103 as reopened), the place stays proposable, and it
+        # keeps a real share of the dice table.
         "avoid_categories": [
             {
                 "value": row.value,
                 "persist": row.persist,
                 "valid_from": row.valid_from.isoformat(),
-                "zeroed": per_stance.get(row.value, 0),
+                "touched": per_stance.get(row.value, 0),
                 "share": 0.0
                 if not breadth.proposable
                 else round(per_stance.get(row.value, 0) / breadth.proposable, 4),
@@ -558,14 +577,20 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
                 "value": row.value,
                 "persist": row.persist,
                 "valid_from": row.valid_from.isoformat(),
-                # **Zero, and reported rather than omitted (D103's shape).** An ingredient is a stance
-                # like a category, so D22's amendment applies to it — and the honest answer today is
-                # that it zeroes nothing, because no place carries ingredient data and there is no
-                # source for it. Sending the key at 0 keeps the screen from special-casing one kind,
-                # and it makes the day the number moves visible instead of a surprise. It is also why
-                # this cannot be folded into `breadth`: the combined figure would then claim an
-                # avoidance narrowed the pool when it narrowed nothing.
-                "zeroed": 0,
+                # **Zero, and reported rather than omitted (D103's shape).** An ingredient is a
+                # stance like a category, so D22's 「碰到」 ruling covers it — and the honest answer
+                # today is that it touches nothing, because no place carries ingredient data and
+                # there is no source for it. Sending the key at 0 keeps the screen from
+                # special-casing one kind, and it makes the day the number moves visible instead of
+                # a surprise.
+                #
+                # **The 2026-08-19 note that this «cannot be folded into `breadth`» is superseded.**
+                # It was right while `breadth` meant *zeroed*: adding a stance that zeroes nothing
+                # would have claimed a narrowing that had not happened. D22 now asks what the
+                # stances **touch**, so the ingredient half belongs inside the combined figure by
+                # definition — it contributes nothing only because there is nothing to join, and
+                # `BREADTH`'s filter says exactly where that join lands.
+                "touched": 0,
                 "share": 0.0,
             }
             for row in ingredients
