@@ -7,7 +7,8 @@
  * hide, toggle or forget to hide. A single type with `weights?: …` would compile the leak.
  *
  * `for_credential` in `api_common.py` builds the member shape by whitelist — `round_id · status ·
- * dice · sum · winning_place_id · places · trip` — so a field added to the payload is operator-only
+ * dice · sum · winning_place_id · places · trip · winner_headline` — so a field added to the
+ * payload is operator-only
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
@@ -36,6 +37,13 @@ export type MemberReveal = {
   sum: number
   winning_place_id: number | null
   places: Places
+  /** A16 / D92's 2026-08-27 amendment — the winner's name shortened for the ONE headline line.
+   *  Composed by the API (`upto.headline`), never here: the authored token list belongs in git
+   *  behind `tools/server_copy.py`'s gate, and the same place must read the same on every screen.
+   *  **`null` is a real state** — a payload that predates A16, or a winner the API could not
+   *  compose one for. The headline then falls back to `places[winning_place_id]`; it never renders
+   *  empty, and `places` itself is untouched so every list row keeps the composed name. */
+  winner_headline: string | null
   trip: Trip
   /** D108. `seed_commit` was published at open, before the first place was proposed; `revealed_seed`
    *  is `null` until the round closes and is what makes the commitment checkable. */

@@ -523,8 +523,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const decider = data
     ? (data.rolls?.find((r) => r.counts)?.nickname ?? data.deciding_member?.nickname ?? '')
     : ''
+  /** A16: the headline takes the API's shortened form, and falls back to the composed name when
+   *  the payload carries none. Nothing is computed here — see `winner_headline` in `lib/reveal`. */
   const winner = data && data.winning_place_id !== null
-    ? data.places[String(data.winning_place_id)]
+    ? (data.winner_headline ?? data.places[String(data.winning_place_id)])
     : ''
 
   return (
