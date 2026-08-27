@@ -47,29 +47,35 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from upto.db import dispose_all, session_factory
-from upto.preferences import BUDGET_BANDS, IN_FORCE_BUDGET
+from upto.preferences import BUDGET_BANDS, IN_FORCE_BUDGET, TIMEZONE, month_end_of
 from upto.privacy.erase import RETENTION
 
 # The back-dated instant, as one expression the database evaluates once. The ninth day of the month
 # rather than its first: a `date_trunc` on its own lands on midnight of day 1, and a row written at
 # a month boundary is the one row a reader cannot tell from a boundary bug.
+#
+# **Taipei's month, then converted back to a timestamptz.** `now() at time zone 'Asia/Taipei'` is a
+# naive local timestamp; the trailing `at time zone` turns the result back into a real instant, so
+# `valid_from` stays an honest timestamptz rather than a Taipei wall-clock time stored as if it were
+# UTC — an eight-hour lie in a column the retention window reads.
 AGED_INSTANT = (
-    "(date_trunc('month', now()) - make_interval(months => cast(:months as integer))"
-    " + interval '9 days')"
-)
+    "((date_trunc('month', now() at time zone '{tz}')"
+    " - make_interval(months => cast(:months as integer))"
+    " + interval '9 days') at time zone '{tz}')"
+).format(tz=TIMEZONE)
 
-# `expires_on` is D25's month end, and this is `upto.preferences.INSERT`'s formula with the
-# back-dated instant in place of `now()`. Two copies of a formula is one too many; the alternative
-# was making the product's INSERT take a timestamp parameter it has no other reason to have, which
-# widens live code for a fixture's benefit.
+# `expires_on` is D25's month end, taken from `upto.preferences.month_end_of` with the back-dated
+# instant in place of `now()` — the product's own expression, imported rather than copied, so the
+# fixture cannot drift from the boundary it is a fixture for. It followed the boundary from UTC to
+# Taipei on 2026-08-27 without being edited, which is what the shared expression buys.
 INSERT_AGED = """
 insert into preference (member_id, kind, value, stance, persist, valid_from, recorded_at,
                         expires_on)
 select :member_id, 'budget', :value, null, true, aged.vf, aged.vf,
-       (date_trunc('month', aged.vf) + interval '1 month' - interval '1 day')::date
+       {month_end}
   from (select {instant} as vf) aged
 returning id, valid_from, expires_on
-""".format(instant=AGED_INSTANT)
+""".format(instant=AGED_INSTANT, month_end=month_end_of("aged.vf"))
 
 # Asked before anything is written. A row older than the retention window is erased by
 # `upto.privacy.erase` on the same nightly DAG that would spare it if it were newer, so this refuses

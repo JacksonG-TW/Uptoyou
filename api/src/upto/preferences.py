@@ -77,50 +77,76 @@ router = APIRouter()
 
 _resolve_member = resolve_member
 
-# `valid_from` and `expires_on` both come from the database's clock in one statement, so a month
-# boundary cannot fall between two readings of two clocks. D25: salary is monthly, so a budget
-# statement expires at the end of its own month — computed at write time and stored, because a
-# boundary four readers each re-derive is how two of them disagree.
-INSERT = """
-insert into preference (member_id, kind, value, stance, persist, expires_on)
-values (
-    :member_id, :kind, :value, :stance, :persist,
-    case when :kind = 'budget'
-         then (date_trunc('month', now()) + interval '1 month' - interval '1 day')::date
-         else null end
-)
-returning id
-"""
+# **The month boundary is Taipei's, owner-ruled 2026-08-27 (D25's amendment).** It used to be the
+# database session's, which is UTC — so a band written in Taipei at 00:30 on the first of a month
+# was stamped as if it were still the previous month, and for the eight hours before each UTC month
+# end the server and the member disagreed about which month it was. D25's reason for a monthly
+# boundary is 「salary is monthly」, which is a fact about a person in Taipei and not about a server.
+# **Existing rows are not migrated** — they heal as members re-affirm.
+#
+# **This is D83's one stated exception and it is not a contradiction of it.** D83 rules that every
+# *cron* here is UTC, and every cron still is: a schedule is machine time. A month boundary is a
+# calendar a person reads, and reading it in the server's timezone is the same class of error as a
+# client deriving its own.
+#
+# **Defined once, as an expression each query interpolates.** Two copies of a boundary is how two
+# copies disagree — the failure this whole field exists to stop, one layer down.
+TIMEZONE = "Asia/Taipei"
+
+# The first instant of the current month, as a naive local timestamp. Everything below is built
+# from this and nothing re-derives it.
+_MONTH_START = "date_trunc('month', now() at time zone '{}')".format(TIMEZONE)
+
+# Today, in Taipei. `current_date` is the session's — UTC — and using it to decide `expired` would
+# reintroduce the same eight-hour skew inside the answer that reports the boundary.
+_TODAY = "(now() at time zone '{}')::date".format(TIMEZONE)
+
+
+def month_end_of(instant_sql: str) -> str:
+    """The last day of the **Taipei** month that a timestamptz expression falls in.
+
+    D25: salary is monthly, so a budget statement expires at the end of its own month — computed at
+    write time and stored, because a boundary four readers each re-derive is how two of them
+    disagree. Exported because `upto.fixture` builds a back-dated row and must land on this same
+    boundary; a fixture with its own month arithmetic is a second clock by another name.
+    """
+    return (
+        "(date_trunc('month', {} at time zone '{}') + interval '1 month' - interval '1 day')::date"
+    ).format(instant_sql, TIMEZONE)
+
 
 # **The month the server's own expiry boundary falls in, `YYYY-MM`** — the evaluator's ask at
 # A2-G13c, and the field a per-device acknowledgement is compared against.
 #
-# **Derived from `date_trunc('month', now())`, the same expression `INSERT` computes `expires_on`
-# from — never from a timezone conversion.** The field exists so a client can stop keeping a second
-# clock; one derived a different way from the boundary it describes is a second clock with a nicer
-# name, and it would disagree exactly at a month end, which is the only moment anybody looks.
-#
-# **What that boundary actually is today, measured 2026-08-26: UTC.** The database session's
-# `TimeZone` is `UTC`, so every `expires_on` in this table was computed against the UTC month —
-# a band written in Taipei at 00:30 on the first of a month is stamped as if it were still the
-# previous month, and for the eight hours before each UTC month end the server and a Taipei member
-# disagree about which month it is. **Whether the boundary should be Taipei is a real question and
-# it is the owner's, not this field's** — it changes when a budget lapses. This field takes no
-# position: it reports the boundary in use, so the day the boundary moves, it moves with it and no
-# client has to be told.
+# **Derived from the same `_MONTH_START` the expiry formula uses — never from a second conversion.**
+# The field exists so a client can stop keeping a second clock; one derived a different way from the
+# boundary it describes is a second clock with a nicer name, and it would disagree exactly at a
+# month end, which is the only moment anybody looks. When the boundary moved from UTC to Taipei on
+# 2026-08-27 this field moved with it and no client was told anything, which is what it is for.
+SERVER_MONTH = "select to_char({}, 'YYYY-MM') as month".format(_MONTH_START)
 
-SERVER_MONTH = "select to_char(date_trunc('month', now()), 'YYYY-MM') as month"
 
+# `valid_from` and `expires_on` both come from the database's clock in one statement, so a month
+# boundary cannot fall between two readings of two clocks. The boundary itself is `month_end_of`
+# above — Taipei's month since 2026-08-27 — and this query interpolates it rather than restating it.
+INSERT = """
+insert into preference (member_id, kind, value, stance, persist, expires_on)
+values (
+    :member_id, :kind, :value, :stance, :persist,
+    case when :kind = 'budget' then {month_end} else null end
+)
+returning id
+""".format(month_end=month_end_of("now()"))
 
 # The latest row per key, which is what "in force" means once nothing is edited. `distinct on` is
 # the shape the index `ix_preference_in_force` was built for: (member_id, kind, valid_from desc).
 IN_FORCE_BUDGET = """
 select distinct on (kind) value, persist, expires_on, valid_from,
-       (expires_on < current_date) as expired
+       (expires_on < {today}) as expired
   from preference
  where member_id = :member_id and kind = 'budget'
  order by kind, valid_from desc, id desc
-"""
+""".format(today=_TODAY)
 
 # One row per avoided category — the latest stance for each value, then only the ones still
 # `avoid`. An `allow` row is a real fact with a real history and is deliberately *not* returned:

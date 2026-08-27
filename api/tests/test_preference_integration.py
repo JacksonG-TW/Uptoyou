@@ -53,6 +53,7 @@ async def scenario(test_url: str) -> None:
 
     from upto import stream  # noqa: PLC0415
     from upto.main import app  # noqa: PLC0415
+    from upto import preferences as preference_module  # noqa: PLC0415
     from upto.preferences import BUDGET_BANDS, CATEGORIES  # noqa: PLC0415
     from upto.privacy import erase  # noqa: PLC0415
 
@@ -255,6 +256,30 @@ async def scenario(test_url: str) -> None:
         check("and it is the same boundary `expires_on` was computed against, not a second clock",
               body["budget"]["expires_on"][:7] == body["month"],
               (body.get("month"), body["budget"]["expires_on"]))
+
+        # **The boundary is Taipei's, owner-ruled 2026-08-27 (D25's amendment) — and the test that
+        # matters is at the eight hours where the two answers differ.** Comparing today's Taipei
+        # month against today's UTC month proves nothing: they agree on all but one evening a
+        # month, which is exactly why the old UTC boundary survived unnoticed. So the expression is
+        # asked about an instant that straddles: 2026-08-31 20:00 UTC is already 2026-09-01 in
+        # Taipei, and the month end must be September's.
+        async with Session() as session:
+            straddle = (
+                await session.execute(
+                    text("select {} as month_end, {} as utc_month_end".format(
+                        preference_module.month_end_of("timestamptz '2026-08-31 20:00+00'"),
+                        "(date_trunc('month', timestamptz '2026-08-31 20:00+00') "
+                        "+ interval '1 month' - interval '1 day')::date",
+                    ))
+                )
+            ).one()
+        check("the month boundary is Taipei's, not the session's (D25, 2026-08-27)",
+              str(straddle.month_end) == "2026-09-30", straddle.month_end)
+        check("and the old UTC boundary would have said August — the eight-hour skew, shown",
+              str(straddle.utc_month_end) == "2026-08-31", straddle.utc_month_end)
+        check("`expired` is decided against Taipei's today, not `current_date`",
+              "current_date" not in preference_module.IN_FORCE_BUDGET
+              and "Asia/Taipei" in preference_module.IN_FORCE_BUDGET)
 
         # --- a set of avoided categories, and un-avoiding one ------------------------
         for value in ("火鍋", "燒烤"):
@@ -588,7 +613,6 @@ async def scenario(test_url: str) -> None:
     # The API records what a person does not eat; *why* is health information about an identified
     # person, and this product does not hold it. That rule binds the copy rather than the schema, so
     # it is asserted against the modules' own text — a CHECK cannot enforce it.
-    from upto import preferences as preference_module  # noqa: PLC0415
     from upto.engine import load as loader_module  # noqa: PLC0415
 
     # **The rule is about user-facing strings, and the first version of this check got that wrong.**

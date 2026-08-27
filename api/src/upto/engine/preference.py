@@ -38,8 +38,11 @@ a price band), so a budget contributor is a later build — and when it arrives:
    act*). A persisted band whose month has ended is pre-filled and flagged on the screen and
    contributes again **only after the member taps once**, which appends a fresh row. Auto-renewing
    was rejected by name: a `persist` flag would become a perpetual constraint nobody re-chose this
-   month. So the budget query filters `expires_on >= current_date`, and the GET's `expired` flag is
-   what the screen uses to ask for the tap.
+   month. So the budget query filters on today — and **`current_date` is the wrong expression
+   for it**: that is the database session's date, which is UTC here, while D25's boundary has
+   been **Taipei's** since 2026-08-27. Use `upto.preferences._TODAY` (or `month_end_of`)
+   rather than writing the comparison again; `IN_FORCE_BUDGET`'s `expired` flag is the shape
+   to copy, and it is what the screen already uses to ask for the tap.
 2. **A stance does not expire and must not be filtered that way.** `expires_on` is `NULL` on a
    category row by CHECK, and D25 says a stance stands until changed — so the avoided-set query
    deliberately has no date condition, and adding one would silently switch every avoidance off.
