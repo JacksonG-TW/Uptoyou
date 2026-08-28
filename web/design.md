@@ -294,6 +294,35 @@ becomes something the product does rather than something a user can verify, and 
 lives in demo mode. That is a real trade and D105 makes it deliberately; it is not an oversight to
 be quietly repaired by leaking a share back into the member view.
 
+### The winner headline — A16, `D92` as amended 2026-08-27; this line added 2026-08-28 by the evaluator
+
+**The headline is the API's `winner_headline`, verbatim; the browser computes nothing.** The server
+strips trailing business-type tokens from a *registered-rung* winner (一階堂拉麵餐飲有限公司 → 一階堂拉麵,
+欣葉國際餐飲股份有限公司 → 欣葉), leaves a sign or brand name untouched, and shows the original when
+the strip would leave fewer than two characters (悠國際有限公司 stays whole). **Every list keeps the
+composed name** — the 提名 list, the operator table, the pairs list — because a list is where a
+person tells rows apart, and the headline is where one name is read alone. `null` falls back to
+`places[winning_place_id]` and never renders empty (`Reveal.tsx`). A shortened name in any list row
+is a defect; a list row and the headline disagreeing is not.
+
+**The bracket — owner-ruled 2026-08-28 (99b9950, `D92` amended; gate `gate-a16-2026-08-28.md`).** A
+composed name that carries `D92`'s bracket splits on the wire: `winner_headline` is the **shortened
+base** (一階堂拉麵), `winner_qualifier` is the **bracket's content without its parentheses**
+(大安和平東路), `null` when the name has none — both fields on both wires. The reveal renders it so:
+
+- `<p class="qualifier" data-part="qualifier">` **directly under `h1.winner`, inside `.answer`**, so it
+  rides the block's `aria-hidden` / `inert` and its fade, and `D91`'s zero-shift clause is kept for
+  free. Rendered **only when non-null** — no empty element, no reserved box: a single-site winner has
+  nothing to say there and the sentence moves up by exactly the line it did not need.
+- `text-lead`, the body face, regular weight, **`currentColor`** like everything else on the flood —
+  never `muted`, which fails the floor on every `-deep` companion. Letter-spacing `.04em`; no
+  parentheses, no dash, no icon: the browser adds nothing to the string and computes nothing from it.
+- It is a statement of *which* branch (the address line the member payload otherwise lacks), so it
+  matches the 提名 row beneath by eye — the row reads 一階堂拉麵餐飲有限公司（大安和平東路）, the headline
+  reads 一階堂拉麵 over 大安和平東路. A qualifier that appears on a list row, or a parenthesis that
+  appears in the qualifier, is a defect.
+- Gate lines HL-6 / HL-14 in `probes/evaluator-harness/g_a16.py`.
+
 ---
 
 **The fill follows reversibility, not the part (`R-2`, `R-11`).** A control carrying a safe,
