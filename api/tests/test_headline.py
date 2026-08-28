@@ -14,6 +14,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from upto import headline as H  # noqa: E402
+from upto import naming  # noqa: E402
 
 
 class RuledExamples(unittest.TestCase):
@@ -128,6 +129,62 @@ class TheAuthoredList(unittest.TestCase):
         for name in ("十八巷麵店", "阿宗麵線工作室", "老王牛肉麵館"):
             with self.subTest(name=name):
                 self.assertEqual(H.shorten(name), name)
+
+
+class TheCallerPassesTheBaseNotTheComposedName(unittest.TestCase):
+    """The defect the A16 gate found on 2026-08-28, pinned from both sides.
+
+    `shorten` matches on the tail. D92 composes a sign-less site of a multi-site company as
+    `base（行政區＋路名）`, so the string ends in `）` and no business-type token can ever match it.
+    Every chain passed through whole — the rule failing on exactly the names it was written for.
+
+    **Why the original tests could not see it (H50's shape, in the file that added H50's second
+    instance the same day).** Every fixture here fed a *raw registered name*, and the ASGI
+    assertion used circle-local places. Both are inputs where the composed name and the base are
+    the same string, so both were blind in the same direction. The tidy input is the one an author
+    reaches for, and it was the one input that hides this.
+    """
+
+    COMPANY = "一階堂拉麵餐飲有限公司"
+    ADDRESSES = {
+        "A": "臺北市大安區和平東路2段86號",
+        "B": "臺北市信義區松高路11號",
+        "C": "臺北市大安區和平東路2段90號",
+    }
+
+    def test_the_real_path_shortens_the_base_and_keeps_the_bracket_apart(self):
+        """Through the shipped `naming` functions, not a hand-written string."""
+        brackets = naming.derive_brackets(self.COMPANY, self.ADDRESSES)
+        self.assertEqual(set(brackets), {"A", "B", "C"})
+        for key, bracket in brackets.items():
+            with self.subTest(site=key):
+                self.assertTrue(bracket, "a multi-site company's sites each get a bracket")
+                # What every list shows — unchanged by A16.
+                self.assertEqual(naming.compose(self.COMPANY, bracket),
+                                 f"{self.COMPANY}（{bracket}）")
+                # What the headline shows — the shortened base, and never a bracket.
+                self.assertEqual(H.headline(self.COMPANY, "registered"), "一階堂拉麵")
+                self.assertNotIn("（", H.headline(self.COMPANY, "registered"))
+                # And the qualifier is the bracket's CONTENT, without its parentheses.
+                self.assertNotIn("（", bracket)
+                self.assertNotIn("）", bracket)
+
+    def test_handing_it_the_composed_name_returns_it_whole(self):
+        """The defect itself, kept as a test so a caller that regresses fails here and reads why.
+
+        This is not the desired behaviour — it is the reason the contract says `base`. A future
+        refactor that starts passing `name` again fails this line, which is the point.
+        """
+        composed = naming.compose(self.COMPANY, "大安和平東路")
+        self.assertEqual(H.headline(composed, "registered"), composed)
+        self.assertNotEqual(H.headline(composed, "registered"), "一階堂拉麵")
+
+    def test_a_single_site_company_has_no_bracket_and_still_shortens(self):
+        """The case the old fixtures all sat on — kept, but no longer the only one."""
+        brackets = naming.derive_brackets(self.COMPANY, {"A": self.ADDRESSES["A"]})
+        self.assertEqual(brackets, {"A": None})
+        self.assertEqual(naming.compose(self.COMPANY, None), self.COMPANY)
+        self.assertEqual(H.headline(self.COMPANY, "registered"), "一階堂拉麵")
 
 
 class NothingIsInvented(unittest.TestCase):

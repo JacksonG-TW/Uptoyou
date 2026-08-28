@@ -135,13 +135,21 @@ async def compose_names(session, rows) -> dict[str, dict]:
         # name is read out before anything is composed; the stored row is untouched.
         row = dict(row, registered=naming.strip_registry_footnote(row.get("registered")))
         if row.get("own") is not None:
-            out[row["key"]] = {"name": row["own"], "name_source": "circle-local", "district": None}
+            out[row["key"]] = {"name": row["own"], "name_source": "circle-local", "district": None,
+                               "base": row["own"], "qualifier": None}
         elif row.get("sign"):
-            out[row["key"]] = {"name": row["sign"], "name_source": "sign", "district": loc.where_line}
+            out[row["key"]] = {"name": row["sign"], "name_source": "sign", "district": loc.where_line,
+                               "base": row["sign"], "qualifier": None}
         else:
             base = row.get("brand") or row.get("registered")
             source = "brand" if row.get("brand") else "registered"
-            out[row["key"]] = {"name": base, "name_source": source, "district": loc.where_line}
+            # **A16 keeps `base` and `qualifier` beside `name`, rather than recovering them later.**
+            # `name` is what every list shows and is unchanged; the headline shortens `base` alone
+            # and carries `qualifier` in its own field. Both are held here because this is the one
+            # place that has them apart — see `naming.derive_brackets` for why they must not be
+            # split out of the composed string afterwards.
+            out[row["key"]] = {"name": base, "name_source": source, "district": loc.where_line,
+                               "base": base, "qualifier": None}
             if row.get("company") and base:
                 pending.setdefault(row["company"], []).append(row)
     if not pending:
@@ -168,11 +176,12 @@ async def compose_names(session, rows) -> dict[str, dict]:
         if len(addresses) < 2:
             continue
         base = company_rows[0].get("brand") or company_rows[0].get("registered")
-        derived = naming.derive_names(base, addresses)
+        brackets = naming.derive_brackets(base, addresses)
         for row in company_rows:
-            derived_name = derived.get(row.get("registry_no"))
-            if derived_name:
-                out[row["key"]]["name"] = derived_name
+            bracket = brackets.get(row.get("registry_no"))
+            if bracket:
+                out[row["key"]]["name"] = naming.compose(base, bracket)
+                out[row["key"]]["qualifier"] = bracket
     return out
 
 
@@ -240,14 +249,25 @@ async def place_names(session, place_ids) -> dict[int, str]:
 # **Composed here rather than in the browser**, for D92's own reason: the same place must read the
 # same on every screen, and the authored token list belongs in git behind `tools/server_copy.py`'s
 # gate rather than in a bundle. `upto.headline` holds the list and the argument.
-def winner_headline_for(display: dict, winning_place_id: int):
-    """The headline string for the winner, or `None` when the winner is not in `display`."""
+def winner_headline_for(display: dict, winning_place_id: int) -> tuple:
+    """`(headline, qualifier)` for the winner — both, or `(None, None)`.
+
+    **Returned together on purpose.** A qualifier on one wire and not the other is D105's silent
+    half, and a headline computed without its qualifier is the defect the A16 gate found: the
+    shortening was handed the *composed* name, whose trailing `）` no business-type token can match,
+    so every chain — the names A16 exists for — passed through whole. One call, two values, no way
+    to obtain one without the other.
+
+    The shortening is given `base`, never `name`. `qualifier` is the bracket's **content**, without
+    its parentheses; `null` when the name has none.
+    """
     from . import headline as headline_module  # noqa: PLC0415  (pure module, lean header)
 
     entry = display.get(winning_place_id)
     if entry is None:
-        return None
-    return headline_module.headline(entry.get("name"), entry.get("name_source"))
+        return None, None
+    return (headline_module.headline(entry.get("base"), entry.get("name_source")),
+            entry.get("qualifier"))
 
 
 def result_body(
@@ -258,6 +278,7 @@ def result_body(
     names: dict[int, str],
     allocation: dict[int, int],
     winner_headline: str | None = None,
+    winner_qualifier: str | None = None,
 ) -> dict:
     return {
         "round_id": round_id,
@@ -274,6 +295,10 @@ def result_body(
         # when the caller did not compute one — a shape the surface must handle by falling back to
         # `places[winning_place_id]`, never by rendering an empty headline.
         "winner_headline": winner_headline,
+        # A16: the parenthetical D92 derived from the registered address, as its own value and
+        # without its parentheses — `null` when the name has none. The surface joins them; the
+        # headline field never carries a bracket.
+        "winner_qualifier": winner_qualifier,
     }
 
 # --- B2 / item 9: the trip, read the same way everywhere it appears ------------------------
@@ -409,7 +434,7 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # A16: the headline is the member's line before it is anyone's — the operator table
                # reads `places`. Named here because this list is a whitelist and a new field is
                # operator-only until it is.
-               "winner_headline",
+               "winner_headline", "winner_qualifier",
                # D108: the seat list, the decider and the commitment are all member-visible — they
                # are what the fairness claim is made of, so withholding them from a member would
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is

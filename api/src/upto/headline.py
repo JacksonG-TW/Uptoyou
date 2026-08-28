@@ -103,12 +103,23 @@ def shorten(name: Optional[str]) -> Optional[str]:
     return value
 
 
-def headline(name: Optional[str], name_source: Optional[str]) -> Optional[str]:
+def headline(base: Optional[str], name_source: Optional[str]) -> Optional[str]:
     """The winner headline: `shorten` on the registered rung, the name itself everywhere else.
 
     A circle-local row is a member's own words, a sign is the branch's published sign and a brand is
     the company's own — none of the three is ours to edit.
+
+    **`base`, never the composed name, and this is the defect the A16 gate found (2026-08-28).**
+    D92 composes a sign-less site of a multi-site company as `base（行政區＋路名）`, so the string
+    ends in `）` and **no business-type token can match its tail** — every chain passed through
+    whole, which is to say the rule failed on exactly the names it was written for. The caller holds
+    the two halves apart (`api_common.compose_names` sets `base` and `qualifier` beside `name`);
+    the bracket travels in its own field and is never re-attached here.
+
+    **Do not "fix" a composed string by splitting on `（`.** Every character inside that bracket is
+    copied from a stored address — that is D92's provenance mark — and a parser over our own output
+    is how one eventually contains something that was never in an address.
     """
     if name_source != REGISTERED:
-        return name
-    return shorten(name)
+        return base
+    return shorten(base)

@@ -147,6 +147,36 @@ async def scenario(test_url: str) -> None:
                 )
             )
         ).scalar_one()
+        # **A16: two sign-less sites of ONE company, so D92 derives a bracket.** Without a pair
+        # here nothing in this file ever gains one, and the headline defect of 2026-08-28 — the
+        # shortening handed a composed name whose trailing `）` no token can match — was invisible
+        # to every assertion in the repository. Only one of the two needs a `place` row; the
+        # sibling exists so `compose_names` sees the collision.
+        for registry, addr in (("A-33333333-00001-1", "臺北市大安區和平東路2段86號"),
+                               ("A-33333333-00002-1", "臺北市信義區松高路11號")):
+            await session.execute(
+                text(
+                    "insert into reference_place (publication_id, registry_no, origin, name, "
+                    "name_raw, address, address_raw, township_code, township_name) "
+                    "values (:pub, :r, 'reference', '一階堂拉麵餐飲有限公司', "
+                    "'一階堂拉麵餐飲有限公司', :a, :a, '63000010', 'x')"
+                ),
+                {"pub": place_pub, "r": registry, "a": addr},
+            )
+        # **Both siblings get a `place` row, and that is what makes the assertion deterministic.**
+        # §3.0 refuses a one-place round (「一輪至少要兩家店」), so the pool needs two — and if the
+        # second were an ordinary local, the winner would be a dice draw and the bracketed case
+        # would be exercised only half the time. Two sites of the same company means *whichever*
+        # wins carries a bracket. A fixture that tests the case on some runs is H50 again.
+        chain_ids = []
+        for registry_no in ("A-33333333-00001-1", "A-33333333-00002-1"):
+            chain_ids.append(
+                (await session.execute(
+                    text("insert into place (origin, registry_no) "
+                         "values ('reference', :r) returning id"), {"r": registry_no})
+                 ).scalar_one()
+            )
+        chain, chain_sibling = chain_ids
         locals_ = []
         for name in ("巷口麵店", "小林拉麵", "阿宗麵線"):
             locals_.append(
@@ -355,6 +385,45 @@ async def scenario(test_url: str) -> None:
             f"/rounds/{round_id}/proposals", json={"place_id": locals_[2]}, headers=auth
         )
         assert late.status_code == 409
+
+        # **A16, the half a circle-local pool cannot reach.** A second round whose pool is exactly
+        # the chain site, so the winner is not a draw: its composed name carries D92's bracket, and
+        # the headline must be the shortened base ALONE with the bracket in its own field. This is
+        # the case the 2026-08-28 gate found and no test here could have.
+        chain_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
+        assert chain_round.status_code == 201, chain_round.text
+        chain_round_id = chain_round.json()["round_id"]
+        for place in (chain, chain_sibling):
+            assert (await client.post(
+                f"/rounds/{chain_round_id}/proposals", json={"place_id": place}, headers=auth
+            )).status_code == 201
+        chain_rolled = await client.post(f"/rounds/{chain_round_id}/roll", headers=auth)
+        assert chain_rolled.status_code == 200, (chain_rolled.status_code, chain_rolled.text)
+        chain_result = chain_rolled.json()
+        winner = chain_result["winning_place_id"]
+        assert winner in (chain, chain_sibling), chain_result
+        composed = chain_result["places"][str(winner)]
+        # The list keeps the whole composed name — A16 changes no list.
+        assert composed.startswith("一階堂拉麵餐飲有限公司（"), composed
+        assert composed.endswith("）"), composed
+        # The headline is the shortened base and never carries a bracket.
+        assert chain_result["winner_headline"] == "一階堂拉麵", chain_result["winner_headline"]
+        assert "（" not in chain_result["winner_headline"]
+        # The qualifier is the bracket's CONTENT, without its parentheses, and it is what the
+        # composed name actually used — not a re-derivation.
+        qualifier = chain_result["winner_qualifier"]
+        assert qualifier and "（" not in qualifier and "）" not in qualifier, qualifier
+        assert composed == f"一階堂拉麵餐飲有限公司（{qualifier}）", (composed, qualifier)
+        # Both fields reach a member, or the whitelist has silently dropped one (D105).
+        # The member's copy comes back through D69's retry, the same door the operator's did —
+        # so this also proves the retry carries both new fields, not just the first response.
+        chain_member = (await client.post(
+            f"/rounds/{chain_round_id}/roll",
+            headers={"Authorization": "Bearer " + plain_token},
+        )).json()
+        assert chain_member["winner_headline"] == "一階堂拉麵"
+        assert chain_member["winner_qualifier"] == qualifier
+        print("  A16: a bracketed chain shortens to its base and carries the bracket apart")
 
     # D14, observed through the endpoint path: the close erased authorship, kept the pool.
     async with Session() as session:

@@ -244,6 +244,7 @@ async def _closed_body(
     # single assembly point as `trip` and `panel`, so the roll response, D69's retry and the SSE
     # close cannot disagree about what the headline says.
     display = await place_display(session, weights.keys())
+    winner_headline, winner_qualifier = winner_headline_for(display, winning_place_id)
     body = result_body(
         round_id,
         dice,
@@ -251,7 +252,8 @@ async def _closed_body(
         weights,
         {key: value["name"] for key, value in display.items()},
         allocate({p: w for p, w in weights.items()}),
-        winner_headline=winner_headline_for(display, winning_place_id),
+        winner_headline=winner_headline,
+        winner_qualifier=winner_qualifier,
     )
     # B2: `None` until somebody signs, and the same shape wherever a trip appears — nickname and
     # time, never the signer's id (H3). Read here rather than assembled, so the reveal, the SSE

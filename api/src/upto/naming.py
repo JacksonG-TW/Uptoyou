@@ -155,28 +155,50 @@ def location(address: Optional[str]) -> Location:
     )
 
 
-def derive_names(base: str, addresses: Mapping[str, str]) -> dict[str, str]:
-    """Names for a set of sign-less sites that share one base name.
+def compose(base: str, bracket: Optional[str]) -> str:
+    """D92's displayed string: the base, and the parenthetical when there is one.
+
+    **The only place the bracket's punctuation is written.** A16 needs the base and the bracket
+    apart as well as together, and two places that know how to join them are two places that can
+    come to disagree about the character between them — which is exactly the provenance mark this
+    entry rests on, so it is written once.
+    """
+    return "{}（{}）".format(base, bracket) if bracket else base
+
+
+def derive_brackets(base: str, addresses: Mapping[str, str]) -> dict[str, Optional[str]]:
+    """The parenthetical for each sign-less site that shares one base name — `None` for none.
 
     `addresses` maps a site key (the registry number) to its stored address. Every site gets
     the layer-two bracket; the sites whose layer-two bracket is still shared move to layer
-    three (house number). A site whose address yields nothing keeps the bare base — a bracket
-    with nothing in it would be a lie about provenance.
+    three (house number). A site whose address yields nothing gets `None` — a bracket with
+    nothing in it would be a lie about provenance.
+
+    **This is the function to call when you need the two parts apart** (A16's headline shortens
+    the base and carries the bracket separately). **Never recover the split by searching the
+    composed string for `（`**: every character inside that bracket is copied from a stored
+    address, and a parser over our own output is how a name eventually gains one that was not.
     """
     if len(addresses) < 2:
-        return {key: base for key in addresses}
+        return {key: None for key in addresses}
     located = {key: location(addr) for key, addr in addresses.items()}
     layer_two = {key: loc.bracket(with_number=False) for key, loc in located.items()}
     counts: dict[Optional[str], int] = {}
     for bracket in layer_two.values():
         counts[bracket] = counts.get(bracket, 0) + 1
-    out = {}
+    out: dict[str, Optional[str]] = {}
     for key, loc in located.items():
         bracket = layer_two[key]
         if bracket is not None and counts[bracket] > 1:
             bracket = loc.bracket(with_number=True)
-        out[key] = "{}（{}）".format(base, bracket) if bracket else base
+        out[key] = bracket
     return out
+
+
+def derive_names(base: str, addresses: Mapping[str, str]) -> dict[str, str]:
+    """`derive_brackets`, composed. The shape every caller but A16's headline wants."""
+    return {key: compose(base, bracket)
+            for key, bracket in derive_brackets(base, addresses).items()}
 
 
 def where_lines(addresses: Iterable[tuple[str, Optional[str]]]) -> dict[str, Optional[str]]:
