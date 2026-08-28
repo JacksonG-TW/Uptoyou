@@ -39,6 +39,7 @@ nowhere and starts biting the moment a second module mentions it. The positive h
 show it*) prints as not-yet-assertable and names what it waits for.
 """
 
+import ast
 import os
 import re
 import sys
@@ -563,6 +564,59 @@ class TheVendoredFaces(unittest.TestCase):
                 self.assertTrue(os.path.exists(on_disk),
                                 "{} is declared and did not ship — the browser would fall back "
                                 "silently".format(url))
+
+
+class TheScreenNeverOffersWhatTheApiRefuses(unittest.TestCase):
+    """The screen's closed lists must be a **subset** of the API's, never the other way round.
+
+    **Why a subset and not equality, since 2026-08-28.** The owner took 亞硫酸鹽類 off the
+    preference screen's ingredient list (D103 amended) and the endpoint **keeps accepting it** —
+    no migration, no purge, stored rows stay inert. So the two lists now differ on purpose: the API
+    knows eleven groups, the screen offers ten. Asserting equality would fail on a ruling.
+
+    **What is still worth guarding is the other direction, and nothing guarded it before.** The two
+    lists are independent copies — `upto/preferences.py` and `app/web/src/lib/preferences.ts` — and
+    a value the screen offers that the API refuses is a **400 the member sees** after tapping a
+    button the product drew for them. That failure is silent until somebody taps it.
+
+    **Both sides are read as text, and neither is imported.** The TypeScript has no runtime here;
+    and `upto.preferences` pulls in FastAPI, which this host does not have and which this check has
+    no use for. The Python side is parsed with `ast`, so it reads the literal the module defines
+    rather than a regex's guess. Both parses fail loudly if their file stops looking like a list of
+    quoted strings, which is better than quietly matching nothing and passing.
+    """
+
+    def api_list(self, name: str) -> list:
+        source = read(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
+                                   "src", "upto", "preferences.py"))
+        for node in ast.walk(ast.parse(source)):
+            if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == name for t in node.targets
+            ):
+                values = [e.value for e in node.value.elts
+                          if isinstance(e, ast.Constant) and isinstance(e.value, str)]
+                self.assertTrue(values, "{}: parsed nothing from the API side".format(name))
+                return values
+        self.fail("{} is not assigned in upto/preferences.py".format(name))
+
+    def literals(self, name: str) -> list:
+        source = read(os.path.join(SRC, "lib", "preferences.ts"))
+        start = source.index("export const {} = [".format(name))
+        end = source.index("]", start)
+        found = re.findall(r"'([^']+)'", source[start:end])
+        self.assertTrue(found, "{}: parsed nothing — has the file's shape changed?".format(name))
+        return found
+
+    def test_every_ingredient_the_screen_offers_is_one_the_api_accepts(self):
+        accepted = self.api_list("INGREDIENTS")
+        offered = self.literals("INGREDIENTS")
+        unknown = [value for value in offered if value not in accepted]
+        self.assertEqual(unknown, [], "the screen offers what the endpoint would 400: {}".format(unknown))
+
+    def test_and_the_api_may_know_more_than_the_screen_shows(self):
+        """The direction that is now intentionally unequal — asserted so nobody re-tightens it."""
+        self.assertLessEqual(len(self.literals("INGREDIENTS")),
+                             len(self.api_list("INGREDIENTS")))
 
 
 if __name__ == "__main__":
