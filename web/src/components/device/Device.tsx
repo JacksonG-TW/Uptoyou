@@ -138,10 +138,18 @@ export default function DeviceScreen() {
 
   return (
     <main className="device" data-screen="device">
-      <h1 className="deviceTitle">貼上鑰匙</h1>
-      <p className="deviceNote">
-        鑰匙由開圈子的人給你，一支裝置一把。貼上之後這台裝置就是你的座位。
-      </p>
+      {/* 丙・只動排版 (`spec-device-typeset.md`, owner-ruled 2026-08-26 from the rendered
+          three-way). **Nothing is added that was not already on the screen** — the eyebrow is the
+          one new element and it carries one word. The parts are set the way the home sets its own,
+          so the two doors read as one building. */}
+      <p className="eyebrow"><em>★</em>入座</p>
+      {/* **Two lines, and the second is the sentence the note used to end with** (§3's copy
+          accounting: every clause of the old note survives somewhere). Serif 900 — the display
+          face, the same one the home's headline uses. */}
+      <h1 className="deviceTitle">
+        <span>貼上鑰匙</span><span className="lit">這台裝置就是你的座位</span>
+      </h1>
+      <p className="deviceLead">鑰匙由開圈子的人給你。</p>
 
       <form className="deviceForm" onSubmit={(e) => void submit(e)}>
         <label className="deviceField">
@@ -176,6 +184,15 @@ export default function DeviceScreen() {
           {busy ? '確認中…' : '確認'}
         </Button>
       </form>
+
+      {/* The other two clauses of the old note, plus two statements D74 already makes: the token
+          is printed once by `python -m upto.issue` and never stored, and re-pasting replaces the
+          key (the seated note below has always said so). No advising word — D20. */}
+      <p className="deviceFacts">
+        <span className="eyebrow">一支裝置一把</span>
+        <span className="eyebrow">只顯示一次</span>
+        <span className="eyebrow">再貼一次就換鑰匙</span>
+      </p>
 
       {existing && (
         <p className="deviceNote" data-part="device-seated">

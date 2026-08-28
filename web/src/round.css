@@ -11,20 +11,75 @@
 
    `--bar-h` is declared in `switcher.css` beside the bars it measures, so this cannot drift from
    them. The home is untouched: its masthead already clears the switcher. */
-.device, .round {
+.round {
   width: min(720px, 88vw);
   margin: 0 auto;
   padding-block: calc(var(--bar-h) + 24px) 32px;
+  padding-bottom: 56px;
 }
-.round { padding-bottom: 56px; }
 
-.deviceTitle, .roundTitle {
+/* **The device screen takes the HOME's column** — 丙, `spec-device-typeset.md` §1. It sat on
+   `min(720px, 88vw)`, so at 1440 its left edge was x=360 against the home's 120: the first two
+   screens a person meets had different gutters and read as two buildings. The content stays
+   left-aligned inside the column; it is the column that is shared, not the alignment.
+
+   `.round` keeps its own 720 — the spec is written on `.device` alone, and the selector the two
+   shared is split here rather than widened. */
+.device { width: var(--col); margin: 0 auto; padding-block: calc(var(--bar-h) + 24px) 32px; }
+
+@media (min-width: 900px) {
+  /* **Vertically centred, like the home's hero.** The spec asks for `padding-block: 60px`; the top
+     keeps `--bar-h + 24` instead, because `spec-inner-header.md` landed between the two specs and
+     a flat 60 would put the title back under the bars on a tall form. 64 > 60, so the spec's
+     intent (breathing room) is met and IH-1 still holds. Flagged rather than chosen quietly. */
+  .device {
+    min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+    padding-block: calc(var(--bar-h) + 24px) 60px;
+  }
+}
+
+.roundTitle {
   font-size: var(--text-display);
   font-weight: 900;
   letter-spacing: .01em;
   line-height: 1.15;
   margin: 0;
 }
+
+/* **The device title, in the display face — and the SELECTOR is load-bearing.**
+   `tools/subset_fonts.py` derives the serif charset from every rule that sets `UpTo Serif`, by
+   reading every class named in that rule's selector. So this must be a single bare class as the
+   whole selector: `.device .deviceTitle` would hand the tool `.device` as well and ask the subset
+   for every character on the screen — `reveal.css:455`'s measured failure, 93 glyphs cut instead
+   of 9. One class, nothing else, and no descendant. */
+.deviceTitle { font-family: "UpTo Serif", "Noto Serif TC", serif; }
+.deviceTitle {
+  display: flex; flex-direction: column;
+  font-weight: 900;
+  letter-spacing: .01em;
+  line-height: 1.08;
+  font-size: clamp(40px, 9vw, 56px);
+  margin: 18px 0 0;
+}
+/* The second line is the sentence, and it takes the accent as TEXT — `hot-ink`, which is the
+   pair's ink half (`hot` itself measures 2.33 on paper and is a ground colour). */
+.deviceTitle .lit { color: var(--color-hot-ink); }
+@media (min-width: 900px) {
+  .deviceTitle { font-size: clamp(56px, 6vw, 86px); }
+}
+
+/* The lead — one sentence now, at reading size and in ink rather than muted: it is the first thing
+   the screen says, not a footnote. **Its own class, split from `.deviceNote`**, because the seated
+   note below still is one and the spec leaves that unchanged. */
+.deviceLead {
+  font-size: var(--text-lead); color: var(--color-ink); line-height: 1.7;
+  margin: 20px 0 0; max-width: 30em;
+}
+
+/* The three tags. `.eyebrow` carries `align-self: flex-start` for the home's column; inside a row
+   it must not, or each tag claims the row's full height. */
+.deviceFacts { display: flex; flex-wrap: wrap; gap: 12px; margin: 40px 0 0; }
+.deviceFacts .eyebrow { align-self: auto; }
 .roundH {
   font-size: var(--text-lead);
   font-weight: 900;
@@ -57,8 +112,12 @@
   color: var(--color-ink);
   font-size: var(--text-body);
 }
-@media (min-width: 900px)  { .device input, .round input { height: 52px; } }
-@media (min-width: 2100px) { .device input, .round input { height: 56px; } }
+/* **The device's fields are taller and set larger than the ladder** (丙): this is the one screen
+   whose entire job is two inputs, and the 48/52/56 ladder is written for a field sitting among
+   other things. `.round`'s search keeps the ladder. */
+.device input { height: 60px; font-size: 20px; }
+@media (min-width: 900px)  { .round input { height: 52px; } }
+@media (min-width: 2100px) { .round input { height: 56px; } }
 .device input::placeholder, .round input::placeholder { color: var(--color-muted); }
 .device input:focus-visible, .round input:focus-visible {
   outline: 2px solid var(--color-ring); outline-offset: 1px;
@@ -66,9 +125,9 @@
 
 /* The form is a column of controls, not a page-wide banner — a 720 px field for a pasted key
    reads as a search bar. */
-.deviceForm { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; max-width: 420px; }
+.deviceForm { display: flex; flex-direction: column; gap: 20px; margin-top: 32px; max-width: 560px; }
 .deviceField { display: flex; flex-direction: column; gap: 8px; }
-.deviceField > span { font-size: var(--text-note); font-weight: 700; letter-spacing: .02em; }
+.deviceField > span { font-size: 16px; font-weight: 700; letter-spacing: .02em; }
 
 .roundSearch { display: flex; flex-direction: column; gap: 8px; margin-top: 32px; max-width: 420px; }
 .roundLabel { font-size: var(--text-note); font-weight: 700; letter-spacing: .02em; }
