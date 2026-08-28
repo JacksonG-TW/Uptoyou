@@ -334,6 +334,19 @@ async def scenario(test_url: str) -> None:
         # requirement is a test rather than an absence, and so that removing it fails here.
         assert member_body["rolls"], "D108: the member shape must carry the seat list"
         assert member_body["deciding_member"]["nickname"], "D91: the decider must be named"
+        # **A16 / D92 as amended: the headline is on both wires, and it is a separate string.**
+        # `MEMBER_KEYS` is a whitelist, so a field that exists on the operator body and is missing
+        # here is the silent half of D105's shape — asserted on both rather than on either.
+        assert "winner_headline" in result, sorted(result)
+        assert "winner_headline" in member_body, sorted(member_body)
+        # This round's places are circle-local — a member's own words, which A16 never edits. So the
+        # headline must equal the composed name here, and a run where it did not would mean the rung
+        # boundary had come off. The shortening's own arithmetic is pinned host-side in
+        # `test_headline.py`; what this asserts is that the rung reaches the wire intact.
+        assert member_body["winner_headline"] == member_body["places"][
+            str(member_body["winning_place_id"])
+        ], (member_body["winner_headline"], member_body["places"])
+        print("  A16: the winner headline is on both wires and leaves a circle-local name alone")
         print("  D105: the member shape withholds the arithmetic and keeps the outcome")
         assert again.json()["allocation"] == result["allocation"]
 
