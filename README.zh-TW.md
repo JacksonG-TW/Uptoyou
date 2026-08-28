@@ -359,11 +359,12 @@ python3 api/tests/test_cwa_ingest.py    # 以及 test_fda_ingest、test_fia_inge
 python3 api/tests/test_weight_fold.py   # test_classify、test_web_surface、test_evaluate_draw …
 ```
 
-整合測試在 stack 內部建立並丟掉它們自己的資料庫：
+整合測試會建立並丟掉它們自己的資料庫，而且跑在只給測試用的服務裡——不是 `api`。`api` 連線用的角色
+無法 `create database`：
 
 ```sh
-docker compose exec api python /srv/tests/test_place_ingest_integration.py
-docker compose exec api python /srv/tests/test_business_tax_integration.py
+docker compose run --rm tests python /srv/tests/test_place_ingest_integration.py
+docker compose run --rm tests python /srv/tests/test_business_tax_integration.py
 ```
 
 ## 範圍
