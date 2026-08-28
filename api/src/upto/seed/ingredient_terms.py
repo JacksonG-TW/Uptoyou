@@ -117,4 +117,24 @@ REFUSED: tuple[tuple[str, str], ...] = (
                "is a fact about the recipe"),
     ("咖啡豆", "coffee bean — 豆 is a shape word here and names no legume"),
     ("果糖", "fructose; matched only by a character-level search, never by a word"),
+    # ---- the four put to the owner on 2026-08-28 and refused together (「全拒」) ---------------
+    # Each has a reading in which the word is not the food. They were refused as one because they
+    # are one question — *is this word naming the food or the flavour?* — and the answer is that a
+    # word which can be either names neither.
+    ("奶精", "非乳 creamer. 745 rows across 奶精 and 奶精粉 make it the third most common term in "
+             "the file, and the file itself proves the distinction is real: one variant is written "
+             "「奶精(不含乳)」, which says in its own name that it contains no dairy. Calling 奶精 "
+             "milk is inference in one direction and refusing it may hide a real allergen in the "
+             "other — so it says nothing, which is the only honest third answer"),
+    ("奶精粉", "the powdered form of 奶精, refused for its reason"),
+    ("麥芽糖", "maltose. 麥芽 names malt, and malt is barley — but 麥 here reads as a form word the "
+               "way 豆 does in 咖啡豆, and the sugar is not the grain"),
+    ("六条麥茶", "barley tea. Same question as 麥芽糖: the drink is an infusion, and whether the "
+                 "grain's protein survives into it is a fact about the process, not the word"),
+    ("榛果果露", "hazelnut syrup. The word names hazelnut and a flavour syrup may contain none — "
+                 "the clearest case of a word naming a flavour rather than a food"),
+    ("杏仁", "in Taiwanese usage 杏仁 is as often apricot kernel as almond, and only one of those "
+             "is 堅果類. Authored in a first draft and removed before it was committed; refused "
+             "with the other three the next day"),
+    ("杏仁粉", "the powdered form of 杏仁, refused for its reason"),
 )

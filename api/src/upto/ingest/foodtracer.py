@@ -47,6 +47,19 @@ COMPANY_COLUMN = "公司名稱"
 BRAND_COLUMN = "品牌名稱"
 REQUIRED_COLUMNS = (COMPANY_COLUMN, BRAND_COLUMN)
 
+# **A19: the same file, read wider.** The platform publishes one row per *ingredient* of one
+# product, and until 2026-08-28 this module kept the (company, brand) pair and threw the rest away.
+# D103's ingredient block was inert *for want of store-published data* that had been arriving daily
+# and being discarded.
+#
+# **These two columns are NOT in `REQUIRED_COLUMNS`, deliberately.** The pair half is what D77 and
+# every name on every screen depend on; the ingredient half is an addition. A file that stopped
+# carrying 產品名稱 should cost the ingredient join and **not** the whole brand ladder — so their
+# absence yields no ingredient rows and no failure, and `column_signature` (D102) records the shape
+# either way so the change is visible in the ledger rather than only in a consequence.
+PRODUCT_COLUMN = "產品名稱"
+MATERIAL_COLUMN = "原料名稱"
+
 REQUEST_TIMEOUT = 300
 
 
@@ -84,9 +97,27 @@ class BrandPair:
     brand_name_raw: str
 
 
+@dataclass(frozen=True)
+class ProductMaterial:
+    """One raw material of one product of one brand, as the platform wrote it.
+
+    **The allergen group is NOT here and must not be.** D28's read-time rule: what is stored is what
+    the publisher published, and the group comes from `upto.seed.ingredient_terms` when somebody
+    asks. Storing the group would freeze today's authored table into yesterday's rows, and the whole
+    point of that table is that a term added tomorrow re-answers every row already held.
+    """
+
+    company_name: str
+    brand_name: str
+    product_name: str
+    material_name: str
+    material_name_raw: str
+
+
 @dataclass
 class PairResult:
     pairs: List[BrandPair] = field(default_factory=list)
+    materials: List[ProductMaterial] = field(default_factory=list)
     scanned: int = 0
     companies: int = 0
 
@@ -183,6 +214,10 @@ def parse_pairs(raw: bytes) -> PairResult:
     _require_columns(reader.fieldnames)
     result = PairResult()
     seen = {}
+    # **Deduplicated on the whole four-tuple.** The file repeats a material across a product's
+    # variants, and 0035's key would refuse the second copy — better to not offer it than to rely
+    # on a conflict clause to hide a shape we could have seen here.
+    materials = {}
     for row in reader:
         result.scanned += 1
         company_raw = (row.get(COMPANY_COLUMN) or "").strip()
@@ -191,6 +226,23 @@ def parse_pairs(raw: bytes) -> PairResult:
         brand = normalise(brand_raw)
         if not company or not brand:
             continue
+        # A19: the ingredient half, gathered beside the pair from the same row. A row with no
+        # product or no material is skipped in silence — the platform leaves both blank for a
+        # company that has registered nothing yet, and that is data entry rather than a defect.
+        product_raw = (row.get(PRODUCT_COLUMN) or "").strip()
+        material_raw = (row.get(MATERIAL_COLUMN) or "").strip()
+        product = normalise(product_raw)
+        material = normalise(material_raw)
+        if product and material:
+            key = (company, brand, product, material)
+            if key not in materials:
+                materials[key] = ProductMaterial(
+                    company_name=company,
+                    brand_name=brand,
+                    product_name=product,
+                    material_name=material,
+                    material_name_raw=material_raw,
+                )
         if (company, brand) not in seen:
             seen[(company, brand)] = BrandPair(
                 company_name=company,
@@ -199,6 +251,7 @@ def parse_pairs(raw: bytes) -> PairResult:
                 brand_name_raw=brand_raw,
             )
     result.pairs = list(seen.values())
+    result.materials = list(materials.values())
     result.companies = len({pair.company_name for pair in result.pairs})
     if not result.pairs:
         raise FoodtracerUnavailable(

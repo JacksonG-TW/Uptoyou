@@ -81,6 +81,9 @@ REFERENCE_TABLES = (
     "business_tax_row",
     "search_alias",
     "township_station",
+    # A19: the pipeline writes it, the request path reads it, and nobody else touches it — the same
+    # shape as every other thing a publication carries.
+    "product_material",
 )
 
 # The pipeline writes what it publishes, the ledger that records the writing, and the crib.

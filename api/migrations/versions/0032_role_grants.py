@@ -84,6 +84,25 @@ def upgrade() -> None:
             sa.text('revoke all on all sequences in schema public from "{}"'.format(role))
         )
         for table, privileges in sorted(tables.items()):
+            # **Only tables that exist at THIS point in the history, and this is not defensive
+            # coding — it is what stops a shared map from editing the past.**
+            #
+            # `upto.roles.grants()` is read by this migration and by the coverage test, which is
+            # exactly the point: one dict, one boundary. But this migration is a *historical* step,
+            # and a table added to the map later did not exist when this step runs. A19 added
+            # `product_material` to the map on 2026-08-29; revision 0035 creates it. On the live
+            # database nothing happened — 0032 had already run — and on a **fresh** one 0032 died
+            # with `relation "product_material" does not exist`, which is every fresh clone, CI and
+            # `split_boot_check.sh` and nothing else.
+            #
+            # So a table the map names and the schema has not reached yet is skipped here, and the
+            # migration that creates it issues its own grants (H10's rule, D115's cost paragraph).
+            # The coverage test still refuses a table with no grants at head, which is where that
+            # question belongs.
+            if connection.execute(
+                sa.text("select to_regclass(:t)"), {"t": "public." + table}
+            ).scalar_one_or_none() is None:
+                continue
             op.execute(
                 sa.text(
                     'grant {} on "{}" to "{}"'.format(", ".join(privileges), table, role)
