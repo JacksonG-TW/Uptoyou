@@ -112,9 +112,18 @@ async def ingest_sheet(
 
     parsed = parse(sheet.raw)
     offered = await store.write(publication_id, parsed.pairs)
+    # **A19: the same file's ingredient half, in the same transaction as the pairs.** One `commit`
+    # below, so a publication either holds both or holds neither — a run that stored the pairs and
+    # died before the materials would leave a publication that reads complete and answers `unknown`
+    # for every product, which is the one wrong answer this feature can give.
+    materials_offered = await store.write_materials(publication_id, parsed.materials)
     held_now = await store.accepted(publication_id)
     await store.record_count(publication_id, held_now)
     await store.commit()
+    # Printed rather than returned in the verdict: `pair_rows` is the ledger's count for this source
+    # and stays what it has always meant (H32 — a column that answers two questions answers
+    # neither). The material count is a line for a person reading the run.
+    print("{}: {} product material rows offered".format(sheet.source, materials_offered))
     return Verdict(
         source=sheet.source,
         content_sha256=sheet.content_sha256,

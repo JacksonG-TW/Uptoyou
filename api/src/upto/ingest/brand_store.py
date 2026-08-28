@@ -58,6 +58,23 @@ on conflict (publication_id, company_name, brand_name) do nothing
 """
 
 
+# **A19: the ingredient half of the same file, written beside the pairs in the same transaction.**
+#
+# `on conflict do nothing` for the same reason the pair insert has it — the parse already dedupes on
+# this exact key, so a conflict here would mean the file changed shape under us, and refusing the
+# row is the same answer as ignoring it. What must never happen is a partial publication: both
+# writes are in one transaction and one `commit`, so a publication either holds its pairs and its
+# materials or holds neither.
+INSERT_MATERIAL = """
+insert into product_material
+    (publication_id, company_name, brand_name, product_name, material_name, material_name_raw)
+values
+    (:publication_id, :company_name, :brand_name, :product_name, :material_name,
+     :material_name_raw)
+on conflict (publication_id, company_name, brand_name, product_name, material_name) do nothing
+"""
+
+
 @dataclass(frozen=True)
 class HeldPublication:
     publication_id: int
@@ -114,6 +131,33 @@ class BrandStore:
             if not batch:
                 continue
             await self._session.execute(text(INSERT_PAIR), batch)
+            offered += len(batch)
+        return offered
+
+    async def write_materials(self, publication_id: int, materials: Sequence) -> int:
+        """Write the product materials. Returns the number offered, not the number accepted.
+
+        **Separate from `write` on purpose.** The pairs are what every name on every screen depends
+        on; the materials are an addition. A caller that has pairs and no materials — an older file,
+        or one that stopped carrying 產品名稱 — writes the pairs and calls this with nothing, and
+        the publication is still a good one.
+        """
+        offered = 0
+        for start in range(0, len(materials), CHUNK):
+            batch = [
+                {
+                    "publication_id": publication_id,
+                    "company_name": item.company_name,
+                    "brand_name": item.brand_name,
+                    "product_name": item.product_name,
+                    "material_name": item.material_name,
+                    "material_name_raw": item.material_name_raw,
+                }
+                for item in materials[start:start + CHUNK]
+            ]
+            if not batch:
+                continue
+            await self._session.execute(text(INSERT_MATERIAL), batch)
             offered += len(batch)
         return offered
 
