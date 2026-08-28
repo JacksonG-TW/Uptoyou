@@ -109,6 +109,14 @@ def headline(base: Optional[str], name_source: Optional[str]) -> Optional[str]:
     A circle-local row is a member's own words, a sign is the branch's published sign and a brand is
     the company's own — none of the three is ours to edit.
 
+    **It returns the name, not `None`, on those three rungs — deliberately, and this sentence exists
+    because a status note of mine claimed otherwise on 2026-08-28 (the evaluator caught it against
+    the wire).** The field's meaning is *the string the headline renders*, so it is always populated
+    and the surface has one path; `null` is left to mean the two things it can only mean — a payload
+    older than A16, or a winner the API had no row for. Making it `null` per rung would move a
+    per-rung branch into the browser, which is the work D92 puts in the API. `test_headline`'s
+    rung cases pin this; do not "fix" it to match a note.
+
     **`base`, never the composed name, and this is the defect the A16 gate found (2026-08-28).**
     D92 composes a sign-less site of a multi-site company as `base（行政區＋路名）`, so the string
     ends in `）` and **no business-type token can match its tail** — every chain passed through
