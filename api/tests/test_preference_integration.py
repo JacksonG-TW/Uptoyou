@@ -787,6 +787,52 @@ async def scenario(test_url: str) -> None:
           all(row.value in preference_module.CATEGORIES for row in categories_in_force),
           [row.value for row in categories_in_force])
 
+    # ---- D25/D103 as amended 2026-08-28: a kept ingredient exclusion has no window -----------
+    #
+    # Owner-ruled 「一直」. 「不吃甲殼類」 does not decay with a pay cycle the way a budget band does;
+    # a member still avoiding it in thirteen months has not changed their mind, they have not been
+    # asked. It ends by an `allow` and until then it stands. Three rows of the same age drive it, so
+    # the assertion is about the RULE and not about one row's luck.
+    async with Session() as session:
+        for kind, value, persist in (("avoid_ingredient", "蛋", True),
+                                     ("avoid_ingredient", "堅果類", False),
+                                     ("budget", "easy", True)):
+            # **`expires_on` comes from the shipped `month_end_of`, not from arithmetic typed
+            # here.** `ck_preference_budget_expires` refused the first version, which set it to
+            # NULL: a budget band without its month end is a band that never expires, and the
+            # CHECK exists to stop exactly that. D25 exports the function so a back-dated row
+            # lands on the same boundary the product would have computed — a fixture with its own
+            # month arithmetic is a second clock by another name.
+            await session.execute(
+                text("insert into preference (member_id, kind, value, stance, persist, valid_from,"
+                     " expires_on) "
+                     "values (:m, :k, :v, case when :k = 'budget' then null else 'avoid' end, "
+                     ":p, now() - interval '13 months', "
+                     "case when :k = 'budget' then {month_end} else null end)".format(
+                         month_end=preference_module.month_end_of(
+                             "(now() - interval '13 months')"))),
+                {"m": member, "k": kind, "v": value, "p": persist},
+            )
+        await session.commit()
+    await erase.run()
+    async with Session() as session:
+        survivors = dict(
+            (row.value, row.kind)
+            for row in (
+                await session.execute(
+                    text("select kind, value from preference where member_id = :m "
+                         "  and valid_from < now() - interval '12 months'"),
+                    {"m": member},
+                )
+            ).all()
+        )
+    check("a kept ingredient older than the window survives — it has no window (「一直」)",
+          "蛋" in survivors, survivors)
+    check("an unkept ingredient of the same age does not — D17's default is still not to remember",
+          "堅果類" not in survivors, survivors)
+    check("and a kept budget of the same age still goes — the exemption is the ingredient's alone",
+          "easy" not in survivors, survivors)
+
     # ---- D25 as amended 2026-08-28: a used 「這次不吃」 is gone in the morning -----------------
     #
     # **The defect this closes, found by the evaluator's gate on live data.** `upto.privacy.erase`

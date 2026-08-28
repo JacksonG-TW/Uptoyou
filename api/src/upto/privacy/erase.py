@@ -55,28 +55,46 @@ UNPINNED = (
     "not exists (select 1 from weight_contribution wc where wc.preference_id = preference.id)"
 )
 
+# **D25 / D103 as amended 2026-08-28 (owner: 「一直」): a KEPT ingredient exclusion has no retention
+# window.** 「不吃甲殼類」 is not a statement about this month the way a budget band is — it does not
+# decay with a pay cycle, and a member who is still avoiding it in thirteen months has not changed
+# their mind, they have simply not been asked. It ends when they append an `allow`, and until then
+# it stands.
+#
+# **This narrows only the window rule.** An *unkept* ingredient row is still erased by `NOT_KEPT`
+# below on the next nightly run, because D17's default is not to remember and nothing here overrides
+# that — 「這次不吃」 means this time.
+#
+# **What does not exist yet, stated so its absence is not mistaken for a decision:** nothing
+# eventually removes a kept exclusion from a device that has stopped coming back. Dormancy erasure
+# was ruled and then **parked** the same day — erasing a person's kept exclusions needs a notice to
+# them first, and this product holds no address to send one to. It resumes with the identity item.
+NEVER_EXPIRES = "not (kind = 'avoid_ingredient' and persist)"
+
 NOT_KEPT = "delete from preference where persist = false and {} returning id".format(UNPINNED)
 
 EXPIRED_WINDOW = (
-    "delete from preference where valid_from < now() - interval '{}' and {} returning id".format(
-        RETENTION, UNPINNED
-    )
+    "delete from preference where valid_from < now() - interval '{}' and {} and {} returning id"
+    .format(RETENTION, UNPINNED, NEVER_EXPIRES)
 )
 
 # What had to be left behind, so the report is a true statement rather than a flattering one.
 PINNED_NOT_KEPT = "select count(*) from preference where persist = false and not ({})".format(
     UNPINNED
 )
+# **`NEVER_EXPIRES` is here too, and leaving it out would have been the subtle bug.** This counts
+# rows the window rule *wanted* and a pin refused. A kept ingredient is not wanted by that rule at
+# all, so counting it here would report it as "held back by a pin" — a true number about the wrong
+# question, and the report would say the window is being obstructed when it is being obeyed.
 PINNED_OVER_WINDOW = (
-    "select count(*) from preference where valid_from < now() - interval '{}' and not ({})".format(
-        RETENTION, UNPINNED
-    )
+    "select count(*) from preference where valid_from < now() - interval '{}' and {} "
+    "and not ({})".format(RETENTION, NEVER_EXPIRES, UNPINNED)
 )
 
 COUNT_NOT_KEPT = "select count(*) from preference where persist = false and {}".format(UNPINNED)
 COUNT_OVER_WINDOW = (
-    "select count(*) from preference where valid_from < now() - interval '{}' and {}".format(
-        RETENTION, UNPINNED
+    "select count(*) from preference where valid_from < now() - interval '{}' and {} and {}".format(
+        RETENTION, UNPINNED, NEVER_EXPIRES
     )
 )
 

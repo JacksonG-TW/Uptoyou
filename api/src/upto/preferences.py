@@ -109,6 +109,14 @@ def month_end_of(instant_sql: str) -> str:
     write time and stored, because a boundary four readers each re-derive is how two of them
     disagree. Exported because `upto.fixture` builds a back-dated row and must land on this same
     boundary; a fixture with its own month arithmetic is a second clock by another name.
+
+    **Pass a parenthesised expression, and this is a real trap rather than a style note.** The
+    argument is interpolated straight into `{} at time zone …`, and `at time zone` binds tighter
+    than arithmetic — so `now() - interval '13 months'` reassociates to
+    `now() - (interval '13 months' at time zone 'Asia/Taipei')` and Postgres refuses with
+    *function pg_catalog.timezone(unknown, interval) does not exist*. Measured 2026-08-28 while
+    back-dating a fixture. `(now() - interval '13 months')` is right. A bare `now()` or a column
+    name needs nothing.
     """
     return (
         "(date_trunc('month', {} at time zone '{}') + interval '1 month' - interval '1 day')::date"
