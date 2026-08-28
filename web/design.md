@@ -267,7 +267,9 @@ what is about the person. The round page holds 「這次不吃」, D38's ten typ
 search, set by one tap and lapsing at the nightly erasure (D17), **with no keep toggle**: a type is
 short-term by ruling. The stat sentences (較少中 · 抽不到 · D22's breadth) travel with the stance to
 wherever it is set, never separately. Same wire, same numbers — the split is where a hand lands,
-not what the engine reads. Chip part: `data-part="tonight-chip"`, `data-on`, filled on / ghost off.
+not what the engine reads. Chip part: `data-part="tonight-chip"`, `data-on`, filled on / ghost off. **An `allow` that ends a row
+mirrors that row's `persist`** (amended 2026-08-28 — a non-kept `allow` over a kept `avoid` is undone
+by the nightly erasure).
 
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
