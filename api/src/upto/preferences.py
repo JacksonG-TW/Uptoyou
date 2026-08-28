@@ -126,6 +126,35 @@ def month_end_of(instant_sql: str) -> str:
 SERVER_MONTH = "select to_char({}, 'YYYY-MM') as month".format(_MONTH_START)
 
 
+# **D25 as amended 2026-08-28 (owner-ruled): a `persist = false` row lapses at READ time, and a
+# lapsed row leaves the key with nothing in force.**
+#
+# **Why read time and not the erasure job.** `upto.privacy.erase` deletes every `persist = false`
+# row nightly — except the ones a round pinned, which D24 makes undeletable. So a 「這次不吃」 that
+# happened to be read by a roll survived for ever and stayed in force, which the evaluator's gate
+# found on a live category (member 325, row 615, pinned by round 820). The row must stay — the pin
+# says what was read — so what changes is what counts as *in force*: the row is history, the
+# predicate is the answer.
+#
+# **The boundary is the erasure hour, 05:00 Taipei**, reused rather than invented: a second boundary
+# would be a second clock, and D25's Taipei rule already exists for exactly this reason.
+#
+# **No fall-through, and that is the ruling rather than a convenience.** The latest row per key is
+# taken first, as always; if *that* row is lapsed the key has nothing in force and nothing older is
+# consulted. The rejected reading let a lapsed `allow` uncover a kept `avoid` beneath it — an
+# avoidance a member had switched off would switch itself back on overnight, which is the opposite
+# of what D17's opt-in default is for.
+LAST_ERASURE_BOUNDARY = (
+    "(date_trunc('day', (now() at time zone '{tz}') - interval '5 hours') + interval '5 hours')"
+).format(tz=TIMEZONE)
+
+#: **The one predicate, shared by the GET and the engine's loader.** Two reads of "in force" that
+#: derive it separately are two answers waiting to disagree; `upto.engine.load` imports this string.
+IN_FORCE_PREDICATE = (
+    "(persist or (valid_from at time zone '{tz}') >= {boundary})"
+).format(tz=TIMEZONE, boundary=LAST_ERASURE_BOUNDARY)
+
+
 # `valid_from` and `expires_on` both come from the database's clock in one statement, so a month
 # boundary cannot fall between two readings of two clocks. The boundary itself is `month_end_of`
 # above — Taipei's month since 2026-08-27 — and this query interpolates it rather than restating it.
@@ -141,12 +170,15 @@ returning id
 # The latest row per key, which is what "in force" means once nothing is edited. `distinct on` is
 # the shape the index `ix_preference_in_force` was built for: (member_id, kind, valid_from desc).
 IN_FORCE_BUDGET = """
-select distinct on (kind) value, persist, expires_on, valid_from,
-       (expires_on < {today}) as expired
-  from preference
- where member_id = :member_id and kind = 'budget'
- order by kind, valid_from desc, id desc
-""".format(today=_TODAY)
+select value, persist, expires_on, valid_from, expired from (
+    select distinct on (kind) value, persist, expires_on, valid_from,
+           (expires_on < {today}) as expired
+      from preference
+     where member_id = :member_id and kind = 'budget'
+     order by kind, valid_from desc, id desc
+) latest
+ where {in_force}
+""".format(today=_TODAY, in_force=IN_FORCE_PREDICATE)
 
 # One row per avoided category — the latest stance for each value, then only the ones still
 # `avoid`. An `allow` row is a real fact with a real history and is deliberately *not* returned:
@@ -158,9 +190,9 @@ select value, persist, valid_from from (
      where member_id = :member_id and kind = :kind
      order by value, valid_from desc, id desc
 ) latest
- where stance = 'avoid'
+ where stance = 'avoid' and {in_force}
  order by value
-"""
+""".format(in_force=IN_FORCE_PREDICATE)
 # **`kind` is a bound parameter and not two copies of the query, but it is passed explicitly at every
 # call site** — never defaulted. An avoidance query that fell back to a kind would silently return
 # categories to a caller asking about ingredients, and both lists are closed so nothing downstream

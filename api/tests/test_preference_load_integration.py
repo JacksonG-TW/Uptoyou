@@ -157,8 +157,17 @@ async def seed(session):
         return (
             await session.execute(
                 text(
+                    # **`persist = true`, since D25's 2026-08-28 amendment.** These rows carry
+                    # absolute dates (EARLIER / LATER, chosen so two rows for one member cannot
+                    # share `now()` and collide on `uq_preference_category_version`), and an
+                    # absolute date does not stay recent: on 2026-08-28 they were eighteen days old
+                    # and a `persist = false` row older than the last 05:00 Taipei boundary is no
+                    # longer in force, so every record this file asserts vanished at once. Keeping
+                    # them isolates what this test is about — the loader's per-member `distinct on`
+                    # — from a retention rule it was never testing. The lapse itself is asserted in
+                    # `test_preference_integration.py`, against rows written for it.
                     "insert into preference (member_id, kind, value, stance, persist, valid_from) "
-                    "values (:m, 'avoid_category', :v, :s, false, :t) returning id"
+                    "values (:m, 'avoid_category', :v, :s, true, :t) returning id"
                 ),
                 {"m": members[nickname], "v": value, "s": stance, "t": valid_from},
             )

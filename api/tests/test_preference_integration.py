@@ -787,6 +787,121 @@ async def scenario(test_url: str) -> None:
           all(row.value in preference_module.CATEGORIES for row in categories_in_force),
           [row.value for row in categories_in_force])
 
+    # ---- D25 as amended 2026-08-28: a used 「這次不吃」 is gone in the morning -----------------
+    #
+    # **The defect this closes, found by the evaluator's gate on live data.** `upto.privacy.erase`
+    # deletes every `persist = false` row nightly — except the ones a round pinned, which D24 makes
+    # undeletable. So a 「這次不吃」 that a roll happened to read survived for ever and stayed in
+    # force (member 325, row 615, pinned by round 820, still avoiding 西式 days later). The row must
+    # stay, because the pin says what was read; what changes is what counts as *in force*.
+    #
+    # **Owner-ruled shape: no fall-through.** The latest row per key is taken first, as always; if
+    # that row is a lapsed `persist = false`, the key has nothing in force and nothing older is
+    # consulted. The rejected reading let a lapsed `allow` uncover a kept `avoid` underneath — an
+    # avoidance a member switched off would switch itself back on overnight.
+    #
+    # **西式 and 早餐 are used by nothing else in this file, and that is deliberate.** The first
+    # version reached for 火鍋 and 燒烤 — both already written earlier in this scenario through the
+    # endpoint, with fresher `valid_from`, so the lapsed rows were legitimately superseded and the
+    # assertion failed for a correct reason. A fixture that shares a key with an earlier one is not
+    # a fixture, it is a continuation.
+    #
+    # **One fixture, both reads.** The screen's answer and the engine's must agree, so the same rows
+    # are put to `IN_FORCE_AVOID` and to the real `load_contributions`, not to a copy of either.
+    async with Session() as session:
+        # A lapsed avoid, pinned by the round above so the erasure job cannot take it away.
+        lapsed_avoid = (
+            await session.execute(
+                text("insert into preference (member_id, kind, value, stance, persist, valid_from) "
+                     "values (:m, 'avoid_category', '西式', 'avoid', false, "
+                     "now() - interval '2 days') returning id"),
+                {"m": member},
+            )
+        ).scalar_one()
+        await session.execute(
+            text("insert into weight_contribution (round_id, place_id, channel, contributor, "
+                 "effect, reason, reason_visibility, member_id, preference_id) "
+                 "values (:r, :p, 'private', 'preference', 0.8, '避開的類型：西式', "
+                 "'represented_member', :m, :pref)"),
+            {"r": round_id, "p": place_id, "m": member, "pref": lapsed_avoid},
+        )
+        # A kept avoid with a lapsed `allow` on top of it — the case the rejected reading got wrong.
+        await session.execute(
+            text("insert into preference (member_id, kind, value, stance, persist, valid_from) "
+                 "values (:m, 'avoid_category', '早餐', 'avoid', true, now() - interval '3 days')"),
+            {"m": member},
+        )
+        await session.execute(
+            text("insert into preference (member_id, kind, value, stance, persist, valid_from) "
+                 "values (:m, 'avoid_category', '早餐', 'allow', false, now() - interval '2 days')"),
+            {"m": member},
+        )
+        # The pooled place gets the category, so the engine has something the avoidance could bite.
+        # Without it the loader would produce nothing whatever the predicate said, and this whole
+        # block would pass while testing none of it (H50).
+        # **All five provenance columns or none — `ck_place_category_provenance` (D39).** The first
+        # version of this line set `category` alone and the CHECK refused it, which is the
+        # constraint doing exactly what D39 wrote it for: a category with no record of what decided
+        # it is a claim with no author.
+        await session.execute(
+            text("update place set category = '西式', category_model = 'test-fixture', "
+                 "category_prompt_version = 'fixture', category_generated_at = now(), "
+                 "category_input = '巷口麵店' where id = :p"),
+            {"p": place_id})
+        await session.commit()
+
+    async with Session() as session:
+        after = (
+            await session.execute(
+                text(preference_module.IN_FORCE_AVOID),
+                {"member_id": member, "kind": "avoid_category"},
+            )
+        ).all()
+    values = [row.value for row in after]
+    check("a lapsed `persist = false` avoid is not in force, though its row is still there",
+          "西式" not in values, values)
+    check("and a lapsed `allow` does not uncover the kept `avoid` beneath it",
+          "早餐" not in values, values)
+
+    async with Session() as session:
+        still_there = (
+            await session.execute(
+                text("select count(*) from preference where id = :i"), {"i": lapsed_avoid})
+        ).scalar()
+    check("the lapsed row is still stored — the pin says what was read (D24)",
+          still_there == 1, still_there)
+
+    async with Session() as session:
+        loaded = await loader_module.load_contributions(session, round_id)
+    from_preference = [c for c in loaded.contributions
+                       if c.contribution.contributor == "preference"]
+    check("and the engine's loader agrees — no preference contribution from a lapsed row",
+          from_preference == [], [c.contribution.reason for c in from_preference])
+
+    # **The other half of the same fixture, so neither read is passing by being blind.** A fresh
+    # avoid on the same category is the latest row for that value, and both reads must see it.
+    async with Session() as session:
+        await session.execute(
+            text("insert into preference (member_id, kind, value, stance, persist, valid_from) "
+                 "values (:m, 'avoid_category', '西式', 'avoid', false, now())"),
+            {"m": member},
+        )
+        await session.commit()
+    async with Session() as session:
+        fresh = (
+            await session.execute(
+                text(preference_module.IN_FORCE_AVOID),
+                {"member_id": member, "kind": "avoid_category"},
+            )
+        ).all()
+    check("a today's `persist = false` avoid IS in force — the predicate is not simply refusing all",
+          "西式" in [row.value for row in fresh], [row.value for row in fresh])
+    async with Session() as session:
+        reloaded = await loader_module.load_contributions(session, round_id)
+    check("and the loader sees it too — the same predicate, the same answer, two reads",
+          [c for c in reloaded.contributions
+           if c.contribution.contributor == "preference"] != [])
+
     # ---- A2's aged budget row (G9–G11): the expired state the product cannot reach ----------
     #
     # `expires_on` is computed from `now()` at write time (D25), so **no sequence of API calls can

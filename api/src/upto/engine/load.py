@@ -33,6 +33,11 @@ from dataclasses import dataclass
 
 from sqlalchemy import text
 
+# **D25 as amended 2026-08-28: the same in-force predicate the GET uses.** Two reads that derive
+# "in force" separately are two answers waiting to disagree — a lapsed `persist = false` row must
+# be invisible to the engine on exactly the terms it is invisible to the screen, which is why this
+# is imported rather than restated.
+from upto.preferences import IN_FORCE_PREDICATE
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
 from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin, TripPin
 from upto.engine.weather import REASON_VISIBILITY as WEATHER_VISIBILITY
@@ -293,7 +298,8 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
         await session.execute(
             text(
                 "select member_id, value, id from ("
-                "  select distinct on (member_id, value) member_id, value, stance, id"
+                "  select distinct on (member_id, value) member_id, value, stance, id,"
+                "         persist, valid_from"
                 "    from preference"
                 # **`kind` named explicitly, never by omission.** Revision 0023 added
                 # `avoid_ingredient`, which carries a stance and a value from a different closed
@@ -307,7 +313,10 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
                 "   where kind = 'avoid_category'"
                 "     and member_id in (select id from member where circle_id = :c)"
                 "   order by member_id, value, valid_from desc, id desc"
-                ") latest where stance = 'avoid'"
+                # D25 as amended: the latest row per key is taken first, and if THAT row is a
+                # lapsed `persist = false` the key has nothing in force — nothing older is
+                # consulted, so a lapsed `allow` never uncovers a kept `avoid`.
+                ") latest where stance = 'avoid' and " + IN_FORCE_PREDICATE
             ),
             {"c": round_row.circle_id},
         )
@@ -380,12 +389,16 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
         await session.execute(
             text(
                 "select member_id, value, id from ("
-                "  select distinct on (member_id, value) member_id, value, stance, id"
+                "  select distinct on (member_id, value) member_id, value, stance, id,"
+                "         persist, valid_from"
                 "    from preference"
                 "   where kind = 'avoid_ingredient'"
                 "     and member_id in (select id from member where circle_id = :c)"
                 "   order by member_id, value, valid_from desc, id desc"
-                ") latest where stance = 'avoid'"
+                # D25 as amended: the latest row per key is taken first, and if THAT row is a
+                # lapsed `persist = false` the key has nothing in force — nothing older is
+                # consulted, so a lapsed `allow` never uncovers a kept `avoid`.
+                ") latest where stance = 'avoid' and " + IN_FORCE_PREDICATE
             ),
             {"c": round_row.circle_id},
         )
