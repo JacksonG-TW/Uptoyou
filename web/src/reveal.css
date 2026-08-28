@@ -352,6 +352,31 @@
   margin: 0;
 }
 
+/* **The qualifier — which branch the winner is** (`design.md` §4b, owner-ruled 2026-08-28).
+   `text-lead`, the body face's regular weight, and `currentColor`.
+
+   **`currentColor`, never `--color-muted`.** This line sits on the flood, and muted fails the text
+   floor on every one of the four `-deep` companions — the demotion that would be right on paper is
+   unreadable here, so the line is demoted by SIZE against a 900-weight headline and by nothing
+   else.
+
+   **No spacing of its own, and that is deliberate.** The spec named four properties and spacing was
+   not one of them, so the block's existing rhythm governs rather than a number invented at build
+   time: `gap: 24px` from `.answer` in the narrow composition, and the sentence's own
+   `calc(34 * var(--k))` step in the wide one, where `.answer` is `display: block; gap: 0`. The
+   evaluator can tighten it to the headline with one declaration if the rendered gap reads wrong.
+
+   No `white-space: nowrap`, unlike `.sentence` above: the sentence is nine authored characters and
+   this is a published address line, which may be long enough that refusing to wrap would push it
+   out of the composition. */
+.reveal .qualifier {
+  font-size: var(--text-lead);
+  font-weight: 400;
+  color: currentColor;
+  letter-spacing: .04em;
+  margin: 0;
+}
+
 .reveal .revealNote, .reveal .revealErr {
   font-size: var(--text-body);
   text-align: center;
@@ -842,6 +867,11 @@
      wide composition changes where the sentence sits and how it aligns; it has no reason to
      change how big it is, and the token is the only thing allowed to answer that. */
   .reveal .sentence { margin-top: calc(34 * var(--k)); text-align: left; }
+  /* `.answer` is `display: block; gap: 0` here, so the qualifier needs the same explicit step the
+     sentence takes — the flex gap that spaced it in the narrow composition does not exist. Same
+     expression, so the two cannot drift apart. No `font-size`: `--text-lead` already answered
+     that, and `RV-3` is the finding about overriding it with an untraceable pixel count. */
+  .reveal .qualifier { margin-top: calc(34 * var(--k)); text-align: left; }
 
   /* ── the right column ─────────────────────────────────────────────────────
      The list sits beside the dice from the first frame, which is what makes the sweep legible as

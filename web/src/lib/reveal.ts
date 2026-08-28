@@ -7,8 +7,8 @@
  * hide, toggle or forget to hide. A single type with `weights?: …` would compile the leak.
  *
  * `for_credential` in `api_common.py` builds the member shape by whitelist — `round_id · status ·
- * dice · sum · winning_place_id · places · trip · winner_headline` — so a field added to the
- * payload is operator-only
+ * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier` — so a
+ * field added to the payload is operator-only
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
@@ -44,6 +44,13 @@ export type MemberReveal = {
    *  compose one for. The headline then falls back to `places[winning_place_id]`; it never renders
    *  empty, and `places` itself is untouched so every list row keeps the composed name. */
   winner_headline: string | null
+  /** The bracket D92 composes onto a name that needs one （大安和平東路）, **without its
+   *  parentheses**, or `null` when the name has none — owner-ruled 2026-08-28, `design.md` §4b.
+   *  It is the address line the member payload otherwise lacks, so the headline can be the short
+   *  name and still say WHICH branch. The browser adds no punctuation to it and computes nothing
+   *  from it; a parenthesis appearing here is a defect, and so is this string appearing on a list
+   *  row, where the composed name already carries the bracket. */
+  winner_qualifier: string | null
   trip: Trip
   /** D108. `seed_commit` was published at open, before the first place was proposed; `revealed_seed`
    *  is `null` until the round closes and is what makes the commitment checkable. */

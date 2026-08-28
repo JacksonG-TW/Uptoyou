@@ -528,6 +528,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const winner = data && data.winning_place_id !== null
     ? (data.winner_headline ?? data.places[String(data.winning_place_id)])
     : ''
+  /** `design.md` §4b. **No fallback, and that asymmetry is the ruling.** A missing headline still
+   *  has to say something, so it falls back to the composed name; a missing qualifier has nothing
+   *  to say and renders no element at all. Deriving one here from the composed name would be the
+   *  browser computing a name, which is the one thing A16 exists to stop. */
+  const qualifier = data?.winner_qualifier ?? null
 
   return (
     // The flood (§5 rule 1) — the winning place's own face colour becomes the whole ground, over
@@ -638,6 +643,27 @@ export default function Reveal({ roundId }: { roundId: number }) {
             already say what they rolled, in pips, which is the form that cannot be mistaken for a
             share of anything. */}
         <h1 className="winner" data-part="winner">{winner}</h1>
+
+        {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
+            D92 composes onto a name that needs one, set as its own line under the headline instead
+            of inside it: the headline reads 一階堂拉麵, this reads 大安和平東路, and the 提名 row below
+            still reads 一階堂拉麵餐飲有限公司（大安和平東路）, which is how the two are matched by eye.
+
+            **Rendered only when non-null — no empty element and no reserved box.** A single-site
+            winner has nothing to say here and the sentence moves up by exactly the line it did not
+            need. That is the opposite of `.winner`'s reserved second line above, deliberately: the
+            headline's height is a property of the screen (`R-D9`'s floor), and this line's is a
+            property of the name.
+
+            **No parentheses, no dash, no icon.** The API sends the bracket's content without its
+            punctuation and the browser adds none back — a parenthesis appearing here is a defect.
+
+            It is inside `.answer`, so it rides the block's `aria-hidden` / `inert` and its fade
+            and `D91`'s zero-shift clause is kept for free — the same argument the act below it
+            already runs on. */}
+        {qualifier !== null && (
+          <p className="qualifier" data-part="qualifier">{qualifier}</p>
+        )}
 
         {/* **The sentence.** Everything the evidence table used to carry now rests on nine
             characters, so they are load-bearing typography and not a caption: `text-lead`, full
