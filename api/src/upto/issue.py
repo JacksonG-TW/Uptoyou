@@ -37,6 +37,37 @@ from sqlalchemy.exc import IntegrityError
 
 from upto.db import dispose_all, session_factory
 
+# **A20 / D74 as amended 2026-08-28 — the operator hands over a link, not two strings to retype.**
+#
+# **The token rides in the URL FRAGMENT and never in the query, and that is the whole design.** A
+# fragment is not sent to the server: it never reaches the proxy's access log, never reaches an
+# access log's `Referer` on the next request, and never reaches this API at all. A `?k=` would be
+# written to disk on every hop between the operator's phone and the member's browser. The device
+# screen reads it with `location.hash` and exchanges it for a session; nothing on our side ever
+# sees it, which is what makes "printed once and stored nowhere" still true after the link exists.
+#
+# **The origin is configuration with a working default.** `UPTO_PUBLIC_ORIGIN` is the address a
+# member's browser can actually reach — a real deployment's hostname. The default is the proxy's
+# own, which is what `UPTO_HTTP_PORT` already serves, so **a fresh clone prints a working link with
+# no configuration at all**. The name is in `.env.example` with an empty value on purpose: it
+# carries no `PASSWORD`, so CI writes it empty (H58), and the default is what keeps the integration
+# tier and `split_boot_check.sh` from failing on a variable they have no reason to set.
+PUBLIC_ORIGIN_VAR = "UPTO_PUBLIC_ORIGIN"
+DEFAULT_PUBLIC_ORIGIN = "http://localhost:8080"
+
+
+def invite_link(circle_id: int, token: str) -> str:
+    """`<origin>/device#c=<circle_id>&k=<token>` — the fragment carries both.
+
+    The circle id travels in the fragment too, though it is not a secret: keeping the pair together
+    means one string to copy, and a link whose query is empty cannot grow a secret into it later by
+    somebody adding "just one more parameter".
+    """
+    import os
+
+    origin = (os.environ.get(PUBLIC_ORIGIN_VAR) or DEFAULT_PUBLIC_ORIGIN).rstrip("/")
+    return "{}/device#c={}&k={}".format(origin, circle_id, token)
+
 # **D110 as amended 2026-08-20 (owner-ruled): the supported shape is 10 people.** Ten seats, three
 # proposals each, so 30 candidate places against D72's 36 dice outcomes — the apportionment has room
 # and D108's decider draw is nowhere near the byte boundary that H48 records.
@@ -146,6 +177,10 @@ async def issue(circle_id: int, nickname: str, principal_id: int | None,
 
     print(f"token: {token}")
     print("(shown once — only its hash is stored, and it cannot be recovered)")
+    # The same secret, in the shape a person can actually send. Printed for every path — the
+    # `--principal` attach included — because a returning device needs a link exactly as much as a
+    # new one does.
+    print(f"link: {invite_link(circle_id, token)}")
     print(f"principal: {principal_id}")
     print(f"member: {member_id}")
     print(f"circle: {circle_name}")

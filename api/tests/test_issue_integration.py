@@ -35,12 +35,14 @@ def urls():
     return head + "/postgres", head + "/" + TEST_DB
 
 
-def run_issue(test_url: str, *arguments: str) -> subprocess.CompletedProcess:
+def run_issue(test_url: str, *arguments: str, origin: str | None = None) -> subprocess.CompletedProcess:
     environment = dict(
         os.environ,
         UPTO_DATABASE_URL=test_url,
         PYTHONPATH=SRC + os.pathsep + os.environ.get("PYTHONPATH", ""),
     )
+    # A20: unset means the CLI's own default, which is the case a fresh clone is in.
+    environment["UPTO_PUBLIC_ORIGIN"] = origin or ""
     return subprocess.run(
         [sys.executable, "-m", "upto.issue", *arguments],
         env=environment,
@@ -106,6 +108,27 @@ async def scenario(test_url: str) -> None:
     assert await counts(Session) == (1, 2, 2), (
         "the --principal run must not mint a second principal — D12's silent double-mint"
     )
+
+    # ---- A20 / D74 as amended: the operator hands over a link, not two strings to retype ------
+    #
+    # **The token is in the FRAGMENT, and the assertion is on the character before it.** A `?` would
+    # put the secret in the query, where it reaches the proxy's access log, the API, and the next
+    # request's `Referer`. Nothing on our side ever sees a fragment — which is what keeps D74's
+    # "printed once and stored nowhere" true now that the secret travels in a URL.
+    link = printed(first.stdout, "link")
+    assert "#" in link, link
+    before, fragment = link.split("#", 1)
+    assert "?" not in link, ("the token must never be in the query — a fragment is not sent", link)
+    assert first_token not in before, ("the token appears before the '#'", link)
+    assert first_token in fragment, link
+    assert fragment == "c={}&k={}".format(circle_a, first_token), fragment
+    assert before == "http://localhost:8080/device", (
+        "a fresh clone sets no origin and must still print a working link", before)
+
+    # The returning device gets one too — `--principal` is not a lesser path.
+    second_link = printed(second.stdout, "link")
+    assert second_link.endswith("#c={}&k={}".format(circle_b, second_token)), second_link
+
 
     # An unknown circle refuses whole: exit 1, and not one row anywhere.
     refused = run_issue(test_url, "999999", "nobody")
@@ -184,6 +207,18 @@ async def scenario(test_url: str) -> None:
     assert await counts(Session) == packed, "the over-cap refusal wrote something"
 
     await engine.dispose()
+    # **Last, and deliberately: this one issues a real device.** Every count assertion above is
+    # about a *refusal* leaving nothing behind, so a legitimate issue must not run before them —
+    # the first version of this check ran mid-scenario and turned "a refused issue left rows
+    # behind" red with a row it had put there itself.
+    # `circle_b`, not `circle_a` — by this point circle A is at D110's ten-seat cap and the issue
+    # would be refused for a reason that has nothing to do with the origin.
+    moved = run_issue(test_url, str(circle_b), "阿妹", origin="https://upto.example.tw/")
+    assert moved.returncode == 0, moved.stderr
+    moved_link = printed(moved.stdout, "link")
+    assert moved_link.startswith("https://upto.example.tw/device#"), (
+        "the origin is configuration and the trailing slash must not double", moved_link)
+
     print(
         "ticket 18: the printed token is a working credential, --principal seats without a "
         "second identity, every refusal leaves no rows, and D110's ten-seat cap refuses the "

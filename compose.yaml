@@ -345,6 +345,10 @@ services:
       UPTO_DATABASE_URL: postgresql+asyncpg://upto_api:${UPTO_API_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       UPTO_INGEST_DATABASE_URL: postgresql+asyncpg://upto_ingest:${UPTO_INGEST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       UPTO_LINEAGE_DATABASE_URL: postgresql+asyncpg://upto_lineage:${UPTO_LINEAGE_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      # A20/D74: the origin `python -m upto.issue` builds its invite link on. Passed through empty
+      # when unset — `upto/issue.py` holds the default, so an operator in a fresh clone still gets
+      # a link that works, and a real deployment sets one name.
+      UPTO_PUBLIC_ORIGIN: ${UPTO_PUBLIC_ORIGIN:-}
     # Exactly one worker, and the reason lives here rather than in a comment somewhere
     # else (H2): live room state is per-process, and a second worker means two people in
     # the same room can be served different rooms. The no-cache rule forbids the usual
