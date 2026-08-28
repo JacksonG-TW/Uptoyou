@@ -175,8 +175,8 @@ export default function Round() {
   useEffect(() => { if (dev) void readPrefs(dev) }, [dev, readPrefs])
 
   /**
-   * One tap on a type. **`persist: false`, always, with no toggle to change it** — a type is
-   * short-term by ruling (owner 2026-08-28: 「這次不想吃甚麼例如火鍋，這是短期的」), so it lapses at
+   * One tap on a type. **Turning one ON is always `persist: false`, with no toggle to change it**
+   * — a type is short-term by ruling (owner 2026-08-28: 「這次不想吃甚麼例如火鍋，這是短期的」), so it lapses at
    * the nightly erasure like every other unkept row (D17 · H22). There is no new `kind` and no
    * per-round expiry; the wire is exactly what the preferences page was already sending.
    *
@@ -184,15 +184,25 @@ export default function Round() {
    * an appended row that ends the avoidance (`lib/preferences`'s own note). That is also the whole
    * migration for a category someone KEPT under the old page: it still shows on, and tapping it
    * off ends it (PS-8).
+   *
+   * **The `allow` that ends a row carries THAT ROW'S `persist`, not `false`** — spec amended
+   * 2026-08-28 at the gate, where PS-7 caught it with a real kept 火鍋. An `allow` written
+   * `persist: false` is itself deleted by the 05:00 erasure, and the kept `avoid` underneath it
+   * survives the night — so the category is in force again by morning and the chip comes back on
+   * its own. **A row that ends a kept row has to live as long as the row it ends.** The old page
+   * did exactly this (`persist: keptCategories.has(c)`) and the shape was lost in the move here.
+   *
+   * `keptPersist` is READ from the GET's `persist` for the in-force row, never inferred: the
+   * payload carries it per row, so there is nothing to compute and nothing to get wrong.
    */
-  const tapCategory = useCallback(async (value: string, on: boolean) => {
+  const tapCategory = useCallback(async (value: string, on: boolean, keptPersist: boolean) => {
     if (!dev) return
     setPending((p) => ({ ...p, [value]: !on }))
     try {
       await postPreference(dev, {
         kind: 'avoid_category', value,
         stance: on ? 'allow' : 'avoid',
-        persist: false,
+        persist: on ? keptPersist : false,
       })
       await readPrefs(dev)
     } catch (e) {
@@ -266,7 +276,7 @@ export default function Round() {
                   data-part="tonight-chip"
                   data-on={on ? 'yes' : 'no'}
                   aria-pressed={on}
-                  onClick={() => void tapCategory(c, on)}
+                  onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
                 >
                   {c}
                 </button>

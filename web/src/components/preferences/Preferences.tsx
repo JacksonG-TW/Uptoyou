@@ -392,6 +392,29 @@ export default function Preferences() {
         </p>
       )}
 
+      {/* **D22's warning stands on BOTH pages, evaluator-ruled 2026-08-28** — same component, same
+          copy, same payload as 這一餐's `tonight-breadth`. Not a duplicate of a fact: the owner's
+          08-19 rule is that the reminder belongs at the hand that chooses, and ingredients feed
+          the same total and are chosen here. A member who narrowed themselves with 不吃的食材
+          would otherwise be warned only on the screen where they did not do it.
+
+          It keeps the OLD part name, `pref-breadth-warning`, because `g_a2.py` already reads it.
+
+          **`crossed` is read, never computed.** The server decides with `>`, so a member exactly
+          on half is not warned, and a surface that computed the boundary could compute it wrong.
+          It is reachable now — categorised coverage passed 73%, so all ten types avoided gives
+          0.7425 — which retires the "cannot fire today" note this block used to carry.
+
+          **A2-G8c still binds:** how much someone has excluded is private, never streamed, and
+          appears in no shared payload. Two screens, both of them this person's own. */}
+      {inForce?.breadth.crossed && (
+        <p className="prefsWarn" data-part="pref-breadth-warning">
+          你目前的選擇，讓這個圈子提得出來的
+          {' '}{inForce.breadth.proposable.toLocaleString('en-US')} 家裡，
+          超過一半會受影響。
+        </p>
+      )}
+
       {/* **The way forward** (`spec-conditional-routing.md` §4). One command, the ruled `.act`
           recipe — hot ground, ink text, ink SINK — label 這一餐.
 
