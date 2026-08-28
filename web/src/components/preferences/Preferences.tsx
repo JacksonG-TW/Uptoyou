@@ -306,6 +306,42 @@ export default function Preferences() {
           先設預算和不吃的食材，再進去提店。這台裝置沒有存下任何東西。按「保留」才會留到下個月。
         </p>
       )}
+      {/* **The way in, offered at the TOP as well as the foot — first visit only**
+          (`spec-firstvisit-exit.md`, evaluator 2026-08-28, from the stranger's walk at the gated
+          width). Measured there: on a first visit at 1440×900 the foot's act sat at y 1306 of a
+          1404 px page — below the fold, behind eleven ingredient rows and their hints. A person
+          with nothing to set reads 「再進去提店」 and then has to scroll the whole sheet to find
+          where 進去 is. Most fifth friends are that person.
+
+          **A ghost text link, and the absence of a box is the ruling.** R-2 gives the fill to the
+          control that carries the sheet's own act, which is the one at the foot; a second filled
+          control here would make the screen ask twice which button is the button. This one is a
+          label with an arrow and nothing else.
+
+          **An exit like the other three, not a shortcut past them.** It is an `<a href>` so
+          middle-click and the status bar tell the truth, and its handler does exactly what
+          `pref-done` does: stamp `prefSeen`, then leave — through the keep guard, so a person who
+          changed something and did not press 保留 is still asked once. The stamp is written either
+          way, because having SEEN this screen and having kept something are separate facts.
+
+          Rejected on the record, by the evaluator: a sticky act, a top-only act, reordering the
+          sheet. */}
+      {firstVisit && (
+        <a
+          className="prefsSkip"
+          data-part="pref-skip"
+          href="/round"
+          onClick={(e) => {
+            e.preventDefault()
+            markPrefSeen(dev.circle)
+            const go = () => window.location.assign('/round')
+            if (pending.length) setLeaving(() => go)
+            else go()
+          }}
+        >
+          直接進去提店 →
+        </a>
+      )}
       <p className="prefsNote">只有你看得到，也只有這台裝置寫得動。</p>
 
       {error && <p className="prefsErr" data-part="pref-error">{error}</p>}

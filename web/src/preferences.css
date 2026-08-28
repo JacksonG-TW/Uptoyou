@@ -371,3 +371,20 @@
   line-height: 1.6;
   font-weight: 400;
 }
+
+/* ── the first visit's quiet way in ────────────────────────────────────────
+   `spec-firstvisit-exit.md`. A ghost text link: no box, no fill, no shadow, so it cannot compete
+   with the filled act at the foot (R-2 — the fill belongs to the control carrying the sheet's own
+   act, and there is one of those per screen).
+
+   `inline-flex` + `align-self: flex-start` because `.prefs` is not a flex column and a bare `<a>`
+   would still stretch its hit area across the sheet; the target should be the words. The underline
+   is the affordance — it is a link and it is drawn as one rather than as a control in disguise. */
+.prefsSkip {
+  display: inline-flex; align-self: flex-start;
+  margin: 14px 0 0;
+  font-size: var(--text-body); font-weight: 700;
+  color: var(--color-ink);
+  text-decoration: underline; text-underline-offset: 4px;
+}
+.prefsSkip:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
