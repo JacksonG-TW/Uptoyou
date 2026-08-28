@@ -86,10 +86,71 @@ def observation_payload(temperature="30.5", weather="陰"):
                         "WindSpeed": "-99",
                         "Now": {"Precipitation": "2.0"},
                     },
-                }
+                },
+                # **A18: a station outside 臺北市 lives in this fixture on purpose.** The live
+                # payload is 876 stations of which 19 are Taipei's, so a fixture with only a Taipei
+                # station cannot tell a working filter from no filter at all — it is the same
+                # coinciding-value trap H50 records, one layer down.
+                {
+                    "StationName": "板橋",
+                    "StationId": "466880",
+                    "ObsTime": {"DateTime": "2026-08-11T18:00:00+08:00"},
+                    "GeoInfo": {"CountyName": "新北市", "TownName": "板橋區"},
+                    "WeatherElement": {
+                        "AirTemperature": "29.0",
+                        "Weather": "多雲",
+                        "WindSpeed": "-99",
+                        "Now": {"Precipitation": "0.0"},
+                    },
+                },
             ]
         },
     }
+
+
+class TheStoredScope(unittest.TestCase):
+    """A18 — the observation ingest keeps 臺北市 and stores nothing else.
+
+    **Parsing is not filtering, and the split matters.** The parse must still see every station,
+    because D42 hashes the whole payload and D102 takes `column_signature` from it; a filter one
+    step earlier would make the hash a hash of our policy rather than of their file. So these two
+    facts are asserted separately: the parse returns both stations, and the predicate keeps one.
+
+    The store's own use of the predicate needs a database and is asserted in
+    `test_ingest_integration.py`; what is pinned here is the rule it applies.
+    """
+
+    def test_the_parse_still_sees_every_station(self):
+        counties = {row.county for row in cwa.parse_observation(observation_payload())}
+        self.assertEqual(counties, {"臺北市", "新北市"})
+
+    def test_the_predicate_keeps_taipei_and_drops_the_rest(self):
+        kept = [row for row in cwa.parse_observation(observation_payload())
+                if cwa.in_stored_scope(row.county)]
+        self.assertTrue(kept)
+        self.assertEqual({row.county for row in kept}, {"臺北市"})
+        self.assertEqual({row.station_id for row in kept}, {"466920"})
+
+    def test_the_other_spelling_is_kept_too(self):
+        """H24: an exact match against one spelling would drop every row the day CWA writes 台北市,
+        and it would do it silently — a publication of zero rows and a ledger saying the fetch
+        worked. The fold is the same one every stored name goes through."""
+        self.assertTrue(cwa.in_stored_scope("台北市"))
+        self.assertTrue(cwa.in_stored_scope("臺北市"))
+
+    def test_nothing_else_is_in_scope(self):
+        for county in ("新北市", "臺南市", "臺中市", "", None):
+            with self.subTest(county=county):
+                self.assertFalse(cwa.in_stored_scope(county))
+
+    def test_the_forecast_needs_no_filter_and_has_none(self):
+        """`F-D0047-061` IS the Taipei township forecast — the dataset id is the county, and
+        `ForecastRow` carries no county field to filter on. Measured 2026-08-28: its latest
+        publication held 6,720 rows over twelve township codes, all prefixed 63000."""
+        self.assertEqual(cwa.FORECAST_DATASET, "F-D0047-061")
+        for row in cwa.parse_forecast(forecast_payload()):
+            self.assertTrue(row.township_code.startswith("63000"))
+        self.assertFalse(hasattr(cwa.ForecastRow, "county"))
 
 
 class ForecastParsing(unittest.TestCase):
@@ -131,24 +192,40 @@ class ForecastParsing(unittest.TestCase):
 
 
 class ObservationParsing(unittest.TestCase):
+    """**These read one named station, not "the station".**
+
+    The fixture carries two since A18 (臺北 466920 and 板橋 466880, so the scope filter has
+    something to drop), and `{r.element: r for r in …}` silently keeps whichever station the loop
+    saw last. Three tests here asserted 466920's values through exactly that dict and started
+    reading 板橋's the moment a second station existed — passing before, failing after, and neither
+    was about the station they meant. Selecting by id is what makes them say what they check.
+    """
+
+    STATION = "466920"
+
+    def rows(self, payload=None, value_only=False):
+        parsed = [row for row in cwa.parse_observation(payload or observation_payload())
+                  if row.station_id == self.STATION]
+        return {r.element: (r.value if value_only else r) for r in parsed}
+
     def test_reads_station_and_town(self):
-        rows = {r.element: r for r in cwa.parse_observation(observation_payload())}
+        rows = self.rows()
         self.assertEqual(rows["AirTemperature"].station_id, "466920")
         self.assertEqual(rows["AirTemperature"].town, "中正區")
 
     def test_sentinel_becomes_null_rather_than_a_number(self):
         """-99 means no reading. Stored as a number it would be averaged into nonsense."""
-        rows = {r.element: r.value for r in cwa.parse_observation(observation_payload())}
+        rows = self.rows(value_only=True)
         self.assertIsNone(rows["WindSpeed"])
 
     def test_absent_weather_text_is_recorded_as_absent(self):
         """The `Weather` field's absence is an open measurement question; a row keeps it answerable."""
-        rows = {r.element: r.value for r in cwa.parse_observation(observation_payload(weather=""))}
+        rows = self.rows(observation_payload(weather=""), value_only=True)
         self.assertIn("Weather", rows)
         self.assertIsNone(rows["Weather"])
 
     def test_nested_value_is_kept_rather_than_dropped(self):
-        rows = {r.element: r.value for r in cwa.parse_observation(observation_payload())}
+        rows = self.rows(value_only=True)
         self.assertEqual(json.loads(rows["Now"]), {"Precipitation": "2.0"})
 
 

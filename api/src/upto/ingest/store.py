@@ -19,6 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import signature
+from . import cwa
 from .cwa import FORECAST_DATASET, Publication
 
 
@@ -51,6 +52,22 @@ on conflict (dataset_id, content_sha256) do nothing
 returning id
 """
 
+# **A18: the observation publication says what it kept, and that is why it needs its own insert.**
+# `stored_scope` exists on this table alone — the other publication tables store everything their
+# source publishes, and a column asserting a filter that does not exist would be D112 inverted. The
+# duplication is six column names; the alternative is a conditional column list built at runtime,
+# which is harder to read than the statement it saves.
+INSERT_OBSERVATION_PUBLICATION = """
+insert into observation_publication
+    (dataset_id, content_sha256, detected_at, payload_bytes, column_signature, column_names,
+     stored_scope)
+values
+    (:dataset_id, :content_sha256, :detected_at, :payload_bytes,
+     :column_signature, :column_names, :stored_scope)
+on conflict (dataset_id, content_sha256) do nothing
+returning id
+"""
+
 INSERT_FORECAST_READING = """
 insert into forecast_reading
     (publication_id, township_code, township, element, measure, slot_start, slot_end, value)
@@ -70,19 +87,25 @@ async def store_publication(session: AsyncSession, publication: Publication) -> 
     forecast = publication.dataset_id == FORECAST_DATASET
     table = "forecast_publication" if forecast else "observation_publication"
 
-    inserted = await session.execute(
-        text(INSERT_PUBLICATION.format(table=table)),
-        {
-            "dataset_id": publication.dataset_id,
-            "content_sha256": publication.content_sha256,
-            "detected_at": publication.detected_at,
-            "payload_bytes": publication.payload_bytes,
-            # D102 / M3: the payload's shape — the key set of one reading-bearing record, since a
-            # JSON feed has no header. `NULL` on a publication that predates the signature.
-            "column_signature": publication.column_signature or None,
-            "column_names": signature.as_json(publication.column_names),
-        },
-    )
+    parameters = {
+        "dataset_id": publication.dataset_id,
+        "content_sha256": publication.content_sha256,
+        "detected_at": publication.detected_at,
+        "payload_bytes": publication.payload_bytes,
+        # D102 / M3: the payload's shape — the key set of one reading-bearing record, since a
+        # JSON feed has no header. `NULL` on a publication that predates the signature.
+        "column_signature": publication.column_signature or None,
+        "column_names": signature.as_json(publication.column_names),
+    }
+    if forecast:
+        statement_sql = INSERT_PUBLICATION.format(table=table)
+    else:
+        statement_sql = INSERT_OBSERVATION_PUBLICATION
+        # A18: recorded as policy, not as outcome — it says which county's rows this run would keep,
+        # so a publication that legitimately kept nothing is still distinguishable from one written
+        # before the filter existed (`NULL`).
+        parameters["stored_scope"] = cwa.STORED_COUNTY
+    inserted = await session.execute(text(statement_sql), parameters)
     publication_id = inserted.scalar()
 
     if publication_id is None:
@@ -106,6 +129,10 @@ async def store_publication(session: AsyncSession, publication: Publication) -> 
         ]
         statement = INSERT_FORECAST_READING
     else:
+        # **A18: the filter is here, and here is the point.** The hash above and D102's signature
+        # were both taken from the whole payload, so D42's change detection still asks "did their
+        # file change" rather than "did our policy". Only the keeping narrows.
+        kept = [row for row in publication.observation_rows if cwa.in_stored_scope(row.county)]
         rows = [
             {
                 "publication_id": publication_id,
@@ -118,7 +145,7 @@ async def store_publication(session: AsyncSession, publication: Publication) -> 
                 "element": row.element,
                 "value": row.value,
             }
-            for row in publication.observation_rows
+            for row in kept
         ]
         statement = INSERT_OBSERVATION_READING
 

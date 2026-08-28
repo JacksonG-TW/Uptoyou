@@ -47,6 +47,37 @@ TAIPEI = timezone(timedelta(hours=8))
 
 REQUEST_TIMEOUT = 90
 
+# **A18, owner-ruled 2026-08-28 (「匯入時只留臺北市，之前太異想天開，一次就做全台」): the observation
+# ingest keeps 臺北市's stations and stores nothing else.** Measured on the live database that day:
+# `O-A0001-001` publishes 876 stations / 7,884 rows an hour, of which 臺北市 is **19 stations / 171
+# rows (2.2%)**, and the product never read the rest — D26 resolves a township to a Taipei station
+# and D57 reads the latest publication per hour.
+#
+# **The filter belongs at store time, never at fetch or parse.** D42's change detection hashes the
+# whole payload and D102 takes `column_signature` from the whole file, so both must keep seeing
+# everything the source published; what narrows is only what is kept. A filter one step earlier
+# would make the hash a hash of our policy instead of of their file, and the day the policy changes
+# every publication would look new.
+#
+# The forecast dataset needs no filter and gets none: `F-D0047-061` **is** the Taipei township
+# forecast, twelve townships in 臺北市's own `63000` code space, so the dataset id is the county.
+STORED_COUNTY = "臺北市"
+
+
+def in_stored_scope(county: str | None) -> bool:
+    """Is this station's county the one A18 keeps?
+
+    **Folded before comparing, and that is not decoration (H24).** The county arrives as free text
+    in `GeoInfo.CountyName`; every value the live payload carries today is spelled 臺, but an exact
+    match against one spelling is a filter that drops **every row** the day the source writes 台北市
+    — and it would drop them silently, leaving a publication of zero rows and a ledger that says the
+    fetch worked. `fda.normalise` already folds administrative 台 to 臺 and is the fold every stored
+    name goes through, so the filter uses it rather than carrying a second list of spellings.
+    """
+    from .fda import normalise  # noqa: PLC0415  (import here to keep the module header lean)
+
+    return normalise(county) == STORED_COUNTY
+
 
 class CwaUnavailable(RuntimeError):
     """The source did not answer usefully. A run that hits this failed; it did not no-op."""
