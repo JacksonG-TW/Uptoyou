@@ -870,8 +870,16 @@
   /* `.answer` is `display: block; gap: 0` here, so the qualifier needs the same explicit step the
      sentence takes — the flex gap that spaced it in the narrow composition does not exist. Same
      expression, so the two cannot drift apart. No `font-size`: `--text-lead` already answered
-     that, and `RV-3` is the finding about overriding it with an untraceable pixel count. */
-  .reveal .qualifier { margin-top: calc(34 * var(--k)); text-align: left; }
+     that, and `RV-3` is the finding about overriding it with an untraceable pixel count.
+
+     **And no `text-align`, which is the fix for a defect this line shipped with.** It carried
+     `left` here, copied from `.sentence` above — and `.sentence` needs a member override further
+     down (`:not(:has(.evNum))`) to take that `left` back to `center`, which the qualifier did not
+     have. Measured on the served reveal at 1440: the headline and the sentence centred on x 720
+     while 大安和平東路 sat at x 340, alone against the left edge of a centred column. Inheriting
+     `text-align` from `.answer` is right in BOTH compositions — left for the operator, centre for
+     the member — and cannot drift, so the declaration is deleted rather than paired. */
+  .reveal .qualifier { margin-top: calc(34 * var(--k)); }
 
   /* ── the right column ─────────────────────────────────────────────────────
      The list sits beside the dice from the first frame, which is what makes the sweep legible as
@@ -955,6 +963,10 @@
   }
   .reveal:not(:has(.evNum)) .winner { text-align: center; }
   .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: calc(26 * var(--k)); }
+  /* The member composition's tighter step, mirroring the sentence above it — the qualifier takes
+     whichever rhythm the block it sits in uses (34 operator, 26 member) and never a third number
+     of its own. `text-align` is absent on purpose; see the rule this overrides. */
+  .reveal:not(:has(.evNum)) .qualifier { margin-top: calc(26 * var(--k)); }
   /* The hole the absolute list sits in, reserved from the list's own measured height rather than
      from a number — `--list-h` is set by `Reveal.tsx`; the fallback is one screen's worth of a
      five-place round, so a browser that never runs the observer still gets a readable page. */
