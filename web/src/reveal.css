@@ -14,7 +14,26 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
-  padding: 24px 6vw 64px;
+  /* **Top padding clears the fixed bars** — `spec-inner-header.md`, evaluator-ruled 2026-08-28.
+     `--bar-h` is declared in `switcher.css` beside the bars it measures.
+
+     **This screen never had the clipping defect** — `justify-content: center` already put its
+     title 270 / 226 / 185 down at 1440 / 900 / 430, well clear of a 39–41 px bar — so the question
+     was whether applying the rule here disturbs a composition that is gated pixel by pixel. It
+     does not. Measured landed, the same round, changing only this declaration:
+
+         width   without    with     delta
+          1440   340,270   340,270      0     the wide composition is absolutely positioned,
+                                              so the padding does not reach it at all
+           900   214,226   214,266    +40
+           430    78,185    78,224    +39
+
+     Which is exactly what IH-3 asks for: unchanged at 1440, and a shift of precisely `--bar-h`
+     where it does move, with x and the box unchanged at every width. **My first reading of this
+     said it moved 26 px up at 1440 and that reading was wrong** — it compared against a number
+     taken before the qualifier's 8 px ruling rather than against this build with the line removed.
+     The table above is the A/B, one declaration apart. */
+  padding: calc(var(--bar-h) + 24px) 6vw 64px;
   /* The flood. Ground and text cross to the winning face's pair together, so no frame of the
      transition has ink on ink. Both properties, one duration, one easing — §5 rule 1. */
   background: var(--color-paper);

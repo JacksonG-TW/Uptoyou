@@ -27,7 +27,9 @@
      This paragraph read "No act and no reserved band. It is a screen a person leaves by the
      switcher" until the screen became 首次必經; the switcher sentence was true and is now half of
      the story. */
-  padding-block: 20px 32px;
+  /* **Starts below the fixed bars** — `spec-inner-header.md`, evaluator-ruled 2026-08-28. `--bar-h`
+     is declared in `switcher.css` beside the bars it measures; see `round.css` for the finding. */
+  padding-block: calc(var(--bar-h) + 24px) 32px;
 }
 
 .prefsTitle {

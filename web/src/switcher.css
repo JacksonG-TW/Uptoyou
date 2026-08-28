@@ -18,6 +18,20 @@
   background: var(--color-paper);
 }
 
+/**
+ * **`--bar-h` — how tall the scaffolding is, derived and not measured off a screenshot.**
+ * `spec-inner-header.md` §1 asks the four inner screens to start `--bar-h + 24` down, and asks for
+ * the height to come from the same tokens the bars use rather than from a second literal. This is
+ * that expression: the two bars are one line of `--text-note` plus their own padding and bottom
+ * border, and nothing else.
+ *
+ * **`line-height` is declared on the bars for this to be true.** Without it the line box is
+ * `normal` — a number the CJK face chooses, which no `calc()` can name — and the height could only
+ * have been copied off a measurement, which is the literal the spec forbids. 1.6 is the surface's
+ * existing note rhythm (`.rowHint`), and it moves the bars by under a pixel.
+ */
+:root { --bar-h: calc(1.6 * var(--text-note) + 18px); }   /* 8+8 padding · 2 bottom border */
+
 .switcher a {
   padding: 8px 14px;
   font-size: var(--text-note);
@@ -25,6 +39,7 @@
   letter-spacing: .02em;
   color: var(--color-ink);
   text-decoration: none;
+  line-height: 1.6;                     /* named so `--bar-h` above can be computed, not measured */
   border-left: 1.5px solid var(--color-ink);
 }
 .switcher a:first-child { border-left: 0; }
@@ -60,6 +75,7 @@
   font-size: var(--text-note);
   font-weight: 700;
   letter-spacing: .02em;
+  line-height: 1.6;                     /* the switcher's, for the same reason — see `--bar-h` */
   text-decoration: none;
   font-family: inherit;
   cursor: pointer;

@@ -2,10 +2,19 @@
    rule: every class name in this directory is shared, so a screen's geometry lives under its own
    root or it belongs to everyone. */
 
+/* **The four inner screens start below the fixed bars** — `spec-inner-header.md`, evaluator-ruled
+   2026-08-28 from the stranger's walk. Every inner `h1` began at y 20 while `Back` and the switcher
+   are 39–41 tall, so the title's top 19–21 px sat under the bar line at every width. At 1440 it
+   showed nothing because the title and the switcher do not share a column; **at 430 they do** —
+   switcher x 194–430 against a title x 26–404 — and 「我的偏好」「這一餐」「貼上鑰匙」 rendered clipped.
+   A stranger on a phone met it on the first screen after the home.
+
+   `--bar-h` is declared in `switcher.css` beside the bars it measures, so this cannot drift from
+   them. The home is untouched: its masthead already clears the switcher. */
 .device, .round {
   width: min(720px, 88vw);
   margin: 0 auto;
-  padding-block: 20px 32px;
+  padding-block: calc(var(--bar-h) + 24px) 32px;
 }
 .round { padding-bottom: 56px; }
 
