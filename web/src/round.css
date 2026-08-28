@@ -249,53 +249,55 @@
 
 .round .chips {
   list-style: none; margin: 0; padding: 0;
-  display: flex; flex-wrap: wrap; gap: 12px;
+  display: flex; flex-wrap: wrap; gap: 8px;
 }
 
-/* The `.band` recipe, deliberately identical: same border, same height ladder, same fill on
-   choose. Two selection controls that look different would say the two choices work differently,
-   and they do not — one lapses monthly and one nightly, which is a fact of the copy, not of the
-   button. `text-body`, no count badge, no icon (the spec forbids both). */
+/* **A chip carries a STANCE, not an act — so it does not get the act's construction.**
+   Evaluator-ruled 2026-08-28 from the stranger's walk (`spec-tonight-chips.md`), and the defect it
+   names is mine: I built these on `.band`'s recipe (700 / 2px / 4px hard shadow / 48–52 tall) on the
+   argument that two *selection* controls should look alike. Measured on the built page that
+   argument fails — ten of them stack above the search, so the screen's first read is ten buttons
+   built like the primary act, and 擲骰 becomes the eleventh thing of the same shape. §3 reserves the
+   hard offset shadow for a control carrying an act.
+
+   **1.5px is the system's own number for this, not a thinning.** §5 rule 5 names 「the chip's
+   border」 at 1.5px explicitly — the 2px I used was the drift, and the ruling puts it back. */
 .round .chip {
-  min-height: 48px;
-  padding: 0 20px;
-  border: 2px solid var(--color-ink);
-  background: transparent;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1.5px solid var(--color-ink);
+  background: var(--color-paper);
   color: var(--color-ink);
   font-size: var(--text-body);
-  font-weight: 700;
+  font-weight: 500;
   cursor: pointer;
+  /* No `box-shadow`, at rest or on. The fill IS the signal (R-2). */
+  transition: background-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
 }
 .round .chip[data-on="yes"] {
   background: var(--color-ink);
   color: var(--color-paper);
+  font-weight: 700;
 }
 .round .chip:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
 
-/* SINK, like `.band` — pressing one changes what the engine will do on the next roll, and the
-   ruling's recipe for "this does something" is the sink. The same numbers as 偏好's, so the two
-   selection controls cannot drift into two vocabularies. */
-.round .chip {
-  box-shadow: 4px 4px 0 0 var(--color-ink);
-  transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out,
-              background-color var(--t-press) ease-out, color var(--t-press) ease-out;
-}
+/* **The hover is colour, because the spec removed the other two.** It says no lift and no shadow
+   growth, and §3 leaves exactly one other vocabulary: 「separation is colour or a rule」. So an off
+   chip takes a light ink tint of the paper it already sits on — no new token, the same two colours
+   the whole surface is made of — and an on chip has nowhere lighter to go, so it stays put. A bare
+   hover would be the defect the depth ruling names; this is the recipe that is left. */
 @media (hover: hover) {
-  .round .chip:hover {
-    transform: translate(2px, 2px);
-    box-shadow: 2px 2px 0 0 var(--color-ink);
+  .round .chip[data-on="no"]:hover {
+    background: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
   }
-}
-.round .chip:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 0 0 var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
 }
 @media (prefers-reduced-motion: reduce) { .round .chip { transition: none; } }
 
-@media (min-width: 900px) {
-  .round .chip { min-height: 52px; }
+/* 38 at phone width. **600 is not a new breakpoint** — it is the width `spec-inner-header.md` §1
+   names for where the two fixed bars read as one row, so the two specs share one number rather
+   than each carrying its own. */
+@media (max-width: 600px) {
+  .round .chip { min-height: 38px; }
 }
 
 /* The per-type count. `roundNote` is muted; the type's own name takes ink so the eye can pair a
