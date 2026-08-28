@@ -26,7 +26,7 @@ export const CATEGORIES = [
   '麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '早餐', '咖啡飲料', '其他',
 ] as const
 
-/** **Ten of 衛福部's eleven food-label groups**, mirrored from revision 0023's CHECK for the same
+/** **衛福部's eleven food-label groups**, mirrored from revision 0023's CHECK for the same
  *  reason the categories are: the list is closed and versioned by a migration, and a screen that
  *  discovered its own controls at runtime would render an empty settings page on a failed request.
  *
@@ -36,20 +36,19 @@ export const CATEGORIES = [
  *  identified person, which this product does not hold. That is a PDPA boundary and it is kept by
  *  the wording — there is no flag to set.
  *
- *  **亞硫酸鹽類 is the eleventh and is deliberately absent (owner-ruled 2026-08-28, D103 amended).**
- *  It is an additive, and no source this product holds states it at the level of a restaurant — so
- *  offering the control would let a member set an exclusion the engine can only guess at, and a
- *  guess about an additive can only be wrong in the direction that matters. The other ten name
- *  ingredients a dish is made of; this one names something added to it.
+ *  **亞硫酸鹽類 was removed and restored on 2026-08-28, and the round trip is recorded here so it
+ *  is not re-proposed.** The case for removing it: it is an additive rather than an ingredient a
+ *  dish is made of, and no source this product holds states it at the level of a restaurant. The
+ *  owner's reversal within the hour: **the other ten rest on exactly the same missing data** —
+ *  `ingredient_coverage` is 0 for every one of the eleven — so sulfites are not a special case,
+ *  and singling them out would claim a distinction the data does not support. The screen's honesty
+ *  about all eleven is `pref-ingredient-coverage`, which states that nothing acts on any of them
+ *  yet; that sentence is the answer to the worry, not a shorter list.
  *
- *  **This list is the SCREEN's, not the wire's.** The endpoint still accepts the value (its own
- *  closed list is unchanged), so a member who stored it before today keeps that row: it is inert
- *  and unlisted rather than deleted. Nothing here posts an `allow` to tidy it away — this product
- *  appends and never deletes, and un-avoiding on a person's behalf would be the surface deciding
- *  something about them. Rendering follows this list, so a stored row simply has no control. */
+ *  So this list is the API's eleven, whole. Backend's ⊆ guard passes because it is the same set. */
 export const INGREDIENTS = [
   '甲殼類', '芒果', '花生', '牛奶／羊奶', '蛋', '堅果類',
-  '芝麻', '含麩質之穀物', '大豆', '魚類',
+  '芝麻', '含麩質之穀物', '大豆', '魚類', '亞硫酸鹽類',
 ] as const
 
 export type Kind = 'budget' | 'avoid_category' | 'avoid_ingredient'
