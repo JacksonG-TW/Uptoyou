@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { device, doorHref } from './lib/round'
+import { dateline } from './lib/dateline'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -39,6 +40,11 @@ export default function App() {
     return () => { live = false; window.clearInterval(t) }
   }, [township])
 
+  /** 甲・日報 §1 — **computed once, on mount, and never again.** The initialiser form is the
+   *  ruling: a sheet printed at 16:59 does not become the evening edition while you look at it,
+   *  so there is no interval here and nothing to tear down. */
+  const [sheet] = useState(dateline)
+
   const name = TOWNSHIPS.find((t) => t.code === township)?.name ?? ''
   const hour = weather?.hour?.slice(11, 16) ?? ''
   const fetched = fetchedLabel(weather)
@@ -48,6 +54,23 @@ export default function App() {
       <div className="col">
         <header className="mast" data-part="masthead">
           <div className="brand"><b>由你決定</b><span>Up to you</span></div>
+          {/* **甲・日報's dateline** (`spec-home-dateline.md` §1, evaluator 2026-08-26; owner ruled
+              甲 alone from the rendered three-way). Four segments, every one of them a statement
+              of fact — D20's register, which is why this layer won over crop marks and category
+              chips: furniture asserts nothing, and a date does.
+
+              **The solar term is allowed to be absent** and renders three segments and two dots
+              when it is. `dateline.ts` returns `null` for a year it has not sourced; a blank is
+              true and a wrong 節氣 is not. Nothing here decides that — the module does, so the
+              rule lives beside the table it guards.
+
+              Text nodes, not `dangerouslySetInnerHTML` (H7): the `<b>` the spec asks for around
+              the weekday is markup here rather than a string carrying tags. */}
+          <p className="dateline" data-part="dateline">
+            {sheet.date}{' · '}<b>{sheet.weekday}</b>
+            {sheet.term !== null && <>{' · '}{sheet.term}</>}
+            {' · '}{sheet.edition}
+          </p>
           <Select value={township} onValueChange={setTownship}>
             <SelectTrigger data-part="picker" aria-label="選擇行政區">
               <SelectValue />
@@ -181,6 +204,27 @@ export default function App() {
           </a>
         </div>
         </div>
+
+        {/* **甲・日報's colophon** (`spec-home-dateline.md` §2) — the foot names where every fact
+            on this page came from. It sits AFTER `.homeFoot` and still inside `.col`, which is
+            what keeps 甲's centring intact: `.homeFoot { margin-bottom: auto }` goes on splitting
+            the slack, and the colophon rides at the very bottom of the sheet like a printed one.
+
+            **Only what has been checked is named.** The spec dropped the cadence words (每日核對 ·
+            逐時 · 每月) for want of a measured number and dropped the 家在冊 count because the
+            collage already carries it — one literal per number. The 招牌與品牌 line differs from
+            the spec on the same principle and against measurement: `api_common.compose_names`
+            takes the sign from `storefront.name` (`ingest/gradelist.py`, 臺北市餐飲衛生分級評核)
+            and the brand from `brand.brand_name` (`ingest/foodtracer.py`, 臺北市食材登錄平台),
+            both data.taipei publications — 財政部's 稅籍登錄 (`ingest/fia.py`, D85) reaches no
+            displayed name today. So this says 臺北市政府 開放資料, which is what the two names are.
+            Reported to the evaluator to rule; the wording is theirs, the measurement is why. */}
+        <footer className="colophon" data-part="colophon">
+          <span className="u"><b>店家</b>衛福部 食品業者登錄</span>
+          <span className="u"><b>天氣</b>中央氣象署 開放資料</span>
+          <span className="u"><b>招牌與品牌</b>臺北市政府 開放資料</span>
+          <span className="u"><b>營業狀態</b>經濟部 商工登記</span>
+        </footer>
       </div>
     </>
   )

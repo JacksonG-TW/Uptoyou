@@ -26,11 +26,31 @@
 .mast {
   display: flex; align-items: center; justify-content: space-between;
   border: 2px solid var(--color-ink); padding: 14px 20px; margin-top: 20px;
+  /* 甲・日報 §1b — the dateline is a third child of a two-child bar, so the bar has to be able to
+     take a second row rather than squeeze the brand. `column-gap` is what keeps the dateline off
+     the picker once `margin-left: auto` below has eaten the free space `space-between` was using. */
+  flex-wrap: wrap; row-gap: 6px; column-gap: 18px;
 }
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .brand b { font-size: var(--text-lead); font-weight: 900; letter-spacing: .02em; }
 .brand span { font-size: var(--text-note); color: var(--color-muted);
               letter-spacing: .1em; text-transform: uppercase; }
+
+/* 甲・日報 §1b · the dateline. `tabular-nums` because the date changes width every day and a
+   masthead that shifts under its own numerals reads as a bug rather than as a sheet. */
+.dateline {
+  font-size: var(--text-note); color: var(--color-muted); letter-spacing: .08em;
+  font-variant-numeric: tabular-nums;
+}
+.dateline b { color: var(--color-ink); font-weight: 700; }
+
+/* **Below 900 the dateline takes its own row, and `order` is what puts it there.**
+   The spec asks for it to drop UNDER the brand rather than squeeze it, and DOM order is
+   brand → dateline → picker (the reading order, which is correct and stays). A full-width
+   `flex-basis` alone would wrap the dateline to row two and push the PICKER to row three,
+   because a flex item cannot jump over a later sibling. Sending it last in the visual order
+   instead keeps brand and picker on the line they already share. */
+.dateline { order: 1; flex: 1 1 100%; }
 
 /* ── hero ─────────────────────────────────────────────────────────────────── */
 .hero { display: grid; gap: 28px; margin-top: 34px; }
@@ -58,6 +78,9 @@
   .hero  { grid-template-columns: 46fr 54fr; gap: 44px; margin-top: auto;
            flex: 1 1 auto; max-height: 480px; align-items: stretch; }
   .homeFoot { margin-bottom: auto; }
+  /* At ≥900 there is room for all three on one line, so the dateline returns to its DOM position
+     and `margin-left: auto` carries it to the right of the bar, beside the picker. */
+  .dateline { order: 0; flex: 0 0 auto; margin-left: auto; }
   /* the weather settles to the collage's foot rather than trailing the body copy */
   .heroL .wx { margin-top: auto; }
 }
@@ -360,3 +383,23 @@ h1.headline .lit { color: var(--color-hot-ink); }
   .homeAct .act { padding: 16px 52px; }
   .tag     { padding: 13px 24px; right: 42px; bottom: -18px; }
 }
+
+/* ── 甲・日報 · the colophon ─────────────────────────────────────────────────
+   `spec-home-dateline.md` §2. The foot of a printed sheet, naming its sources.
+
+   **The 3px rule is the sheet's heaviest stroke** and it is the whole reason this reads as a
+   colophon rather than as a fourth paragraph — everything above it is 2px (`.mast`, `.eyebrow`)
+   or 1.5px (table rules), so the eye takes this line as the bottom of the object.
+
+   It sits outside `.homeFoot` on purpose: `.homeFoot { margin-bottom: auto }` splits the column's
+   slack with the hero and centres the two as one group (甲's change 1a), and a colophon inside
+   that group would be centred with them instead of sitting at the foot. `white-space: nowrap` on
+   each unit is what makes the wrap happen BETWEEN units — a label torn from its source is the one
+   wrap this line must not make. */
+.colophon {
+  border-top: 3px solid var(--color-ink); margin-top: 8px; padding: 12px 0 18px;
+  display: flex; flex-wrap: wrap; gap: 6px 28px;
+  font-size: var(--text-note); color: var(--color-muted);
+}
+.colophon b { color: var(--color-ink); font-weight: 700; margin-right: 6px; }
+.colophon .u { white-space: nowrap; }

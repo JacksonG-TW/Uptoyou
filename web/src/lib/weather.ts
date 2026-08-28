@@ -19,9 +19,25 @@ export const TOWNSHIPS = [
   { code: '63000110', name: '士林區' }, { code: '63000120', name: '北投區' },
 ] as const
 
+/**
+ * The wall clock in Taipei, as a `Date` whose LOCAL getters read Taipei's date and hour.
+ *
+ * **Extracted 2026-08-28 so the dateline could reuse it** (`lib/dateline.ts`, `spec-home-dateline`
+ * §1: "do not write a second timezone helper"). The shift itself is unchanged and this is the only
+ * place on the surface that performs it — a second copy is how one of the two gets corrected alone
+ * and the page starts disagreeing with itself about what day it is.
+ *
+ * The returned `Date`'s own instant is wrong by the reader's offset **on purpose**: it exists to
+ * be read with `getFullYear` / `getMonth` / `getDate` / `getDay` / `getHours`, never to be
+ * compared with a real instant or sent anywhere.
+ */
+export function taipeiNow(now: Date = new Date()): Date {
+  return new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000)
+}
+
 /** The hour the API keys on, in Taipei time regardless of the reader's clock. */
 export function currentTaipeiHour(now = new Date()): string {
-  const taipei = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000)
+  const taipei = taipeiNow(now)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${taipei.getFullYear()}-${pad(taipei.getMonth() + 1)}-${pad(taipei.getDate())}`
        + `T${pad(taipei.getHours())}:00:00+08:00`
@@ -73,9 +89,8 @@ export function measure(w: Weather | null, name: string): string {
 export function fetchedLabel(w: Weather | null, now = new Date()): string {
   const at = w?.source?.detected_at
   if (!at) return ''
-  const shift = (d: Date) => new Date(d.getTime() + (8 * 60 + d.getTimezoneOffset()) * 60000)
-  const t = shift(new Date(at))
-  const today = shift(now)
+  const t = taipeiNow(new Date(at))
+  const today = taipeiNow(now)
   const pad = (n: number) => String(n).padStart(2, '0')
   const clock = `${pad(t.getHours())}:${pad(t.getMinutes())}`
   const sameDay = t.getFullYear() === today.getFullYear()
