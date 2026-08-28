@@ -260,6 +260,15 @@ each pair as text. Failing either half fails the line.
 
 | `DIE` | **custom** | the 3-D cube — **it already is one**; six faces, `rotateX`/`rotateY`, `translateZ`. It lands **face-on**, which is why the resting state reads flat to a viewer. **If a tilted resting angle is ever ruled (raised by the owner 2026-08-19, unruled), one constraint binds it and it is not cosmetic: the landed face's pip count must stay unambiguous — a person reads the number without counting twice.** The landed face is the only place the roll's result is legible, and `D91` forbids the animation misrepresenting a decided result; the resting frame is where that result is asserted. Foreshortening the winning face while neighbouring faces contribute pips is exactly that failure, so **a small angle that keeps one face dominant is the target — near-corner-on views, where three faces sit at similar prominence, are where it breaks.** Choose by rendering candidates and ruling from them, never by picking a number (frontend's constraint, 2026-08-19). One variable, `--die`, at **140**/180/240 px; the `translateZ` that closes the six faces **derives from it** — change the value, never the derivation. **140, not 132, ruled 2026-08-19** (frontend found the conflict; the recommendation was its): 132 is **17.37%** of 760 against `R-D9`'s **18%** floor, so the token contradicted the gate it is measured by. 136.8 px is the exact floor and 140 clears it at 18.42% with margin for a border. **The floor was not moved to fit the token** — a target adjusted to pass its own test measures nothing, and 18% came from R-D9's measurement of the reference. Parked-width note: 430 is out of scope under §7b, so this changes nothing today; it is fixed now because a known contradiction left in this file is one the next reader has to rediscover. |
 
+### §4a · Preferences by tempo — owner-ruled 2026-08-28 (`spec-preference-split.md`)
+
+**偏好 is for months; 這一餐 is for tonight.** The preferences page holds the budget and 不吃的食材 —
+what is about the person. The round page holds 「這次不吃」, D38's ten types as a chip row above the
+search, set by one tap and lapsing at the nightly erasure (D17), **with no keep toggle**: a type is
+short-term by ruling. The stat sentences (較少中 · 抽不到 · D22's breadth) travel with the stance to
+wherever it is set, never separately. Same wire, same numbers — the split is where a hand lands,
+not what the engine reads. Chip part: `data-part="tonight-chip"`, `data-on`, filled on / ghost off.
+
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
 **Member state — what a person in the circle sees after the roll:** the winner, the dice, **one line
