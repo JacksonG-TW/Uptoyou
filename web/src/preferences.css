@@ -273,3 +273,70 @@
 @media (prefers-reduced-motion: reduce) {
   .band, .keep, .rowTap { transition: none; }
 }
+
+/* ── `keep-dialog` — the exit asks once ─────────────────────────────────────
+   `spec-ingredient-keep.md` §3, owner-ruled 2026-08-28. One new registry part.
+
+   **The card recipe, one step above the page**: paper ground, a 3px ink rule, a scrim behind. 3px
+   because §3's ladder gives the heaviest stroke to whatever sits on top of everything else, which
+   is what a dialog is. **Not scoped under `.prefs`** — Radix portals the content to `<body>`, so
+   the class names are its scope; they carry the part's own name rather than a generic one. */
+.keepScrim {
+  position: fixed; inset: 0;
+  background: color-mix(in srgb, var(--color-ink) 55%, transparent);
+}
+.keepDialog {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  /* 420 is the spec's cap and `88vw` is what keeps it inside a 430 viewport with the page's own
+     margin — the same expression `--col` uses on the home. Never a bare 420. */
+  width: min(420px, 88vw);
+  background: var(--color-paper);
+  border: 3px solid var(--color-ink);
+  padding: 22px 22px 18px;
+}
+.keepDialogH {
+  font-size: var(--text-lead); font-weight: 900; letter-spacing: .02em;
+  margin: 0; line-height: 1.35;
+}
+.keepDialogBody {
+  font-size: var(--text-body); line-height: 1.75; color: var(--color-ink);
+  margin: 12px 0 0;
+}
+/* The pending rows. A rule per item rather than a bullet: the sheet's vocabulary is rules, and a
+   disc would be the first bullet on the surface. */
+.keepDialogList {
+  list-style: none; margin: 14px 0 0; padding: 0;
+  font-size: var(--text-body); line-height: 1.9;
+}
+.keepDialogList li { border-top: 1.5px solid var(--color-ink); padding: 6px 0; }
+/* Wrapping, because at 430 the two labels plus their gap can exceed the card's inner width, and a
+   button pushed past the edge is the one control a person must not have to hunt for. */
+.keepDialogActs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+
+/* **The fill goes to 保留** (R-2): the reversible act — a kept row can be un-kept next visit, while
+   不保留 is the one that lets something go at 05:00. `.band`'s recipe again, same border, same
+   height, same SINK, so the dialog introduces no third button vocabulary. */
+.keepStay, .keepDrop {
+  min-height: 48px; padding: 0 22px;
+  border: 2px solid var(--color-ink);
+  font-size: var(--text-body); font-weight: 700;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 0 var(--color-ink);
+  transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out,
+              background-color var(--t-press) ease-out, color var(--t-press) ease-out;
+}
+.keepStay { background: var(--color-ink); color: var(--color-paper); }
+.keepDrop { background: transparent; color: var(--color-ink); }
+@media (hover: hover) {
+  .keepStay:hover, .keepDrop:hover {
+    transform: translate(2px, 2px); box-shadow: 2px 2px 0 0 var(--color-ink);
+  }
+}
+.keepStay:active, .keepDrop:active {
+  transform: translate(4px, 4px); box-shadow: 0 0 0 0 var(--color-ink);
+  background: var(--color-ink); color: var(--color-paper);
+}
+.keepStay:focus-visible, .keepDrop:focus-visible {
+  outline: 2px solid var(--color-ring); outline-offset: 1px;
+}
+@media (prefers-reduced-motion: reduce) { .keepStay, .keepDrop { transition: none; } }

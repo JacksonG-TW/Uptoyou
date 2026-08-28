@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   BANDS, BAND_LABEL, INGREDIENTS,
   device, fetchPreferences, postPreference, pct,
@@ -10,6 +10,10 @@ import {
    "seen" means. (`lib/preferences.ts` already carries its own duplicate `device()` — that one is
    flagged, not multiplied.) */
 import { markPrefSeen, prefSeen } from '@/lib/round'
+import {
+  AlertDialog, AlertDialogPortal, AlertDialogOverlay, AlertDialogContent,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
+} from '@/components/ui/alert-dialog'
 
 /**
  * A2 — the private preference screen. Built to `idea & img/evaluator/spec-preference-screen.md`
@@ -91,6 +95,21 @@ export default function Preferences() {
      it off StrictMode's second render. */
   const [firstVisit] = useState(() => !prefSeen())
 
+  /** **What this visit changed, by key** — `budget` and `ing:<食材>`. Not what is pending: what was
+   *  TOUCHED. Whether a touched row is still un-kept is re-derived from the payload below, so
+   *  pressing its keep control or un-avoiding it drops out of the set with no bookkeeping here and
+   *  nothing to forget. A visit that only reads never adds a key and never asks anything on the
+   *  way out. */
+  const [touched, setTouched] = useState<Set<string>>(() => new Set())
+  /** The navigation the guard is holding, or `null`. A thunk rather than a URL: the three exits
+   *  leave in three different ways (`assign`, `history.back()`, the act's own `assign`), and the
+   *  dialog should not have to know which. */
+  const [leaving, setLeaving] = useState<(() => void) | null>(null)
+  /** 保留 takes focus when the dialog opens, overriding Radix's default of the cancel control.
+   *  Radix focuses cancel because in the usual alert the cancel is the safe half; here it is the
+   *  other way round — 不保留 is the choice that silently drops something at 05:00. */
+  const keepBtn = useRef<HTMLButtonElement | null>(null)
+
   const load = useCallback(async (d: Device) => {
     try {
       setInForce(await fetchPreferences(d))
@@ -118,6 +137,14 @@ export default function Preferences() {
       setBusy(key)
       try {
         await postPreference(dev, body)
+        /* **Marked TOUCHED here, on the accepted write, and keyed by the row rather than by the
+           caller's `key`.** `key` distinguishes a row's tap from its keep control so `busy` can
+           name one button; the guard does not care which control did it, only that this visit
+           changed this row. Deriving it from the body means a new control cannot forget to
+           register — there is nothing for it to remember. */
+        setTouched((t) => new Set(t).add(
+          body.kind === 'budget' ? 'budget' : `${body.kind}:${body.value}`,
+        ))
         await load(dev)
       } catch (e) {
         setError((e as Error).message || '寫入失敗')
@@ -140,9 +167,78 @@ export default function Preferences() {
     if (!dev) window.location.replace('/device')
   }, [dev])
 
+  const budget = inForce?.budget ?? null
+  /**
+   * **The pending set, re-derived from the payload every render** (`spec-ingredient-keep.md` §1).
+   *
+   * A row is pending when this visit touched it AND the server says it is in force AND un-kept.
+   * Both of the ways a row stops being pending fall out of that with no code: pressing its keep
+   * control makes `persist` true, and un-avoiding it takes it out of force. Nothing here is
+   * remembered across the two, so the two cannot disagree.
+   *
+   * The label is what the person will read in the dialog's list, and it is built from the same
+   * strings the rows themselves carry — 「不吃 花生」, 「預算 省一點」 — so the dialog names the thing
+   * they just pressed rather than a key.
+   */
+  const pending: string[] = []
+  let pendingBudget = false
+  let pendingIngredient = false
+  if (touched.has('budget') && budget && !budget.persist) {
+    pending.push(`預算 ${BAND_LABEL[budget.value]}`)
+    pendingBudget = true
+  }
+  for (const a of inForce?.avoid_ingredients ?? []) {
+    if (touched.has(`avoid_ingredient:${a.value}`) && !a.persist) {
+      pending.push(`不吃 ${a.value}`)
+      pendingIngredient = true
+    }
+  }
+
+  /**
+   * **The keep guard** (owner-ruled 2026-08-28: 「確認有變動偏好後，要先確認使用者有沒有按下保留，若是
+   * 沒按下可以跳出視窗提醒使用者並再次讓他選擇是否要保留變更」).
+   *
+   * **A capture-phase listener rather than four edited components.** The exits are the switcher and
+   * `Back`, which are `main.tsx`'s and are shared by every screen — putting a preferences-only
+   * question inside them would give two general components one screen's special case. Capture is
+   * what lets this run BEFORE their own handlers, which is the whole requirement: `Back` calls
+   * `history.back()` on click, and a bubble-phase listener would be told about a navigation that
+   * had already happened.
+   *
+   * **It only arms when something is pending**, so a read-only visit has no listener at all and the
+   * common case costs nothing.
+   *
+   * **A modified click is let through untouched** — ⌘/Ctrl/Shift/Alt or a middle button opens a new
+   * tab and leaves this page exactly where it is, so there is nothing to guard and intercepting it
+   * would break the one interaction `Back`'s own comment argues for.
+   *
+   * **The tab's own close is NOT guarded and that is the ruling, not an omission** (§2): a
+   * `beforeunload` prompt cannot carry our copy, cannot post anything, and is drawn by the browser.
+   * The change then lapses at 05:00, which is D17's stated default.
+   */
+  useEffect(() => {
+    if (!pending.length) return
+    const onClick = (e: MouseEvent) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+      const el = (e.target as HTMLElement | null)?.closest('a[href], button')
+      if (!el) return
+      const link = el.closest('.switcher a[href]') as HTMLAnchorElement | null
+      const back = el.closest('[data-part="back"]')
+      if (!link && !back) return
+      e.preventDefault()
+      e.stopPropagation()
+      const href = link?.getAttribute('href')
+        ?? (back as HTMLAnchorElement | null)?.getAttribute('href')
+        ?? null
+      setLeaving(() => (href ? () => window.location.assign(href) : () => window.history.back()))
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [pending.length])
+
+
   if (!dev) return <main className="prefs" data-screen="preferences" />
 
-  const budget = inForce?.budget ?? null
   /**
    * **A2-G8-always: every stance states what it zeroes, count and share, whatever the size.**
    *
@@ -207,7 +303,7 @@ export default function Preferences() {
           「訪客」 — the word is the owner's and the person never chose it. */}
       {firstVisit && (
         <p className="prefsNote" data-part="pref-first">
-          先設預算和不吃的食材，再進去提店。這台裝置沒有存下任何東西。
+          先設預算和不吃的食材，再進去提店。這台裝置沒有存下任何東西。按「保留」才會留到下個月。
         </p>
       )}
       <p className="prefsNote">只有你看得到，也只有這台裝置寫得動。</p>
@@ -415,6 +511,111 @@ export default function Preferences() {
         </p>
       )}
 
+      {/* ── `keep-dialog` — asked once, on the way out ────────────────────────────────────
+          `spec-ingredient-keep.md` §3. Owner-ruled 2026-08-28, and it is his CORRECTION of an
+          earlier wording (kept-by-default, a dialog on 「不留」) that he withdrew an hour later:
+          「確認有變動偏好後，要先確認使用者有沒有按下保留，若是沒按下可以跳出視窗提醒使用者並再次讓他
+          選擇是否要保留變更」. D17's opt-in default is untouched — nothing here posts `persist: true`
+          by itself, a person does.
+
+          **In-page, never `window.confirm`.** A native dialog blocks the page's own event loop and
+          every automation pointed at it, the evaluator's browser included — so the gate could not
+          read the copy it is gating. Radix's `AlertDialog` brings the focus trap, `Esc`, the
+          backdrop and the ARIA roles; the ink and paper are ours.
+
+          **保留 is filled and takes focus; 不保留 is the ghost.** R-2 gives the fill to the
+          reversible act, and here that is 保留 — a kept row can be un-kept next visit, while 不保留
+          is the choice that silently drops something at 05:00. Radix focuses the cancel control by
+          default because in the usual alert the cancel is the safe half; on this one it is not, so
+          the focus is moved.
+
+          **`Esc` and the backdrop stay on the page and post nothing** — a third outcome, and the
+          right one: the person can still press 保留 on the rows themselves.
+
+          **Every word here is browser copy, which `tools/server_copy.py` cannot see** — it reads
+          the API's `detail=` strings, not JSX — so the only gates on this text are
+          `test_web_surface`'s D20 word list and the evaluator's IK-4. That makes the copy below
+          the kind that can drift silently; it is quoted in the spec for exactly that reason.
+          No 過敏 (D103 clause 2). */}
+      <AlertDialog
+        open={leaving !== null}
+        onOpenChange={(o) => { if (!o) setLeaving(null) }}
+      >
+        <AlertDialogPortal>
+          <AlertDialogOverlay className="keepScrim" />
+          <AlertDialogContent
+            className="keepDialog"
+            data-part="keep-dialog"
+            onOpenAutoFocus={(e) => { e.preventDefault(); keepBtn.current?.focus() }}
+          >
+            <AlertDialogTitle className="keepDialogH">要保留這次的變更嗎？</AlertDialogTitle>
+            {/* **What is NOT here is two rulings, both the owner's on 2026-08-28.**
+                (1) No sentence about when an un-kept change lapses (「不用跟使用者說」) — the lapse
+                is the product's business, not the reader's, and stating it turns a question about
+                keeping into a warning about losing. The hour is not quoted in this comment either,
+                so a gate that greps the source finds nothing to explain away. `pref-first` lost the
+                same half in the same ruling.
+                (2) No 「十二個月」. A kept 不吃的食材 has no retention window any more — 「一直」 — so
+                the one number that used to live on this surface is gone with it. The budget still
+                has a month, and says so.
+
+                **The per-kind line is computed from the pending LIST and nothing else** — which
+                kinds are in it, which the screen already knows. No fetch, no second source, and a
+                dialog that lists only ingredients cannot state the budget's rule by accident. */}
+            <AlertDialogDescription className="keepDialogBody">
+              保留的話，只有你看得到。
+              {pendingIngredient && '不吃的食材會一直記著。'}
+              {pendingBudget && '預算記到下個月底。'}
+            </AlertDialogDescription>
+            {/* Named, not counted. 「兩項變更」 would make the person reconstruct which two, on the
+                one screen where the answer decides what survives the night. */}
+            <ul className="keepDialogList" data-part="keep-dialog-list">
+              {pending.map((label) => <li key={label}>{label}</li>)}
+            </ul>
+            <div className="keepDialogActs">
+              <AlertDialogCancel
+                className="keepDrop"
+                data-part="keep-dialog-drop"
+                onClick={() => { const go = leaving; setLeaving(null); go?.() }}
+              >
+                不保留
+              </AlertDialogCancel>
+              {/* Re-posts each pending row with `persist: true` — the same call the row's own keep
+                  control makes, D17's append pattern, no DELETE. **Sequential and awaited**: they
+                  share one `busy` slot, and `write` refuses a second call while one is in flight,
+                  so firing them together would silently drop all but the first. A failure leaves
+                  the person here with `pref-error` rather than navigating away from it. */}
+              <AlertDialogAction
+                ref={keepBtn}
+                className="keepStay"
+                data-part="keep-dialog-keep"
+                onClick={(e) => {
+                  e.preventDefault()
+                  const go = leaving
+                  void (async () => {
+                    if (budget && !budget.persist && touched.has('budget')) {
+                      await write('budget:keep', {
+                        kind: 'budget', value: budget.value, persist: true,
+                      })
+                    }
+                    for (const a of inForce?.avoid_ingredients ?? []) {
+                      if (!touched.has(`avoid_ingredient:${a.value}`) || a.persist) continue
+                      await write(`ing:keep:${a.value}`, {
+                        kind: 'avoid_ingredient', value: a.value, stance: 'avoid', persist: true,
+                      })
+                    }
+                    setLeaving(null)
+                    go?.()
+                  })()
+                }}
+              >
+                保留
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialogPortal>
+      </AlertDialog>
+
       {/* **The way forward** (`spec-conditional-routing.md` §4). One command, the ruled `.act`
           recipe — hot ground, ink text, ink SINK — label 這一餐.
 
@@ -434,7 +635,16 @@ export default function Preferences() {
           type="button"
           className="act"
           data-part="pref-done"
-          onClick={() => { markPrefSeen(dev.circle); window.location.assign('/round') }}
+          /* **The third exit, and it asks the same question the other two do** (§2). The stamp is
+             written either way: the person HAS seen this screen, whatever they decide about
+             keeping — routing and retention are separate facts, and coupling them would send a
+             returning person back through a screen they have already read. */
+          onClick={() => {
+            markPrefSeen(dev.circle)
+            const go = () => window.location.assign('/round')
+            if (pending.length) setLeaving(() => go)
+            else go()
+          }}
         >
           這一餐
         </button>
