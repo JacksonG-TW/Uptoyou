@@ -244,6 +244,41 @@ async def scenario(test_url: str) -> None:
         "reason, reason_visibility) values (:r, :p, 'contextual', 'weather', 0.8, 'x', 'none')",
         base,
     )
+    # **A real brand publication, so the two-source refusal below is refused by the CHECK and not
+    # by the foreign key.** A fixture that used a made-up id would pass while the CHECK was broken —
+    # the constraint under test has to be the one that fires (H50).
+    async with Session() as session:
+        brand_pub = (
+            await session.execute(
+                text("insert into brand_publication "
+                     "  (source, content_sha256, detected_at, payload_bytes, scope) "
+                     "values ('taipei-foodtracer', repeat('e', 64), now(), 1024, 'x') "
+                     "returning id")
+            )
+        ).scalar_one()
+        await session.commit()
+
+    # **A19's fifth source (revision 0036), and the count is what is being tested.** The rule has
+    # not changed since three sources — `num_nonnulls(...) = 1` — but its arity has, twice, and each
+    # widening is a chance for the CHECK to be recreated with a column left out. Two refusals pin
+    # both directions: a row naming the new source AND an old one, and a row naming none.
+    await must_reject(
+        Session,
+        "a contribution naming two sources, one of them the new brand pin (D24)",
+        "insert into weight_contribution (round_id, place_id, channel, contributor, effect, "
+        "reason, reason_visibility, member_id, brand_publication_id, forecast_publication_id) "
+        "values (:r, :p, 'private', 'ingredient', 0, 'x', 'represented_member', :m, :bp, :pub)",
+        {**base, "m": member, "bp": brand_pub},
+    )
+    await must_reject(
+        Session,
+        "a brand pin that names no publication that exists (RESTRICT's other half)",
+        "insert into weight_contribution (round_id, place_id, channel, contributor, effect, "
+        "reason, reason_visibility, member_id, brand_publication_id) "
+        "values (:r, :p, 'private', 'ingredient', 0, 'x', 'represented_member', :m, 999999)",
+        {**base, "m": member},
+    )
+
     await must_reject(
         Session,
         "a private contribution before the preference table exists (ruled with 0009)",
