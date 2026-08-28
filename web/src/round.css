@@ -235,3 +235,77 @@
   font-size: var(--text-body);
   color: var(--color-hot-ink);
 }
+
+/* ── 「這次不吃」 · the chip row ──────────────────────────────────────────────
+   `spec-preference-split.md` §2, owner-ruled 2026-08-28. Ten types as one wrapping row above the
+   search, `data-part="tonight-chip"` per `design.md` §4a.
+
+   **Filled on, ghost off — and the fill is licensed rather than decorative.** R-2: a control
+   carrying a safe, REVERSIBLE act may be filled, and a type is the most reversible thing on this
+   surface (tap again, and it lapses by itself at 05:00 anyway). The at-most-one-filled-control rule
+   is about the screen's primary act; these are a selection, the same role `.band` holds on 偏好,
+   and they take the same recipe rather than a second one invented here. */
+.round .tonightBlock { margin-top: 28px; }
+
+.round .chips {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-wrap: wrap; gap: 12px;
+}
+
+/* The `.band` recipe, deliberately identical: same border, same height ladder, same fill on
+   choose. Two selection controls that look different would say the two choices work differently,
+   and they do not — one lapses monthly and one nightly, which is a fact of the copy, not of the
+   button. `text-body`, no count badge, no icon (the spec forbids both). */
+.round .chip {
+  min-height: 48px;
+  padding: 0 20px;
+  border: 2px solid var(--color-ink);
+  background: transparent;
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+.round .chip[data-on="yes"] {
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+.round .chip:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
+
+/* SINK, like `.band` — pressing one changes what the engine will do on the next roll, and the
+   ruling's recipe for "this does something" is the sink. The same numbers as 偏好's, so the two
+   selection controls cannot drift into two vocabularies. */
+.round .chip {
+  box-shadow: 4px 4px 0 0 var(--color-ink);
+  transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out,
+              background-color var(--t-press) ease-out, color var(--t-press) ease-out;
+}
+@media (hover: hover) {
+  .round .chip:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 0 var(--color-ink);
+  }
+}
+.round .chip:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 0 var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-paper);
+}
+@media (prefers-reduced-motion: reduce) { .round .chip { transition: none; } }
+
+@media (min-width: 900px) {
+  .round .chip { min-height: 52px; }
+}
+
+/* The per-type count. `roundNote` is muted; the type's own name takes ink so the eye can pair a
+   sentence with the chip it belongs to without reading the whole line. */
+.round .tonightStat b { color: var(--color-ink); font-weight: 700; }
+
+/* D22's warning — the accent as a left rule, the same treatment 偏好 gives it, because it is the
+   same statement about the same person and a second register would read as a different severity. */
+.round .roundWarn {
+  margin: 14px 0 0; padding: 12px 0 12px 14px;
+  border-left: 3px solid var(--color-hot-ink);
+  font-size: var(--text-body);
+}

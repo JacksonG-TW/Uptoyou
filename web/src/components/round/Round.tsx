@@ -4,6 +4,10 @@ import {
   type Candidate, type Device, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { Input } from '@/components/ui/input'
+import {
+  CATEGORIES, fetchPreferences, postPreference, touchedLine, pct,
+  type Preferences,
+} from '@/lib/preferences'
 
 /**
  * A4 — the round screen: open, propose, roll.
@@ -45,6 +49,19 @@ export default function Round() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const seq = useRef(0)
+
+  /** **「這次不吃」's state is the server's, read once on mount** (`spec-preference-split.md` §2).
+   *  `null` until the GET answers, which is why the row renders its chips off rather than not at
+   *  all — ten controls appearing a beat late would move the search box under the reader's thumb. */
+  const [prefs, setPrefs] = useState<Preferences | null>(null)
+  /** The taps this device has made that the server has not confirmed yet, `value → intended on`.
+   *
+   *  **Optimistic for the CHIP, server-owned for the NUMBERS.** A tap has to answer instantly or
+   *  the row reads as broken, but the count under it (`481 家會比較少中`) is the API's and may not
+   *  be guessed — so the chip flips here and the sentence waits for the re-read. On a non-204 the
+   *  entry is dropped and the chip snaps back to what the server last said, which is the only
+   *  state this screen is allowed to assert. */
+  const [pending, setPending] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (!dev) return
@@ -142,7 +159,57 @@ export default function Round() {
     else if (!prefSeen()) window.location.replace('/preferences')
   }, [dev])
 
+  /** **The row's state comes from the GET, never from what this device just tapped** (PS-4). A
+   *  reload has to show the same chips, and the only thing that knows what is in force is the
+   *  server (D25) — so this runs on mount and again after every accepted write. It is deliberately
+   *  NOT on the stream: a preference emits no SSE event by design (§3.0), because in a circle of
+   *  five the timing of an event is one guess from a name. */
+  const readPrefs = useCallback(async (d: Device) => {
+    try {
+      setPrefs(await fetchPreferences(d))
+    } catch (e) {
+      setError((e as Error).message || '讀取失敗')
+    }
+  }, [])
+
+  useEffect(() => { if (dev) void readPrefs(dev) }, [dev, readPrefs])
+
+  /**
+   * One tap on a type. **`persist: false`, always, with no toggle to change it** — a type is
+   * short-term by ruling (owner 2026-08-28: 「這次不想吃甚麼例如火鍋，這是短期的」), so it lapses at
+   * the nightly erasure like every other unkept row (D17 · H22). There is no new `kind` and no
+   * per-round expiry; the wire is exactly what the preferences page was already sending.
+   *
+   * **Off posts `allow`, it does not delete.** Nothing in this product is deleted — an `allow` is
+   * an appended row that ends the avoidance (`lib/preferences`'s own note). That is also the whole
+   * migration for a category someone KEPT under the old page: it still shows on, and tapping it
+   * off ends it (PS-8).
+   */
+  const tapCategory = useCallback(async (value: string, on: boolean) => {
+    if (!dev) return
+    setPending((p) => ({ ...p, [value]: !on }))
+    try {
+      await postPreference(dev, {
+        kind: 'avoid_category', value,
+        stance: on ? 'allow' : 'avoid',
+        persist: false,
+      })
+      await readPrefs(dev)
+    } catch (e) {
+      setError((e as Error).message || '寫入失敗')
+    } finally {
+      setPending((p) => { const { [value]: _drop, ...rest } = p; return rest })
+    }
+  }, [dev, readPrefs])
+
   if (!dev || !prefSeen()) return <main className="round" data-screen="round" />
+
+  /** In force per the server, then this device's unconfirmed taps on top. */
+  const avoided = new Set((prefs?.avoid_categories ?? []).map((a) => a.value))
+  const chipOn = (c: string) => pending[c] ?? avoided.has(c)
+  const catStat = new Map((prefs?.avoid_categories ?? []).map((a) => [a.value, a]))
+  const catCoverage = prefs?.category_coverage.share ?? 0
+  const anyOn = CATEGORIES.some(chipOn)
 
 
   return (
@@ -172,6 +239,105 @@ export default function Round() {
       <p className="roundNote" data-part="round-pool-rule">
         同一家店不管幾個人提，都只算一份。多提不會提高中選的機會。
       </p>
+
+      {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
+          `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
+          甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
+          types moved here, **above the search on purpose** — before a person looks for a place they
+          say what tonight is not, so the stance is set while it is still cheap.
+
+          **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
+          `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
+          old page still sees it on; tapping it off posts `allow` and ends it. That is the whole
+          migration — nothing backfills and nothing is deleted.
+
+          **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
+          1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
+      <section className="tonightBlock">
+        <h2 className="roundH">這次不吃</h2>
+        <ul className="chips" data-part="tonight-avoid">
+          {CATEGORIES.map((c) => {
+            const on = chipOn(c)
+            return (
+              <li key={c}>
+                <button
+                  type="button"
+                  className="chip"
+                  data-part="tonight-chip"
+                  data-on={on ? 'yes' : 'no'}
+                  aria-pressed={on}
+                  onClick={() => void tapCategory(c, on)}
+                >
+                  {c}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+
+        {/* **One line per chip that is on, and the count is the payload's** (A2-G8-always). The
+            verb is 比較少中 and not 抽不到: since A13 a category discounts by `1 − 1/N` rather than
+            zeroing, so a 火鍋 place can still be drawn, and `touchedLine` is shared with the
+            preferences page's `zeroLine` precisely so the two verbs cannot converge by accident.
+
+            The type's own name leads the line because the chips are a wrapping row rather than
+            labelled rows — on the old screen the name was the row the sentence sat in. That is the
+            only thing about this copy that is new. */}
+        {CATEGORIES.filter(chipOn).map((c) => (
+          <p
+            key={c}
+            className="roundNote tonightStat"
+            data-part="tonight-stat"
+            data-shape={catCoverage > 0 ? 'count' : 'why'}
+          >
+            <b>{c}</b> {touchedLine(catStat.get(c), catCoverage)}
+          </p>
+        ))}
+
+        {/* §4's honesty requirement, moved with the types it describes. The number is the
+            payload's and is never written here — it moved from about 6% to nearly 13% in one day,
+            and a constant would have been false by the afternoon while still rendering. Shown once
+            and only while something is on: with no stance set there is nothing for it to qualify. */}
+        {anyOn && prefs && (
+          <p className="roundNote" data-part="pref-category-coverage">
+            全市 {prefs.category_coverage.reference_rows.toLocaleString('en-US')} 家登記店家裡，
+            目前有 {(prefs.category_coverage.with_category ?? 0).toLocaleString('en-US')} 家帶有分類
+            （{pct(prefs.category_coverage.share)}）。沒有分類的店，避開讀不到。
+          </p>
+        )}
+
+        {/* **A13's sentence, verbatim from the ruling (AD-9).** Everything else here reports
+            numbers; this reports what the numbers MEAN, once, and says the part a member would
+            otherwise have to infer — that the effect shrinks as the table fills. D20 holds: it
+            states, it does not advise. */}
+        {anyOn && (
+          <p className="roundNote" data-part="pref-category-discount">
+            避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
+          </p>
+        )}
+
+        {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
+            `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
+            half is not warned, and a surface that computed it could compute it wrong.
+
+            **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
+            is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
+            half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
+            to make it appear (A2-G8b stays n/a).
+
+            The cross-kind 碰到 total it used to sit beside stays on 偏好: that number counts
+            ingredients too, and the ingredients are there. */}
+        {prefs?.breadth.crossed && (
+          <p className="roundWarn" data-part="tonight-breadth">
+            你目前的選擇，讓這個圈子提得出來的
+            {' '}{prefs.breadth.proposable.toLocaleString('en-US')} 家裡，
+            超過一半會受影響。
+          </p>
+        )}
+
+        {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
+            states, it does not reassure, and an empty row already says it. */}
+      </section>
 
       <label className="roundSearch">
         <span className="roundLabel">找一家店</span>

@@ -186,6 +186,48 @@ export async function postPreference(
   throw await said(r, '寫入失敗')
 }
 
+/**
+ * The statement itself. **抽不到, never 拿掉／少掉／移除** (`A2-G8-verb`): the place keeps its
+ * seat, stays proposable and still appears in the round and in the table at `0/36`. What changed
+ * is that no roll reaches it. `D37` stands beside this — nothing is hidden from the typeahead on
+ * a preference.
+ *
+ * **The second sentence is the evaluator's, and the reason is parallelism rather than accuracy.**
+ * My draft ended 「這個選擇目前不會生效」 — true, and a different frame from every other row.
+ * Four rows should read as four of the same thing; 「不會生效」 costs the reader a translation
+ * step (*what does that mean for me?*) **on the row where a translation step is most expensive**.
+ * 「沒有任何店家會因此抽不到」 lands in the vocabulary the screen already uses, so the comparison
+ * against 480 家 and 8,664 家 is immediate rather than inferred. D20 still holds: it states the
+ * consequence and advises nothing.
+ *
+ * **`A2-G8-zero`: where the KIND has no coverage, the row states why there is no number instead
+ * of stating zero.** The first build printed 「0 家抽不到（0.0%）」 for an ingredient, and the
+ * evaluator was right that this is worse than silence: **a count of zero reads as a result —
+ * *we looked and nothing needed excluding*. What is true is that we hold no ingredient data at
+ * all, so the choice does not act.** Those are opposite meanings and the false one is the
+ * reassuring one, on the single kind the owner ruled about because 「過敏是會致死的」.
+ *
+ * **It keys on the kind's COVERAGE and never on `touched === 0`**, and the distinction is the
+ * whole rule. A category stance that genuinely reaches nothing at 42.6% coverage HAS been
+ * measured, and 「0 家」 is then the true answer. Zero-because-measured and
+ * no-measurement-exists must not render the same way, which is exactly the absent-subject
+ * failure we have found all day — arriving here in the one place it costs more than a wrong
+ * verdict.
+ *
+ * **The two kinds no longer say the same thing, because they no longer DO the same thing**
+ * (A13 / `spec-avoid-discount.md` AD-9, evaluator 2026-08-27). An ingredient is still ×0, so
+ * 抽不到 stays true for it and stays. A category is now a discount of `1 − 1/N` — a 火鍋 place
+ * can still be drawn — so 抽不到 became a false statement on every category row overnight, and
+ * the honest phrase is 比較少中. **This is why one helper became two rather than growing a
+ * flag**: the whole content of each is its verb, and a shared function with a boolean would put
+ * the two claims one typo apart.
+ */
+export function touchedLine(a: { touched: number; share: number } | undefined, coverage: number): string | null {
+  if (!a) return null
+  if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此比較少中。'
+  return `${a.touched.toLocaleString('en-US')} 家會比較少中（${pct(a.share)}）`
+}
+
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on
  *  every screen that states one — never written into the markup, because today's figure becomes
  *  false the moment a backfill runs and says nothing when it does. */
