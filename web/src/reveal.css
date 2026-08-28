@@ -283,7 +283,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  /* **Named because the qualifier subtracts it.** `--qualifier` is ruled at 8px from the headline
+     at every width, and in this composition the block's own gap is what sits between them — so the
+     one number has to be readable from both places or the two drift the day either moves. */
+  --answer-gap: 24px;
+  gap: var(--answer-gap);
   text-align: center;
   max-width: min(1200px, 88vw);
   opacity: 0;
@@ -374,7 +378,13 @@
   font-weight: 400;
   color: currentColor;
   letter-spacing: .04em;
-  margin: 0;
+  /* **8px under the headline, at every width — evaluator-ruled 2026-08-28.** It is a sub-line of
+     the name, not a peer of the sentence, and the block's own rhythm read as the second thing.
+     Written as a subtraction rather than as a negative number: whatever `.answer` puts between its
+     children, this takes back, leaving 8. `0px` and not `0` in the wide block above — `calc()`
+     needs the unit. The gap BELOW is untouched and stays the block's rhythm, which is the other
+     half of the ruling: only the top of this line moved. */
+  margin: calc(8px - var(--answer-gap)) 0 0;
 }
 
 .reveal .revealNote, .reveal .revealErr {
@@ -843,7 +853,7 @@
   .reveal .decider { margin: 0; max-width: 62ch; letter-spacing: .16em; opacity: .72; }
   .reveal .answer {
     margin-top: calc(40 * var(--k)); max-width: calc(100% - 460 * var(--k));
-    display: block; text-align: left; gap: 0;
+    display: block; --answer-gap: 0px; gap: var(--answer-gap); text-align: left;
   }
   /* **The operator's headline stops short of the operator's column, not the member's.**
      `460px` above is the member's right column (400px) plus its gutter. The operator's column is
@@ -878,8 +888,12 @@
      have. Measured on the served reveal at 1440: the headline and the sentence centred on x 720
      while 大安和平東路 sat at x 340, alone against the left edge of a centred column. Inheriting
      `text-align` from `.answer` is right in BOTH compositions — left for the operator, centre for
-     the member — and cannot drift, so the declaration is deleted rather than paired. */
-  .reveal .qualifier { margin-top: calc(34 * var(--k)); }
+     the member — and cannot drift, so the declaration is deleted rather than paired.
+
+     **And no `margin-top` either, since the 8px ruling.** The base rule derives it from
+     `--answer-gap`, which this block sets to `0px` — so 8px lands here without a second
+     declaration, and the sentence's own `calc(34 * var(--k))` below still measures from this
+     line's bottom, which is the rhythm the ruling said to keep. */
 
   /* ── the right column ─────────────────────────────────────────────────────
      The list sits beside the dice from the first frame, which is what makes the sweep legible as
@@ -963,10 +977,9 @@
   }
   .reveal:not(:has(.evNum)) .winner { text-align: center; }
   .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: calc(26 * var(--k)); }
-  /* The member composition's tighter step, mirroring the sentence above it — the qualifier takes
-     whichever rhythm the block it sits in uses (34 operator, 26 member) and never a third number
-     of its own. `text-align` is absent on purpose; see the rule this overrides. */
-  .reveal:not(:has(.evNum)) .qualifier { margin-top: calc(26 * var(--k)); }
+  /* No `.qualifier` line here on purpose: the 8px above the qualifier does not vary by
+     composition, and the 26px below it is the SENTENCE's margin, which the rule above already
+     sets. Two compositions, one declaration. */
   /* The hole the absolute list sits in, reserved from the list's own measured height rather than
      from a number — `--list-h` is set by `Reveal.tsx`; the fallback is one screen's worth of a
      five-place round, so a browser that never runs the observer still gets a readable page. */
