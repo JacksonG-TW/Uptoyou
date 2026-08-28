@@ -271,6 +271,15 @@ not what the engine reads. Chip part: `data-part="tonight-chip"`, `data-on`, fil
 mirrors that row's `persist`** (amended 2026-08-28 — a non-kept `allow` over a kept `avoid` is undone
 by the nightly erasure).
 
+**偏好 asks once before you leave with an un-kept change — owner-ruled 2026-08-28, corrected the same
+day (`spec-ingredient-keep.md`; the kept-by-default wording was withdrawn by him and never built).**
+D17's opt-in stands for every kind. A change made this visit whose row is not kept is a *pending* one;
+any in-app exit from 偏好 with a pending change opens the registry's one dialog part — `keep-dialog`,
+shadcn `AlertDialog`, in-page, never `window.confirm` — 「要保留這次的變更嗎？／保留的話，只有你看得到。」 + per pending kind 「不吃的食材會一直記著。」／「預算記到下個月底。」 (no 05:00 sentence; a kept ingredient never lapses — owner, 2026-08-28) with 保留 as the filled
+primary and 不保留 as the ghost; either continues the navigation, `Esc` stays. Closing the tab is not
+guarded and the change lapses at 05:00, which is the stated default. Categories on 這一餐 stay
+tonight-only with no keep control and nothing to guard.
+
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
 **Member state — what a person in the circle sees after the roll:** the winner, the dice, **one line
