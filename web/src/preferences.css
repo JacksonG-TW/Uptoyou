@@ -340,3 +340,32 @@
   outline: 2px solid var(--color-ring); outline-offset: 1px;
 }
 @media (prefers-reduced-motion: reduce) { .keepStay, .keepDrop { transition: none; } }
+
+/* ── the ingredient row's 「常見於 …」 hint ──────────────────────────────────
+   Owner's ask, 2026-08-28. `text-note`, muted, under the name and inside the tap target.
+
+   **`.rowText` exists because `.rowTap` is a horizontal flex row** — the name and its hint stack,
+   everything else on the row stays beside them. Without the wrapper the hint would land to the
+   right of the name and read as a second column.
+
+   `align-items: flex-start` on the tap target now that its content can be two lines: centred, a
+   long wrapped hint would drag the name off the row's own baseline. `line-height` is the body
+   rhythm rather than the note's, because this line is read as part of the name above it.
+
+   Never truncated (no `ellipsis`, no `-webkit-line-clamp`): a hint that hides its last example is
+   worse than one that takes a second line, and at 430 every row takes two or three. */
+.prefs .rowTap { align-items: flex-start; padding-block: 10px; }
+.prefs .rowText { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+/* **The marker centres on the NAME's line, not on the block.** `align-items: flex-start` above is
+   what stops a long wrapped hint dragging the name off the row, and it left the 12px square 9px
+   high of the name it belongs to (measured). The offset is derived from the two numbers it is
+   made of — the name's own line box and the square's size — rather than typed, so it follows
+   `--text-body` up the ladder instead of drifting at 900 and 2560. */
+.prefs .rowName { line-height: 1.7; }
+.prefs .rowTap .mark { margin-top: calc((1.7em - 12px) / 2); }
+.prefs .rowHint {
+  font-size: var(--text-note);
+  color: var(--color-muted);
+  line-height: 1.6;
+  font-weight: 400;
+}

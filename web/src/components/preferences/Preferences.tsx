@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  BANDS, BAND_LABEL, INGREDIENTS,
+  BANDS, BAND_LABEL, INGREDIENTS, INGREDIENT_EXAMPLES,
   device, fetchPreferences, postPreference, pct,
   type Band, type Device, type Kind, type Preferences as InForce,
 } from '@/lib/preferences'
@@ -424,7 +424,24 @@ export default function Preferences() {
                   }}
                 >
                   <span className="mark" aria-hidden="true" />
-                  <span className="rowName">不吃 {g}</span>
+                  {/* **The name and its hint are one block inside the tap target**, not two
+                      siblings of the flex row: the hint has to sit UNDER the name, and it has to be
+                      inside the button so a screen reader reads it as part of what is being chosen.
+                      A hint outside the label would be a fact about the row that the row's own
+                      control does not announce. */}
+                  <span className="rowText">
+                    <span className="rowName">不吃 {g}</span>
+                    {/* **Where the group turns up, quoted from a government document** — the
+                        owner's ask (「像我就不知道亞硫酸鹽類是甚麼」). The sources are named per row
+                        in `lib/preferences`. A row with no sourced examples renders nothing here
+                        rather than a guess; today all eleven have one. No tooltip and no 「?」
+                        control: a hint behind a tap is a hint nobody reads. */}
+                    {INGREDIENT_EXAMPLES[g] && (
+                      <span className="rowHint" data-part="pref-ingredient-hint">
+                        常見於 {INGREDIENT_EXAMPLES[g]}
+                      </span>
+                    )}
+                  </span>
                   {state === 'on' && <span className="rowState">避開</span>}
                   {state === 'asking' && <span className="rowState asking">點一下沿用</span>}
                   {/* **This row states why there is no number, not a number.** Ingredient coverage

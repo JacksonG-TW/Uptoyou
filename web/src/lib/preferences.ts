@@ -51,6 +51,52 @@ export const INGREDIENTS = [
   '芝麻', '含麩質之穀物', '大豆', '魚類', '亞硫酸鹽類',
 ] as const
 
+/**
+ * **Where each group is commonly found** — the owner's ask, verbatim: 「若我是一般的使用者會希望
+ * 亞硫酸鹽類，可以舉例說明。像我就不知道亞硫酸鹽類是甚麼，有哪些食材有用到」.
+ *
+ * **Sourced, not authored — every name below is quoted from a government document, and the three
+ * sources are named per row.** The spec's draft table was written from memory and said so; it was
+ * checked line by line and it was wrong in one place that mattered, which is the argument for the
+ * rule rather than a footnote to it: the draft put 啤酒 under 含麩質之穀物, and the Q&A's A17 says
+ * 由穀類製得的酒類 is explicitly EXEMPT from the labelling regulation. A hint naming a food the
+ * regulation excludes is worse than no hint.
+ *
+ * **A · 食藥署「食品過敏原標示規定問答集」107.08.21**
+ *   https://www.fda.gov.tw/tc/includes/GetFile.ashx?id=f636703601345760449
+ *   Q10 芝麻油 · Q12 鮭魚卵 · Q13 堅果類 · Q15 含麩質穀物 · Q19 大豆製品 · Q20/Q21 魚類製品
+ * **B · 食藥署「食品過敏原標示規定第一點所定六項含有致過敏性內容物及其製品之案例」103.03.13**
+ *   https://www.fda.gov.tw/upload/133/Content/2014031216074266953.pdf
+ *   (一) 蝦 · (二) 蟹 · (三) 芒果 · (四) 花生 · (五) 牛奶 · (六) 蛋
+ * **C · 食品添加物使用範圍及限量暨規格標準 附表一 第（四）類 漂白劑**
+ *   https://law.moj.gov.tw/LawClass/LawGetFile.ashx?FileId=0000079439&lan=C
+ *   the permitted uses of 亞硫酸鉀／鈉／氫鈉 etc., which is where an ADDITIVE's answer to
+ *   "what is it in" actually lives — the allergen material names only the chemicals and the
+ *   10 mg/kg threshold, so B and A cannot answer this row and C can.
+ *
+ * All three read 2026-08-28. **A row that could not be sourced would ship with no line at all**
+ * (the solar-term rule, `spec-home-dateline` §1a): a blank is true, a guess is not. Every row
+ * found a source, but two are thin and are flagged rather than padded — 芝麻 has exactly one named
+ * product in the whole Q&A, and 魚類's named products are the non-obvious ones rather than fish.
+ * Padding either from general knowledge is the thing this comment exists to forbid.
+ *
+ * **Statements only** (D20), and no 過敏 anywhere (D103 clause 2) — including in this comment's
+ * neighbours on the screen. What a row says is where a thing turns up, not what to do about it.
+ */
+export const INGREDIENT_EXAMPLES: Record<string, string> = {
+  甲殼類: '蝦、蟹、蝦餅、蟹肉棒',                        // B(一)(二)
+  芒果: '芒果乾、芒果醬、芒果冰棒、芒果蛋糕',              // B(三)
+  花生: '花生醬、花生粉、花生糖、沙嗲醬',                  // B(四)
+  '牛奶／羊奶': '起士、奶粉、優格、人造奶油',              // B(五)
+  蛋: '蛋糕、蛋塔、皮蛋、蛋黃醬',                        // B(六)
+  堅果類: '杏仁、核桃、腰果、開心果',                     // A Q13
+  芝麻: '芝麻油',                                      // A Q10 — the only product the Q&A names
+  含麩質之穀物: '小麥、大麥、黑麥、燕麥',                  // A Q15 (A17: 由穀類製得的酒類 is exempt)
+  大豆: '豆腐、豆漿、醬油、味噌',                         // A Q19
+  魚類: '魚油、魚類取得的明膠、鮭魚卵',                    // A Q20/Q21/Q12
+  亞硫酸鹽類: '金針乾製品、白葡萄乾、脫水蔬菜、糖漬果實類（用作漂白）',  // C
+}
+
 export type Kind = 'budget' | 'avoid_category' | 'avoid_ingredient'
 export type Stance = 'avoid' | 'allow'
 
