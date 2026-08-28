@@ -124,9 +124,29 @@ OWNER_ONLY = ("alembic_version",)
 # `weight_contribution` be refused for this role, not SELECT, which is what a reading that intended
 # SELECT to be available would say. Sent to orchestrator on landing as the one grant here taken from
 # the Done line's wording plus the code rather than from the rule's sentence. One line to correct.
+# **Two weather tables added 2026-08-28 (D42's retention amendment).** The 90-day job runs as this
+# role and not as `upto_ingest`, which already holds DELETE on both — because its `UNPINNED` filter
+# must read `weight_contribution`, and D115 gives the pipeline **nothing** there: §3.0 and D14 say
+# the pipeline never sees a person. Granting that SELECT to widen the ingest role would undo the
+# exact line A15 was built to draw, so the job comes to the role that already holds it.
+#
+# *Cost, recorded rather than assumed away:* this role's reach grows from one person-bearing table
+# to two pipeline tables, and a weather reading is **not re-fetchable** — CWA publishes the current
+# file, not an archive — so a bad line in that DAG destroys something a re-run cannot restore.
+# *Rejected:* a fifth role — one more password and D115's own warning that the next role must argue
+# better than the fourth did, spent to protect data from the job whose purpose is deleting it.
 ERASURE_GRANTS = {
     "preference": ("select", "delete"),
     "weight_contribution": READ,
+    "observation_reading": ("select", "delete"),
+    "forecast_reading": ("select", "delete"),
+    # The 90-day filter reads this to know a forecast reading is a round's pinned baseline
+    # (A12/D71, revision 0030). SELECT only: this role may never touch a round's own rows.
+    "round_forecast_baseline": READ,
+    # The window is the publication's `detected_at`, so the job joins to both publication tables.
+    # SELECT only — publication rows are the ledger and stay for ever (M2 reads them).
+    "observation_publication": READ,
+    "forecast_publication": READ,
 }
 
 
