@@ -277,15 +277,22 @@ BREADTH = """
 with latest as (
     select id from place_publication order by detected_at desc, id desc limit 1
 ),
+brand as (
+    select id from brand_publication order by detected_at desc, id desc limit 1
+),
 proposable as (
-    select p.category
+    -- A19: the company comes along, because an ingredient stance reaches a place through what its
+    -- COMPANY published rather than through a column on the place.
+    select p.category, rp.name as company
       from reference_place rp
       join latest on true
       left join place p
         on p.registry_no = rp.registry_no and p.origin = 'reference'
      where rp.publication_id = latest.id
     union all
-    select p.category
+    -- A place a member typed has no company and no publisher, so no ingredient stance can reach
+    -- it. `null`, not an empty string: it is unknown, not "published nothing".
+    select p.category, null as company
       from place p
      where p.origin = 'circle-local' and p.circle_id = :circle_id
 )
@@ -304,12 +311,27 @@ select count(*) as proposable,
        -- not *how much have I killed*.
        count(*) filter (
            where category = any(:avoided)
-           -- **The ingredient half is a stated gap, not an omission.** `place` carries no
-           -- ingredient column — there is no source and none planned (D103) — so no predicate can
-           -- be written here yet and this counts zero of them for a reason rather than by silence.
-           -- The day a source arrives it becomes `or <the join>` on this line and `touched`'s
-           -- definition does not move; `filter` counts a row once, so a place both stances reach
-           -- is one place and not two.
+           -- **A19: the day the previous comment predicted.** It said *"the day a source arrives it
+           -- becomes `or <the join>` on this line and `touched`'s definition does not move"*. It
+           -- arrived on 2026-08-29 and this is that line, unchanged in meaning.
+           --
+           -- **The total is EXACT, and it is worth saying which part of A19 is a floor and which is
+           -- not.** `exists` over the union of the member's terms counts a place once however many
+           -- of them match, and `filter` counts a row once however many stances reach it — so a
+           -- place both a category and an ingredient reach is one place, and 蝦 plus 蝦仁 on one
+           -- company is one place. The floor is in the per-ingredient ROW (`touched_is_a_floor`),
+           -- where the count is one term's rather than a union; it is not here.
+              or (
+                  company is not null
+                  and exists (
+                      select 1
+                        from product_material pm
+                        join brand on true
+                       where pm.company_name = company
+                         and pm.publication_id = brand.id
+                         and pm.material_name = any(:ingredient_terms)
+                  )
+              )
        ) as touched
   from proposable
 """
@@ -494,9 +516,12 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
                 text(IN_FORCE_AVOID), {"member_id": member_id, "kind": KIND_AVOID}
             )
         ).all()
-        # A separate query with the kind named, not one query returning both. D22's `breadth` is
-        # computed from the *categories* alone — an ingredient avoidance removes no place today —
-        # so mixing the two lists into one list would silently feed ingredients to that calculation.
+        # A separate query with the kind named, not one query returning both. **The 2026-08-19
+        # reason — that `breadth` is computed from the categories alone — stopped being true on
+        # 2026-08-29**, when A19 gave the ingredient half a join and `BREADTH` began counting both.
+        # The separation stands on the other reason, which never depended on that: the two are
+        # closed lists with disjoint values, and one query returning both would hand a category to
+        # a caller asking about ingredients.
         ingredients = (
             await session.execute(
                 text(IN_FORCE_AVOID), {"member_id": member_id, "kind": KIND_INGREDIENT}
@@ -524,10 +549,19 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
                 # single term is a floor rather than the true union — stated in the payload's own
                 # comment, because a number that is knowably low is honest only if it says so.
                 ingredient_touched[group] = max(ingredient_touched.get(group, 0), row.touched)
+        # **Only the terms naming a group this member actually avoids.** Handing the whole authored
+        # table would make `touched` count every place any allergen reaches, which is a fact about
+        # the city and not about them.
+        avoided_groups = {row.value for row in ingredients}
+        breadth_terms = [term for term, group in _term_group.items() if group in avoided_groups]
         breadth = (
             await session.execute(
                 text(BREADTH),
-                {"circle_id": circle_id, "avoided": [row.value for row in avoided]},
+                {
+                    "circle_id": circle_id,
+                    "avoided": [row.value for row in avoided],
+                    "ingredient_terms": breadth_terms,
+                },
             )
         ).one()
         per_stance = {
