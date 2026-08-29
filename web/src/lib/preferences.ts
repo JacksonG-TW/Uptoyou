@@ -116,6 +116,17 @@ export type Avoidance = {
   persist: boolean
   valid_from: string
   touched: number
+  /**
+   * **`touched` is a FLOOR on the ingredient rows, and the payload says so rather than the reader
+   * guessing** (A19, backend 2026-08-29). Two authored terms of one group — 蝦 and 蝦仁 — name
+   * overlapping sets of places, so the count is the largest single term's rather than a union that
+   * would double-count. The true number is at least this many.
+   *
+   * Optional: the category rows carry no flag, because D38's ten are disjoint and their counts are
+   * totals. **Absent means a total, never "unknown"** — so the copy hedges only where the wire
+   * says to hedge.
+   */
+  touched_is_a_floor?: boolean
   share: number
 }
 
@@ -309,10 +320,18 @@ export function touchedLine(a: { touched: number; share: number } | undefined, c
  * real. Deleting this would mean rewriting the argument above when it is; leaving it, unused and
  * explained, costs one export.
  */
-export function zeroLine(a: { touched: number; share: number } | undefined, coverage: number): string | null {
+export function zeroLine(
+  a: { touched: number; share: number; touched_is_a_floor?: boolean } | undefined,
+  coverage: number,
+): string | null {
   if (!a) return null
   if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此抽不到。'
-  return `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
+  /* **One word, and it is the wire's own claim rather than a hedge on ours** (evaluator-ruled
+     2026-08-29). 「至少」 renders exactly when `touched_is_a_floor` is true; no footnote, no second
+     qualifier, no asterisk. A number that is silently a floor is the same family of defect as the
+     false zero this line printed for a few hours — it reads as a total and is not one. */
+  const count = `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
+  return a.touched_is_a_floor ? `至少 ${count}` : count
 }
 
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on

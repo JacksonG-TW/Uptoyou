@@ -1057,7 +1057,18 @@
    `currentColor` rather than `--color-ink`, because the flood crosses the text colour with the
    ground (§5 rule 1) and a fixed ink would be the one element left behind on a dark face. */
 .reveal .myReasons {
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex; flex-direction: column; gap: 4px;
   color: currentColor;
 }
+
+/* **On a flood the mark is `currentColor`, never `--color-muted`** — spec §1 as amended
+   2026-08-29 after the evaluator measured it. Muted is a PAPER colour: #5A5C63 on the hot flood is
+   **2.82:1**, under every floor in §1, and the same on the other three faces. `currentColor` is
+   what the flood already crosses ground and text to (§5 rule 1), so the mark travels with the face
+   instead of being the one element left behind on it — 7.98 on hot, and it cannot drift when a
+   face is retuned because it is not a second value.
+
+   **The demotion moves from colour to size**, which is what `text-note` beside a `text-body` name
+   was already doing on paper; the mark was never leaning on muted to be secondary. */
+.reveal .rowTag { color: currentColor; }
