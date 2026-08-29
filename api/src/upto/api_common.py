@@ -309,6 +309,38 @@ async def ingredient_data_for(session, place_ids) -> dict:
             for place_id in ids}
 
 
+async def my_reasons_for(session, round_id: int, viewer: int | None) -> list:
+    """The sentences this member is allowed to read about their own round, and nothing else.
+
+    **D105 as amended 2026-08-29 (owner: 「加」).** A private contribution carries a sentence whose
+    `reason_visibility` is `represented_member`: it belongs to the one member it speaks for, and to
+    nobody — not to the other four, and not to an operator, who audits the arithmetic rather than
+    the people (D13 as D20 filled it).
+
+    **A list of sentences and nothing else.** No factor, no place id, no number. The member is being
+    told *why their own round looked like that*, not handed a share of the evidence table; adding a
+    number here would rebuild the operator view one field at a time on the member wire.
+
+    **`viewer is None` returns nothing, and that is the safe direction.** An operator's own body has
+    no represented-member seat to read, and a caller that forgot to pass a viewer gets silence
+    rather than somebody else's sentences.
+    """
+    if viewer is None:
+        return []
+    rows = (
+        await session.execute(
+            text(
+                "select reason from weight_contribution "
+                " where round_id = :r and member_id = :m "
+                "   and reason_visibility = 'represented_member' and reason is not null "
+                " order by id"
+            ),
+            {"r": round_id, "m": viewer},
+        )
+    ).all()
+    return [row.reason for row in rows]
+
+
 def result_body(
     round_id: int,
     dice: tuple[int, int] | None,
@@ -319,6 +351,7 @@ def result_body(
     winner_headline: str | None = None,
     winner_qualifier: str | None = None,
     ingredient_data: dict | None = None,
+    my_reasons: list | None = None,
 ) -> dict:
     return {
         "round_id": round_id,
@@ -341,6 +374,8 @@ def result_body(
         "winner_qualifier": winner_qualifier,
         # A19: per place, `declared` or `unknown` — never absent. See `ingredient_data_for`.
         "ingredient_data": ingredient_data or {},
+        # D105 as amended: this member's own `represented_member` sentences, nothing else.
+        "my_reasons": my_reasons or [],
     }
 
 # --- B2 / item 9: the trip, read the same way everywhere it appears ------------------------
@@ -480,6 +515,10 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # A19: a member avoiding an ingredient is the person this is for, so it is theirs
                # before it is the operator's.
                "ingredient_data",
+               # D105 as amended 2026-08-29: the member's own sentences. Whitelisted explicitly
+               # because it is the one field here whose value differs per reader — the whole payload
+               # is otherwise the same for everyone in the room.
+               "my_reasons",
                # D108: the seat list, the decider and the commitment are all member-visible — they
                # are what the fairness claim is made of, so withholding them from a member would
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is

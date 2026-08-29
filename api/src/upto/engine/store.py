@@ -66,6 +66,7 @@ class TripPin:
     trip_id: int
 
 
+@dataclass(frozen=True)
 class BrandPin:
     """The brand **publication** an ingredient veto read — A19, revision 0036, the fifth source.
 

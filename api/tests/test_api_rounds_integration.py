@@ -168,6 +168,26 @@ async def scenario(test_url: str) -> None:
         # second were an ordinary local, the winner would be a dice draw and the bracketed case
         # would be exercised only half the time. Two sites of the same company means *whichever*
         # wins carries a bracket. A fixture that tests the case on some runs is H50 again.
+        # **A19: the chain's company publishes materials, so the loader's brand path actually
+        # runs.** Without these rows every round in this file has an empty `product_material` join
+        # and the ingredient pass never builds a `BrandPin` — which is exactly how
+        # `class BrandPin:` shipped without `@dataclass` and 500'd every roll whose pool held one of
+        # the 4,509 places whose company publishes (H50: the fixture that never reaches the branch).
+        brand_pub_for_chain = (
+            await session.execute(
+                text("insert into brand_publication "
+                     "  (source, content_sha256, detected_at, payload_bytes, scope) "
+                     "values ('taipei-foodtracer', repeat('d', 64), now(), 1024, 'x') "
+                     "returning id")
+            )
+        ).scalar_one()
+        for product, material in (("拉麵", "雞蛋"), ("拉麵", "麵粉"), ("叉燒", "豬肉")):
+            await session.execute(
+                text("insert into product_material (publication_id, company_name, brand_name, "
+                     "  product_name, material_name, material_name_raw) "
+                     "values (:pub, '一階堂拉麵餐飲有限公司', '一階堂', :p, :m, :m)"),
+                {"pub": brand_pub_for_chain, "p": product, "m": material},
+            )
         chain_ids = []
         for registry_no in ("A-33333333-00001-1", "A-33333333-00002-1"):
             chain_ids.append(
@@ -424,6 +444,83 @@ async def scenario(test_url: str) -> None:
         assert chain_member["winner_headline"] == "一階堂拉麵"
         assert chain_member["winner_qualifier"] == qualifier
         print("  A16: a bracketed chain shortens to its base and carries the bracket apart")
+
+        # **A19, case 1: a declared brand in the pool and NOBODY avoiding anything.** This is the
+        # case that was broken for every roll and that no test reached — the round above already
+        # exercises it now that the company publishes materials, so the assertion is simply that it
+        # closed at all, said plainly rather than left implicit.
+        assert chain_rolled.status_code == 200, ("a pool holding a declared brand must roll",
+                                                 chain_rolled.text)
+        assert chain_result["ingredient_data"][str(winner)] == "declared", (
+            chain_result["ingredient_data"])
+        print("  A19: a declared brand rolls with nobody avoiding, and reads `declared`")
+
+        # **A19, case 2: the same brand, and a seat that avoids what it names.**
+        # The pool is the chain site plus a circle-local one, deliberately: if both places were the
+        # chain's, every weight would be zero and the draw would have nothing to pick — a real
+        # question this feature raises and NOT the one under test here.
+        await client.post(
+            f"/circles/{circle}/preferences",
+            json={"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"},
+            headers={"Authorization": "Bearer " + plain_token},
+        )
+        veto_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
+        assert veto_round.status_code == 201, veto_round.text
+        veto_round_id = veto_round.json()["round_id"]
+        for place in (chain, locals_[1]):
+            assert (await client.post(
+                f"/rounds/{veto_round_id}/proposals", json={"place_id": place}, headers=auth
+            )).status_code == 201
+        veto_rolled = await client.post(f"/rounds/{veto_round_id}/roll", headers=auth)
+        assert veto_rolled.status_code == 200, ("the veto path must not 500", veto_rolled.text)
+        veto_result = veto_rolled.json()
+        assert veto_result["weights"][str(chain)] == "0", veto_result["weights"]
+        assert veto_result["winning_place_id"] == locals_[1], (
+            "a vetoed place cannot win — the only other place must", veto_result)
+        assert veto_result["ingredient_data"][str(chain)] == "declared"
+        assert veto_result["ingredient_data"][str(locals_[1])] == "unknown", (
+            "a circle-local place has no company and no publisher — unknown, never declared")
+
+        # **D105 as amended: the sentence is the avoiding member's and nobody else's.**
+        veto_member = (await client.post(
+            f"/rounds/{veto_round_id}/roll",
+            headers={"Authorization": "Bearer " + plain_token},
+        )).json()
+        assert any("蛋" in r for r in veto_member["my_reasons"]), veto_member["my_reasons"]
+        # **The operator's own body DOES carry it, and that is correct — the first version of this
+        # assertion had it backwards.** Both device secrets in this file share one `principal_id`:
+        # they are two devices of one person, so the operator device belongs to the represented
+        # member and is reading their own sentence. D74's rule is that the role belongs to the
+        # secret and not to the person, and this is that rule seen from the other side.
+        assert any("蛋" in r for r in veto_result["my_reasons"]), veto_result["my_reasons"]
+
+        # **The leak that matters is a DIFFERENT member's device**, so the test needs a second
+        # person rather than a second device. This is the D105 failure the field could produce:
+        # one sentence, on somebody else's payload.
+        async with Session() as session:
+            other_principal = (
+                await session.execute(text("insert into principal default values returning id"))
+            ).scalar_one()
+            await session.execute(
+                text("insert into member (circle_id, principal_id, nickname) "
+                     "values (:c, :p, '第二人') returning id"),
+                {"c": circle, "p": other_principal},
+            )
+            other_token = "t-other-" + sha256(b"other").hexdigest()[:16]
+            await session.execute(
+                text("insert into device_secret (principal_id, secret_sha256, operator) "
+                     "values (:p, :h, false)"),
+                {"p": other_principal, "h": sha256(other_token.encode()).hexdigest()},
+            )
+            await session.commit()
+        other_body = (await client.post(
+            f"/rounds/{veto_round_id}/roll",
+            headers={"Authorization": "Bearer " + other_token},
+        )).json()
+        assert other_body["my_reasons"] == [], (
+            "another member's payload carried a represented-member sentence (D105)",
+            other_body["my_reasons"])
+        print("  A19: the veto zeroes the declared place and only its own member reads the reason")
 
     # D14, observed through the endpoint path: the close erased authorship, kept the pool.
     async with Session() as session:

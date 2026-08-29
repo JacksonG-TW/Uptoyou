@@ -41,6 +41,7 @@ from .api_common import (
     resolve_member,
     result_body,
     ingredient_data_for,
+    my_reasons_for,
     winner_headline_for,
     trip_for,
 )
@@ -138,6 +139,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         display = await place_display(session, weights.keys())
         winner_headline, winner_qualifier = winner_headline_for(display, last.winning_place_id)
         ingredient_data = await ingredient_data_for(session, weights.keys())
+        my_reasons = await my_reasons_for(session, last.id, viewer)
         last_result = result_body(
             last.id,
             dice,
@@ -148,6 +150,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
             winner_headline=winner_headline,
             winner_qualifier=winner_qualifier,
             ingredient_data=ingredient_data,
+            my_reasons=my_reasons,
         )
         # **B2, and this is the half D56 makes necessary.** Nothing is pushed when a trip is signed
         # (D53), so a client that was not connected at the moment — or that reconnected since — would

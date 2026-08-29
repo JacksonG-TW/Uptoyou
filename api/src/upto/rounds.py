@@ -41,6 +41,7 @@ from .api_common import (
     resolve_member,
     result_body,
     ingredient_data_for,
+    my_reasons_for,
     winner_headline_for,
     seats_for,
     trip_for,
@@ -256,6 +257,8 @@ async def _closed_body(
     # A19: two states per place, never an absence (D112) — the member avoiding an
     # ingredient is who it is for, so it is built here beside the names.
     ingredient_data = await ingredient_data_for(session, weights.keys())
+    # D105 as amended: per reader, and the only field here that is.
+    my_reasons = await my_reasons_for(session, round_id, viewer)
     body = result_body(
         round_id,
         dice,
@@ -266,6 +269,7 @@ async def _closed_body(
         winner_headline=winner_headline,
         winner_qualifier=winner_qualifier,
         ingredient_data=ingredient_data,
+        my_reasons=my_reasons,
     )
     # B2: `None` until somebody signs, and the same shape wherever a trip appears — nickname and
     # time, never the signer's id (H3). Read here rather than assembled, so the reveal, the SSE

@@ -347,6 +347,40 @@ select category, count(*) as touched
 """
 
 
+# **A19: the same question for an ingredient, and it is a different join rather than a different
+# column.** A category lives on `place.category`; an ingredient lives on what a place's *company*
+# published, so this reaches through `reference_place.name` into `product_material`. The rest is
+# BREADTH_BY_STANCE's shape — the circle's proposable set (D22's ruled denominator), counted per
+# stance.
+#
+# **`count(distinct rp.registry_no)`, not `count(*)`.** A company publishes many materials naming
+# one group and a place would otherwise be counted once per material — 全家 has 87 products and
+# would have reported hundreds of places touched by 蛋. The category query needs no such guard
+# because a place has exactly one category.
+#
+# **Circle-local places are absent on purpose and the denominator still includes them.** A place a
+# member typed has no company and no publisher, so it can never be touched by this — which is a true
+# `unknown`, not a zero, and it is the same reason the payload's `share` is a share of the whole
+# proposable set rather than of the places that published.
+INGREDIENT_BY_STANCE = """
+with latest as (
+    select id from place_publication order by detected_at desc, id desc limit 1
+),
+brand as (
+    select id from brand_publication order by detected_at desc, id desc limit 1
+)
+select pm.material_name as material, count(distinct rp.registry_no) as touched
+  from reference_place rp
+  join latest on true
+  join brand on true
+  join product_material pm
+    on pm.company_name = rp.name and pm.publication_id = brand.id
+ where rp.publication_id = latest.id
+   and pm.material_name = any(:materials)
+ group by pm.material_name
+"""
+
+
 class PreferenceBody(BaseModel):
     kind: str
     value: str
@@ -471,6 +505,25 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
         month = (await session.execute(text(SERVER_MONTH))).one()
         coverage = (await session.execute(text(CATEGORY_COVERAGE))).one()
         ingredient_coverage = (await session.execute(text(INGREDIENT_COVERAGE))).one()
+        # A19: how many proposable places each avoided GROUP is named by. The mapping term → group
+        # is the authored table's and stays in Python — the rule is a lookup and a substring rule is
+        # forbidden (D103), so SQL is handed the terms and never a pattern.
+        from upto.seed.ingredient_terms import TERMS as _TERMS  # noqa: PLC0415
+
+        _term_group = {term: group for term, group, _d, _b, _r in _TERMS}
+        ingredient_touched = {}
+        for row in (
+            await session.execute(
+                text(INGREDIENT_BY_STANCE), {"materials": list(_term_group)}
+            )
+        ).all():
+            group = _term_group.get(row.material)
+            if group:
+                # **`max`, not `+`.** Two terms of one group (蝦 and 蝦仁) name overlapping sets of
+                # places, and adding them would report more places than the city has. The largest
+                # single term is a floor rather than the true union — stated in the payload's own
+                # comment, because a number that is knowably low is honest only if it says so.
+                ingredient_touched[group] = max(ingredient_touched.get(group, 0), row.touched)
         breadth = (
             await session.execute(
                 text(BREADTH),
@@ -649,8 +702,20 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
                 # stances **touch**, so the ingredient half belongs inside the combined figure by
                 # definition — it contributes nothing only because there is nothing to join, and
                 # `BREADTH`'s filter says exactly where that join lands.
-                "touched": 0,
-                "share": 0.0,
+                # **A19 made these real; they were a literal 0 and 0.0.** The placeholder was
+                # honest when nothing published — and it printed 「0 家抽不到（0.0%）」 on the served
+                # screen the day 4,509 places did, which reads as *we looked and nothing needed
+                # excluding*. A false zero on the one kind where being wrong is not a worse dinner.
+                #
+                # **A floor, not a total, and the payload says so rather than the reader guessing.**
+                # Two authored terms of one group (蝦 and 蝦仁) name overlapping sets of places, so
+                # the count is the largest single term's rather than a union that would double-count.
+                # The denominator is the same proposable set `breadth` uses (D22).
+                "touched": ingredient_touched.get(row.value, 0),
+                "touched_is_a_floor": True,
+                "share": 0.0
+                if not breadth.proposable
+                else round(ingredient_touched.get(row.value, 0) / breadth.proposable, 4),
             }
             for row in ingredients
         ],
