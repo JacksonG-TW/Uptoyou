@@ -533,6 +533,21 @@ export default function Reveal({ roundId }: { roundId: number }) {
    *  to say and renders no element at all. Deriving one here from the composed name would be the
    *  browser computing a name, which is the one thing A16 exists to stop. */
   const qualifier = data?.winner_qualifier ?? null
+  /**
+   * **Identical sentences collapse to one** (evaluator-ruled 2026-08-30). The wire carries one
+   * sentence per contribution, so two places that both trip the same stance send the same string
+   * twice — and the sentence is about the PERSON'S stance, not about a place. 「避開的類型：火鍋」
+   * printed twice would read as two different facts, and printing a count beside it would answer a
+   * question nobody asked and hand the member a shard of the evidence table.
+   *
+   * **Dedupe on the exact string, order preserved.** No normalisation, no trimming, no case fold:
+   * the sentences are the payload's and two that differ by a character differ for a reason this
+   * screen cannot see. `Set` keeps first-seen order, which is the wire's `order by id`.
+   *
+   * This is right whichever way the pending ruling on category reasons goes: two places declaring
+   * 蛋 duplicate 「原料含有：蛋」 exactly as two 火鍋 places duplicate their line.
+   */
+  const myReasons = [...new Set(data?.my_reasons ?? [])]
 
   return (
     // The flood (§5 rule 1) — the winning place's own face colour becomes the whole ground, over
@@ -795,10 +810,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
           「原料含有：蛋」 under the winner's name would tell a person the place they are about to eat
           at contains the thing they avoid — the opposite of what happened, on the one screen where
           that sentence matters. */}
-      {answered && (data?.my_reasons?.length ?? 0) > 0 && (
+      {answered && myReasons.length > 0 && (
         <div className="myReasons" data-part="my-reasons">
-          {data!.my_reasons!.map((r, i) => (
-            <p key={i} className="rowReason" data-part="ingredient-reason">{r}</p>
+          {myReasons.map((r) => (
+            <p key={r} className="rowReason" data-part="ingredient-reason">{r}</p>
           ))}
         </div>
       )}
