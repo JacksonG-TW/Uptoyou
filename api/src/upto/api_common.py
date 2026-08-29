@@ -270,6 +270,45 @@ def winner_headline_for(display: dict, winning_place_id: int) -> tuple:
             entry.get("qualifier"))
 
 
+async def ingredient_data_for(session, place_ids) -> dict:
+    """`{place_id: "declared" | "unknown"}` — A19's two states, never an absence (D112).
+
+    **Why this is on the wire at all.** An ingredient veto that finds nothing produces no record,
+    and so does a place nobody has published anything about. The arithmetic cannot tell them apart
+    and must not try — but a member avoiding 甲殼類 is owed the difference, because one means *the
+    publisher listed their materials and none is this* and the other means *nobody has said*.
+    Measured 2026-08-29: **4,509 of 36,499 places have any published data**, so `unknown` is 87.6%
+    of the city — the ordinary case, and rendering it as "no allergen here" is the one dangerous
+    thing this feature could do.
+
+    **`declared` is not a claim of safety.** It says only that the company published materials for
+    some product. What it licenses a screen to say is *"they published, and nothing they published
+    names what you avoid"* — never *"this is safe for you"*.
+    """
+    ids = list(place_ids)
+    if not ids:
+        return {}
+    rows = (
+        await session.execute(
+            text(
+                "select distinct p.id as place_id from place p "
+                "  join reference_place rp on rp.registry_no = p.registry_no "
+                "   and rp.publication_id = (" + LATEST_PLACE_PUBLICATION + ") "
+                "  join product_material pm on pm.company_name = rp.name "
+                "   and pm.publication_id = ("
+                "     select id from brand_publication order by detected_at desc, id desc limit 1) "
+                " where p.id in :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"ids": ids},
+        )
+    ).all()
+    declared = {row.place_id for row in rows}
+    # Every pooled place gets a value. **A place missing from this map would be a third state the
+    # surface has to invent a meaning for**, which is the absence D112 forbids.
+    return {str(place_id): ("declared" if place_id in declared else "unknown")
+            for place_id in ids}
+
+
 def result_body(
     round_id: int,
     dice: tuple[int, int] | None,
@@ -279,6 +318,7 @@ def result_body(
     allocation: dict[int, int],
     winner_headline: str | None = None,
     winner_qualifier: str | None = None,
+    ingredient_data: dict | None = None,
 ) -> dict:
     return {
         "round_id": round_id,
@@ -299,6 +339,8 @@ def result_body(
         # without its parentheses — `null` when the name has none. The surface joins them; the
         # headline field never carries a bracket.
         "winner_qualifier": winner_qualifier,
+        # A19: per place, `declared` or `unknown` — never absent. See `ingredient_data_for`.
+        "ingredient_data": ingredient_data or {},
     }
 
 # --- B2 / item 9: the trip, read the same way everywhere it appears ------------------------
@@ -435,6 +477,9 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # reads `places`. Named here because this list is a whitelist and a new field is
                # operator-only until it is.
                "winner_headline", "winner_qualifier",
+               # A19: a member avoiding an ingredient is the person this is for, so it is theirs
+               # before it is the operator's.
+               "ingredient_data",
                # D108: the seat list, the decider and the commitment are all member-visible — they
                # are what the fairness claim is made of, so withholding them from a member would
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is

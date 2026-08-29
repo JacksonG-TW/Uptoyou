@@ -40,6 +40,7 @@ from .api_common import (
     resolve_credential,
     resolve_member,
     result_body,
+    ingredient_data_for,
     winner_headline_for,
     seats_for,
     trip_for,
@@ -245,6 +246,9 @@ async def _closed_body(
     # close cannot disagree about what the headline says.
     display = await place_display(session, weights.keys())
     winner_headline, winner_qualifier = winner_headline_for(display, winning_place_id)
+    # A19: two states per place, never an absence (D112) — the member avoiding an
+    # ingredient is who it is for, so it is built here beside the names.
+    ingredient_data = await ingredient_data_for(session, weights.keys())
     body = result_body(
         round_id,
         dice,
@@ -254,6 +258,7 @@ async def _closed_body(
         allocate({p: w for p, w in weights.items()}),
         winner_headline=winner_headline,
         winner_qualifier=winner_qualifier,
+        ingredient_data=ingredient_data,
     )
     # B2: `None` until somebody signs, and the same shape wherever a trip appears — nickname and
     # time, never the signer's id (H3). Read here rather than assembled, so the reveal, the SSE

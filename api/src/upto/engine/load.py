@@ -31,15 +31,24 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 
 # **D25 as amended 2026-08-28: the same in-force predicate the GET uses.** Two reads that derive
 # "in force" separately are two answers waiting to disagree — a lapsed `persist = false` row must
 # be invisible to the engine on exactly the terms it is invisible to the screen, which is why this
 # is imported rather than restated.
 from upto.preferences import IN_FORCE_PREDICATE
+from upto.seed.ingredient_terms import TERMS as _INGREDIENT_TERMS
+from upto.engine.ingredient import REASON_VISIBILITY as INGREDIENT_VISIBILITY
+from upto.engine.ingredient import veto_contribution as ingredient_veto
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
-from upto.engine.store import ForecastPin, PinnedContribution, PreferencePin, TripPin
+
+#: material name → allergen group, built once from the authored table (A19). A dict
+#: rather than a scan: the rule is a lookup and a substring rule is forbidden (D103).
+INGREDIENT_TERMS = {term: group for term, group, _d, _b, _r in _INGREDIENT_TERMS}
+from upto.engine.store import (
+    BrandPin, ForecastPin, PinnedContribution, PreferencePin, TripPin,
+)
 from upto.engine.weather import REASON_VISIBILITY as WEATHER_VISIBILITY
 from upto.engine.trip import REASON_VISIBILITY as TRIP_VISIBILITY
 from upto.engine.trip import last_trip_contribution
@@ -404,12 +413,84 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
         )
     ).all()
     if ingredient_rows:
-        # Deliberately not silent. A round whose members avoid ingredients and whose places carry no
-        # ingredient data produces no record for them, and a reader of a reveal panel would
-        # reasonably wonder why — so the absence is stated once per round rather than inferred.
+        # ---- A19: the pass that was inert now has data -------------------------------------
+        #
+        # **One query for the whole pool, unfiltered by the authored table.** It returns every
+        # material each pooled place's company publishes, not only the ones that name an allergen —
+        # because the difference between *declared and named nothing* and *declared nothing at all*
+        # is exactly what this feature exists to keep, and a query that filtered would collapse
+        # them into one absence (D112).
+        avoided_by_member = {}
+        for row in ingredient_rows:
+            avoided_by_member.setdefault(row.member_id, {})[row.value] = row.id
+        brand_publication_id = (
+            await session.execute(
+                text("select id from brand_publication "
+                     " order by detected_at desc, id desc limit 1")
+            )
+        ).scalar()
+        declared = {}
+        if brand_publication_id is not None:
+            material_rows = (
+                await session.execute(
+                    text(
+                        "select p.id as place_id, pm.material_name as material "
+                        "  from place p "
+                        "  join reference_place rp on rp.registry_no = p.registry_no "
+                        "   and rp.publication_id = ("
+                        "     select id from place_publication "
+                        "      order by detected_at desc, id desc limit 1) "
+                        "  join product_material pm on pm.company_name = rp.name "
+                        "   and pm.publication_id = :bp "
+                        " where p.id in :ids"
+                    ).bindparams(bindparam("ids", expanding=True)),
+                    {"bp": brand_publication_id,
+                     "ids": [row.place_id for row in pool]},
+                )
+            ).all()
+            for row in material_rows:
+                # `setdefault` to an empty set first: a place that appears here at all is
+                # **declared**, whatever its materials turn out to name.
+                declared.setdefault(row.place_id, set())
+                group = INGREDIENT_TERMS.get(row.material)
+                if group:
+                    declared[row.place_id].add(group)
+
+        produced = 0
+        for member_id, avoided in sorted(avoided_by_member.items()):
+            for row in pool:
+                place_id = row.place_id
+                record = ingredient_veto(
+                    next_id, place_id,
+                    # **`None`, not an empty set, for a place nobody published anything about.**
+                    # `.get` returns exactly that, and the contributor's own docstring says why the
+                    # two must not be flattened.
+                    declared.get(place_id),
+                    set(avoided),
+                )
+                if record is None:
+                    continue
+                pinned.append(
+                    PinnedContribution(
+                        contribution=record,
+                        pin=BrandPin(brand_publication_id=brand_publication_id),
+                        reason_visibility=INGREDIENT_VISIBILITY,
+                        member_id=member_id,
+                    )
+                )
+                next_id += 1
+                produced += 1
+
+        # **Still not silent, and now it says which of three things happened.** A round whose
+        # members avoid ingredients and whose places publish nothing is the ordinary case — 87.6%
+        # of the city publishes nothing (measured 2026-08-29) — and a reader of a panel that shows
+        # no ingredient record deserves to know whether that is "nobody publishes" or "they publish
+        # and it is clean".
         print(
-            "engine: {} ingredient avoidance(s) in force for this circle and no place carries "
-            "ingredient data, so none contributed (D103)".format(len(ingredient_rows)),
+            "engine: {} ingredient avoidance(s) in force; {} of {} pooled places have published "
+            "materials; {} record(s) produced (D103)".format(
+                len(ingredient_rows), len(declared), len(pool), produced
+            ),
             flush=True,
         )
 

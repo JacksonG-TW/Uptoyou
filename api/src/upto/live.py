@@ -40,6 +40,7 @@ from .api_common import (
     resolve_credential,
     resolve_member,
     result_body,
+    ingredient_data_for,
     winner_headline_for,
     trip_for,
 )
@@ -125,6 +126,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         # read twice, so a reconnecting client's reveal reads identically to the live one.
         display = await place_display(session, weights.keys())
         winner_headline, winner_qualifier = winner_headline_for(display, last.winning_place_id)
+        ingredient_data = await ingredient_data_for(session, weights.keys())
         last_result = result_body(
             last.id,
             dice,
@@ -134,6 +136,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
             allocate(weights) if weights else {},
             winner_headline=winner_headline,
             winner_qualifier=winner_qualifier,
+            ingredient_data=ingredient_data,
         )
         # **B2, and this is the half D56 makes necessary.** Nothing is pushed when a trip is signed
         # (D53), so a client that was not connected at the moment — or that reconnected since — would

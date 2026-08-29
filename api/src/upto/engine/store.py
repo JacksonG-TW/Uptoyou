@@ -66,6 +66,19 @@ class TripPin:
     trip_id: int
 
 
+class BrandPin:
+    """The brand **publication** an ingredient veto read — A19, revision 0036, the fifth source.
+
+    **Coarser than every other pin here, and deliberately.** A veto reads every product of a brand,
+    so there is no single `product_material` row the answer came from; what D24 requires is that a
+    re-read reproduces the number, and the input that reproduces it is the publication. The rejected
+    alternative — pinning one product row — would have been a true fact about an arbitrary member of
+    a set, and the answer would survive that row's deletion unchanged.
+    """
+
+    brand_publication_id: int
+
+
 @dataclass(frozen=True)
 class PreferencePin:
     """The preference **version** actually read — one id, and that is the whole point of it.
@@ -83,7 +96,7 @@ class PinnedContribution:
     """A contribution plus what only the engine knows: the pin and the visibility."""
 
     contribution: Contribution
-    pin: ForecastPin | ObservationPin | PreferencePin
+    pin: ForecastPin | ObservationPin | PreferencePin | TripPin | BrandPin
     reason_visibility: str
     member_id: int | None = None
 
@@ -182,6 +195,11 @@ async def write_roll(
         elif isinstance(pin, PreferencePin):
             pin_columns = "preference_id"
             params |= {"s1": pin.preference_id}
+            pin_values = ":s1"
+        elif isinstance(pin, BrandPin):
+            # Revision 0036, the fifth source. Same shape as the two id pins above.
+            pin_columns = "brand_publication_id"
+            params |= {"s1": pin.brand_publication_id}
             pin_values = ":s1"
         elif isinstance(pin, TripPin):
             # Revision 0031, the fourth source. The `else` below is why adding one is safe: an

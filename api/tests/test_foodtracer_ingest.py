@@ -139,9 +139,18 @@ class FakeStore:
         self._claim_id = claim_id
         self._held_id = held_id
         self.written = []
+        # A19: the ingredient half, offered from the same parse in the same transaction. Kept
+        # separately from `written` because the two halves are separately meaningful — a file that
+        # carries pairs and no products writes one and not the other, and a fake that pooled them
+        # could not tell that case from a working one.
+        self.materials = []
         self.committed = False
         self.rolled_back = False
         self.counted = None
+
+    async def write_materials(self, publication_id, materials):
+        self.materials.append((publication_id, list(materials)))
+        return len(materials)
 
     async def claim(self, sheet, scope):
         return self._claim_id
@@ -193,6 +202,15 @@ class Sequencing(unittest.TestCase):
         sheet = read_sheet(csv_bytes([row("某公司", "某牌")]), NOW)
         store = FakeStore(claim_id=7)
         verdict = asyncio.run(ingest_sheet(store, sheet))
+        # **A19: the ingredient half went to the store from the same parse.** The fake accepted
+        # this method only after `run_brands` started calling it — the first version of that call
+        # turned two tests red with `'FakeStore' object has no attribute 'write_materials'`, which
+        # is the fake doing its job: a stand-in that silently absorbed an unknown call would have
+        # let the wiring ship untested.
+        self.assertEqual(len(store.materials), 1, store.materials)
+        offered_publication, offered = store.materials[0]
+        self.assertEqual(offered_publication, 7)
+        self.assertTrue(offered, "the parse produced no materials for a row that has both columns")
         self.assertTrue(verdict.stored)
         self.assertEqual(verdict.publication_id, 7)
         self.assertEqual(verdict.pairs_held, 1)
