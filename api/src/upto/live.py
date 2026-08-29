@@ -81,6 +81,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         # snapshot that omitted them would make the browser reconstruct a fairness claim it cannot
         # verify. The seats come from `api_common.seats_for`, the same function the reveal uses, so
         # the stream and the response cannot drift.
+        open_ingredient_data = await ingredient_data_for(session, pool_ids)
         seed = bytes(open_row.outcome_seed) if open_row.outcome_seed is not None else None
         seats = await seats_for(session, open_row.id, open_row.seat_ids, seed, closed=False)
         open_round = {
@@ -88,7 +89,17 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
             "target_hour": open_row.target_hour.isoformat(),
             "target_hour_typed": open_row.target_hour_typed,
             "opened_at": open_row.opened_at.isoformat(),
-            "pool": [{"place_id": p, "name": names.get(p)} for p in pool_ids],
+            # A19: same map, same discipline, on the pool a person is choosing from. A snapshot
+            # without it would draw an unmarked list for a reconnecting member — the one rendering
+            # that must never happen.
+            "pool": [
+                {
+                    "place_id": p,
+                    "name": names.get(p),
+                    "ingredient_data": open_ingredient_data.get(str(p), "unknown"),
+                }
+                for p in pool_ids
+            ],
             "seed_commit": open_row.seed_commit,
             "rolls": seats,
             "deciding_member": deciding_member_for(seats),

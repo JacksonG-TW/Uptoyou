@@ -230,8 +230,27 @@ select (select count(*) from place where category is not null) as with_category,
 # **It is computed rather than returned as a literal 0.** A hardcoded zero is indistinguishable from
 # a query that broke, and it would keep reading zero after the column it counts starts filling. There
 # is no ingredient column on `place` yet, so what this counts is the honest thing: nothing.
+# **A19 made this a real query, and the literal `0` it replaced is the hazard, not a typo.** It was
+# written when no place carried ingredient data and it said so in its own comment — and it would
+# have gone on reporting zero for ever, silently, the day a source arrived. That day was 2026-08-29:
+# 4,509 of 36,499 places have published materials. The same shape CLAUDE.md warns about for
+# `category_coverage` — *today's figure becomes false the moment a backfill runs* — except a
+# hard-coded constant cannot even drift into being wrong. It starts wrong and waits.
+#
+# **A place counts when its COMPANY publishes anything**, not when the materials name an allergen:
+# the figure answers *how much of the city has published at all*, which is what a member reading
+# 「N 家沒有資料」 needs. What those materials say is the veto's question, one layer down.
 INGREDIENT_COVERAGE = """
-select 0 as with_ingredient,
+select (select count(*) from reference_place rp
+         where rp.publication_id = (
+             select id from place_publication order by detected_at desc, id desc limit 1
+         )
+           and exists (
+             select 1 from product_material pm
+              where pm.company_name = rp.name
+                and pm.publication_id = (
+                  select id from brand_publication order by detected_at desc, id desc limit 1
+                ))) as with_ingredient,
        (select count(*) from reference_place
          where publication_id = (
              select id from place_publication order by detected_at desc, id desc limit 1

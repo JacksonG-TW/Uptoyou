@@ -189,6 +189,12 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
             )
             await session.commit()
             names = await place_names(session, [body.place_id])
+            # **A19: the mark travels with the place, on the event that puts it in the pool.**
+            # 這一餐's list is where a person chooses, so it needs the state before the roll and not
+            # only after it — and a list drawn from a wire that lacks the field renders NO mark,
+            # which reads as *no allergen here*. §3.0 is satisfied because the value is a fact about
+            # the place and about nobody: it is the same string for every member in the room.
+            ingredient_data = await ingredient_data_for(session, [body.place_id])
             publish(
                 round_row.circle_id,
                 {
@@ -197,6 +203,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
                     "place": {
                         "place_id": body.place_id,
                         "name": names.get(body.place_id),
+                        "ingredient_data": ingredient_data.get(str(body.place_id), "unknown"),
                     },
                 },
             )
