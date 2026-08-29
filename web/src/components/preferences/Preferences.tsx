@@ -239,34 +239,11 @@ export default function Preferences() {
 
   if (!dev) return <main className="prefs" data-screen="preferences" />
 
-  /**
-   * **A2-G8-always: every stance states what it zeroes, count and share, whatever the size.**
-   *
-   * The owner ruled two mechanisms where the evaluator proposed one, and this is the half that
-   * does the work. A threshold alone would have left **nine of the ten categories silent forever**
-   * — only 其他 clears 10% — so the asymmetry a person is actually creating stayed invisible
-   * everywhere it was small.
-   *
-   * **And the zeroes are the most important thing on this screen.** An ingredient avoidance reports
-   * `0 家` today, because nothing in the data carries ingredient information (D103). A member who
-   * has just tapped 花生 and is shown nothing would reasonably conclude they are now protected from
-   * it. **They are not, and silence is what would tell them they were.**
-   */
-  const stat = (list: { value: string; touched: number; share: number }[] | undefined) =>
-    new Map((list ?? []).map((a) => [a.value, a]))
-  const ingStat = stat(inForce?.avoid_ingredients)
   /* **`touchedLine` moved to `lib/preferences.ts` on 2026-08-28** with the categories it
      described (`spec-preference-split.md`): its only caller is the round screen's 「這次不吃」 row
-     now. It sits in the lib rather than in `Round.tsx` because `zeroLine` below is its pair, and
-     the pair's whole point is that the two verbs differ — a reader who finds one has to be able
-     to find the other. */
-  /** The ingredient half, unchanged and deliberately so: ×0 means 抽不到 and that is still what
-   *  happens. The two helpers differing IS the fact the screen is reporting. */
-  const zeroLine = (a: { touched: number; share: number } | undefined, coverage: number) => {
-    if (!a) return null
-    if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此抽不到。'
-    return `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
-  }
+     now, and `zeroLine` followed it there on 2026-08-29 when the ingredient stat stopped being
+     renderable. The pair lives in the lib together because its whole point is that the two verbs
+     differ — a reader who finds one has to be able to find the other. */
   const ack = readAck()
   /* **The server's month or nothing — this screen never derives one** (A2-G13c, `4caed3d`).
      `null` while the payload has not arrived, and `null` if a response ever arrives without the
@@ -480,18 +457,36 @@ export default function Preferences() {
                   </span>
                   {state === 'on' && <span className="rowState">避開</span>}
                   {state === 'asking' && <span className="rowState asking">點一下沿用</span>}
-                  {/* **This row said why there was no number; A19 gave it one, and no code here
-                      changed.** It read 「Ingredient coverage is 0.0 — nothing in the data carries
-                      it」, which was true until backend's `dca7be8` published materials for 4,509
-                      places. `zeroLine` keys on the KIND's coverage rather than on `touched === 0`
-                      precisely so the sentence follows the data the day the data arrives: the same
-                      helper now prints 「N 家抽不到（P%）」 from the payload. The verb stays 抽不到 —
-                      an ingredient is a veto (×0), not the category's discount (A2-G8-zero). */}
-                  {state !== 'off' && (
-                    <span className="rowStat" data-part="pref-stance-stat" data-shape={(inForce?.ingredient_coverage.share ?? 0) > 0 ? 'count' : 'why'}>
-                      {zeroLine(ingStat.get(g), inForce?.ingredient_coverage.share ?? 0)}
-                    </span>
-                  )}
+                  {/* **The per-ingredient count is NOT rendered, and the reason is a live defect
+                      this row had for about an hour.**
+
+                      `zeroLine` branches on the KIND's coverage. Until 2026-08-28 that was 0, so
+                      every avoided ingredient printed 「店家資料還沒有這一項」 — true. A19 made
+                      coverage 0.1235, which flipped the branch to the count — and the count on the
+                      wire is a **placeholder**: the GET answers `touched: 0, share: 0.0` for every
+                      ingredient because backend has not computed the per-ingredient figure yet
+                      (confirmed by backend through orchestrator, 2026-08-29). So the row rendered
+                      「0 家抽不到（0.0%）」 on the served page, which I measured before fixing.
+
+                      **That is A2-G8-zero's exact failure, on the one screen it was written for**:
+                      a count of zero reads as a RESULT — *we looked and nothing needed excluding* —
+                      when what is true is that nothing has been measured. Those are opposite
+                      meanings and the false one is the reassuring one, on the kind the owner ruled
+                      about because 「過敏是會致死的」.
+
+                      Neither branch of `zeroLine` is true today: 「還沒有這一項」 is false for 4,509
+                      places, and the count is a placeholder. So the line renders nothing until the
+                      field is real.
+
+                      **Silence is not the right answer either, and A2-G8-always said so first.**
+                      The rule this screen was built on reads: 「A member who has just tapped 花生
+                      and is shown nothing would reasonably conclude they are now protected from it.
+                      They are not, and silence is what would tell them they were.」 That argument
+                      still stands. It is being overruled here by the other half of the same ruling
+                      — a false zero is a stronger reassurance than an absence — so the lesser wrong
+                      is chosen and named rather than the better one pretended. **The fix is the
+                      wire, not this line**, and it is with the evaluator. The category rows are
+                      unaffected: their numbers are computed and real. */}
                 </button>
                 {state !== 'off' && (
                   <button

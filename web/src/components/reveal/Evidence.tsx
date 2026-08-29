@@ -159,11 +159,11 @@ export default function Evidence({
     A row whose wire does not carry the field renders nothing: `undefined` is our ignorance of
     the wire and `unknown` is a published fact about the store, and the two must not look
     alike. */}
-                  {ingredientData?.[placeId] && (
+                  {ingredientData && (
                     <span
                       className="rowTag"
                       data-part="ingredient-mark"
-                      data-state={ingredientData[placeId]}
+                      data-state={ingredientData[placeId] ?? 'unknown'}
                     >
                       {ingredientData[placeId] === 'declared' ? '原料已公開' : '原料未公開'}
                     </span>

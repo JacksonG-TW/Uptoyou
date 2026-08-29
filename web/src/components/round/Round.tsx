@@ -214,6 +214,14 @@ export default function Round() {
 
   if (!dev || !prefSeen()) return <main className="round" data-screen="round" />
 
+  /** **Does this wire carry A19's mark at all?** The snapshot's pool rows and each `pooled` event
+   *  carry `ingredient_data` per place, so a row without one on a wire that has them is a gap in
+   *  the map rather than an older api — and a gap reads as `unknown`, which is exactly what
+   *  「原料未公開」 says. An older api carries it on no row, and then nothing is marked: a mark we
+   *  never received is not ours to print. One test for the whole list, so two rows of the same
+   *  pool can never disagree about which rule they are under. */
+  const marksOnWire = pool.some((p) => p.ingredient_data !== undefined)
+
   /** In force per the server, then this device's unconfirmed taps on top. */
   const avoided = new Set((prefs?.avoid_categories ?? []).map((a) => a.value))
   const chipOn = (c: string) => pending[c] ?? avoided.has(c)
@@ -451,8 +459,8 @@ export default function Round() {
     A row whose wire does not carry the field renders nothing: `undefined` is our ignorance of
     the wire and `unknown` is a published fact about the store, and the two must not look
     alike. */}
-                  {p.ingredient_data && (
-                    <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data}>
+                  {marksOnWire && (
+                    <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data ?? 'unknown'}>
                       {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
                     </span>
                   )}
@@ -473,8 +481,8 @@ export default function Round() {
                 {/* The same mark, on the shorter list — see the one above for why `unknown`
                     renders. Two call sites because the pool is drawn twice (before and after the
                     two-place floor), not two decisions. */}
-                {p.ingredient_data && (
-                  <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data}>
+                {marksOnWire && (
+                  <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data ?? 'unknown'}>
                     {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
                   </span>
                 )}

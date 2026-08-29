@@ -287,6 +287,34 @@ export function touchedLine(a: { touched: number; share: number } | undefined, c
   return `${a.touched.toLocaleString('en-US')} 家會比較少中（${pct(a.share)}）`
 }
 
+/**
+ * The ingredient half of the pair, **dormant since 2026-08-29 and kept for when the wire wakes**.
+ *
+ * The two helpers exist as a pair because the two kinds no longer DO the same thing: a category is
+ * a discount of `1 − 1/N` — a 火鍋 place can still be drawn, so 比較少中 — and an ingredient is
+ * still ×0, so 抽不到 stays true for it. **The whole content of each is its verb**, which is why
+ * this is a second function and not a boolean on the first: a shared helper with a flag would put
+ * the two claims one typo apart.
+ *
+ * **Its second branch is A2-G8-zero, and it is the reason this file still holds it.** Where the
+ * KIND has no coverage the row must state why there is no number rather than state zero: 「0 家」
+ * reads as a RESULT — *we looked and nothing needed excluding* — when what is true is that nothing
+ * was measured. Opposite meanings, and the false one is the reassuring one, on the kind the owner
+ * ruled about because 「過敏是會致死的」.
+ *
+ * **Why nothing calls it today.** A19 gave ingredients coverage (4,509 places), which flips this
+ * function to its count branch — and the count on the wire is a placeholder: the GET answers
+ * `touched: 0, share: 0.0` for every ingredient because the per-ingredient figure is not computed
+ * yet. So both branches are false at once, and the row renders no stat at all until the field is
+ * real. Deleting this would mean rewriting the argument above when it is; leaving it, unused and
+ * explained, costs one export.
+ */
+export function zeroLine(a: { touched: number; share: number } | undefined, coverage: number): string | null {
+  if (!a) return null
+  if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此抽不到。'
+  return `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
+}
+
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on
  *  every screen that states one — never written into the markup, because today's figure becomes
  *  false the moment a backfill runs and says nothing when it does. */
