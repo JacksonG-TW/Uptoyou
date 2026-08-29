@@ -27,6 +27,93 @@ name: upto
 # **A YAML anchor rather than eight copies**, because eight copies of a policy drift and the drift is
 # invisible: a service quietly missing its cap looks exactly like one that has it until the day it is
 # the one that filled the disk.
+# **A21 (owner 「開票」, after the Zeabur audit): Airflow's own configuration, and nothing a DAG
+# reads through a Connection.** Every one of the four Airflow services needs these ten; only
+# `airflow-init` needs the eleven below it, because init is what writes them into Connections (D33)
+# and then exits. A long-lived scheduler that holds the CWA key has it for the length of its
+# uptime and uses it never — the DAG asks `BaseHook`, and the key comes back decrypted from the
+# metadata database with the Fernet key that IS here.
+x-airflow-env: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@db:5432/airflow
+      AIRFLOW__API__BASE_URL: http://localhost:${AIRFLOW_HTTP_PORT:-8081}
+      # Airflow 3 runs tasks through the Execution API rather than in-process, so a worker
+      # has to reach the api-server *over the compose network*. Left at the default it
+      # derives from API__BASE_URL above, which says localhost — correct for a browser on
+      # the host and refused inside every container. The symptom is a task that queues,
+      # fails with no log at all, and a scheduler saying "not found in serialized_dag
+      # table", none of which names the URL.
+      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api:8080/execution/
+      # Shared across every Airflow container. Unset, each one generates its own and a task
+      # dies with "Invalid auth token: Signature verification failed" — which reads like a
+      # credential problem in the DAG and is a configuration problem in the stack.
+      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
+      # One api-server worker rather than Airflow's default four, and **the number is not a
+      # capacity choice — it is which uvicorn code path runs.** `uvicorn/main.py` reads
+      # `elif config.workers > 1: Multiprocess(...).run()` / `else: server.run()`. Above one,
+      # a supervisor appears; at one, the server runs in-process and there is no supervisor
+      # to go wrong. Airflow reaches it through plain `uvicorn.run(workers=...)`, so this env
+      # var is the whole lever.
+      #
+      # **What goes wrong above one, read out of the installed source rather than guessed.**
+      # `Process.is_alive(timeout=5)` pings each child and `keep_subprocess_alive` kills any
+      # child that does not answer within five seconds — a default in uvicorn 0.34.3's own
+      # signature, which Airflow never overrides and no Airflow setting reaches. Children are
+      # `spawn`ed (`_subprocess.py`: `get_context("spawn")`), so a child must re-import
+      # Airflow from scratch, and `subprocess_started` starts the thread that answers the
+      # ping only *after* that import. **A worker therefore cannot answer during the one
+      # phase that takes longer than the timeout.** An Airflow import costs 8s warm and idle
+      # here and 31-45s cold and contended — always more than 5s once the machine is busy —
+      # so the child is killed mid-import and replaced by another cold import, which is
+      # slower again.
+      # Measured, and the spacing is the signature: kills exactly 5.0s apart, continuously.
+      # On the CI runner, PIDs 398 through 600 and not one "Started server process" in 11
+      # minutes. A local run under 2x CPU oversubscription reproduced it at 60 kills in 7
+      # minutes. Warm and idle it converges on the sixth attempt after 32s, which is why
+      # this has never been seen on a warm laptop.
+      #
+      # **Rejected: two workers, and it was rejected by measurement rather than by argument.**
+      # Halving the herd was tried first, on the theory that four cold imports on four cores
+      # was the pressure. It failed the same local run in the same way: two is still above
+      # one, so the supervisor still exists, and a worker that cannot answer in 5s is killed
+      # whether it has one sibling or three.
+      # Cost admitted: the orchestrator UI and the Execution API are served by one process,
+      # so a slow request delays the next. That is the same trade the product api makes above
+      # for a different reason, and the load is one operator plus two hourly tasks.
+      AIRFLOW__API__WORKERS: "1"
+      # Where the simple auth manager keeps the admin password. Left at its default this is a
+      # file inside the api-server's own container filesystem, which means a password nobody
+      # chose and a different one after every `down`. Pointing it at a named volume lets
+      # airflow-init write the password from .env once and the api-server read it thereafter.
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/auth/passwords.json
+
+# **What only `airflow-init` needs.** These are the values it writes into Connections and into the
+# simple-auth passwords file, one time, before it exits. Held by a service that lives for seconds
+# instead of by three that live for as long as the stack.
+x-airflow-bootstrap-env: &airflow-bootstrap-env
+      # The bootstrap layer, and D33 says this is the whole of it. Everything a *task* uses
+      # arrives as a Connection instead; these three exist only to stand Airflow up.
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      UPTO_CWA_API_KEY: ${UPTO_CWA_API_KEY}
+      # A15 / D115 — read by `init.sh` to create the four roles and the two new Connections, and by
+      # nothing else. A task reads its database credential from its **Connection** (D33), never from
+      # here; these are the bootstrap layer that puts the credential into the Connection once.
+      UPTO_API_DB_PASSWORD: ${UPTO_API_DB_PASSWORD}
+      UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
+      UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
+      UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
+      # A10's alert channel. Read by `init.sh` once, to create the `telegram_alerts` Connection;
+      # no task reads them afterwards (D33). `:-` because absent is legal — a stack with no bot
+      # runs with alerting off rather than refusing to start.
+      UPTO_TELEGRAM_BOT_TOKEN: ${UPTO_TELEGRAM_BOT_TOKEN:-}
+      UPTO_TELEGRAM_CHAT_ID: ${UPTO_TELEGRAM_CHAT_ID:-}
+
 x-logging: &logging
   logging:
     driver: json-file
@@ -430,81 +517,8 @@ services:
     volumes:
       - ./airflow/init.sh:/opt/airflow/init.sh:ro,z
       - airflow-auth:/opt/airflow/auth
-    environment: &airflow-env
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
-      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${AIRFLOW_DB_PASSWORD}@db:5432/airflow
-      AIRFLOW__API__BASE_URL: http://localhost:${AIRFLOW_HTTP_PORT:-8081}
-      # Airflow 3 runs tasks through the Execution API rather than in-process, so a worker
-      # has to reach the api-server *over the compose network*. Left at the default it
-      # derives from API__BASE_URL above, which says localhost — correct for a browser on
-      # the host and refused inside every container. The symptom is a task that queues,
-      # fails with no log at all, and a scheduler saying "not found in serialized_dag
-      # table", none of which names the URL.
-      AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api:8080/execution/
-      # Shared across every Airflow container. Unset, each one generates its own and a task
-      # dies with "Invalid auth token: Signature verification failed" — which reads like a
-      # credential problem in the DAG and is a configuration problem in the stack.
-      AIRFLOW__API_AUTH__JWT_SECRET: ${AIRFLOW_JWT_SECRET}
-      # One api-server worker rather than Airflow's default four, and **the number is not a
-      # capacity choice — it is which uvicorn code path runs.** `uvicorn/main.py` reads
-      # `elif config.workers > 1: Multiprocess(...).run()` / `else: server.run()`. Above one,
-      # a supervisor appears; at one, the server runs in-process and there is no supervisor
-      # to go wrong. Airflow reaches it through plain `uvicorn.run(workers=...)`, so this env
-      # var is the whole lever.
-      #
-      # **What goes wrong above one, read out of the installed source rather than guessed.**
-      # `Process.is_alive(timeout=5)` pings each child and `keep_subprocess_alive` kills any
-      # child that does not answer within five seconds — a default in uvicorn 0.34.3's own
-      # signature, which Airflow never overrides and no Airflow setting reaches. Children are
-      # `spawn`ed (`_subprocess.py`: `get_context("spawn")`), so a child must re-import
-      # Airflow from scratch, and `subprocess_started` starts the thread that answers the
-      # ping only *after* that import. **A worker therefore cannot answer during the one
-      # phase that takes longer than the timeout.** An Airflow import costs 8s warm and idle
-      # here and 31-45s cold and contended — always more than 5s once the machine is busy —
-      # so the child is killed mid-import and replaced by another cold import, which is
-      # slower again.
-      # Measured, and the spacing is the signature: kills exactly 5.0s apart, continuously.
-      # On the CI runner, PIDs 398 through 600 and not one "Started server process" in 11
-      # minutes. A local run under 2x CPU oversubscription reproduced it at 60 kills in 7
-      # minutes. Warm and idle it converges on the sixth attempt after 32s, which is why
-      # this has never been seen on a warm laptop.
-      #
-      # **Rejected: two workers, and it was rejected by measurement rather than by argument.**
-      # Halving the herd was tried first, on the theory that four cold imports on four cores
-      # was the pressure. It failed the same local run in the same way: two is still above
-      # one, so the supervisor still exists, and a worker that cannot answer in 5s is killed
-      # whether it has one sibling or three.
-      # Cost admitted: the orchestrator UI and the Execution API are served by one process,
-      # so a slow request delays the next. That is the same trade the product api makes above
-      # for a different reason, and the load is one operator plus two hourly tasks.
-      AIRFLOW__API__WORKERS: "1"
-      # Where the simple auth manager keeps the admin password. Left at its default this is a
-      # file inside the api-server's own container filesystem, which means a password nobody
-      # chose and a different one after every `down`. Pointing it at a named volume lets
-      # airflow-init write the password from .env once and the api-server read it thereafter.
-      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/auth/passwords.json
-      # The bootstrap layer, and D33 says this is the whole of it. Everything a *task* uses
-      # arrives as a Connection instead; these three exist only to stand Airflow up.
-      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      UPTO_CWA_API_KEY: ${UPTO_CWA_API_KEY}
-      # A15 / D115 — read by `init.sh` to create the four roles and the two new Connections, and by
-      # nothing else. A task reads its database credential from its **Connection** (D33), never from
-      # here; these are the bootstrap layer that puts the credential into the Connection once.
-      UPTO_API_DB_PASSWORD: ${UPTO_API_DB_PASSWORD}
-      UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
-      UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
-      UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
-      # A10's alert channel. Read by `init.sh` once, to create the `telegram_alerts` Connection;
-      # no task reads them afterwards (D33). `:-` because absent is legal — a stack with no bot
-      # runs with alerting off rather than refusing to start.
-      UPTO_TELEGRAM_BOT_TOKEN: ${UPTO_TELEGRAM_BOT_TOKEN:-}
-      UPTO_TELEGRAM_CHAT_ID: ${UPTO_TELEGRAM_CHAT_ID:-}
+    environment:
+      <<: [*airflow-env, *airflow-bootstrap-env]
     depends_on:
       db:
         condition: service_healthy
