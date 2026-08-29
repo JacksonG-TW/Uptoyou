@@ -442,6 +442,20 @@ export default function Round() {
               {pool.map((p) => (
                 <li key={p.place_id} className="row" data-part="pool-row">
                   <span className="rowName">{p.name}</span>
+                  {/* **A19's mark — `unknown` is rendered, not omitted.** A blank row reads as clean to a
+    person scanning a list, so an absent mark would itself be a claim. Two states, two facts
+    about the STORE, and nothing about the food: `declared` says the publisher listed materials
+    and this feature read them. It does not say the place is free of anything, which is why
+    there is no third string composed here from an absence.
+    No icon, no colour but muted ink — a tick or a green would be a safety claim in one glyph.
+    A row whose wire does not carry the field renders nothing: `undefined` is our ignorance of
+    the wire and `unknown` is a published fact about the store, and the two must not look
+    alike. */}
+                  {p.ingredient_data && (
+                    <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data}>
+                      {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
+                    </span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -456,6 +470,14 @@ export default function Round() {
               // else, and the reveal is where numbers are allowed to exist at all.
               <li key={p.place_id} className="row" data-part="pool-row">
                 <span className="rowName">{p.name}</span>
+                {/* The same mark, on the shorter list — see the one above for why `unknown`
+                    renders. Two call sites because the pool is drawn twice (before and after the
+                    two-place floor), not two decisions. */}
+                {p.ingredient_data && (
+                  <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data}>
+                    {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

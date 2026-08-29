@@ -770,6 +770,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
           ev={evidence}
           places={data.places}
           winnerId={data.winning_place_id}
+          ingredientData={data.ingredient_data}
           sweep={sweep}
         />
       )}

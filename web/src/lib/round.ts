@@ -153,7 +153,15 @@ export async function roll(d: Device, roundId: number): Promise<void> {
   throw new Error(body.detail || `擲不出來（${r.status}）`)
 }
 
-export type Pooled = { place_id: number; name: string }
+/** A19's mark travels per pool row, on the snapshot and on each `pooled` event. **Optional, so a
+ *  wire that does not carry it renders no mark rather than a guessed one** — `undefined` is not
+ *  `unknown`, and `unknown` is a published fact about the store while `undefined` is our ignorance
+ *  of the wire. */
+export type Pooled = {
+  place_id: number
+  name: string
+  ingredient_data?: 'declared' | 'unknown'
+}
 
 /** The four event shapes as the server actually publishes them, captured off the wire rather than
  *  read off the router — `round_opened` nests its payload under `round`, `pooled` under `place`,

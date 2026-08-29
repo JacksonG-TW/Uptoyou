@@ -480,10 +480,13 @@ export default function Preferences() {
                   </span>
                   {state === 'on' && <span className="rowState">避開</span>}
                   {state === 'asking' && <span className="rowState asking">點一下沿用</span>}
-                  {/* **This row states why there is no number, not a number.** Ingredient coverage
-                      is 0.0 — nothing in the data carries it (D103) — so there is no measurement to
-                      report, and printing 「0 家」 would claim one. It becomes a count on its own
-                      the day the data does; no code here has to remember. */}
+                  {/* **This row said why there was no number; A19 gave it one, and no code here
+                      changed.** It read 「Ingredient coverage is 0.0 — nothing in the data carries
+                      it」, which was true until backend's `dca7be8` published materials for 4,509
+                      places. `zeroLine` keys on the KIND's coverage rather than on `touched === 0`
+                      precisely so the sentence follows the data the day the data arrives: the same
+                      helper now prints 「N 家抽不到（P%）」 from the payload. The verb stays 抽不到 —
+                      an ingredient is a veto (×0), not the category's discount (A2-G8-zero). */}
                   {state !== 'off' && (
                     <span className="rowStat" data-part="pref-stance-stat" data-shape={(inForce?.ingredient_coverage.share ?? 0) > 0 ? 'count' : 'why'}>
                       {zeroLine(ingStat.get(g), inForce?.ingredient_coverage.share ?? 0)}
@@ -515,10 +518,21 @@ export default function Preferences() {
         {/* §4's harder case, and the sentence carries the defence rather than hiding it: on day one
             nothing acts on these at all. The figure comes from the payload for the same reason the
             category one does — the day a source arrives, a zero in the markup keeps reading zero. */}
-        {inForce && (inForce.ingredient_coverage.with_ingredient ?? 0) === 0 && (
+        {/* **This line said 「目前沒有任何店家帶有食材資料」 and that became false on 2026-08-28**
+            (A19, backend `dca7be8`): 4,509 places now have their materials published. It was true
+            when written and the screen would have kept saying it, which is the hazard a literal
+            always carries — so it is replaced by the same shape the category block already uses,
+            with every number read from the GET.
+
+            **Never a typed figure.** Today's is 12.4% and it moves whenever a publication lands;
+            a constant here would be false by the afternoon while still rendering, which is exactly
+            what happened to the sentence it replaces. `sourceless` is gone as a state: the payload
+            answers, so the screen states what it answers. */}
+        {inForce && (
           <p className="prefsNote" data-part="pref-ingredient-coverage">
-            目前沒有任何店家帶有食材資料，所以這裡的選擇還不會影響任何一輪。
-            先記下來，是為了資料到位的那天不用再問一次。
+            全市 {inForce.ingredient_coverage.reference_rows.toLocaleString('en-US')} 家登記店家裡，
+            目前有 {(inForce.ingredient_coverage.with_ingredient ?? 0).toLocaleString('en-US')} 家公開原料
+            （{pct(inForce.ingredient_coverage.share)}）。沒公開的店，避開讀不到。
           </p>
         )}
       </section>

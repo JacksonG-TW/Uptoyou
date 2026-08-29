@@ -7,8 +7,8 @@
  * hide, toggle or forget to hide. A single type with `weights?: …` would compile the leak.
  *
  * `for_credential` in `api_common.py` builds the member shape by whitelist — `round_id · status ·
- * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier` — so a
- * field added to the payload is operator-only
+ * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier ·
+ * ingredient_data` — so a field added to the payload is operator-only
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
@@ -51,6 +51,20 @@ export type MemberReveal = {
    *  from it; a parenthesis appearing here is a defect, and so is this string appearing on a list
    *  row, where the composed name already carries the bracket. */
   winner_qualifier: string | null
+  /**
+   * A19 — per pooled place, whether the store's company published its materials.
+   *
+   * **`unknown` is a value, never an absence, and that is the whole rule.** A blank row reads as
+   * clean to a person scanning a list, so the absence of a mark would itself be a claim; the API
+   * answers for every pooled place and the surface prints both states. `declared` says the
+   * publisher listed materials and this feature read them — **it does not say the place is free of
+   * anything**, and nothing here may compose 「沒有你避開的」 out of an absence.
+   *
+   * **Optional on the type because a wire that lacks it must render NO mark, never a guessed
+   * one.** Today all three wires carry it (the closed body, the snapshot's pool rows, the `pooled`
+   * event); a payload from an older api answers `undefined`, and `undefined` is not `unknown`.
+   */
+  ingredient_data?: Record<string, 'declared' | 'unknown'>
   trip: Trip
   /** D108. `seed_commit` was published at open, before the first place was proposed; `revealed_seed`
    *  is `null` until the round closes and is what makes the commitment checkable. */

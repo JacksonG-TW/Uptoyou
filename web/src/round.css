@@ -379,3 +379,8 @@
   border-left: 3px solid var(--color-hot-ink);
   font-size: var(--text-body);
 }
+
+/* A19's mark on a pool row. The tag itself is styled in `preferences.css` (`.rowTag`, one recipe
+   for both screens); this only places it — pushed to the row's right edge, like `.rowStat` on the
+   preferences rows, so a list of names reads as a column of names with the marks in their own. */
+.round .row .rowTag { margin-left: auto; }

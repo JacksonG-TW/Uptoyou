@@ -52,11 +52,17 @@ export default function Evidence({
   ev,
   places,
   winnerId,
+  ingredientData,
   sweep = null,
 }: {
   ev: EvidenceData | null
   places: Places
   winnerId: number | null
+  /** A19, per place. **This one component draws both the member's 提名 list and the operator's
+   *  table** — `ev` gates the extra columns — so the mark lands on two of the spec's three
+   *  surfaces from one place, and they cannot disagree. `undefined` for a wire that does not
+   *  carry the field, which renders nothing at all. */
+  ingredientData?: Record<string, 'declared' | 'unknown'>
   /** A7 — the place id the sweep is lighting during the tumble, or `null`. **It is handed in and
    *  never derived here**: the schedule that guarantees equal dwell and an order uncorrelated with
    *  the winner lives in one place, and a component that decided its own highlight would be a
@@ -144,6 +150,24 @@ export default function Evidence({
                   <span className="evName" data-name={places[placeId]}>
                     <span className="evNameInk">{places[placeId]}</span>
                   </span>
+                  {/* **A19's mark — `unknown` is rendered, not omitted.** A blank row reads as clean to a
+    person scanning a list, so an absent mark would itself be a claim. Two states, two facts
+    about the STORE, and nothing about the food: `declared` says the publisher listed materials
+    and this feature read them. It does not say the place is free of anything, which is why
+    there is no third string composed here from an absence.
+    No icon, no colour but muted ink — a tick or a green would be a safety claim in one glyph.
+    A row whose wire does not carry the field renders nothing: `undefined` is our ignorance of
+    the wire and `unknown` is a published fact about the store, and the two must not look
+    alike. */}
+                  {ingredientData?.[placeId] && (
+                    <span
+                      className="rowTag"
+                      data-part="ingredient-mark"
+                      data-state={ingredientData[placeId]}
+                    >
+                      {ingredientData[placeId] === 'declared' ? '原料已公開' : '原料未公開'}
+                    </span>
+                  )}
                 </td>
                 {/* tabular-nums and right-aligned, so the column reads as a column */}
                 {ev && <td className="evNum">{n}<span className="evOf">/36</span></td>}

@@ -388,3 +388,25 @@
   text-decoration: underline; text-underline-offset: 4px;
 }
 .prefsSkip:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+/* ── A19's mark, and the veto's sentence ───────────────────────────────────
+   `spec-ingredient-mark.md`. **Muted ink and nothing else.** No border, no icon, no green and no
+   red: a colour or a tick would make a fact about a STORE (its company published its materials)
+   read as a fact about the FOOD (it is safe to eat), and the two are not the same claim. The
+   states differ by their words alone, which is why both `data-state` values take the same rule. */
+.rowTag {
+  font-size: var(--text-note);
+  color: var(--color-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* The sentence the wire sends to one member. **Ink, not muted** — it is the one line on the screen
+   that changed that person's outcome, and demoting it to the mark's colour would file the reason
+   beside the metadata. Its own line under the name, never appended to it. */
+.rowReason {
+  display: block;
+  font-size: var(--text-note);
+  color: var(--color-ink);
+  line-height: 1.6;
+}
