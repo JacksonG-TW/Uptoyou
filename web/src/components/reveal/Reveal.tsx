@@ -776,6 +776,32 @@ export default function Reveal({ roundId }: { roundId: number }) {
       )}
       </div>
 
+      {/* ── A19 §2 · the sentences that belong to this reader alone ────────────────────────
+          `my_reasons`, verbatim, ink. Rendered **only when the payload carries some**; nothing is
+          composed here and nothing is said when the list is empty.
+
+          **They are NOT on a row, and that is forced by the wire rather than chosen.** §2 asks for
+          the sentence under the place's name, but the payload carries sentences with no place id —
+          backend's own reason: a place id would rebuild the operator's evidence view one field at
+          a time on the member wire. With no key there is no row to attach to.
+
+          **And they must not go under the winner, which was the other obvious place.** A
+          `represented_member` reason on an ingredient is a ×0 — the place it speaks for can never
+          be drawn, so it is never the winner. Printing 「原料含有：蛋」 under the winner's name would
+          state that the place a person is about to eat at contains the thing they avoid, which is
+          the exact opposite of what happened. On the one screen where that sentence matters, the
+          wrong placement is worse than no placement.
+
+          So it sits after the list it is about and before the receipt below, as its own block. The
+          placement is mine and is flagged to the evaluator; the words are the payload's. */}
+      {answered && (data?.my_reasons?.length ?? 0) > 0 && (
+        <div className="myReasons" data-part="my-reasons">
+          {data!.my_reasons!.map((r, i) => (
+            <p key={i} className="rowReason" data-part="ingredient-reason">{r}</p>
+          ))}
+        </div>
+      )}
+
       {/* Owner-ruled 「要」 2026-08-19. **After the dice land**, not before: the pairs are the
           receipt for a result the screen has just shown, and printing them while the dice are still
           in the air would be the answer available in numbers beside an animation withholding it —

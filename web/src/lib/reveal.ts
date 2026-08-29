@@ -8,7 +8,7 @@
  *
  * `for_credential` in `api_common.py` builds the member shape by whitelist — `round_id · status ·
  * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier ·
- * ingredient_data` — so a field added to the payload is operator-only
+ * ingredient_data · my_reasons` — so a field added to the payload is operator-only
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
@@ -65,6 +65,20 @@ export type MemberReveal = {
    * event); a payload from an older api answers `undefined`, and `undefined` is not `unknown`.
    */
   ingredient_data?: Record<string, 'declared' | 'unknown'>
+  /**
+   * A19 §2, D105 as amended 2026-08-29 — **the sentences this reader is allowed to read about
+   * their own round, and nobody else's.** A `represented_member` reason belongs to the one member
+   * it speaks for: not to the other four, and not to an operator, who audits the arithmetic rather
+   * than the people. Empty is the ordinary case.
+   *
+   * **A list of sentences and nothing else — no place id, by design.** Backend's own note: adding
+   * one would rebuild the operator's evidence view a field at a time on the member wire. That
+   * shapes the rendering and is why these do not sit on a row; see `Reveal.tsx`.
+   *
+   * Optional on the type for the same reason `ingredient_data` is: an older api answers
+   * `undefined`, and nothing is rendered rather than something guessed.
+   */
+  my_reasons?: string[]
   trip: Trip
   /** D108. `seed_commit` was published at open, before the first place was proposed; `revealed_seed`
    *  is `null` until the round closes and is what makes the commitment checkable. */

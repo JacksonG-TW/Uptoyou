@@ -1049,3 +1049,15 @@
   .reveal .evTable .evPlace { transition: background-color .6s ease-out; }
   .reveal .evTable tr[data-sweep="on"] .evPlace { transition: none; }
 }
+
+/* ── A19 §2 · this reader's own sentences ──────────────────────────────────
+   Ink on the flood, `text-note`, its own block after the list. **Ink and not muted**: it is the
+   one line on the screen that changed this person's outcome, and the mark beside a place name is
+   muted precisely so these two never read as the same weight of statement.
+   `currentColor` rather than `--color-ink`, because the flood crosses the text colour with the
+   ground (§5 rule 1) and a fixed ink would be the one element left behind on a dark face. */
+.reveal .myReasons {
+  margin-top: 20px;
+  display: flex; flex-direction: column; gap: 4px;
+  color: currentColor;
+}

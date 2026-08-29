@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  BANDS, BAND_LABEL, INGREDIENTS, INGREDIENT_EXAMPLES,
+  BANDS, BAND_LABEL, INGREDIENTS, INGREDIENT_EXAMPLES, zeroLine,
   device, fetchPreferences, postPreference, pct,
   type Band, type Device, type Kind, type Preferences as InForce,
 } from '@/lib/preferences'
@@ -258,6 +258,10 @@ export default function Preferences() {
       ack[a.value] === month ? 'on' : 'asking',
     ]),
   )
+  /** The GET's per-stance figures, by value. Back on 2026-08-29 with the numbers themselves. */
+  const ingStat = new Map(
+    (inForce?.avoid_ingredients ?? []).map((a) => [a.value, a]),
+  )
   const keptIngredients = new Set(
     (inForce?.avoid_ingredients ?? []).filter((a) => a.persist).map((a) => a.value),
   )
@@ -457,36 +461,30 @@ export default function Preferences() {
                   </span>
                   {state === 'on' && <span className="rowState">避開</span>}
                   {state === 'asking' && <span className="rowState asking">點一下沿用</span>}
-                  {/* **The per-ingredient count is NOT rendered, and the reason is a live defect
-                      this row had for about an hour.**
+                  {/* **The count is real since backend's `8b98688` (2026-08-29), and this line
+                      was silent for a few hours in between.** The history is worth keeping because
+                      it is the argument for the shape: `zeroLine` branches on the KIND's coverage,
+                      A19 flipped that branch to the count while the count was still a placeholder,
+                      and the row printed 「0 家抽不到（0.0%）」 — *we looked and nothing needed
+                      excluding* on the one kind where being wrong is not a worse dinner
+                      (A2-G8-zero). It rendered nothing until the field was real; now it renders
+                      the field.
 
-                      `zeroLine` branches on the KIND's coverage. Until 2026-08-28 that was 0, so
-                      every avoided ingredient printed 「店家資料還沒有這一項」 — true. A19 made
-                      coverage 0.1235, which flipped the branch to the count — and the count on the
-                      wire is a **placeholder**: the GET answers `touched: 0, share: 0.0` for every
-                      ingredient because backend has not computed the per-ingredient figure yet
-                      (confirmed by backend through orchestrator, 2026-08-29). So the row rendered
-                      「0 家抽不到（0.0%）」 on the served page, which I measured before fixing.
+                      **The verb stays 抽不到.** An ingredient is a veto (×0) and a category is a
+                      discount, and the two helpers differ by exactly that word (`lib/preferences`).
 
-                      **That is A2-G8-zero's exact failure, on the one screen it was written for**:
-                      a count of zero reads as a RESULT — *we looked and nothing needed excluding* —
-                      when what is true is that nothing has been measured. Those are opposite
-                      meanings and the false one is the reassuring one, on the kind the owner ruled
-                      about because 「過敏是會致死的」.
-
-                      Neither branch of `zeroLine` is true today: 「還沒有這一項」 is false for 4,509
-                      places, and the count is a placeholder. So the line renders nothing until the
-                      field is real.
-
-                      **Silence is not the right answer either, and A2-G8-always said so first.**
-                      The rule this screen was built on reads: 「A member who has just tapped 花生
-                      and is shown nothing would reasonably conclude they are now protected from it.
-                      They are not, and silence is what would tell them they were.」 That argument
-                      still stands. It is being overruled here by the other half of the same ruling
-                      — a false zero is a stronger reassurance than an absence — so the lesser wrong
-                      is chosen and named rather than the better one pretended. **The fix is the
-                      wire, not this line**, and it is with the evaluator. The category rows are
-                      unaffected: their numbers are computed and real. */}
+                      **`touched_is_a_floor` arrives on every row and is deliberately not drawn.**
+                      The count is the largest single authored term's rather than a union — 蝦 and
+                      蝦仁 name overlapping sets and adding them would double-count — so the true
+                      number is at least this. Saying so is a copy decision and the copy is the
+                      evaluator's; 「至少」 or a footnote is theirs to word, and inventing one here
+                      would put a hedge on an allergen row that nobody ruled. The flag is read and
+                      held, not rendered. */}
+                  {state !== 'off' && (
+                    <span className="rowStat" data-part="pref-stance-stat" data-shape={(inForce?.ingredient_coverage.share ?? 0) > 0 ? 'count' : 'why'}>
+                      {zeroLine(ingStat.get(g), inForce?.ingredient_coverage.share ?? 0)}
+                    </span>
+                  )}
                 </button>
                 {state !== 'off' && (
                   <button
