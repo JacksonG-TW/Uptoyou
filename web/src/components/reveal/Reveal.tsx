@@ -533,21 +533,6 @@ export default function Reveal({ roundId }: { roundId: number }) {
    *  to say and renders no element at all. Deriving one here from the composed name would be the
    *  browser computing a name, which is the one thing A16 exists to stop. */
   const qualifier = data?.winner_qualifier ?? null
-  /**
-   * **Identical sentences collapse to one** (evaluator-ruled 2026-08-30). The wire carries one
-   * sentence per contribution, so two places that both trip the same stance send the same string
-   * twice — and the sentence is about the PERSON'S stance, not about a place. 「避開的類型：火鍋」
-   * printed twice would read as two different facts, and printing a count beside it would answer a
-   * question nobody asked and hand the member a shard of the evidence table.
-   *
-   * **Dedupe on the exact string, order preserved.** No normalisation, no trimming, no case fold:
-   * the sentences are the payload's and two that differ by a character differ for a reason this
-   * screen cannot see. `Set` keeps first-seen order, which is the wire's `order by id`.
-   *
-   * This is right whichever way the pending ruling on category reasons goes: two places declaring
-   * 蛋 duplicate 「原料含有：蛋」 exactly as two 火鍋 places duplicate their line.
-   */
-  const myReasons = [...new Set(data?.my_reasons ?? [])]
 
   return (
     // The flood (§5 rule 1) — the winning place's own face colour becomes the whole ground, over
@@ -785,38 +770,22 @@ export default function Reveal({ roundId }: { roundId: number }) {
           ev={evidence}
           places={data.places}
           winnerId={data.winning_place_id}
-          ingredientData={data.ingredient_data}
           sweep={sweep}
         />
       )}
-      {/* ── A19 §2 · the sentences that belong to this reader alone ────────────────────────
-          `my_reasons`, verbatim, ink, `text-note`, no heading. Rendered **only when the payload
-          carries some**; nothing is composed here and nothing is said when the list is empty.
+      {/* **A19 §2's `my-reasons` block was here and is gone** (2026-08-30,
+          `spec-return-choice.md` §4). It rendered the sentences this reader alone was allowed to
+          read about their own round — 「原料含有：蛋」 — and it went with the field: the ingredient
+          kind is withdrawn, so no `represented_member` reason is written any more and
+          `MEMBER_KEYS` lost `my_reasons`.
 
-          **Inside the list's column, after the list** — evaluator-ruled 2026-08-29 after I put it
-          outside. DOM order is not visual order on this screen: at ≥1100 the reveal's parts are
-          absolutely positioned, so a block placed after `.right` in the markup rendered as a
-          full-stage line at x 104–1336 **above** a list sitting at x 520–920, alone in the left
-          gutter over a ground die. Being a child of the column is what makes "after the list" true
-          at every width rather than only in the source.
-
-          **They are NOT on a row, and that is forced by the wire.** §2 asks for the sentence under
-          the place's name; the payload carries sentences with **no place id**, by backend's design
-          — a place id would rebuild the operator's evidence view one field at a time on the member
-          wire. With no key there is no row to attach to.
-
-          **And they must not go under the winner.** A `represented_member` reason on an ingredient
-          is a ×0: the place it speaks for can never be drawn, so it is never the winner. Printing
-          「原料含有：蛋」 under the winner's name would tell a person the place they are about to eat
-          at contains the thing they avoid — the opposite of what happened, on the one screen where
-          that sentence matters. */}
-      {answered && myReasons.length > 0 && (
-        <div className="myReasons" data-part="my-reasons">
-          {myReasons.map((r) => (
-            <p key={r} className="rowReason" data-part="ingredient-reason">{r}</p>
-          ))}
-        </div>
-      )}
+          **Two rulings it carried are worth keeping where the next reader will meet them.** The
+          sentences were never attached to a row, because the wire deliberately carried no place id
+          — one would have rebuilt the operator's evidence view a field at a time on the member
+          wire. And they were never put under the winner: a veto is a ×0, so the place a reason
+          speaks for can never be the winner, and 「原料含有：蛋」 under the winner's name would have
+          told a person the place they were about to eat at contains the thing they avoid. If a
+          per-member sentence ever returns, those two constraints return with it. */}
       </div>
 
       {/* Owner-ruled 「要」 2026-08-19. **After the dice land**, not before: the pairs are the

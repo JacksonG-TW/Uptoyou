@@ -51,34 +51,12 @@ export type MemberReveal = {
    *  from it; a parenthesis appearing here is a defect, and so is this string appearing on a list
    *  row, where the composed name already carries the bracket. */
   winner_qualifier: string | null
-  /**
-   * A19 — per pooled place, whether the store's company published its materials.
-   *
-   * **`unknown` is a value, never an absence, and that is the whole rule.** A blank row reads as
-   * clean to a person scanning a list, so the absence of a mark would itself be a claim; the API
-   * answers for every pooled place and the surface prints both states. `declared` says the
-   * publisher listed materials and this feature read them — **it does not say the place is free of
-   * anything**, and nothing here may compose 「沒有你避開的」 out of an absence.
-   *
-   * **Optional on the type because a wire that lacks it must render NO mark, never a guessed
-   * one.** Today all three wires carry it (the closed body, the snapshot's pool rows, the `pooled`
-   * event); a payload from an older api answers `undefined`, and `undefined` is not `unknown`.
-   */
-  ingredient_data?: Record<string, 'declared' | 'unknown'>
-  /**
-   * A19 §2, D105 as amended 2026-08-29 — **the sentences this reader is allowed to read about
-   * their own round, and nobody else's.** A `represented_member` reason belongs to the one member
-   * it speaks for: not to the other four, and not to an operator, who audits the arithmetic rather
-   * than the people. Empty is the ordinary case.
-   *
-   * **A list of sentences and nothing else — no place id, by design.** Backend's own note: adding
-   * one would rebuild the operator's evidence view a field at a time on the member wire. That
-   * shapes the rendering and is why these do not sit on a row; see `Reveal.tsx`.
-   *
-   * Optional on the type for the same reason `ingredient_data` is: an older api answers
-   * `undefined`, and nothing is rendered rather than something guessed.
-   */
-  my_reasons?: string[]
+  /* **`ingredient_data` and `my_reasons` left `MEMBER_KEYS` on 2026-08-30**
+   *  (`spec-return-choice.md` §1). The first said `declared`/`unknown` per pooled place and the
+   *  second carried this reader's own veto sentences; the ingredient kind is withdrawn, so neither
+   *  has anything to describe. The rule the first was built on outlives it and is recorded in
+   *  `defences.md`: an absent mark reads as clean, so `unknown` had to be a value rather than a
+   *  blank — which is why withdrawing the feature meant removing the column, not emptying it. */
   trip: Trip
   /** D108. `seed_commit` was published at open, before the first place was proposed; `revealed_seed`
    *  is `null` until the round closes and is what makes the commitment checkable. */
