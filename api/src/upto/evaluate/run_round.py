@@ -42,9 +42,9 @@ reason, which would survive someone publishing the port.)
 
 Five candidates: D64's local slate — `qwen` · `gemma` · `llama`, three contenders from three
 makers, all self-hostable per D63 — plus `gemini`, the hosted baseline that enters the
-evaluation and nothing else (D84's last line), plus `qwen7b` since 2026-08-30, which is a
-**ceiling probe and not a fourth contender** (see `LOCAL_MODELS` for why the difference is
-load-bearing). All are asked
+evaluation and nothing else (D84's last line), plus `qwen7b`, a fourth
+contender since D64's gate was amended on 2026-08-30 to name the machine the DAG calls (see
+`LOCAL_MODELS`). All are asked
 through `upto.classify.classify_name`, so a round measures **the shipped validation path**,
 not a second copy of it written for the evaluation — an answer this runner accepts is exactly
 an answer the backfill would have written, and an answer it refuses is a row the backfill
@@ -115,14 +115,17 @@ RAG_K_MAX = 20
 # 4 GB EC2 class's ~2.5 GB resident line (gemma3:4b failed that gate and was replaced by
 # gemma2:2b). One CLI name per model; the string is pinned here and written into the round.
 #
-# **`qwen7b` (added 2026-08-30, the post-launch classifier ladder's first rung) is in this map
-# but is NOT a fourth contender, and the distinction has to be read before anyone reports its
-# score.** A 7B at q4_K_M is ~4.7 GB resident — it **fails D64's ~2.5 GB gate outright**, the
-# same gate that removed `gemma3:4b`. It is here to answer "how much accuracy is the small model
-# leaving on the table?" on the GPU box, which is a number the ladder needs before choosing
-# between a bigger model, a better embedder and a trained head. **A round it wins does not make
-# it deployable**, and a comparison table that lists it beside the three without saying so is
-# reporting a model the product cannot run.
+# **`qwen7b` is a FOURTH CONTENDER since 2026-08-30, and it was a ceiling probe for six hours in
+# between — the change is a ruling, not a correction.** It was added under D64's original gate,
+# which it fails: ~4.7 GB resident against a ~2.5 GB line written for the 4 GB EC2 class the
+# product was once going to be deployed on. **The owner then amended D64** (「我想先測出贏多少，
+# 這才是決定性的關鍵，外接機器沒關係，可以證明我們是混和雲」): the resident gate is the VRAM of the
+# machine the DAG actually calls — the GPU box, 8 GB, with 7B + arctic measured at 6.9 GB — and
+# the model is chosen on measured lift under one prompt version with the 3× cost column beside it.
+# So the slate is four, and the number that decides is the lift, not the size.
+#
+# **The gate names a machine now, and that is the load-bearing part.** "~2.5 GB" with no machine
+# named is exactly what let a 7B look like a contender and then like a probe within one day.
 #
 # **⚠️ `qwen` (3B) is under the Qwen RESEARCH LICENSE — non-commercial. Read H63 before it goes
 # anywhere near a DAG or a shipped image.** Evaluation rounds are exactly the permitted use, so

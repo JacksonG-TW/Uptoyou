@@ -573,15 +573,16 @@ class TheCandidateMap(unittest.TestCase):
         self.assertEqual(run_round.build_candidate("qwen7b").model,
                          "qwen2.5:7b-instruct-q4_K_M")
 
-    def test_the_three_ruled_contenders_are_still_exactly_three(self):
-        """**The assertion that makes the paragraph above `LOCAL_MODELS` true.** D64's slate is
-        three models under a ~2.5 GB resident line; a 7B at q4_K_M is ~4.7 GB and fails that gate,
-        so it is a ceiling probe and not a fourth contender. If somebody later reports four
-        contenders from a four-key map, this is the line that should have stopped them."""
-        self.assertEqual(
-            sorted(k for k in run_round.LOCAL_MODELS if k != "qwen7b"),
-            ["gemma", "llama", "qwen"],
-        )
+    def test_the_slate_is_four_contenders_since_the_gate_was_amended(self):
+        """**Four since 2026-08-30, and the previous version of this test said three.**
+
+        It asserted `qwen7b` was excluded — correct under D64's original ~2.5 GB line, which was
+        written for a 4 GB EC2 class. The owner amended D64 the same day: the resident gate is the
+        VRAM of the machine the DAG calls (the GPU box, 8 GB; 7B + arctic measured 6.9 GB), and
+        the model is chosen on measured lift with the 3× cost column beside it. So the exclusion
+        is gone and the count is the thing to pin — a fifth key has to come here and argue.
+        """
+        self.assertEqual(sorted(run_round.LOCAL_MODELS), ["gemma", "llama", "qwen", "qwen7b"])
 
     def test_an_unknown_candidate_is_still_refused_by_name(self):
         """Adding a key must not turn the refusal into a fallback — and the message must NAME the
