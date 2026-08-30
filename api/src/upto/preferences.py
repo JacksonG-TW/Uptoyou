@@ -654,6 +654,11 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
         # database, never a literal — the day the re-pass lands this empties itself.
         "values_awaiting_classification": {
             "values": unclassified,
-            "why": "分類器尚未以 v6 重跑全市；這些類別目前沒有任何店家（2026-08-30）",
+            # **No version number in this sentence, and that is deliberate.** It said 「以 v6
+            # 重跑」 for about six hours and was already wrong when v7 landed — a prompt version is
+            # the fastest-moving fact in this repository and a string that names one is stale the
+            # next day. What is true regardless is that the city has not been re-classified since
+            # these values existed, which is the thing a member is actually being told.
+            "why": "分類器還沒有用新的分類重跑全市，所以這些類別目前找不到任何店家",
         },
     }
