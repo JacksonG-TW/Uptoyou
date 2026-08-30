@@ -170,6 +170,11 @@ export type StreamEvent =
   | { type: 'snapshot'; open_round: OpenRound | null; last_result: { round_id: number } | null }
   | { type: 'round_opened'; round: OpenRound }
   | { type: 'pooled'; round_id: number; place: Pooled }
+  /** A19 / the owner's 2026-08-30 ruling: a roll found every pooled weight at 0, so nothing could
+   *  be picked. **Carries the round id and no text** — the sentence is browser copy, one string
+   *  with one owner (`Round.tsx`), and `tools/server_copy.py` has nothing new to cover. The round
+   *  stays open and proposing continues; this is a state, not an end. */
+  | { type: 'pool_swept'; round_id: number }
   | { type: 'closed'; result: { round_id: number } }
 
 /**

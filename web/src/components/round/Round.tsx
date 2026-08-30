@@ -63,6 +63,24 @@ export default function Round() {
    *  state this screen is allowed to assert. */
   const [pending, setPending] = useState<Record<string, boolean>>({})
 
+  /** **The round whose pool swept to nothing, or `null`.** A round id rather than a boolean, and
+   *  that is what makes the clear rule correct: the line clears on the next `pooled` **for that
+   *  round**, so a late event for a round this device has moved on from cannot clear a line that
+   *  belongs to the current one. Never cleared on a timer — the state is true until the pool
+   *  changes, and a sentence that disappears by itself would say the table's sum had changed when
+   *  nothing had. */
+  const [swept, setSwept] = useState<number | null>(null)
+  /** A refused roll, **kept with the round it was refused on rather than merged into `error`**.
+   *
+   *  The refusal reaches this device twice for the swept-pool case — as its own 409 `detail` and as
+   *  the `pool_swept` every seat receives — and §2 says the roller reads one line. Suppression is
+   *  therefore a **derived** question, not something the catch can answer: the two arrive over
+   *  different transports and either can be first. Holding the message and deciding at render is
+   *  what makes the order stop mattering; a check inside the catch would have shown two lines
+   *  whenever the event was a beat late, which is the timing a fast local stack never produces and
+   *  a phone on a train does. */
+  const [rollError, setRollError] = useState<{ round: number; message: string } | null>(null)
+
   useEffect(() => {
     if (!dev) return
     return subscribe(dev, (e) => {
@@ -73,6 +91,12 @@ export default function Round() {
         setPool(r?.pool ?? [])
         setRolls(r?.rolls ?? [])
         setCommit(r?.seed_commit ?? '')
+        // A new round, or a reconnect: the sweep belonged to the round that is being replaced.
+        // **The snapshot does not carry the state and must not be made to** — it is the answer to
+        // a roll, not a property of the round, so a reconnecting device is told by the next roll
+        // rather than shown a sentence about an attempt it did not see.
+        setSwept(null)
+        setRollError(null)
       }
       if (e.type === 'snapshot') {
         take(e.open_round)
@@ -82,6 +106,22 @@ export default function Round() {
         // Keyed by place, because D70 lets the same place be proposed twice and the second time
         // must change nothing a person can see.
         setPool((p) => (p.some((x) => x.place_id === e.place.place_id) ? p : [...p, e.place]))
+        // **The sum changed, so the sentence about the sum stops being true.** Scoped to the same
+        // round: `pooled` for another round says nothing about this one's pool. A repeat proposal
+        // (D70) still arrives as `pooled` and still clears — the line's claim is 「every place is
+        // vetoed」, and a device that cannot tell a new place from a repeat must not keep asserting
+        // it; the next roll re-emits `pool_swept` if it is still true. Wrong for a moment beats
+        // wrong until someone presses something.
+        setSwept((r) => (r === e.round_id ? null : r))
+        // **And the held refusal goes with it.** Without this the roller's 409 would reappear the
+        // moment the sweep cleared — the sentence is suppressed *while* the sweep explains it, and
+        // once the pool changes the refusal is about a state that no longer exists.
+        setRollError((r) => (r && r.round === e.round_id ? null : r))
+      } else if (e.type === 'pool_swept') {
+        // **Every seat, including the one that rolled.** The owner's ruling is that the table is
+        // told, not the presser: 「反饋訊息給所有玩家」. Idempotent — a second roll on an unchanged
+        // pool emits it again and the state is already this.
+        setSwept(e.round_id)
       } else if (e.type === 'closed') {
         window.location.href = `/reveal?round=${e.result.round_id}`
       }
@@ -379,7 +419,14 @@ export default function Round() {
           proposal was refused is still true while the person types the next query, and a message
           that vanishes the moment they touch the keyboard is one they will meet again by trying
           the same thing. It clears when a proposal succeeds. */}
-      {error && <p className="roundErr" data-part="round-error">{error}</p>}
+      {/* **The roll's refusal is suppressed exactly while `pool_swept` is explaining it** — one
+          line for the roller (§2), and the API's own sentence whenever the event did not arrive,
+          so a refusal is never silent. Every other error is untouched. */}
+      {(error || (rollError && rollError.round !== swept ? rollError.message : null)) && (
+        <p className="roundErr" data-part="round-error">
+          {error || rollError?.message}
+        </p>
+      )}
 
       {/* **A zero result says so; silence is only allowed while the question is still open.**
           Evaluator-ruled 2026-08-20 from the data-experience remit: typing 星巴克 rendered nothing
@@ -436,6 +483,27 @@ export default function Round() {
 
       <section className="poolBlock" data-part="pool">
         <h2 className="roundH">這一輪的名單</h2>
+        {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
+            (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
+            「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
+            one person's, and at five people a sentence that narrowed it would be one guess from a
+            name (§3.0).
+
+            D20: the first sentence states what happened, the second states the condition for the
+            next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
+
+            **Browser copy, one owner.** The event carries a type and a round id and no text, so
+            `tools/server_copy.py` has nothing new to cover and `test_web_surface`'s word list is
+            this string's gate.
+
+            At the top of the pool block, so it is read before the list it is about; 擲骰 stays
+            enabled, because the fix is proposing another place and the act is not what is
+            broken. */}
+        {swept !== null && swept === roundId && (
+          <p className="roundWarn" data-part="pool-vetoed">
+            大家目前的偏好加起來，池子裡每一家都抽不到。要多幾家才擲得成。
+          </p>
+        )}
         {pool.length === 0 ? (
           <p className="roundNote">還沒有人提。</p>
         ) : pool.length === 1 ? (
@@ -569,7 +637,22 @@ export default function Round() {
             if (!dev || roundId === null) return
             setBusy(true)
             // No navigation here on purpose — the `closed` event moves every device at once.
-            void roll(dev, roundId).catch((e: Error) => { setError(e.message); setBusy(false) })
+            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
+               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
+               gets — and the screen must show one. **The 409's text is suppressed rather than made
+               identical to the event's:** the detail is the API's string and lives under
+               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
+               the same string would put one sentence under two owners. That is the drift this
+               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
+               here keeps one owner per string.
+
+               **Suppressed only when the event actually arrived for THIS round.** The event is
+               published before the 409 returns, but if it ever did not arrive the person would be
+               left with a refusal and no reason, so the fallback is the API's own sentence. */
+            void roll(dev, roundId).catch((e: Error) => {
+              setRollError({ round: roundId, message: e.message })
+              setBusy(false)
+            })
           }}
         >
           擲骰

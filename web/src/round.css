@@ -384,3 +384,9 @@
    for both screens); this only places it — pushed to the row's right edge, like `.rowStat` on the
    preferences rows, so a list of names reads as a column of names with the marks in their own. */
 .round .row .rowTag { margin-left: auto; }
+
+/* The swept-pool sentence takes `.roundWarn`'s register — the accent as a left rule, the one
+   cautionary treatment on this screen — at `text-lead` rather than `text-body`, per
+   `spec-pool-vetoed.md` §2. Keyed on the part rather than a second class: it IS a `roundWarn`, it
+   is only a louder one, and a modifier class would invite a third. */
+.round [data-part="pool-vetoed"] { font-size: var(--text-lead); font-weight: 400; }
