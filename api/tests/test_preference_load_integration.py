@@ -292,7 +292,10 @@ async def scenario(test_url: str) -> None:
     assert len(members) == 4, members
     for p in pinned:
         assert p.contribution.effect == Decimal("0.750"), p.contribution
-        assert p.reason_visibility == "represented_member", p.reason_visibility
+        # `_panel` since 2026-08-30 (D13 「縮小」): this sentence reaches the operator's panel and
+        # the member it speaks for, and NOT the reveal's `my_reasons`. The ingredient veto keeps
+        # the shorter name and keeps the reveal.
+        assert p.reason_visibility == "represented_member_panel", p.reason_visibility
     assert {p.contribution.reason for p in on_hotpot} == {"避開的類型：火鍋"}, (
         "two members avoiding one category read the same sentence, because the sentence is "
         "about the category and not about the member"
@@ -342,7 +345,7 @@ async def scenario(test_url: str) -> None:
     assert len(stored) == 3, f"expected three stored rows, got {len(stored)}"
     assert {(r.place_id, r.member_id, r.preference_id) for r in stored} == want
     for row in stored:
-        assert row.channel == "private" and row.reason_visibility == "represented_member"
+        assert row.channel == "private" and row.reason_visibility == "represented_member_panel"
         # The pin went in the right column. This is the assertion that would have caught the bare
         # `else` in `write_roll` writing a preference id into `observation_publication_id`.
         assert row.forecast_publication_id is None, row

@@ -67,11 +67,20 @@ class AnAvoidedCategory(unittest.TestCase):
         record = avoid_contribution(1, 42, "小吃", {"小吃", "西式", "早餐"}, FIVE)
         self.assertIsNotNone(record)
 
-    def test_the_visibility_this_channel_takes_is_not_the_table(self):
-        """`weight_contribution` will carry a CHECK refusing `table` for a private row; this names
-        the value the contributor's rows are written with so the two cannot disagree."""
-        self.assertEqual(REASON_VISIBILITY, "represented_member")
+    def test_the_visibility_this_channel_takes_is_the_panel_one(self):
+        """`weight_contribution` carries a CHECK listing the four legal values; this names the one
+        the contributor writes so the two cannot disagree.
+
+        **Amended 2026-08-30 (D13's 「縮小」 ruling): `represented_member_panel`, not
+        `represented_member`.** The two differ in exactly one place — `my_reasons`, the reveal's
+        own-reasons list — and the narrower value is the category discount's because that sentence
+        restates a chip the member set themselves and took nothing away they did not ask for.
+        The ingredient veto keeps `represented_member` and keeps the reveal: a place going to zero
+        is news. Both values still reach the operator's panel, and only the member they speak for.
+        """
+        self.assertEqual(REASON_VISIBILITY, "represented_member_panel")
         self.assertNotEqual(REASON_VISIBILITY, "table")
+        self.assertNotEqual(REASON_VISIBILITY, "none")
 
 
 class TheOneOverNTable(unittest.TestCase):

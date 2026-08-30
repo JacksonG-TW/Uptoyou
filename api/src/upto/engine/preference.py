@@ -59,8 +59,9 @@ remember this" mean "do not apply this", which is a different promise.
 
 **The reason names the category, deliberately.** `reason` exists to explain a number to whoever
 may see it (D13), and for a `private` row that is the represented member alone —
-`reason_visibility = 'represented_member'`, and the reveal panel shows channel-only labels for
-this channel, so the text never reaches another person's screen. Withholding the category from its
+`reason_visibility = 'represented_member_panel'` since 2026-08-30 (D13 「縮小」), and the reveal
+panel shows channel-only labels for this channel, so the text never reaches another person's
+screen. Withholding the category from its
 owner would make the column useless to the only reader it has; and it would buy nothing against a
 database leak, because the `preference` row itself already states the same fact more plainly.
 """
@@ -116,7 +117,16 @@ def discount_for(member_count: int) -> Decimal:
 
 # D13's third column: who may see the reason. `table` is refused for this channel by a CHECK on
 # `weight_contribution`, so the value is named here rather than left to a caller's default.
-REASON_VISIBILITY = "represented_member"
+# **`_panel` since 2026-08-30 (D13 amended, owner 「縮小」).** This sentence restates the chip the
+# member set themselves and removed nothing — the place still keeps a real share of the dice table
+# (D103's reopening made a category a discount, not a veto). The reveal's `my_reasons` is for a fact
+# a person cannot see anywhere else, which the ingredient veto is and this is not.
+#
+# **The new value is on the thing being narrowed, not on the thing being kept**, so `my_reasons`'s
+# predicate stays `= 'represented_member'` and never learns a second value: nothing silently joins
+# it, and a fifth contributor chooses between two named audiences rather than inheriting the reveal.
+# It is still this member's own — the operator's panel shows it to them and to nobody else.
+REASON_VISIBILITY = "represented_member_panel"
 
 
 def avoid_contribution(

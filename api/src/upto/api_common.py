@@ -592,9 +592,16 @@ async def panel_for(session, round_id: int, weights, viewer: int | None = None) 
                     # normalize(): numeric(4,3) reads back as 0.800, and the panel says ×0.8.
                     # Display only — the fold and D15's reconciliation compare values.
                     "effect": str(c.effect.normalize()),
+                    # **Both represented-member values, and this line is why the narrowing needed
+                    # reading before it was written.** D13's 2026-08-30 amendment moved the category
+                    # discount to `represented_member_panel` so it leaves the *reveal*; it did not
+                    # take it off the panel, and a predicate matching one exact string would have
+                    # removed it from here silently — the operator table would simply have shown one
+                    # fewer sentence, with nothing failing.
                     "reason": c.reason if (
                         visibility[c.id] == "table"
-                        or (visibility[c.id] == "represented_member"
+                        or (visibility[c.id] in ("represented_member",
+                                                 "represented_member_panel")
                             and viewer is not None and represented[c.id] == viewer)
                     ) else None,
                 }

@@ -459,11 +459,28 @@ async def scenario(test_url: str) -> None:
         # The pool is the chain site plus a circle-local one, deliberately: if both places were the
         # chain's, every weight would be zero and the draw would have nothing to pick — a real
         # question this feature raises and NOT the one under test here.
-        await client.post(
-            f"/circles/{circle}/preferences",
-            json={"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"},
-            headers={"Authorization": "Bearer " + plain_token},
-        )
+        # **The same member avoids a category AND an ingredient, so the round carries both
+        # sentences at once.** That is what makes the next assertions mean something: D13 as
+        # amended 2026-08-30 sends one of the two to the reveal and keeps the other on the panel,
+        # and a round producing only one of them could not tell a narrowing from a sentence that
+        # was never made. **The category goes on the OTHER place, and that is forced rather than
+        # chosen:** this circle seats one member, so D103's `1 − 1/N` is exactly 0 at N = 1 (a
+        # round of one person is that person's decision) — putting it on `chain` would zero the
+        # place whose full weight the ingredient half is here to prove.
+        async with Session() as session:
+            await session.execute(
+                text("update place set category = '日式', category_model = 'test-fixture', "
+                     "category_prompt_version = 'fixture', category_generated_at = now(), "
+                     "category_input = '日式小店' where id = :p"),
+                {"p": locals_[1]},
+            )
+            await session.commit()
+        for kind, value in (("avoid_ingredient", "蛋"), ("avoid_category", "日式")):
+            assert (await client.post(
+                f"/circles/{circle}/preferences",
+                json={"kind": kind, "value": value, "stance": "avoid"},
+                headers={"Authorization": "Bearer " + plain_token},
+            )).status_code == 204
         veto_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
         assert veto_round.status_code == 201, veto_round.text
         veto_round_id = veto_round.json()["round_id"]
@@ -488,7 +505,27 @@ async def scenario(test_url: str) -> None:
             f"/rounds/{veto_round_id}/roll",
             headers={"Authorization": "Bearer " + plain_token},
         )).json()
+        # **D13 as amended 2026-08-30 (「縮小」): the ingredient sentence and ONLY it.** This member
+        # is also avoiding a category by now, and that sentence carries
+        # `represented_member_panel` — it restates the chip they set themselves and removed
+        # nothing, so it belongs on the operator's panel and not on the reveal. An equality
+        # assertion rather than a membership one, because the failure this guards is a second
+        # sentence ARRIVING, which `any(...)` would never see.
         assert veto_member["my_reasons"] == ["部分品項含有：蛋"], veto_member["my_reasons"]
+        assert not any("避開的類型" in r for r in veto_member["my_reasons"]), (
+            "a category discount must not ride my_reasons", veto_member["my_reasons"])
+        # And it is still on the panel, for the member it speaks for. The operator body carries the
+        # panel; this reader is that member (one principal, two devices — D74).
+        # The panel is keyed by place and each place carries `factors` (D46's total order,
+        # straight from the fold).
+        panel_reasons = [
+            factor["reason"]
+            for place in veto_result["panel"].values()
+            for factor in place["factors"]
+            if factor.get("reason")
+        ]
+        assert any("避開的類型" in r for r in panel_reasons), (
+            "the narrowing took the category sentence off the panel too", panel_reasons)
         # **The operator's own body DOES carry it, and that is correct — the first version of this
         # assertion had it backwards.** Both device secrets in this file share one `principal_id`:
         # they are two devices of one person, so the operator device belongs to the represented
