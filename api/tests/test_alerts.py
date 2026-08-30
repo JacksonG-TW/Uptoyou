@@ -242,8 +242,9 @@ class EveryDagIsWired(unittest.TestCase):
         dags = os.path.join(here, "..", "..", "airflow", "dags")
         files = [name for name in sorted(os.listdir(dags))
                  if name.endswith(".py") and not name.startswith("_")]
-        # 7 since 2026-08-28: `weather_retention.py` joined (D42's ninety-day window).
-        self.assertEqual(len(files), 7, files)
+        # 8 since 2026-08-30: `db_backup.py` joined (A22's nightly dump). It was 7 from
+        # 2026-08-28, when `weather_retention.py` landed (D42's ninety-day window).
+        self.assertEqual(len(files), 8, files)
         for name in files:
             source = open(os.path.join(dags, name), encoding="utf-8").read()
             # **The import is read from the AST, not matched as a string.** The first version of this

@@ -132,6 +132,32 @@ async def scenario(test_url: str) -> None:
               await granted(connection, role_map.API, "ingest_run", "select")
               and not await granted(connection, role_map.API, "ingest_run", "insert"))
 
+        # --- A22: the backup role reads everything and writes nothing ----------------------
+        #
+        # **The pair that matters is read-yes / write-no on a table it was never named for.**
+        # `pg_read_all_data` is granted at the cluster level (revision 0038), so the assertion is
+        # not "the map lists it" — the map does not — but that a table nobody thought about is
+        # readable and unwritable. `preference` is the right table to ask about: it is the most
+        # sensitive thing here, the backup must contain it, and the role must not be able to
+        # change one word of it.
+        check("upto_backup may read `preference` — a backup that skips it is not a backup",
+              await granted(connection, role_map.BACKUP, "preference", "select"))
+        for table in ("preference", "weight_contribution", "place", "round"):
+            for privilege in ("insert", "update", "delete"):
+                check("upto_backup cannot {} `{}`".format(privilege, table),
+                      not await granted(connection, role_map.BACKUP, table, privilege))
+
+        # **H61 — and this is the assertion, not the comment above it.** `ungranted_tables` proves
+        # "a table added without grants goes red" by asking whether ANY role in `SERVICE_ROLES`
+        # can SELECT it. A role holding `pg_read_all_data` can SELECT everything, including the
+        # table somebody forgets to grant next year — so putting this one in that tuple would make
+        # the coverage check pass for ever, silently, and DR-8 below would be the only thing left
+        # standing. The membership is therefore load-bearing and is pinned here.
+        check("H61: upto_backup is NOT in SERVICE_ROLES — it would blind the coverage check",
+              role_map.BACKUP not in role_map.SERVICE_ROLES, role_map.SERVICE_ROLES)
+        check("and it is in no grants map either — its reach is a cluster role, not a table list",
+              role_map.BACKUP not in role_map.grants())
+
         # --- coverage: no table is unreachable by every role -------------------------------
         orphans = await ungranted_tables(connection)
         check("every table in public is reachable by the role that owns its boundary",
@@ -161,9 +187,11 @@ async def scenario(test_url: str) -> None:
         print("\n{} failing: {}".format(len(FAILURES), ", ".join(FAILURES)))
         raise SystemExit(1)
     print(
-        "\nA15: the four roles hold exactly their boundary — the pipeline cannot see a person, "
-        "the lineage tool cannot reach past its declaration, the erasure job can delete a "
-        "preference and read nothing about anyone, and a table added without grants goes red"
+        "\nA15/A22: the five roles hold exactly their boundary — the pipeline cannot see a "
+        "person, the lineage tool cannot reach past its declaration, the erasure job can delete a "
+        "preference and read nothing about anyone, the backup role reads every table and writes "
+        "none and is deliberately outside the coverage check (H61), and a table added without "
+        "grants goes red"
     )
 
 

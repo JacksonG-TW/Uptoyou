@@ -80,6 +80,36 @@ airflow connections add upto_erasure_postgres \
     --conn-login upto_erasure \
     --conn-password "${UPTO_ERASURE_DB_PASSWORD}"
 
+# **A22's backup role — read everything, change nothing.** `pg_read_all_data` and no write grant
+# anywhere (revision 0038). It is NOT the owner: the nightly `pg_dump` runs inside the long-lived
+# scheduler, and D115 says only a job that exits may hold the owner. Created unconditionally, the
+# same as the other three — an absent bucket turns the *DAG* off (below), and a missing Connection
+# would turn it red instead, which is the wrong signal for a stack that simply has no S3.
+airflow connections delete upto_backup_postgres >/dev/null 2>&1 || true
+airflow connections add upto_backup_postgres \
+    --conn-type postgres \
+    --conn-host db \
+    --conn-port 5432 \
+    --conn-schema "${POSTGRES_DB}" \
+    --conn-login upto_backup \
+    --conn-password "${UPTO_BACKUP_DB_PASSWORD}"
+
+# **A22's destination credential (D61's scoped IAM key), and absent is legal here too.** The bucket
+# name is configuration and rides the environment; the key is a secret and rides this Connection,
+# read once by this file and by no task afterwards (D33/H16). A stack with no AWS account creates
+# nothing and the backup DAG skips on the empty bucket before it ever asks for this.
+airflow connections delete upto_backup_s3 >/dev/null 2>&1 || true
+if [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+    airflow connections add upto_backup_s3 \
+        --conn-type aws \
+        --conn-login "${AWS_ACCESS_KEY_ID}" \
+        --conn-password "${AWS_SECRET_ACCESS_KEY}" \
+        --conn-extra "{\"region_name\": \"ap-northeast-1\"}"
+    echo "airflow-init: upto_backup_s3 created — the nightly dump has somewhere to go"
+else
+    echo "airflow-init: no AWS key in the environment, so upto_backup_s3 was NOT created — the nightly backup will skip on its empty bucket (A22: absent is legal)"
+fi
+
 airflow connections delete cwa_open_data >/dev/null 2>&1 || true
 airflow connections add cwa_open_data \
     --conn-type http \

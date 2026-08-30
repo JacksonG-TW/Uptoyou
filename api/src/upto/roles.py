@@ -31,7 +31,16 @@ INGEST = "upto_ingest"
 LINEAGE = "upto_lineage"
 ERASURE = "upto_erasure"
 
-#: Every login role this file grants to. `upto` is deliberately absent: it owns the tables.
+# **A22 — the nightly `pg_dump`, and it is deliberately NOT in `SERVICE_ROLES` below.** This role
+# holds the predefined `pg_read_all_data` and no table grant of its own, so it is granted by
+# revision 0038 at the cluster level and appears nowhere in `grants()`. Read H61 before adding it
+# to the tuple: the coverage test asks whether *any* service role can SELECT a table, and a role
+# that can SELECT everything makes that question answer "yes" for ever, including for the table
+# somebody forgets to grant next year.
+BACKUP = "upto_backup"
+
+#: Every login role this file grants to **table by table**. `upto` is deliberately absent: it owns
+#: the tables. `upto_backup` is absent for a different reason — see H61 and the note above.
 SERVICE_ROLES = (API, INGEST, LINEAGE, ERASURE)
 
 WRITE = ("select", "insert", "update", "delete")
@@ -194,11 +203,14 @@ _PASSWORD_VARS = {
     INGEST: "UPTO_INGEST_DB_PASSWORD",
     LINEAGE: "UPTO_LINEAGE_DB_PASSWORD",
     ERASURE: "UPTO_ERASURE_DB_PASSWORD",
+    # A22. Created here with the other four because `ensure()` is the one place a role is created;
+    # what it may *do* is revision 0038's business and is one line, not a map.
+    BACKUP: "UPTO_BACKUP_DB_PASSWORD",
 }
 
 
 def ensure() -> int:
-    """Create or re-password the four login roles. Run as the owner, before the grants.
+    """Create or re-password the five login roles. Run as the owner, before the grants.
 
     **asyncpg, not psycopg2, and not because it is tidier.** H1 rules the synchronous driver out of
     this codebase entirely, and the api image carries only `asyncpg` — the first version of this

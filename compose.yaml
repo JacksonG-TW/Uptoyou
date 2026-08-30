@@ -89,6 +89,14 @@ x-airflow-env: &airflow-env
       # chose and a different one after every `down`. Pointing it at a named volume lets
       # airflow-init write the password from .env once and the api-server read it thereafter.
       AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_PASSWORDS_FILE: /opt/airflow/auth/passwords.json
+      # **A22 — configuration, not a credential, which is why it is on this side of A21's line.**
+      # A bucket name identifies a destination and unlocks nothing; the IAM key that can write to
+      # it is a Connection (`upto_backup_s3`), created once by init. **Empty is the default and it
+      # is load-bearing**: the backup DAG's first task raises `AirflowSkipException` on an empty
+      # bucket, so a fresh clone, `split_boot_check.sh` and CI all boot with the DAG present and
+      # skipping rather than absent or red.
+      UPTO_BACKUP_S3_BUCKET: ${UPTO_BACKUP_S3_BUCKET:-}
+      UPTO_BACKUP_S3_PREFIX: ${UPTO_BACKUP_S3_PREFIX:-db}
 
 # **What only `airflow-init` needs.** These are the values it writes into Connections and into the
 # simple-auth passwords file, one time, before it exits. Held by a service that lives for seconds
@@ -108,6 +116,13 @@ x-airflow-bootstrap-env: &airflow-bootstrap-env
       UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
       UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
       UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
+      # A22's read-only backup role, and the scoped IAM key its dump is uploaded with. Both are
+      # read by `init.sh` once, to create `upto_backup_postgres` and `upto_backup_s3`; no task
+      # reads either from the environment (D33). `:-` on the AWS pair because absent is legal —
+      # a stack with no AWS account creates no Connection and the DAG skips (A22).
+      UPTO_BACKUP_DB_PASSWORD: ${UPTO_BACKUP_DB_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       # A10's alert channel. Read by `init.sh` once, to create the `telegram_alerts` Connection;
       # no task reads them afterwards (D33). `:-` because absent is legal — a stack with no bot
       # runs with alerting off rather than refusing to start.
@@ -357,12 +372,16 @@ services:
     environment:
       UPTO_BOOTSTRAP: "1"
       UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      # The four login roles are created here, by the owner, immediately before the migration that
+      # The five login roles are created here, by the owner, immediately before the migration that
       # grants to them — see `upto/roles.py`. These are read for that and for nothing else.
       UPTO_API_DB_PASSWORD: ${UPTO_API_DB_PASSWORD}
       UPTO_INGEST_DB_PASSWORD: ${UPTO_INGEST_DB_PASSWORD}
       UPTO_LINEAGE_DB_PASSWORD: ${UPTO_LINEAGE_DB_PASSWORD}
       UPTO_ERASURE_DB_PASSWORD: ${UPTO_ERASURE_DB_PASSWORD}
+      # A22's read-only backup role (revision 0038 grants it `pg_read_all_data`). Created here for
+      # the same reason as the other four: `ensure()` is the one place a role is created, and it
+      # runs in the one-shot service that exits.
+      UPTO_BACKUP_DB_PASSWORD: ${UPTO_BACKUP_DB_PASSWORD}
       # The seed writes `township_station`, which is the pipeline's table — so it uses the
       # pipeline's role rather than the owner's, even here.
       UPTO_INGEST_DATABASE_URL: postgresql+asyncpg://upto_ingest:${UPTO_INGEST_DB_PASSWORD}@db:5432/${POSTGRES_DB}
