@@ -567,16 +567,24 @@ class TheVendoredFaces(unittest.TestCase):
 
 
 class TheScreenNeverOffersWhatTheApiRefuses(unittest.TestCase):
-    """The screen's closed lists must be a **subset** of the API's, never the other way round.
+    """The screen's closed list must be a **subset** of the API's, never the other way round.
 
-    **Why a subset and not equality, since 2026-08-28.** The owner took 亞硫酸鹽類 off the
-    preference screen's ingredient list (D103 amended) and the endpoint **keeps accepting it** —
-    no migration, no purge, stored rows stay inert. So the two lists now differ on purpose: the API
-    knows eleven groups, the screen offers ten. Asserting equality would fail on a ruling.
+    **The list this guards changed on 2026-08-30, and the guard did not.** It was `INGREDIENTS`
+    until the owner withdrew that kind from the surface (「將選擇權還給使用者，我們專心做好分類」);
+    `lib/preferences.ts` no longer defines it, so this class now watches `CATEGORIES` — the list
+    that still exists, and the one that just gained D38's eleventh value 便利商店. **The rule is
+    the same rule**: the screen may never offer what the endpoint would refuse.
 
-    **What is still worth guarding is the other direction, and nothing guarded it before.** The two
+    **Why a subset and not equality, and it earned that on both lists.** The ingredient version
+    was ⊆ because the owner took 亞硫酸鹽類 off the screen while the endpoint kept accepting it.
+    The category version needs it for the opposite reason: on 2026-08-30 the API gained 便利商店
+    hours before the screen did, so equality would have gone red in the gap and the honest-looking
+    fix would have been to delete the test. The two lists are equal today; the relationship is
+    what is asserted.
+
+    **What is guarded is the direction, and nothing guarded it before this class existed.** The two
     lists are independent copies — `upto/preferences.py` and `app/web/src/lib/preferences.ts` — and
-    a value the screen offers that the API refuses is a **400 the member sees** after tapping a
+    a value the screen offers that the API refuses is a **refusal the member sees** after tapping a
     button the product drew for them. That failure is silent until somebody taps it.
 
     **Both sides are read as text, and neither is imported.** The TypeScript has no runtime here;
@@ -607,16 +615,27 @@ class TheScreenNeverOffersWhatTheApiRefuses(unittest.TestCase):
         self.assertTrue(found, "{}: parsed nothing — has the file's shape changed?".format(name))
         return found
 
-    def test_every_ingredient_the_screen_offers_is_one_the_api_accepts(self):
-        accepted = self.api_list("INGREDIENTS")
-        offered = self.literals("INGREDIENTS")
+    def test_every_category_the_screen_offers_is_one_the_api_accepts(self):
+        accepted = self.api_list("CATEGORIES")
+        offered = self.literals("CATEGORIES")
         unknown = [value for value in offered if value not in accepted]
-        self.assertEqual(unknown, [], "the screen offers what the endpoint would 400: {}".format(unknown))
+        self.assertEqual(unknown, [],
+                         "the screen offers what the endpoint would refuse: {}".format(unknown))
 
     def test_and_the_api_may_know_more_than_the_screen_shows(self):
-        """The direction that is now intentionally unequal — asserted so nobody re-tightens it."""
-        self.assertLessEqual(len(self.literals("INGREDIENTS")),
-                             len(self.api_list("INGREDIENTS")))
+        """The direction that may legitimately be unequal — asserted so nobody re-tightens it."""
+        self.assertLessEqual(len(self.literals("CATEGORIES")),
+                             len(self.api_list("CATEGORIES")))
+
+    def test_the_eleventh_value_reached_both_sides(self):
+        """**The specific thing this commit is about**, named rather than left to the ⊆ check.
+
+        `便利商店` is D38's eleventh value (revision 0039). A chip the API refuses and a category
+        the API accepts but no chip offers are both silent failures, in opposite directions, and
+        the subset test above catches only one of them.
+        """
+        self.assertIn("便利商店", self.api_list("CATEGORIES"))
+        self.assertIn("便利商店", self.literals("CATEGORIES"))
 
 
 if __name__ == "__main__":
