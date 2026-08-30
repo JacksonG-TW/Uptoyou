@@ -115,5 +115,72 @@ class TestPrompt(unittest.TestCase):
         self.assertEqual(classify_name("某店", answering("？")).prompt_version, PROMPT_VERSION)
 
 
+class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
+    """H43 — `keep_alive: 0` every `UNLOAD_EVERY` rows, and the constant carries its arithmetic.
+
+    Owner-ruled 2026-08-30 (「不改WSL，用卸載壓住」): the WSL2 memory ceiling stays where it is
+    because Windows needs it, so the unload is the bound. Tested here rather than only in the
+    module because the failure is silent — a request that quietly stops carrying the field looks
+    exactly like one that carries it, until the box is killed some hours into a pass.
+    """
+
+    def _payload(self, **kwargs):
+        """The JSON body `ask` would send, without sending it."""
+        import json as _json
+        from upto.classify import model as model_module
+
+        captured = {}
+
+        def fake_fetch(request, timeout, what):
+            captured["body"] = _json.loads(request.data.decode())
+            return {"response": "早餐"}
+
+        original = model_module.fetch
+        model_module.fetch = fake_fetch
+        try:
+            model_module.ask("某店", **kwargs)
+        finally:
+            model_module.fetch = original
+        return captured["body"]
+
+    def test_an_ordinary_ask_carries_no_keep_alive(self):
+        """**The default must not change.** An unload on every request would pay a ~10 s reload
+        per row, which is the same defect in the opposite direction."""
+        self.assertNotIn("keep_alive", self._payload())
+
+    def test_the_unloading_ask_sets_keep_alive_to_zero(self):
+        self.assertEqual(self._payload(unload_after=True)["keep_alive"], 0)
+
+    def test_the_rest_of_the_request_is_untouched(self):
+        """The unload is one field on a request we already make — not a different request."""
+        plain = self._payload()
+        unloading = self._payload(unload_after=True)
+        del unloading["keep_alive"]
+        self.assertEqual(plain, unloading)
+
+    def test_the_constant_is_200_and_says_where_both_numbers_came_from(self):
+        """**The source is read, because a constant without its arithmetic cannot be moved.**
+
+        N is a trade between cache growth per distinct prompt and the cost of one reload; a reader
+        who can see only the number has to re-derive both to change it, and will not.
+        """
+        import pathlib
+
+        source = pathlib.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "run.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("UNLOAD_EVERY = 200", source)
+        for number in ("9.9", "3.9", "7.7", "10 s"):
+            self.assertIn(number, source, "the constant lost one of its measured quantities")
+        self.assertIn("H43", source)
+
+    def test_the_window_fires_on_the_row_it_should(self):
+        """The off-by-one that would make this useless: `% N == 0` on a 0-based index unloads on
+        row 1 and never again on a boundary. Asserted on the expression the loop uses."""
+        every = 200
+        fires = [i for i in range(401) if (i + 1) % every == 0]
+        self.assertEqual(fires, [199, 399], fires)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

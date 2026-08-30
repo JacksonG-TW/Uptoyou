@@ -81,18 +81,26 @@ def take_samples() -> list[dict]:
     return taken
 
 
-def ask(prompt: str) -> str:
-    """One completion, deterministic, short — the answer is at most a few characters."""
-    body = json.dumps(
-        {
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False,
-            # temperature 0 so a re-run of the same prompt version is as close to repeatable
-            # as this kind of tool gets. D39 admits it is not fully reproducible.
-            "options": {"temperature": 0, "num_predict": 8},
-        }
-    ).encode()
+def ask(prompt: str, unload_after: bool = False) -> str:
+    """One completion, deterministic, short — the answer is at most a few characters.
+
+    **`unload_after` sets `keep_alive: 0` on THIS request, which unloads the model the moment it
+    answers.** See `UNLOAD_EVERY` in `upto.classify.run` for why and how often. It is a field on a
+    request we already make: no second endpoint, no separate call, nothing to fail on its own.
+    Verified 2026-08-30 against the local service by reading `/api/ps` on both sides — the model
+    goes, **and a resident embedder stays**, which is what makes it safe in a `--rag` pass.
+    """
+    payload = {
+        "model": MODEL,
+        "prompt": prompt,
+        "stream": False,
+        # temperature 0 so a re-run of the same prompt version is as close to repeatable
+        # as this kind of tool gets. D39 admits it is not fully reproducible.
+        "options": {"temperature": 0, "num_predict": 8},
+    }
+    if unload_after:
+        payload["keep_alive"] = 0
+    body = json.dumps(payload).encode()
     request = urllib.request.Request(
         f"http://{HOST}/api/generate", data=body, headers={"Content-Type": "application/json"}
     )
