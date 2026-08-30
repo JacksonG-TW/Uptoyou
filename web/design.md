@@ -280,6 +280,43 @@ primary and 不保留 as the ghost; either continues the navigation, `Esc` stays
 guarded and the change lapses at 05:00, which is the stated default. Categories on 這一餐 stay
 tonight-only with no keep control and nothing to guard.
 
+### Feedback for a stance belongs at the tap; the reveal reports only what the roll did — ruled 2026-08-30 by the evaluator, answering the owner's critique
+
+The owner, verbatim: 「為何是透過顯示一行字，應該是當使用者點選後，前端透過選項變色的方式，讓使用者知道已經勾選，這部分evaluator參考的資料不足」.
+He is right about the moment, and half-right about the mechanism. Two rulings:
+
+**1. The chip's on-state must carry a second cue that is not colour.** Today 「這次不吃」's on-state is an ink fill
+with paper text and 500→700 weight. A fill inversion is a *lightness* change, so it survives colour-blindness, and
+weight is a second cue — but neither is a glyph a person can name, and the product already has one: the 偏好 rows'
+leading `.mark` square, □ off / ■ on. **The chip gets the same mark**, □/■ before its label, so a selected chip reads
+as selected in monochrome, at a glance, and in the same vocabulary as the sheet the person just left. Sources:
+WCAG 2.2 SC 1.4.1 *Use of Color* (colour is never the only visual means of conveying state) and SC 1.4.11 *Non-text
+Contrast* (the chip's 1.5 px ink border and the mark ≥ 3:1 against paper — measured 15.9:1); Material 3 *Chips* —
+a selected filter chip shows a leading check glyph *and* a container colour change, never the colour alone; Apple
+HIG *Feedback* — confirm a selection where it was made, immediately; Nielsen #1 *Visibility of system status* and
+#6 *Recognition rather than recall*; Doherty threshold (the optimistic flip is < 400 ms today — measured ~120 ms to
+paint); Refactoring UI, "don't rely on colour alone to communicate state". Spec: `spec-chip-mark.md`.
+
+**2. The reveal's `my_reasons` line is a different moment only when the roll DID something.** A stance is
+confirmed at the tap (ruling 1). What the tap cannot show is what the roll did with it — and there are two very
+different answers. An ingredient veto **removed a place from the table** (×0): that is an outcome the person cannot
+see anywhere else, and Nielsen #1 says the system reports what it did; the line stays: 「原料含有：蛋」 / 「部分品項含有：蛋」.
+A category discount **removed nothing** (×0.8, the place can still win, the effect is invisible by design — the roll
+is random): 「避開的類型：火鍋」 restates the stance the chip already shows and adds no outcome; on the reveal it is
+redundant, and next to the veto's line it reads alike while meaning the opposite (backend's own note). **So
+`my_reasons` carries veto outcomes only** — sentences from the `ingredient` contributor — and the discount's
+sentence is not rendered on the reveal. The filter belongs on the wire (one predicate on the contributor), not in
+the browser, which must not sort reasons by what they mean. This narrows D105's 2026-08-29 amendment (「要」, all
+kinds) on the *reveal* only: the person still *may* read every own reason — the GET already states the stance and
+its count on 偏好 and 這一餐 — the reveal just stops repeating the ones that changed nothing. Cost: one wire
+predicate (backend), nothing in the browser. Rejected: render all (the owner's critique); render none (a place
+vanished with no trace); two visual weights for two meanings (the fix for a redundant line is not a lighter font).
+
+**Where the owner's "reference material" point lands, stated plainly:** the chip spec (2026-08-28) ruled weight
+and fill from the depth vocabulary and did not consult the accessibility criteria for state; that is the gap he
+named, and ruling 1 closes it with the sources above. The list of what to consult is now in
+`idea & img/skill-research-sources.md`'s design section.
+
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
 **Member state — what a person in the circle sees after the roll:** the winner, the dice, **one line
