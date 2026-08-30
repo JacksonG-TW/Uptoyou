@@ -268,79 +268,6 @@ def winner_headline_for(display: dict, winning_place_id: int) -> tuple:
         return None, None
     return (headline_module.headline(entry.get("base"), entry.get("name_source")),
             entry.get("qualifier"))
-
-
-async def ingredient_data_for(session, place_ids) -> dict:
-    """`{place_id: "declared" | "unknown"}` — A19's two states, never an absence (D112).
-
-    **Why this is on the wire at all.** An ingredient veto that finds nothing produces no record,
-    and so does a place nobody has published anything about. The arithmetic cannot tell them apart
-    and must not try — but a member avoiding 甲殼類 is owed the difference, because one means *the
-    publisher listed their materials and none is this* and the other means *nobody has said*.
-    Measured 2026-08-29: **4,509 of 36,499 places have any published data**, so `unknown` is 87.6%
-    of the city — the ordinary case, and rendering it as "no allergen here" is the one dangerous
-    thing this feature could do.
-
-    **`declared` is not a claim of safety.** It says only that the company published materials for
-    some product. What it licenses a screen to say is *"they published, and nothing they published
-    names what you avoid"* — never *"this is safe for you"*.
-    """
-    ids = list(place_ids)
-    if not ids:
-        return {}
-    rows = (
-        await session.execute(
-            text(
-                "select distinct p.id as place_id from place p "
-                "  join reference_place rp on rp.registry_no = p.registry_no "
-                "   and rp.publication_id = (" + LATEST_PLACE_PUBLICATION + ") "
-                "  join product_material pm on pm.company_name = rp.name "
-                "   and pm.publication_id = ("
-                "     select id from brand_publication order by detected_at desc, id desc limit 1) "
-                " where p.id in :ids"
-            ).bindparams(bindparam("ids", expanding=True)),
-            {"ids": ids},
-        )
-    ).all()
-    declared = {row.place_id for row in rows}
-    # Every pooled place gets a value. **A place missing from this map would be a third state the
-    # surface has to invent a meaning for**, which is the absence D112 forbids.
-    return {str(place_id): ("declared" if place_id in declared else "unknown")
-            for place_id in ids}
-
-
-async def my_reasons_for(session, round_id: int, viewer: int | None) -> list:
-    """The sentences this member is allowed to read about their own round, and nothing else.
-
-    **D105 as amended 2026-08-29 (owner: 「加」).** A private contribution carries a sentence whose
-    `reason_visibility` is `represented_member`: it belongs to the one member it speaks for, and to
-    nobody — not to the other four, and not to an operator, who audits the arithmetic rather than
-    the people (D13 as D20 filled it).
-
-    **A list of sentences and nothing else.** No factor, no place id, no number. The member is being
-    told *why their own round looked like that*, not handed a share of the evidence table; adding a
-    number here would rebuild the operator view one field at a time on the member wire.
-
-    **`viewer is None` returns nothing, and that is the safe direction.** An operator's own body has
-    no represented-member seat to read, and a caller that forgot to pass a viewer gets silence
-    rather than somebody else's sentences.
-    """
-    if viewer is None:
-        return []
-    rows = (
-        await session.execute(
-            text(
-                "select reason from weight_contribution "
-                " where round_id = :r and member_id = :m "
-                "   and reason_visibility = 'represented_member' and reason is not null "
-                " order by id"
-            ),
-            {"r": round_id, "m": viewer},
-        )
-    ).all()
-    return [row.reason for row in rows]
-
-
 def result_body(
     round_id: int,
     dice: tuple[int, int] | None,
@@ -350,8 +277,6 @@ def result_body(
     allocation: dict[int, int],
     winner_headline: str | None = None,
     winner_qualifier: str | None = None,
-    ingredient_data: dict | None = None,
-    my_reasons: list | None = None,
 ) -> dict:
     return {
         "round_id": round_id,
@@ -373,9 +298,7 @@ def result_body(
         # headline field never carries a bracket.
         "winner_qualifier": winner_qualifier,
         # A19: per place, `declared` or `unknown` — never absent. See `ingredient_data_for`.
-        "ingredient_data": ingredient_data or {},
         # D105 as amended: this member's own `represented_member` sentences, nothing else.
-        "my_reasons": my_reasons or [],
     }
 
 # --- B2 / item 9: the trip, read the same way everywhere it appears ------------------------
@@ -512,13 +435,10 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # reads `places`. Named here because this list is a whitelist and a new field is
                # operator-only until it is.
                "winner_headline", "winner_qualifier",
-               # A19: a member avoiding an ingredient is the person this is for, so it is theirs
-               # before it is the operator's.
-               "ingredient_data",
-               # D105 as amended 2026-08-29: the member's own sentences. Whitelisted explicitly
-               # because it is the one field here whose value differs per reader — the whole payload
-               # is otherwise the same for everyone in the room.
-               "my_reasons",
+               # **`ingredient_data` and `my_reasons` left this whitelist on 2026-08-30**, with
+               # the ingredient kind. They are the only two fields ever removed from it, and that
+               # is worth a line: a whitelist shrinking is as much a payload change as one growing,
+               # and frontend was warned before this landed rather than after.
                # D108: the seat list, the decider and the commitment are all member-visible — they
                # are what the fairness claim is made of, so withholding them from a member would
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is

@@ -47,7 +47,12 @@ from .db import session_factory
 # and the duplication is the cheaper half:** the database refuses a bad value whatever the API
 # believes (D39's condition 2), and this list exists only so the refusal is a 400 naming the list
 # rather than a 500 carrying a constraint name. The integration test asserts they agree.
-CATEGORIES = ("麵食", "飯食", "小吃", "火鍋", "燒烤", "日式", "西式", "早餐", "咖啡飲料", "其他")
+# **Eleven since 2026-08-30 — `便利商店` is D38's new value (revision 0039 widens the CHECK).**
+# `其他` stays last: the order is the row a screen renders, and the fallback belongs at the end.
+# This list is the SCREEN's, and `test_preference_contributor` asserts it is a subset of the
+# classifier's — never equality, because the classifier's may legitimately run ahead again.
+CATEGORIES = ("麵食", "飯食", "小吃", "火鍋", "燒烤", "日式", "西式", "早餐", "咖啡飲料",
+              "便利商店", "其他")
 # 衛福部's eleven food-label allergen groups, mirrored from revision 0023's CHECK for the same
 # reason as the ten above. **D103: the list is these groups because that is what Taiwanese packaging
 # already prints — and no copy on any surface may contain the word 過敏.** The API records 「不吃 X」;
@@ -66,6 +71,11 @@ KIND_INGREDIENT = "avoid_ingredient"
 # The two kinds that carry a stance, and the one place that fact is written on this side. Both are
 # reversible by appending `allow`; neither expires.
 AVOIDANCES = (KIND_AVOID, KIND_INGREDIENT)
+
+# **Known, stored, and refused on the wire since 2026-08-30.** They are still legal values of
+# `ck_preference_kind` and 9 + 81 rows hold them; what changed is that nothing can create another.
+# Named as a set rather than tested as "not the one good kind", so the 422's message can be true.
+RETIRED_KINDS = (KIND_BUDGET, KIND_INGREDIENT)
 
 # Which closed list each avoidance draws from. A dict rather than two branches, so adding a fourth
 # kind is a line here instead of an `elif` somewhere a reader has to find.
@@ -213,6 +223,28 @@ select value, persist, valid_from from (
 # copying a cadence off a webpage. The denominator is the current reference publication — the set a
 # member could actually propose from — and the numerator is the places that have a category, which
 # is what decides whether an avoid can fire at all.
+# **Which of D38's values no place in the current publication carries.** One row per value that is
+# absent, so the caller gets a list rather than a shape to diff. `unnest` on the parameter rather
+# than a literal list: the eleven live in `CATEGORIES` and this query must not become a twelfth
+# place to keep them.
+VALUES_WITH_NO_PLACES = """
+with latest as (
+    select id from place_publication order by detected_at desc, id desc limit 1
+)
+select v.value
+  from unnest(cast(:values as text[])) as v(value)
+ where not exists (
+       select 1
+         from reference_place rp
+         join latest on true
+         join place p
+           on p.registry_no = rp.registry_no and p.origin = 'reference'
+        where rp.publication_id = latest.id and p.category = v.value
+ )
+ order by v.value
+"""
+
+
 CATEGORY_COVERAGE = """
 select (select count(*) from place where category is not null) as with_category,
        (select count(*) from reference_place
@@ -277,22 +309,15 @@ BREADTH = """
 with latest as (
     select id from place_publication order by detected_at desc, id desc limit 1
 ),
-brand as (
-    select id from brand_publication order by detected_at desc, id desc limit 1
-),
 proposable as (
-    -- A19: the company comes along, because an ingredient stance reaches a place through what its
-    -- COMPANY published rather than through a column on the place.
-    select p.category, rp.name as company
+    select p.category
       from reference_place rp
       join latest on true
       left join place p
         on p.registry_no = rp.registry_no and p.origin = 'reference'
      where rp.publication_id = latest.id
     union all
-    -- A place a member typed has no company and no publisher, so no ingredient stance can reach
-    -- it. `null`, not an empty string: it is unknown, not "published nothing".
-    select p.category, null as company
+    select p.category
       from place p
      where p.origin = 'circle-local' and p.circle_id = :circle_id
 )
@@ -309,30 +334,14 @@ select count(*) as proposable,
        -- gets there. An ingredient's ×0 and a category's discount each count one place, because
        -- the question the number answers is *how much of the room have I had an opinion about*,
        -- not *how much have I killed*.
-       count(*) filter (
-           where category = any(:avoided)
-           -- **A19: the day the previous comment predicted.** It said *"the day a source arrives it
-           -- becomes `or <the join>` on this line and `touched`'s definition does not move"*. It
-           -- arrived on 2026-08-29 and this is that line, unchanged in meaning.
-           --
-           -- **The total is EXACT, and it is worth saying which part of A19 is a floor and which is
-           -- not.** `exists` over the union of the member's terms counts a place once however many
-           -- of them match, and `filter` counts a row once however many stances reach it — so a
-           -- place both a category and an ingredient reach is one place, and 蝦 plus 蝦仁 on one
-           -- company is one place. The floor is in the per-ingredient ROW (`touched_is_a_floor`),
-           -- where the count is one term's rather than a union; it is not here.
-              or (
-                  company is not null
-                  and exists (
-                      select 1
-                        from product_material pm
-                        join brand on true
-                       where pm.company_name = company
-                         and pm.publication_id = brand.id
-                         and pm.material_name = any(:ingredient_terms)
-                  )
-              )
-       ) as touched
+       -- **Categories alone again since 2026-08-30.** A19's ingredient join lived on this line
+       -- for one day; the owner withdrew the kind from the surface (12.4% of the city declares
+       -- anything, 「覆蓋率太小了，沒有意義」), so nothing on any screen can produce an ingredient
+       -- stance and a join that can never match is a join that misleads whoever reads the query
+       -- next. **The tables, the ingest and the stored rows all stay** — this is the surface
+       -- leaving, not the data — so re-adding the `or (...)` block is a small change if a source
+       -- ever makes the kind worth offering again.
+       count(*) filter (where category = any(:avoided)) as touched
   from proposable
 """
 
@@ -418,36 +427,40 @@ def _validate(body: PreferenceBody) -> None:
     bug into a plausible stored fact, which is the H23 shape this schema keeps meeting. A default
     stance is the one that would hurt: it would let a malformed request *start* an avoidance.
     """
-    if body.kind not in (KIND_BUDGET,) + AVOIDANCES:
+    # **One kind on the wire since 2026-08-30, and three still in the database.** The owner
+    # withdrew `budget` and `avoid_ingredient` from the surface (「將選擇權還給使用者，我們專心做好
+    # 分類」); `ck_preference_kind` still names all three and the 9 budget and 81 ingredient rows
+    # stay where they are, because D24's pins reference preference rows and a screen losing a chip
+    # is not a reason to delete what a member asked to keep. So: refused **here**, at the door, and
+    # nowhere else.
+    #
+    # **422 and not 400, and the kind is named in the detail.** A retired kind is a well-formed
+    # request the server will not process, and a client that gets a bare 400 cannot tell "you sent
+    # nonsense" from "that feature is gone".
+    # **Two refusals, two codes, and the difference is the point.** A kind this server has never
+    # heard of is a malformed request — 400, as it always was. A kind it knows and has *retired*
+    # is a well-formed request it will not process — 422, naming what happened. A client that gets
+    # one code for both cannot tell "you sent nonsense" from "that feature is gone", and the second
+    # is the one somebody needs to read in a changelog.
+    if body.kind in RETIRED_KINDS:
         raise HTTPException(
-            status_code=400,
-            detail="kind must be one of {} — {!r} is not".format(
-                ", ".join((KIND_BUDGET,) + AVOIDANCES), body.kind
+            status_code=422,
+            detail=(
+                "{!r} was withdrawn from the surface on 2026-08-30 and is no longer accepted; "
+                "{} is the only kind. Rows already stored under the retired kinds are kept and "
+                "are never returned.".format(body.kind, KIND_AVOID)
             ),
         )
-    if body.kind == KIND_BUDGET:
-        if body.value not in BUDGET_BANDS:
-            raise HTTPException(
-                status_code=400,
-                detail="a budget value must be one of {} — {!r} is not".format(
-                    ", ".join(BUDGET_BANDS), body.value
-                ),
-            )
-        if body.stance is not None:
-            raise HTTPException(
-                status_code=400,
-                detail="a budget carries no stance; stance belongs to an avoidance alone",
-            )
-        return
-    # Both avoidances from here: same stance rule, different closed list. **The list is looked up
-    # rather than branched on**, so a fourth kind is one entry in `VALUES_FOR` and not another arm
-    # nobody remembers to add a stance check to.
+    if body.kind != KIND_AVOID:
+        raise HTTPException(
+            status_code=400,
+            detail="kind must be {} — {!r} is not".format(KIND_AVOID, body.kind),
+        )
     allowed = VALUES_FOR[body.kind]
     if body.value not in allowed:
         raise HTTPException(
             status_code=400,
-            detail="{} must be one of ({}) — {!r} is not".format(
-                "a category" if body.kind == KIND_AVOID else "an ingredient",
+            detail="a category must be one of ({}) — {!r} is not".format(
                 "、".join(allowed), body.value
             ),
         )
@@ -473,9 +486,14 @@ async def record_preference(circle_id: int, body: PreferenceBody, request: Reque
     No 409: a second write is not a conflict, it is the next version. That is D70's quiet-success
     shape applied to a table that appends.
     """
-    _validate(body)
+    # **The credential first, the body second, and the order is a rule rather than a style.** A
+    # request with no token must read 401 whatever it carries: validating first told an anonymous
+    # caller which kinds this server accepts and which it has retired, and it turned the 401
+    # contract into "401 unless your body is also wrong". Caught 2026-08-30 by
+    # `test_preference_integration`'s no-token line going 422.
     async with session_factory()() as session:
         member_id = await _resolve_member(session, request, circle_id)
+        _validate(body)
         await session.execute(
             text(INSERT),
             {
@@ -508,59 +526,29 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
     """
     async with session_factory()() as session:
         member_id = await _resolve_member(session, request, circle_id)
-        budget_row = (
-            await session.execute(text(IN_FORCE_BUDGET), {"member_id": member_id})
-        ).one_or_none()
         avoided = (
             await session.execute(
                 text(IN_FORCE_AVOID), {"member_id": member_id, "kind": KIND_AVOID}
             )
         ).all()
-        # A separate query with the kind named, not one query returning both. **The 2026-08-19
-        # reason — that `breadth` is computed from the categories alone — stopped being true on
-        # 2026-08-29**, when A19 gave the ingredient half a join and `BREADTH` began counting both.
-        # The separation stands on the other reason, which never depended on that: the two are
-        # closed lists with disjoint values, and one query returning both would hand a category to
-        # a caller asking about ingredients.
-        ingredients = (
-            await session.execute(
-                text(IN_FORCE_AVOID), {"member_id": member_id, "kind": KIND_INGREDIENT}
-            )
-        ).all()
-        month = (await session.execute(text(SERVER_MONTH))).one()
         coverage = (await session.execute(text(CATEGORY_COVERAGE))).one()
-        ingredient_coverage = (await session.execute(text(INGREDIENT_COVERAGE))).one()
-        # A19: how many proposable places each avoided GROUP is named by. The mapping term → group
-        # is the authored table's and stays in Python — the rule is a lookup and a substring rule is
-        # forbidden (D103), so SQL is handed the terms and never a pattern.
-        from upto.seed.ingredient_terms import TERMS as _TERMS  # noqa: PLC0415
-
-        _term_group = {term: group for term, group, _d, _b, _r in _TERMS}
-        ingredient_touched = {}
-        for row in (
-            await session.execute(
-                text(INGREDIENT_BY_STANCE), {"materials": list(_term_group)}
-            )
-        ).all():
-            group = _term_group.get(row.material)
-            if group:
-                # **`max`, not `+`.** Two terms of one group (蝦 and 蝦仁) name overlapping sets of
-                # places, and adding them would report more places than the city has. The largest
-                # single term is a floor rather than the true union — stated in the payload's own
-                # comment, because a number that is knowably low is honest only if it says so.
-                ingredient_touched[group] = max(ingredient_touched.get(group, 0), row.touched)
-        # **Only the terms naming a group this member actually avoids.** Handing the whole authored
-        # table would make `touched` count every place any allergen reaches, which is a fact about
-        # the city and not about them.
-        avoided_groups = {row.value for row in ingredients}
-        breadth_terms = [term for term, group in _term_group.items() if group in avoided_groups]
+        # **Which of D38's values no place carries yet — asked, never assumed.** `便利商店` arrived
+        # on 2026-08-30 and every one of the city's 2,110 convenience-store rows still reads 其他
+        # until the v6 re-pass runs, so that chip's stat is a true 0 家 for a reason the member
+        # cannot guess. A silent zero reads as "there are none of those near you"; this makes the
+        # screen able to say which it is. It empties itself the day the re-pass lands.
+        unclassified = [
+            row.value for row in (
+                await session.execute(text(VALUES_WITH_NO_PLACES),
+                                      {"values": list(CATEGORIES)})
+            ).all()
+        ]
         breadth = (
             await session.execute(
                 text(BREADTH),
                 {
                     "circle_id": circle_id,
                     "avoided": [row.value for row in avoided],
-                    "ingredient_terms": breadth_terms,
                 },
             )
         ).one()
@@ -574,12 +562,11 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             ).all()
         }
     return {
-        # **The server's month, so the client compares rather than derives (A2-G13c).** A screen
-        # that acknowledges a band "for this month" needs to know which month the server means, and
-        # a browser deriving one from its own clock is the two-clock arrangement D25 refuses inside
-        # the database — the same argument, one layer out. See `SERVER_MONTH` for which boundary
-        # this is and for the question it deliberately does not answer.
-        "month": month.month,
+        # **`month` left this payload on 2026-08-30 with the budget.** It was the *budget's*
+        # boundary — D25's one stated exception to D83's UTC rule — and a month on the wire that
+        # nothing on the screen is bounded by is a fact waiting to be misread as "this expires".
+        # `month_end_of` and `_TODAY` stay in this module: A2's fixture still writes an expiring
+        # row and the 9 stored budgets still carry one.
         # **D22's breadth, with its denominator stated in the payload rather than assumed.** The
         # evaluator refuses an unstated denominator at the gate and is right to: the same share
         # means three different things over three candidate pools, and a warning nobody can check
@@ -639,37 +626,6 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             if not coverage.reference_rows
             else round(coverage.with_category / coverage.reference_rows, 4),
         },
-        # **Zero today, and reported rather than omitted (D103).** No place carries ingredient data,
-        # so an ingredient avoidance is stored and changes no roll. A screen offering eleven choices
-        # that do nothing has to be able to say so — and it must read the figure here rather than
-        # state it, because the day a source arrives a number in the markup becomes false silently.
-        # The same discipline `category_coverage` is under, which has moved from 6.2% to 24.5% in a
-        # single day.
-        "ingredient_coverage": {
-            "with_ingredient": ingredient_coverage.with_ingredient,
-            "reference_rows": ingredient_coverage.reference_rows,
-            "share": 0.0
-            if not ingredient_coverage.reference_rows
-            else round(
-                ingredient_coverage.with_ingredient / ingredient_coverage.reference_rows, 4
-            ),
-        },
-        "budget": None
-        if budget_row is None
-        else {
-            "value": budget_row.value,
-            "persist": budget_row.persist,
-            # The month D25 gives it. A screen may say "until the end of August" without
-            # re-deriving a boundary the database already decided.
-            "expires_on": budget_row.expires_on.isoformat(),
-            "valid_from": budget_row.valid_from.isoformat(),
-            # **An expired budget is still returned, and that is D25's own rule rather than
-            # laxity:** *「Re-confirmation shows the value, it does not ask the question again.」*
-            # The screen arrives with last month's band filled in and the member accepts or
-            # changes it. What expiry stops is the *contributing* — the contributor ignores an
-            # expired band — so the flag is here for the prompt, not as a deletion signal.
-            "expired": bool(budget_row.expired),
-        },
         # **Each stance says what it zeroes on its own (D22's amendment, `f51aec0`).** So the screen
         # can state every choice — 「火鍋 讓 354 家擲不到」 — rather than only the total, which is the
         # number a member can actually act on: the combined figure tells them they have narrowed a lot
@@ -691,66 +647,13 @@ async def preferences_in_force(circle_id: int, request: Request) -> dict:
             }
             for row in avoided
         ],
-        # **Its own key, never merged into `avoid_categories`.** They are two closed lists and the
-        # screen shows them as two groups; more to the point, `breadth` above is computed from the
-        # categories alone, so a merged list would be handed to a calculation that cannot mean
-        # anything for an ingredient. **No `expired` flag here and none coming:** an ingredient
-        # avoidance does not lapse (revision 0023's CHECK keeps `expires_on` NULL). B1's carry rule
-        # for this kind — *show, and require the tap even for a stance* — is a screen behaviour, and
-        # putting an expiry in the data to force it would silently switch an avoidance **off**,
-        # which is the opposite of asking again.
-        #
-        # **The device half of that carry rule is ruled OUT of the server (2026-08-19).** B1 asks for
-        # a re-ask on a new month **or a new device**; `preference` records a member and no device, so
-        # the second half was never answerable here. Three reasons it stays that way rather than
-        # getting a column: monthly re-asking already gives the safety a new device would; the browser
-        # knows for itself that it is new, because a fresh device has no local state; and **storing a
-        # device beside an allergen is the most sensitive linkage this product could make** — it turns
-        # 「this member avoids 花生」 into 「this member, on this handset, avoids 花生」. Identity and
-        # new-phone linking are parked whole with D107, so nothing is coming that would change the
-        # arithmetic. The evaluator carries it as `A2-G13c-device`, **`n/a` with its precondition
-        # named — the table cannot express the question** — never as a pass, which is H37's rule
-        # applied to a missing *column* rather than a missing row.
-        #
-        # **The month half is still the endpoint's and is NOT built yet.** This payload resolves
-        # neither boundary today: it hands out `valid_from` and lets the screen decide, which makes
-        # the client the only deriver rather than a second one — the opposite of what D25 chose when
-        # it stored the budget's expiry, and D25's stated reason was that *a month boundary four
-        # readers each re-derive is how two of them disagree*. So the remaining work is to resolve
-        # the month here and send the asking / not-asking state already decided.
-        "avoid_ingredients": [
-            {
-                "value": row.value,
-                "persist": row.persist,
-                "valid_from": row.valid_from.isoformat(),
-                # **Zero, and reported rather than omitted (D103's shape).** An ingredient is a
-                # stance like a category, so D22's 「碰到」 ruling covers it — and the honest answer
-                # today is that it touches nothing, because no place carries ingredient data and
-                # there is no source for it. Sending the key at 0 keeps the screen from
-                # special-casing one kind, and it makes the day the number moves visible instead of
-                # a surprise.
-                #
-                # **The 2026-08-19 note that this «cannot be folded into `breadth`» is superseded.**
-                # It was right while `breadth` meant *zeroed*: adding a stance that zeroes nothing
-                # would have claimed a narrowing that had not happened. D22 now asks what the
-                # stances **touch**, so the ingredient half belongs inside the combined figure by
-                # definition — it contributes nothing only because there is nothing to join, and
-                # `BREADTH`'s filter says exactly where that join lands.
-                # **A19 made these real; they were a literal 0 and 0.0.** The placeholder was
-                # honest when nothing published — and it printed 「0 家抽不到（0.0%）」 on the served
-                # screen the day 4,509 places did, which reads as *we looked and nothing needed
-                # excluding*. A false zero on the one kind where being wrong is not a worse dinner.
-                #
-                # **A floor, not a total, and the payload says so rather than the reader guessing.**
-                # Two authored terms of one group (蝦 and 蝦仁) name overlapping sets of places, so
-                # the count is the largest single term's rather than a union that would double-count.
-                # The denominator is the same proposable set `breadth` uses (D22).
-                "touched": ingredient_touched.get(row.value, 0),
-                "touched_is_a_floor": True,
-                "share": 0.0
-                if not breadth.proposable
-                else round(ingredient_touched.get(row.value, 0) / breadth.proposable, 4),
-            }
-            for row in ingredients
-        ],
+        # **Which of the eleven no place carries yet, so a true zero can say why.** `便利商店`
+        # is the whole of this list on 2026-08-30 and is expected to leave it after the v6
+        # city re-pass; a value here means the chip works and there is nothing for it to reach
+        # *yet*, which is a different sentence from "there are none near you". Derived from the
+        # database, never a literal — the day the re-pass lands this empties itself.
+        "values_awaiting_classification": {
+            "values": unclassified,
+            "why": "分類器尚未以 v6 重跑全市；這些類別目前沒有任何店家（2026-08-30）",
+        },
     }

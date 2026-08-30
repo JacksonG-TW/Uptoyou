@@ -279,34 +279,18 @@ async def scenario(test_url: str, base_url: str) -> None:
         # the same reason it must come after the later `open_round is None` assertion, which is
         # true only while nothing is open. A swept round blocks its circle until somebody proposes
         # into it — the shape that left round 834 holding circle 5.
-        async with Session() as session:
-            swept_brand = (
-                await session.execute(
-                    text("insert into brand_publication "
-                         "  (source, content_sha256, detected_at, payload_bytes, scope) "
-                         "values ('taipei-foodtracer', repeat('9', 64), now(), 1024, 'x') "
-                         "returning id")
-                )
-            ).scalar_one()
-            company = (
-                await session.execute(
-                    text("select name from reference_place where registry_no = ("
-                         "  select registry_no from place where id = :p)"),
-                    {"p": rainy},
-                )
-            ).scalar_one()
-            await session.execute(
-                text("insert into product_material (publication_id, company_name, brand_name, "
-                     "  product_name, material_name, material_name_raw) "
-                     "values (:pub, :c, :c, '蛋餅', '雞蛋', '雞蛋')"),
-                {"pub": swept_brand, "c": company},
-            )
-            await session.commit()
-        assert (await client.post(
-            f"/circles/{circle}/preferences",
-            json={"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"},
-            headers=auth,
-        )).status_code == 204
+        # **Rebuilt on 2026-08-30: the all-swept pool is now reached through a CATEGORY, not an
+        # ingredient.** The ingredient veto was the only ×0 when this test was written and it has
+        # been withdrawn — but the state it produced is still reachable, and by a shorter road:
+        # D103's discount is `1 − 1/N` and this circle seats **one**, so `N = 1` gives exactly 0.
+        # That is the formula and not a special case (D103's own sentence), so avoiding the
+        # category both pooled places carry sweeps the pool.
+        #
+        # **Worth keeping rather than deleting with the feature.** A swept pool leaves the round
+        # OPEN and blocks its circle until somebody proposes into it — the shape that left round
+        # 834 holding circle 5 — so the event is the only thing telling the other seats what
+        # happened. The spec keeps `pool_swept` as the guard for the next ×0 anyone rules; a guard
+        # with no test is the guard that is quietly broken when that day comes.
         swept = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
         assert swept.status_code == 201, swept.text
         swept_id = swept.json()["round_id"]
@@ -316,10 +300,28 @@ async def scenario(test_url: str, base_url: str) -> None:
             headers=auth,
         )
         assert sibling.status_code == 201, sibling.text
-        for place in (rainy, sibling.json()["place_id"]):
+        pooled_places = (rainy, sibling.json()["place_id"])
+        for place in pooled_places:
             assert (await client.post(
                 f"/rounds/{swept_id}/proposals", json={"place_id": place}, headers=auth
             )).status_code == 201
+        # **Both pooled places carry the one category the seat avoids** — that is what makes the
+        # pool swept rather than merely discounted. All five provenance columns or none
+        # (`ck_place_category_provenance`), so the fixture sets the lot.
+        async with Session() as session:
+            for place in pooled_places:
+                await session.execute(
+                    text("update place set category = '燒烤', category_model = 'test-fixture', "
+                         "  category_prompt_version = 'fixture', category_generated_at = now(), "
+                         "  category_input = 'x' where id = :p"),
+                    {"p": place},
+                )
+            await session.commit()
+        assert (await client.post(
+            f"/circles/{circle}/preferences",
+            json={"kind": "avoid_category", "value": "燒烤", "stance": "avoid"},
+            headers=auth,
+        )).status_code == 204
 
         swept_events = []
         swept_seen = asyncio.Event()

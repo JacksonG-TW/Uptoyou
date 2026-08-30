@@ -40,8 +40,6 @@ from .api_common import (
     resolve_credential,
     resolve_member,
     result_body,
-    ingredient_data_for,
-    my_reasons_for,
     winner_headline_for,
     trip_for,
 )
@@ -82,7 +80,6 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         # snapshot that omitted them would make the browser reconstruct a fairness claim it cannot
         # verify. The seats come from `api_common.seats_for`, the same function the reveal uses, so
         # the stream and the response cannot drift.
-        open_ingredient_data = await ingredient_data_for(session, pool_ids)
         seed = bytes(open_row.outcome_seed) if open_row.outcome_seed is not None else None
         seats = await seats_for(session, open_row.id, open_row.seat_ids, seed, closed=False)
         open_round = {
@@ -97,7 +94,6 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
                 {
                     "place_id": p,
                     "name": names.get(p),
-                    "ingredient_data": open_ingredient_data.get(str(p), "unknown"),
                 }
                 for p in pool_ids
             ],
@@ -138,8 +134,6 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         # read twice, so a reconnecting client's reveal reads identically to the live one.
         display = await place_display(session, weights.keys())
         winner_headline, winner_qualifier = winner_headline_for(display, last.winning_place_id)
-        ingredient_data = await ingredient_data_for(session, weights.keys())
-        my_reasons = await my_reasons_for(session, last.id, viewer)
         last_result = result_body(
             last.id,
             dice,
@@ -149,8 +143,6 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
             allocate(weights) if weights else {},
             winner_headline=winner_headline,
             winner_qualifier=winner_qualifier,
-            ingredient_data=ingredient_data,
-            my_reasons=my_reasons,
         )
         # **B2, and this is the half D56 makes necessary.** Nothing is pushed when a trip is signed
         # (D53), so a client that was not connected at the moment — or that reconnected since — would

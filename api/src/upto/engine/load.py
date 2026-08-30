@@ -38,16 +38,15 @@ from sqlalchemy import bindparam, text
 # be invisible to the engine on exactly the terms it is invisible to the screen, which is why this
 # is imported rather than restated.
 from upto.preferences import IN_FORCE_PREDICATE
-from upto.seed.ingredient_terms import TERMS as _INGREDIENT_TERMS
-from upto.engine.ingredient import REASON_VISIBILITY as INGREDIENT_VISIBILITY
-from upto.engine.ingredient import veto_contribution as ingredient_veto
 from upto.engine.preference import REASON_VISIBILITY, avoid_contribution
 
 #: material name → allergen group, built once from the authored table (A19). A dict
 #: rather than a scan: the rule is a lookup and a substring rule is forbidden (D103).
-INGREDIENT_TERMS = {term: group for term, group, _d, _b, _r in _INGREDIENT_TERMS}
 from upto.engine.store import (
-    BrandPin, ForecastPin, PinnedContribution, PreferencePin, TripPin,
+    # `BrandPin` is no longer imported: nothing here writes one since A19's pass was removed.
+    # It stays in `store.py` with its dispatch branch, because `weight_contribution` rows already
+    # carry `brand_publication_id` and the writer must still describe what is in the table.
+    ForecastPin, PinnedContribution, PreferencePin, TripPin,
 )
 from upto.engine.weather import REASON_VISIBILITY as WEATHER_VISIBILITY
 from upto.engine.trip import REASON_VISIBILITY as TRIP_VISIBILITY
@@ -374,129 +373,17 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
             )
             next_id += 1
 
-    # --- A1 / D103: the private ingredient avoidances of this circle's members ---------------
+    # --- A19's ingredient pass was removed on 2026-08-30 -------------------------------------
     #
-    # **A separate pass with its own comparison, and it produces nothing today.** No place carries
-    # ingredient data — there is no source for it and none planned — so this fetch returns the
-    # member's avoidances and there is nothing to compare them against. `GET
-    # /circles/{id}/preferences` reports `ingredient_coverage` as zero for exactly this reason.
+    # **The surface left, so the read left with it (owner: 「覆蓋率太小了，沒有意義」 — 12.4% of the
+    # city declares anything).** `POST /circles/{id}/preferences` refuses `avoid_ingredient` from
+    # today, so no new row of that kind can be written; the 81 already stored stay, and this loader
+    # no longer looks at them. **A contributor that can only ever fire on rows nothing can create
+    # is worse than none** — it reads as live code to whoever meets it next.
     #
-    # **Why it exists at all rather than being added when a source arrives.** The alternative was to
-    # let ingredient rows fall through the category pass above, where they match nothing because
-    # 芒果 is not one of D38's ten. That is the right answer reached by type confusion, and it hides
-    # the work rather than removing it — see the comment on the `kind` filter above.
-    #
-    # **What the comparison will be is not decided here.** A place's ingredients are not a single
-    # value like its category, so `avoid_contribution`'s shape does not carry over, and the
-    # contributor stays category-only until there is data to shape it against. What is settled is
-    # D45's absorbing zero: an ingredient a person does not eat is a veto, not a discount.
-    #
-    # **And this pass may never be applied by speak-for.** One person may roll for a circle, and they
-    # may not carry an absent person's ingredient avoidance into a round that person did not join.
-    # That is an API rule rather than a schema one, and it lands with the code that reads it.
-    ingredient_rows = (
-        await session.execute(
-            text(
-                "select member_id, value, id from ("
-                "  select distinct on (member_id, value) member_id, value, stance, id,"
-                "         persist, valid_from"
-                "    from preference"
-                "   where kind = 'avoid_ingredient'"
-                "     and member_id in (select id from member where circle_id = :c)"
-                "   order by member_id, value, valid_from desc, id desc"
-                # D25 as amended: the latest row per key is taken first, and if THAT row is a
-                # lapsed `persist = false` the key has nothing in force — nothing older is
-                # consulted, so a lapsed `allow` never uncovers a kept `avoid`.
-                ") latest where stance = 'avoid' and " + IN_FORCE_PREDICATE
-            ),
-            {"c": round_row.circle_id},
-        )
-    ).all()
-    if ingredient_rows:
-        # ---- A19: the pass that was inert now has data -------------------------------------
-        #
-        # **One query for the whole pool, unfiltered by the authored table.** It returns every
-        # material each pooled place's company publishes, not only the ones that name an allergen —
-        # because the difference between *declared and named nothing* and *declared nothing at all*
-        # is exactly what this feature exists to keep, and a query that filtered would collapse
-        # them into one absence (D112).
-        avoided_by_member = {}
-        for row in ingredient_rows:
-            avoided_by_member.setdefault(row.member_id, {})[row.value] = row.id
-        brand_publication_id = (
-            await session.execute(
-                text("select id from brand_publication "
-                     " order by detected_at desc, id desc limit 1")
-            )
-        ).scalar()
-        declared = {}
-        if brand_publication_id is not None:
-            material_rows = (
-                await session.execute(
-                    text(
-                        "select p.id as place_id, pm.product_name as product, "
-                        "       pm.material_name as material "
-                        "  from place p "
-                        "  join reference_place rp on rp.registry_no = p.registry_no "
-                        "   and rp.publication_id = ("
-                        "     select id from place_publication "
-                        "      order by detected_at desc, id desc limit 1) "
-                        "  join product_material pm on pm.company_name = rp.name "
-                        "   and pm.publication_id = :bp "
-                        " where p.id in :ids"
-                    ).bindparams(bindparam("ids", expanding=True)),
-                    {"bp": brand_publication_id,
-                     "ids": [row.place_id for row in pool]},
-                )
-            ).all()
-            for row in material_rows:
-                # **Per product since 2026-08-30 (D103 as amended): `{place: {product: groups}}`.**
-                # The veto is ×0 only when EVERY published product names the avoided group, so the
-                # denominator is the product count and the shape has to carry products that name
-                # nothing — `setdefault` to an empty set is what keeps them in the count. A dict
-                # keyed only by group would have thrown away the divisor.
-                by_product = declared.setdefault(row.place_id, {})
-                groups = by_product.setdefault(row.product, set())
-                group = INGREDIENT_TERMS.get(row.material)
-                if group:
-                    groups.add(group)
-
-        produced = 0
-        for member_id, avoided in sorted(avoided_by_member.items()):
-            for row in pool:
-                place_id = row.place_id
-                record = ingredient_veto(
-                    next_id, place_id,
-                    # **`None`, not an empty set, for a place nobody published anything about.**
-                    # `.get` returns exactly that, and the contributor's own docstring says why the
-                    # two must not be flattened.
-                    declared.get(place_id),
-                    set(avoided),
-                )
-                if record is None:
-                    continue
-                pinned.append(
-                    PinnedContribution(
-                        contribution=record,
-                        pin=BrandPin(brand_publication_id=brand_publication_id),
-                        reason_visibility=INGREDIENT_VISIBILITY,
-                        member_id=member_id,
-                    )
-                )
-                next_id += 1
-                produced += 1
-
-        # **Still not silent, and now it says which of three things happened.** A round whose
-        # members avoid ingredients and whose places publish nothing is the ordinary case — 87.6%
-        # of the city publishes nothing (measured 2026-08-29) — and a reader of a panel that shows
-        # no ingredient record deserves to know whether that is "nobody publishes" or "they publish
-        # and it is clean".
-        print(
-            "engine: {} ingredient avoidance(s) in force; {} of {} pooled places have published "
-            "materials; {} record(s) produced (D103)".format(
-                len(ingredient_rows), len(declared), len(pool), produced
-            ),
-            flush=True,
-        )
-
+    # **What stayed, and it is most of the work:** the ingest, `product_material`, the brand
+    # publication, `upto.seed.ingredient_terms`, `upto.engine.ingredient` and its unit test, the
+    # `weight_contribution` rows already written (history — D24's pins reference them), and
+    # `pool_swept`, which is the guard for the next ×0 anyone rules. Re-adding the pass is a query
+    # and a loop, not a feature.
     return LoadedRound(contributions=tuple(pinned), forecast_baseline=baseline)

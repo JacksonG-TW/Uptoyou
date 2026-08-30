@@ -445,169 +445,38 @@ async def scenario(test_url: str) -> None:
         assert chain_member["winner_qualifier"] == qualifier
         print("  A16: a bracketed chain shortens to its base and carries the bracket apart")
 
-        # **A19, case 1: a declared brand in the pool and NOBODY avoiding anything.** This is the
-        # case that was broken for every roll and that no test reached — the round above already
-        # exercises it now that the company publishes materials, so the assertion is simply that it
-        # closed at all, said plainly rather than left implicit.
-        assert chain_rolled.status_code == 200, ("a pool holding a declared brand must roll",
+        # --- A19's surface was withdrawn on 2026-08-30; what survives is asserted here ------
+        #
+        # **This block used to prove the ingredient veto end to end and now proves it is gone.**
+        # The owner withdrew the kind (「覆蓋率太小了，沒有意義」 — 12.4% of the city declares
+        # anything). The ingest, `product_material`, the brand publication and the 81 stored rows
+        # all stay; what left is the read, the wire and the POST. The assertions below are the
+        # after-shape of exactly what the deleted ones checked, in the same order, so the diff is
+        # readable as a withdrawal rather than as a test that quietly stopped existing.
+        assert chain_rolled.status_code == 200, ("a pool holding a declared brand must still roll",
                                                  chain_rolled.text)
-        assert chain_result["ingredient_data"][str(winner)] == "declared", (
-            chain_result["ingredient_data"])
-        print("  A19: a declared brand rolls with nobody avoiding, and reads `declared`")
+        assert "ingredient_data" not in chain_result, sorted(chain_result)
+        assert "my_reasons" not in chain_result, sorted(chain_result)
 
-        # **A19, case 2: the same brand, and a seat that avoids what it names.**
-        # The pool is the chain site plus a circle-local one, deliberately: if both places were the
-        # chain's, every weight would be zero and the draw would have nothing to pick — a real
-        # question this feature raises and NOT the one under test here.
-        # **The same member avoids a category AND an ingredient, so the round carries both
-        # sentences at once.** That is what makes the next assertions mean something: D13 as
-        # amended 2026-08-30 sends one of the two to the reveal and keeps the other on the panel,
-        # and a round producing only one of them could not tell a narrowing from a sentence that
-        # was never made. **The category goes on the OTHER place, and that is forced rather than
-        # chosen:** this circle seats one member, so D103's `1 − 1/N` is exactly 0 at N = 1 (a
-        # round of one person is that person's decision) — putting it on `chain` would zero the
-        # place whose full weight the ingredient half is here to prove.
-        async with Session() as session:
-            await session.execute(
-                text("update place set category = '日式', category_model = 'test-fixture', "
-                     "category_prompt_version = 'fixture', category_generated_at = now(), "
-                     "category_input = '日式小店' where id = :p"),
-                {"p": locals_[1]},
-            )
-            await session.commit()
-        for kind, value in (("avoid_ingredient", "蛋"), ("avoid_category", "日式")):
-            assert (await client.post(
-                f"/circles/{circle}/preferences",
-                json={"kind": kind, "value": value, "stance": "avoid"},
-                headers={"Authorization": "Bearer " + plain_token},
-            )).status_code == 204
-        veto_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
-        assert veto_round.status_code == 201, veto_round.text
-        veto_round_id = veto_round.json()["round_id"]
-        for place in (chain, locals_[1]):
-            assert (await client.post(
-                f"/rounds/{veto_round_id}/proposals", json={"place_id": place}, headers=auth
-            )).status_code == 201
-        veto_rolled = await client.post(f"/rounds/{veto_round_id}/roll", headers=auth)
-        assert veto_rolled.status_code == 200, ("the veto path must not 500", veto_rolled.text)
-        veto_result = veto_rolled.json()
-        # **全家's case, owner-ruled 2026-08-30: 1 of 2 published products names 蛋, so the place
-        # PARTICIPATES at full weight and the member is told.** 拉麵 names 雞蛋; 叉燒 names 豬肉,
-        # which is in no group. Zeroing a store because one of its products names 蛋 would tell
-        # somebody they cannot go where they can plainly eat something else.
-        assert veto_result["weights"][str(chain)] == "1", veto_result["weights"]
-        assert veto_result["ingredient_data"][str(chain)] == "declared"
-        assert veto_result["ingredient_data"][str(locals_[1])] == "unknown", (
-            "a circle-local place has no company and no publisher — unknown, never declared")
-
-        # **D105 as amended: the sentence is the avoiding member's and nobody else's.**
-        veto_member = (await client.post(
-            f"/rounds/{veto_round_id}/roll",
+        # **The POST refuses the kind, and 422 rather than 400 is the assertion.** A client cannot
+        # tell "you sent nonsense" from "that feature is gone" if the two share a code.
+        refused = await client.post(
+            f"/circles/{circle}/preferences",
+            json={"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"},
             headers={"Authorization": "Bearer " + plain_token},
-        )).json()
-        # **D13 as amended 2026-08-30 (「縮小」): the ingredient sentence and ONLY it.** This member
-        # is also avoiding a category by now, and that sentence carries
-        # `represented_member_panel` — it restates the chip they set themselves and removed
-        # nothing, so it belongs on the operator's panel and not on the reveal. An equality
-        # assertion rather than a membership one, because the failure this guards is a second
-        # sentence ARRIVING, which `any(...)` would never see.
-        assert veto_member["my_reasons"] == ["部分品項含有：蛋"], veto_member["my_reasons"]
-        assert not any("避開的類型" in r for r in veto_member["my_reasons"]), (
-            "a category discount must not ride my_reasons", veto_member["my_reasons"])
-        # And it is still on the panel, for the member it speaks for. The operator body carries the
-        # panel; this reader is that member (one principal, two devices — D74).
-        # The panel is keyed by place and each place carries `factors` (D46's total order,
-        # straight from the fold).
-        panel_reasons = [
-            factor["reason"]
-            for place in veto_result["panel"].values()
-            for factor in place["factors"]
-            if factor.get("reason")
-        ]
-        assert any("避開的類型" in r for r in panel_reasons), (
-            "the narrowing took the category sentence off the panel too", panel_reasons)
-        # **The operator's own body DOES carry it, and that is correct — the first version of this
-        # assertion had it backwards.** Both device secrets in this file share one `principal_id`:
-        # they are two devices of one person, so the operator device belongs to the represented
-        # member and is reading their own sentence. D74's rule is that the role belongs to the
-        # secret and not to the person, and this is that rule seen from the other side.
-        assert veto_result["my_reasons"] == ["部分品項含有：蛋"], veto_result["my_reasons"]
+        )
+        assert refused.status_code == 422, (refused.status_code, refused.text[:160])
+        assert "avoid_ingredient" in refused.text, refused.text[:160]
 
-        # **The leak that matters is a DIFFERENT member's device**, so the test needs a second
-        # person rather than a second device. This is the D105 failure the field could produce:
-        # one sentence, on somebody else's payload.
-        async with Session() as session:
-            other_principal = (
-                await session.execute(text("insert into principal default values returning id"))
-            ).scalar_one()
-            await session.execute(
-                text("insert into member (circle_id, principal_id, nickname) "
-                     "values (:c, :p, '第二人') returning id"),
-                {"c": circle, "p": other_principal},
-            )
-            other_token = "t-other-" + sha256(b"other").hexdigest()[:16]
-            await session.execute(
-                text("insert into device_secret (principal_id, secret_sha256, operator) "
-                     "values (:p, :h, false)"),
-                {"p": other_principal, "h": sha256(other_token.encode()).hexdigest()},
-            )
-            await session.commit()
-        other_body = (await client.post(
-            f"/rounds/{veto_round_id}/roll",
-            headers={"Authorization": "Bearer " + other_token},
-        )).json()
-        assert other_body["my_reasons"] == [], (
-            "another member's payload carried a represented-member sentence (D105)",
-            other_body["my_reasons"])
-
-        # **The other side of the ruling: a company whose EVERY published product names 蛋 is ×0.**
-        # Three products, all naming it — the fixture the ruling's sharp edge needs, because "every"
-        # means every *published* product and a company publishing three is zeroed even if it sells
-        # fifty. The rest are unknown, never safe.
-        async with Session() as session:
-            for registry in ("A-44444444-00001-1", "A-44444444-00002-1"):
-                await session.execute(
-                    text("insert into reference_place (publication_id, registry_no, origin, name, "
-                         "name_raw, address, address_raw, township_code, township_name) "
-                         "values (:pub, :r, 'reference', '全蛋屋股份有限公司', '全蛋屋股份有限公司', "
-                         "'臺北市大安區和平東路2段86號', 'x', '63000010', 'x')"),
-                    {"pub": place_pub, "r": registry},
-                )
-            for product in ("蛋餅", "蛋糕捲", "茶葉蛋"):
-                await session.execute(
-                    text("insert into product_material (publication_id, company_name, brand_name, "
-                         "  product_name, material_name, material_name_raw) "
-                         "values (:pub, '全蛋屋股份有限公司', '全蛋屋', :p, '雞蛋', '雞蛋')"),
-                    {"pub": brand_pub_for_chain, "p": product},
-                )
-            all_egg = (
-                await session.execute(
-                    text("insert into place (origin, registry_no) "
-                         "values ('reference', 'A-44444444-00001-1') returning id")
-                )
-            ).scalar_one()
-            await session.commit()
-        zero_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
-        assert zero_round.status_code == 201, zero_round.text
-        zero_round_id = zero_round.json()["round_id"]
-        for place in (all_egg, locals_[2]):
-            assert (await client.post(
-                f"/rounds/{zero_round_id}/proposals", json={"place_id": place}, headers=auth
-            )).status_code == 201
-        zero_rolled = await client.post(f"/rounds/{zero_round_id}/roll", headers=auth)
-        assert zero_rolled.status_code == 200, zero_rolled.text
-        zero_result = zero_rolled.json()
-        assert zero_result["weights"][str(all_egg)] == "0", zero_result["weights"]
-        assert zero_result["winning_place_id"] == locals_[2], (
-            "a place whose every published product names the group cannot win", zero_result)
-        zero_member = (await client.post(
-            f"/rounds/{zero_round_id}/roll",
-            headers={"Authorization": "Bearer " + plain_token},
-        )).json()
-        assert zero_member["my_reasons"] == ["原料含有：蛋"], zero_member["my_reasons"]
-        print("  A19: a partly-naming brand participates and says so; an all-naming one is ×0; "
-              "and only the member it speaks for reads either sentence")
-
+        # **And the two fields are off all THREE wires, not only the result body** — frontend
+        # found that gap in the warning: `Round.tsx` drew the pool's marks from the snapshot and
+        # from `pooled`, so removing it from the reveal alone would have left 這一餐 showing
+        # 原料未公開 for ever.
+        snapshot = (await client.get(f"/circles/{circle}/state", headers=auth)).json()
+        for row in (snapshot.get("open_round") or {}).get("pool", []):
+            assert "ingredient_data" not in row, row
+        print("  A19 withdrawn: the roll is unaffected, the kind is refused 422, and neither "
+              "field rides the result body, the snapshot or the pooled event")
     # D14, observed through the endpoint path: the close erased authorship, kept the pool.
     async with Session() as session:
         authored = (

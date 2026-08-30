@@ -155,14 +155,50 @@ async def scenario(test_url: str) -> None:
         # --- the closed lists, refused and never coerced (D38, D39) -------------------
         for body, why in (
             ({"kind": "mood", "value": "tight"}, "an unknown kind"),
-            ({"kind": "budget", "value": "500元"}, "a typed budget"),
-            ({"kind": "budget", "value": "tight", "stance": "avoid"}, "a budget with a stance"),
-            ({"kind": "avoid_category", "value": "拉麵"}, "a category outside D38's ten"),
+            ({"kind": "avoid_category", "value": "拉麵"}, "a category outside D38's eleven"),
             ({"kind": "avoid_category", "value": "火鍋"}, "a category with no stance"),
         ):
             answer = await client.post(path, json=body, headers=auth)
             check("{} is refused with 400".format(why), answer.status_code == 400,
                   "{} {}".format(answer.status_code, answer.text[:120]))
+
+        # --- the two retired kinds: 422, not 400, and the code carries the difference ---
+        #
+        # **Owner-ruled 2026-08-30 — the surface keeps categories and gives the rest back to the
+        # member.** `budget` and `avoid_ingredient` are refused on the wire and remain legal in
+        # `ck_preference_kind`; the 9 and 81 rows already stored stay, because D24's pins reference
+        # preference rows and a chip leaving a screen is not a reason to delete what somebody asked
+        # to keep. **The code is the assertion**: 400 says the request was nonsense, 422 says the
+        # feature is gone, and a client cannot tell those apart if they share a number.
+        for body, why in (
+            ({"kind": "budget", "value": "tight"}, "a budget"),
+            ({"kind": "budget", "value": "500元"}, "a budget that is not even a band"),
+            ({"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"}, "an ingredient"),
+        ):
+            answer = await client.post(path, json=body, headers=auth)
+            check("{} is refused with 422".format(why), answer.status_code == 422,
+                  "{} {}".format(answer.status_code, answer.text[:120]))
+            check("  and the refusal names the kind", body["kind"] in answer.text,
+                  answer.text[:160])
+
+        # **The eleventh value is accepted, which is the other half of revision 0039.** A CHECK the
+        # module's list has outrun refuses this write at the database rather than at the door, so
+        # this line is what pairs the two lists together.
+        answer = await client.post(
+            path, json={"kind": "avoid_category", "value": "便利商店", "stance": "avoid"},
+            headers=auth,
+        )
+        check("便利商店 is accepted — D38's eleventh value reaches the CHECK (0039)",
+              answer.status_code == 204, "{} {}".format(answer.status_code, answer.text[:160]))
+        # **Removed again straight away, and by DELETE rather than by an `allow`.** This is a probe
+        # of the constraint, not part of the scenario's state: every count below is about the
+        # categories the scenario writes on purpose, and a row left here would make each of them
+        # measure the probe instead. An `allow` would not do — it appends a second row and D25 says
+        # nothing is ever edited, so the history would still be two rows long.
+        async with Session() as session:
+            await session.execute(
+                text("delete from preference where kind='avoid_category' and value='便利商店'"))
+            await session.commit()
 
         # --- the write is silent: 204, empty, and nothing on the stream ---------------
         published = []
@@ -170,7 +206,8 @@ async def scenario(test_url: str) -> None:
         stream.publish = lambda *args, **kwargs: published.append((args, kwargs))
         try:
             answer = await client.post(
-                path, json={"kind": "budget", "value": "tight"}, headers=auth
+                path, json={"kind": "avoid_category", "value": "火鍋", "stance": "avoid"},
+                headers=auth,
             )
         finally:
             stream.publish = original_publish
@@ -206,20 +243,54 @@ async def scenario(test_url: str) -> None:
               "publish" not in calls, [c for c in calls if "publish" in c])
 
         # --- persist defaults to false (D17) -----------------------------------------
+        #
+        # **Asserted on `avoid_category` since 2026-08-30, and the rule did not move.** D17 is
+        # about the *default*, not about a kind; it was demonstrated on a budget only because a
+        # budget was the shortest body to write. `budget` is refused on the wire now, so the same
+        # rule is shown on the kind that remains.
         async with Session() as session:
             row = (
                 await session.execute(
-                    text("select persist, expires_on, stance from preference where kind='budget'")
+                    text("select persist, expires_on, stance from preference "
+                         " where kind='avoid_category' order by id desc limit 1")
                 )
             ).one()
         check("persist defaults to false — the default is not to keep", row.persist is False,
               row.persist)
-        check("a budget carries the month's end (D25)", row.expires_on is not None)
-        check("and no stance", row.stance is None)
+        check("an avoidance carries no expiry (revision 0023's CHECK)", row.expires_on is None)
+        check("and it carries its stance", row.stance == "avoid", row.stance)
+
+        # **D25's month boundary, still asserted — on a row written the way A2's fixture writes
+        # one.** The budget left the wire, not the database: `ck_preference_kind` still names it,
+        # 9 rows hold it, and `upto.fixture expired-budget` writes another for gate lines G9–G11.
+        # So the rule that a budget expires at the end of its own **Taipei** month has to keep a
+        # test, and the only honest way to reach it now is the same INSERT the fixture uses.
+        async with Session() as session:
+            await session.execute(
+                text("insert into preference (member_id, kind, value, persist, expires_on) "
+                     "values (:m, 'budget', 'tight', false, {})".format(
+                         preference_module.month_end_of("now()"))),
+                {"m": member},
+            )
+            await session.commit()
+            budget = (
+                await session.execute(
+                    text("select persist, expires_on, stance from preference "
+                         " where kind='budget' order by id desc limit 1")
+                )
+            ).one()
+        check("a stored budget still carries the month's end (D25)",
+              budget.expires_on is not None, budget.expires_on)
+        check("and no stance", budget.stance is None)
 
         # --- a change appends; the older row is untouched (D25, D24) ------------------
         answer = await client.post(
-            path, json={"kind": "budget", "value": "easy", "persist": True}, headers=auth
+            # **The same value, a new persist — which is a truer append test than two values.**
+            # Two different categories are two independent stances; one category written twice is
+            # the case D25 is actually about, where an editing implementation would have had
+            # somewhere to write.
+            path, json={"kind": "avoid_category", "value": "火鍋", "stance": "avoid",
+                        "persist": True}, headers=auth
         )
         check("the second write is not a conflict — no 409", answer.status_code == 204,
               answer.status_code)
@@ -227,35 +298,64 @@ async def scenario(test_url: str) -> None:
             rows = (
                 await session.execute(
                     text(
-                        "select value, persist from preference where kind='budget' "
+                        # **Scoped to the one value this block wrote twice.** The scenario holds
+                        # other categories by now, and "count the rows" would be measuring the
+                        # fixture rather than the append rule.
+                        "select value, persist from preference "
+                        " where kind='avoid_category' and value = '火鍋' "
                         "order by valid_from, id"
                     )
                 )
             ).all()
         check("both versions exist — nothing was edited", len(rows) == 2, rows)
-        check("and the first still says what it said", rows[0].value == "tight", rows[0])
+        check("and the first still says what it said", rows[0].persist is False, rows[0])
+        check("while the second carries the change", rows[1].persist is True, rows[1])
 
         answer = await client.get(path, headers=auth)
         body = answer.json()
-        check("the read resolves the value in force server-side",
-              body["budget"]["value"] == "easy", body["budget"])
+        # **The retired keys are GONE from the payload, not null.** A key present and empty is a
+        # screen's invitation to keep rendering the thing; absent is the honest shape, and
+        # frontend was told these four were leaving before this landed.
+        for gone in ("budget", "avoid_ingredients", "ingredient_coverage", "month"):
+            check("the read no longer carries `{}`".format(gone), gone not in body, sorted(body))
+        check("and it still carries what the screen needs",
+              all(key in body for key in ("avoid_categories", "breadth", "category_coverage")),
+              sorted(body))
+        check("the value in force is the LATEST version, resolved server-side",
+              [row["persist"] for row in body["avoid_categories"] if row["value"] == "火鍋"]
+              == [True], body["avoid_categories"])
         check("and hands over no history", "versions" not in body and "rows" not in body,
               sorted(body))
-        check("the month is stated so a screen need not re-derive it",
-              body["budget"]["expires_on"] is not None)
-        check("and it is not expired today", body["budget"]["expired"] is False,
-              body["budget"])
+        # **A22/D38: a true zero that says why.** 便利商店 exists as a chip from today and no place
+        # carries it until the v6 city re-pass, so the payload names the value rather than letting
+        # a screen render 0 家 as "there are none near you".
+        check("the payload names the values no place carries yet",
+              "便利商店" in body["values_awaiting_classification"]["values"],
+              body.get("values_awaiting_classification"))
+        check("with a reason beside them, never a bare zero",
+              bool(body["values_awaiting_classification"]["why"]))
 
-        # **A2-G13c: the payload states the server's month so no client derives one.** The
-        # assertion that matters is not the format — it is that `month` and `expires_on` come from
-        # the same boundary. A field that merely looks like a month can be derived from a second
-        # clock and agree with the first one for every day but the last of a month, which is the
-        # only day anybody would notice. So this compares them.
-        check("the payload states the server's own month (A2-G13c)",
-              len(body.get("month", "")) == 7 and body["month"][4] == "-", body.get("month"))
-        check("and it is the same boundary `expires_on` was computed against, not a second clock",
-              body["budget"]["expires_on"][:7] == body["month"],
-              (body.get("month"), body["budget"]["expires_on"]))
+        # **A2-G13c left the payload with the budget on 2026-08-30, and the rule it protected did
+        # not.** `month` was on the wire so no client would derive a boundary the server had
+        # already decided; with no budget on the screen there is nothing on the wire bounded by a
+        # month, and a month field nothing is bounded by is a fact waiting to be misread as an
+        # expiry. **What still has to hold is that `month_end_of` and the payload agree**, because
+        # the 9 stored budgets and A2's fixture still use it — so the comparison moves from the
+        # HTTP body to the expression itself, one query below, where the Taipei-boundary test
+        # already lives. Nothing is lost; the assertion changed address.
+        check("the read no longer states a month — nothing on the screen is bounded by one",
+              "month" not in body, sorted(body))
+        async with Session() as session:
+            same = (
+                await session.execute(
+                    text("select to_char({}, 'YYYY-MM') as a, "
+                         "       to_char({}, 'YYYY-MM') as b".format(
+                             preference_module._MONTH_START,
+                             preference_module.month_end_of("now()")))
+                )
+            ).one()
+        check("and the month a budget expires in is still the server's own (A2-G13c, moved)",
+              same.a == same.b, (same.a, same.b))
 
         # **The boundary is Taipei's, owner-ruled 2026-08-27 (D25's amendment) — and the test that
         # matters is at the eight hours where the two answers differ.** Comparing today's Taipei
@@ -310,10 +410,16 @@ async def scenario(test_url: str) -> None:
         async with Session() as session:
             kept = (
                 await session.execute(
-                    text("select count(*) from preference where kind='avoid_category'")
+                    text("select count(*) from preference "
+                         " where kind='avoid_category' and value in ('火鍋', '燒烤')")
                 )
             ).scalar()
-        check("without deleting anything — three rows for two categories", kept == 3, kept)
+        # **Five, and scoped to the two values this block is about.** 火鍋 carries three versions
+        # by now (the silent write, the persist change, then the `allow`) and 燒烤 two. The count
+        # was `three rows for two categories` until 2026-08-30, when the append test above moved
+        # off the retired budget kind and onto 火鍋 — the rule it proves is unchanged: an `allow`
+        # appends, and nothing is ever deleted.
+        check("without deleting anything — every version is still there", kept == 5, kept)
 
         # --- nothing about anyone else, and the coverage number (H3, §3.0) -----------
         check("the payload names no other member",
@@ -706,8 +812,14 @@ async def scenario(test_url: str) -> None:
     loader_source = inspect.getsource(loader_module)
     check("the loader filters kind = 'avoid_category' explicitly",
           "kind = 'avoid_category'" in loader_source)
-    check("and has its own ingredient pass rather than letting them fall through",
-          "kind = 'avoid_ingredient'" in loader_source)
+    # **Inverted on 2026-08-30 — it asserted the ingredient pass EXISTS and now asserts it does
+    # not.** The owner withdrew the kind from the surface, so nothing can create another row of it
+    # and a loader that still read them would be live code firing on a closed set. The 81 stored
+    # rows stay (D24's pins), the ingest and `product_material` stay, and re-adding the pass is a
+    # query and a loop — the test is here so that re-adding is a deliberate act with a red line to
+    # answer, rather than something that quietly comes back.
+    check("and no longer reads avoid_ingredient at all — the surface left, so the read left",
+          "kind = 'avoid_ingredient'" not in loader_source)
 
     async with Session() as session:
         second_principal = (
@@ -968,21 +1080,38 @@ async def scenario(test_url: str) -> None:
     check("the fixture writes an aged band",
           await fixture.expired_budget(second_member, "tight", 1) == 0)
 
+    # **Read from the DATABASE since 2026-08-30, not from the screen — and that is the change the
+    # budget's withdrawal actually makes here.** This block existed because a fixture checked only
+    # by the query that wrote it proves nothing about what a person sees; the screen was the point.
+    # The budget is off the screen now, so there is no screen left to check it against, and the
+    # honest test is the row plus the payload's *silence*. **A2's gate lines G9–G11 are the
+    # evaluator's to retire — this test does not decide that**, it records that the fixture still
+    # writes exactly what it always wrote.
+    async with Session() as session:
+        aged = (
+            await session.execute(
+                text("select value, persist, expires_on < current_date as lapsed "
+                     "  from preference where member_id = :m and kind = 'budget'"),
+                {"m": second_member},
+            )
+        ).one()
+    check("and the row is the band that was asked for", aged.value == "tight", aged)
+    check("lapsed, which is the state no API call can produce (A2, G9–G11)", aged.lapsed is True,
+          aged)
+    # **`persist` is forced true and this is why.** `upto.privacy.erase` deletes every
+    # `persist = false` row nightly, so a `false` fixture would be correct when written and gone by
+    # morning — the gate state would erase itself with nothing to say it had.
+    check("and persisted, so the nightly erasure does not take it away overnight",
+          aged.persist is True, aged)
+
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as amy:
         body = (
             await amy.get(path, headers={"Authorization": "Bearer {}".format(amy_token)})
         ).json()
-    check("and the member's own screen reads it as in force",
-          body.get("budget", {}).get("value") == "tight", body.get("budget"))
-    check("flagged expired (D25's re-affirmation prompt has something to show)",
-          body.get("budget", {}).get("expired") is True, body.get("budget"))
-    # **`persist` is forced true and this is why.** `upto.privacy.erase` deletes every
-    # `persist = false` row nightly, so a `false` fixture would be correct when written and gone by
-    # morning — the gate state would erase itself with nothing to say it had.
-    check("and persisted, so the nightly erasure does not take it away overnight",
-          body.get("budget", {}).get("persist") is True, body.get("budget"))
+    check("and the member's screen says NOTHING about it — the budget left the surface, "
+          "not the database", "budget" not in body, sorted(body))
 
     # Re-running is safe: `valid_from` is deterministic, so 0022's unique index refuses the second
     # write and the fixture reports the row already there rather than failing.

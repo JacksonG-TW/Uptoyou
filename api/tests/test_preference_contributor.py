@@ -129,16 +129,30 @@ class TheTwoCategoryListsAreRelatedAndNotEqual(unittest.TestCase):
             "a member could avoid something no place can be — the avoidance would match nothing "
             "and read as a working filter", missing))
 
-    def test_the_classifier_list_is_allowed_to_be_wider(self):
-        """The other direction is NOT asserted, on purpose. `便利商店` lives only in the
-        classifier's list today, and the day the chip row grows this test still passes."""
-        self.assertIn("便利商店", classify_categories)
-        self.assertNotIn("便利商店", preference_categories)
+    def test_the_two_lists_are_equal_today_and_that_is_not_what_is_asserted(self):
+        """**They diverged for one day and are equal again, and the guard did not move.**
 
-    def test_the_widening_is_exactly_one_value_today(self):
-        """A count, so a second value cannot be added to one list and not the other in silence."""
-        self.assertEqual(
-            sorted(set(classify_categories) - set(preference_categories)), ["便利商店"])
+        On 2026-08-30 the classifier gained `便利商店` first and the screen followed a few hours
+        later (revision 0039). For those hours the classifier's list was strictly wider; today the
+        two hold the same eleven values. **This is precisely why the guard is `⊆` and not `==`**:
+        an equality test would have gone red during the gap and the honest-looking fix would have
+        been to delete it. The relationship is what matters, not the coincidence.
+        """
+        self.assertIn("便利商店", classify_categories)
+        self.assertIn("便利商店", preference_categories)
+        self.assertLessEqual(set(preference_categories), set(classify_categories))
+
+    def test_the_screen_may_never_run_ahead_of_the_classifier(self):
+        """The direction that must never hold, named on its own so the failure reads plainly.
+
+        A value the screen offers and the classifier cannot produce is a chip that matches nothing
+        — an avoidance that silently filters no place and reads to the member as a working choice.
+        The reverse is harmless and happens: the classifier can categorise something the screen
+        does not yet let anyone avoid.
+        """
+        ahead = sorted(set(preference_categories) - set(classify_categories))
+        self.assertEqual(ahead, [], (
+            "the screen offers a value no place can carry", ahead))
 
 
 class TheOneOverNTable(unittest.TestCase):
