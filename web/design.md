@@ -260,6 +260,16 @@ each pair as text. Failing either half fails the line.
 
 | `DIE` | **custom** | the 3-D cube — **it already is one**; six faces, `rotateX`/`rotateY`, `translateZ`. It lands **face-on**, which is why the resting state reads flat to a viewer. **If a tilted resting angle is ever ruled (raised by the owner 2026-08-19, unruled), one constraint binds it and it is not cosmetic: the landed face's pip count must stay unambiguous — a person reads the number without counting twice.** The landed face is the only place the roll's result is legible, and `D91` forbids the animation misrepresenting a decided result; the resting frame is where that result is asserted. Foreshortening the winning face while neighbouring faces contribute pips is exactly that failure, so **a small angle that keeps one face dominant is the target — near-corner-on views, where three faces sit at similar prominence, are where it breaks.** Choose by rendering candidates and ruling from them, never by picking a number (frontend's constraint, 2026-08-19). One variable, `--die`, at **140**/180/240 px; the `translateZ` that closes the six faces **derives from it** — change the value, never the derivation. **140, not 132, ruled 2026-08-19** (frontend found the conflict; the recommendation was its): 132 is **17.37%** of 760 against `R-D9`'s **18%** floor, so the token contradicted the gate it is measured by. 136.8 px is the exact floor and 140 clears it at 18.42% with margin for a border. **The floor was not moved to fit the token** — a target adjusted to pass its own test measures nothing, and 18% came from R-D9's measurement of the reference. Parked-width note: 430 is out of scope under §7b, so this changes nothing today; it is fixed now because a known contradiction left in this file is one the next reader has to rediscover. |
 
+### §4a′ · 將選擇權還給使用者 — owner-ruled 2026-08-30 evening; supersedes §4a's sheet (`spec-return-choice.md`)
+
+**There is no 偏好 screen.** Budget and 不吃的食材 leave the product (screen, contributor, endpoint kind; A19's ingest
+stays); the keep guard goes with them; the switcher has four tabs (首頁 · 裝置 · 這一餐 · 開獎); a keyed device goes home →
+這一餐. The whole of preference is one row of **eleven** 「這次不吃」 chips on 這一餐 (D38 + 便利商店), tonight-only, `persist`
+always false, with the per-chip stat, the coverage sentence, the discount sentence, the cross-kind total (`tonight-total`,
+moved from the sheet) and D22's crossed warning under it. The ingredient marks (原料未公開／已公開) and the reveal's
+`my-reasons` block are removed. §4a below stays as the record of the sheet that was; the `AlertDialog` and `.mark` parts
+stay in the registry. The owner's frame: 「將選擇權還給使用者，我們專心做好分類」.
+
 ### §4a · Preferences by tempo — owner-ruled 2026-08-28 (`spec-preference-split.md`)
 
 **偏好 is for months; 這一餐 is for tonight.** The preferences page holds the budget and 不吃的食材 —
