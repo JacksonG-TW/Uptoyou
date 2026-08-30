@@ -549,5 +549,48 @@ class TestTheKAxis(unittest.TestCase):
         self.assertNotIn("sqlalchemy", sys.modules)
 
 
+class TheCandidateMap(unittest.TestCase):
+    """The slate, and the one entry in it that is not a contender.
+
+    Added 2026-08-30 with `qwen7b`, the post-launch classifier ladder's first rung. The map is
+    where a candidate's model string lives, so a test here is what stops the CLI, the round file
+    and the ladder from disagreeing about which model answered.
+    """
+
+    def test_qwen7b_is_a_candidate_and_its_model_string_is_pinned(self):
+        """**Pinned as a string, not as a pattern.** The round file records this exact value and
+        it is the only durable record of what answered; a test matching `startswith("qwen2.5:7b")`
+        would go on passing after somebody swapped the quantisation, which is a different model
+        with the same name."""
+        self.assertIn("qwen7b", run_round.LOCAL_MODELS)
+        self.assertEqual(run_round.LOCAL_MODELS["qwen7b"], "qwen2.5:7b-instruct-q4_K_M")
+
+    def test_it_is_a_local_candidate_and_so_needs_no_new_branch(self):
+        """The three axes are orthogonal to the candidate, and this is why the brief could say
+        "`--rag --embed arctic --k 5` must work unchanged": every one of them is decided after
+        the name is looked up, so adding a key to the map adds a candidate to all of them."""
+        self.assertNotEqual("qwen7b", "gemini")
+        self.assertEqual(run_round.build_candidate("qwen7b").model,
+                         "qwen2.5:7b-instruct-q4_K_M")
+
+    def test_the_three_ruled_contenders_are_still_exactly_three(self):
+        """**The assertion that makes the paragraph above `LOCAL_MODELS` true.** D64's slate is
+        three models under a ~2.5 GB resident line; a 7B at q4_K_M is ~4.7 GB and fails that gate,
+        so it is a ceiling probe and not a fourth contender. If somebody later reports four
+        contenders from a four-key map, this is the line that should have stopped them."""
+        self.assertEqual(
+            sorted(k for k in run_round.LOCAL_MODELS if k != "qwen7b"),
+            ["gemma", "llama", "qwen"],
+        )
+
+    def test_an_unknown_candidate_is_still_refused_by_name(self):
+        """Adding a key must not turn the refusal into a fallback — and the message must NAME the
+        new candidate, because `qwen7b` and `qwen70b` are one keystroke apart and the list is the
+        only thing that tells a typist which one exists."""
+        with self.assertRaises(run_round.UsageError) as caught:
+            run_round.build_candidate("qwen70b")
+        self.assertIn("qwen7b", str(caught.exception))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

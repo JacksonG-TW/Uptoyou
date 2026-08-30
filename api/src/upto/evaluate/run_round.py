@@ -40,9 +40,11 @@ the plain prompt permanently. (It is also true that the database publishes no ho
 a host-side round could not reach the store anyway — but the rule stands on the first
 reason, which would survive someone publishing the port.)
 
-Four candidates: D64's local slate — `qwen` · `gemma` · `llama`, three contenders from three
+Five candidates: D64's local slate — `qwen` · `gemma` · `llama`, three contenders from three
 makers, all self-hostable per D63 — plus `gemini`, the hosted baseline that enters the
-evaluation and nothing else (D84's last line). All are asked
+evaluation and nothing else (D84's last line), plus `qwen7b` since 2026-08-30, which is a
+**ceiling probe and not a fourth contender** (see `LOCAL_MODELS` for why the difference is
+load-bearing). All are asked
 through `upto.classify.classify_name`, so a round measures **the shipped validation path**,
 not a second copy of it written for the evaluation — an answer this runner accepts is exactly
 an answer the backfill would have written, and an answer it refuses is a row the backfill
@@ -112,10 +114,30 @@ RAG_K_MAX = 20
 # D64's local slate, owner-ruled 2026-08-14: three contenders, three makers, all under the
 # 4 GB EC2 class's ~2.5 GB resident line (gemma3:4b failed that gate and was replaced by
 # gemma2:2b). One CLI name per model; the string is pinned here and written into the round.
+#
+# **`qwen7b` (added 2026-08-30, the post-launch classifier ladder's first rung) is in this map
+# but is NOT a fourth contender, and the distinction has to be read before anyone reports its
+# score.** A 7B at q4_K_M is ~4.7 GB resident — it **fails D64's ~2.5 GB gate outright**, the
+# same gate that removed `gemma3:4b`. It is here to answer "how much accuracy is the small model
+# leaving on the table?" on the GPU box, which is a number the ladder needs before choosing
+# between a bigger model, a better embedder and a trained head. **A round it wins does not make
+# it deployable**, and a comparison table that lists it beside the three without saying so is
+# reporting a model the product cannot run.
+#
+# **⚠️ `qwen` (3B) is under the Qwen RESEARCH LICENSE — non-commercial. Read H63 before it goes
+# anywhere near a DAG or a shipped image.** Evaluation rounds are exactly the permitted use, so
+# its presence here is fine and its presence in `classify.run`'s default would not be. `qwen7b`
+# and `llama` are Apache-2.0 and carry no such limit; `gemma2` is under Google's Gemma terms.
 LOCAL_MODELS = {
     "qwen": "qwen2.5:3b-instruct-q4_K_M",
     "gemma": "gemma2:2b",
     "llama": "llama3.2:3b",
+    # **The tag is provisional until the GPU session confirms what it pulled** (asked
+    # 2026-08-30). Written in the parallel spelling of the 3B line above; if the box holds a
+    # differently-spelled tag, this string is what the round records and the two must be made to
+    # agree HERE rather than by passing an override, because the round file's `model` field is
+    # the only durable record of what answered.
+    "qwen7b": "qwen2.5:7b-instruct-q4_K_M",
 }
 OLLAMA_URL = os.environ.get("UPTO_OLLAMA_URL", "http://ollama:11434").rstrip("/")
 OLLAMA_TIMEOUT_S = int(os.environ.get("UPTO_OLLAMA_TIMEOUT", "180"))
