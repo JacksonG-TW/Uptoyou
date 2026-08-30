@@ -409,7 +409,7 @@ default enter/exit animations where they are not one of the three above.
 diagnosis is now settled — the cheapness was never the stack, the hardware, or the builder; it was
 **generic web-widget vocabulary drawn onto a print-direction page**. These rules are the fix, stated
 as rules. Grounded in the `ui-ux-pro-max` database (user-scoped, `~/.claude/skills/ui-ux-pro-max` —
-query it with `python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain <ux|style|gsap|typography>`);
+query it with `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain <ux|style|gsap|typography>`);
 where a search result and this file disagree, **this file and the rulings win** — the database is
 reference, not authority.*
 
