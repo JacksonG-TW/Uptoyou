@@ -11,12 +11,9 @@
  * file because there is none in the product (§3 D).
  */
 
-/** The two bands. Not a number — a typed budget would need a currency, a period and a model. */
-export const BANDS = ['tight', 'easy'] as const
-export type Band = (typeof BANDS)[number]
-
-/** The label a person reads. `tight`/`easy` are the wire's words and appear on no screen. */
-export const BAND_LABEL: Record<Band, string> = { tight: '省一點', easy: '鬆一點' }
+/* **The budget's two bands went with the 偏好 screen** (`spec-return-choice.md`, 2026-08-30):
+   nothing sets a budget any more and the API refuses the kind. The wire's words were
+   `tight`/`easy` and appeared on no screen; the labels were 省一點／鬆一點. */
 
 /** D38's ten, in the order the API's closed list carries them. Mirrored, not fetched: the list is
  *  closed and versioned by a migration, and a screen that discovered its own controls at runtime
@@ -26,78 +23,16 @@ export const CATEGORIES = [
   '麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '早餐', '咖啡飲料', '其他',
 ] as const
 
-/** **衛福部's eleven food-label groups**, mirrored from revision 0023's CHECK for the same
- *  reason the categories are: the list is closed and versioned by a migration, and a screen that
- *  discovered its own controls at runtime would render an empty settings page on a failed request.
- *
- *  **The word for why a person avoids one of these appears nowhere in this file, on this screen,
- *  or in any string it renders.** What is recorded is a dietary choice. The moment the copy names
- *  a medical reason, the row stops being a preference and becomes health information about an
- *  identified person, which this product does not hold. That is a PDPA boundary and it is kept by
- *  the wording — there is no flag to set.
- *
- *  **亞硫酸鹽類 was removed and restored on 2026-08-28, and the round trip is recorded here so it
- *  is not re-proposed.** The case for removing it: it is an additive rather than an ingredient a
- *  dish is made of, and no source this product holds states it at the level of a restaurant. The
- *  owner's reversal within the hour: **the other ten rest on exactly the same missing data** —
- *  `ingredient_coverage` is 0 for every one of the eleven — so sulfites are not a special case,
- *  and singling them out would claim a distinction the data does not support. The screen's honesty
- *  about all eleven is `pref-ingredient-coverage`, which states that nothing acts on any of them
- *  yet; that sentence is the answer to the worry, not a shorter list.
- *
- *  So this list is the API's eleven, whole. Backend's ⊆ guard passes because it is the same set. */
-export const INGREDIENTS = [
-  '甲殼類', '芒果', '花生', '牛奶／羊奶', '蛋', '堅果類',
-  '芝麻', '含麩質之穀物', '大豆', '魚類', '亞硫酸鹽類',
-] as const
+/* **The eleven food-label groups and their sourced 「常見於 …」 lines are gone** with the same
+   ruling — the ingredient kind was withdrawn wholesale, so there is no control left to list them
+   for. Every example was quoted from 食藥署's own material and the three sources are named in the
+   commit that added them (c90b06e); nothing here was authored, so nothing is lost that a document
+   does not hold. */
 
-/**
- * **Where each group is commonly found** — the owner's ask, verbatim: 「若我是一般的使用者會希望
- * 亞硫酸鹽類，可以舉例說明。像我就不知道亞硫酸鹽類是甚麼，有哪些食材有用到」.
- *
- * **Sourced, not authored — every name below is quoted from a government document, and the three
- * sources are named per row.** The spec's draft table was written from memory and said so; it was
- * checked line by line and it was wrong in one place that mattered, which is the argument for the
- * rule rather than a footnote to it: the draft put 啤酒 under 含麩質之穀物, and the Q&A's A17 says
- * 由穀類製得的酒類 is explicitly EXEMPT from the labelling regulation. A hint naming a food the
- * regulation excludes is worse than no hint.
- *
- * **A · 食藥署「食品過敏原標示規定問答集」107.08.21**
- *   https://www.fda.gov.tw/tc/includes/GetFile.ashx?id=f636703601345760449
- *   Q10 芝麻油 · Q12 鮭魚卵 · Q13 堅果類 · Q15 含麩質穀物 · Q19 大豆製品 · Q20/Q21 魚類製品
- * **B · 食藥署「食品過敏原標示規定第一點所定六項含有致過敏性內容物及其製品之案例」103.03.13**
- *   https://www.fda.gov.tw/upload/133/Content/2014031216074266953.pdf
- *   (一) 蝦 · (二) 蟹 · (三) 芒果 · (四) 花生 · (五) 牛奶 · (六) 蛋
- * **C · 食品添加物使用範圍及限量暨規格標準 附表一 第（四）類 漂白劑**
- *   https://law.moj.gov.tw/LawClass/LawGetFile.ashx?FileId=0000079439&lan=C
- *   the permitted uses of 亞硫酸鉀／鈉／氫鈉 etc., which is where an ADDITIVE's answer to
- *   "what is it in" actually lives — the allergen material names only the chemicals and the
- *   10 mg/kg threshold, so B and A cannot answer this row and C can.
- *
- * All three read 2026-08-28. **A row that could not be sourced would ship with no line at all**
- * (the solar-term rule, `spec-home-dateline` §1a): a blank is true, a guess is not. Every row
- * found a source, but two are thin and are flagged rather than padded — 芝麻 has exactly one named
- * product in the whole Q&A, and 魚類's named products are the non-obvious ones rather than fish.
- * Padding either from general knowledge is the thing this comment exists to forbid.
- *
- * **Statements only** (D20), and no 過敏 anywhere (D103 clause 2) — including in this comment's
- * neighbours on the screen. What a row says is where a thing turns up, not what to do about it.
- */
-export const INGREDIENT_EXAMPLES: Record<string, string> = {
-  甲殼類: '蝦、蟹、蝦餅、蟹肉棒',                        // B(一)(二)
-  芒果: '芒果乾、芒果醬、芒果冰棒、芒果蛋糕',              // B(三)
-  花生: '花生醬、花生粉、花生糖、沙嗲醬',                  // B(四)
-  '牛奶／羊奶': '起士、奶粉、優格、人造奶油',              // B(五)
-  蛋: '蛋糕、蛋塔、皮蛋、蛋黃醬',                        // B(六)
-  堅果類: '杏仁、核桃、腰果、開心果',                     // A Q13
-  芝麻: '芝麻油',                                      // A Q10 — the only product the Q&A names
-  含麩質之穀物: '小麥、大麥、黑麥、燕麥',                  // A Q15 (A17: 由穀類製得的酒類 is exempt)
-  大豆: '豆腐、豆漿、醬油、味噌',                         // A Q19
-  魚類: '魚油、魚類取得的明膠、鮭魚卵',                    // A Q20/Q21/Q12
-  亞硫酸鹽類: '金針乾製品、白葡萄乾、脫水蔬菜、糖漬果實類（用作漂白）',  // C
-}
-
-export type Kind = 'budget' | 'avoid_category' | 'avoid_ingredient'
+/** **One kind since 2026-08-30** (`spec-return-choice.md` §1). `budget` and `avoid_ingredient`
+ *  are refused with a 422 naming the kind — refused, not ignored, so a client still sending one
+ *  learns it rather than failing quietly. */
+export type Kind = 'avoid_category'
 export type Stance = 'avoid' | 'allow'
 
 /**
@@ -138,17 +73,10 @@ export type Coverage = {
 }
 
 export type Preferences = {
-  /** **`YYYY-MM`, and the only month this screen is allowed to know** (A2-G13c, `4caed3d`).
-   *
-   *  It is the month the server's own expiry boundary falls in — derived from the same
-   *  `date_trunc('month', now())` that computed every `expires_on` — so `month` and
-   *  `budget.expires_on.slice(0, 7)` cannot disagree. Backend measured the database session's
-   *  `TimeZone` as **UTC**, so it is the UTC month, **not** Taipei's; the two are the same value
-   *  except for the eight hours before each UTC month end. **Never convert it, and never derive a
-   *  month here.** A conversion re-creates the two-clock defect at precisely the boundary this
-   *  field exists to close, and would look correct in every test but one evening a month. If the
-   *  boundary is ever ruled to be Taipei, this value moves and the client needs no change. */
-  month: string
+  /* **`month` went with the budget** (`spec-return-choice.md` §1, 2026-08-30). It was the server's
+     own expiry boundary and existed so the screen could never derive one — the two-clock defect
+     that rule closed is recorded in D25. With no budget there is no month boundary to state. */
+
   breadth: {
     /** **`touched` — the third name this field has had, and each rename was a correction.**
      *  `removed` until 2026-08-19, `zeroed` until 2026-08-27, `touched` now (backend `fdf1a06`,
@@ -178,18 +106,10 @@ export type Preferences = {
     crossed?: boolean
   }
   category_coverage: Coverage
-  ingredient_coverage: Coverage
-  budget: {
-    value: Band
-    persist: boolean
-    expires_on: string
-    valid_from: string
-    /** Still returned, deliberately. Expiry stops the band *contributing*; the flag exists so the
-     *  screen can show D25's re-affirmation prompt rather than present a stale band as current. */
-    expired: boolean
-  } | null
   avoid_categories: Avoidance[]
-  avoid_ingredients: Avoidance[]
+  /* **`ingredient_coverage`, `budget` and `avoid_ingredients[]` left the payload** with the kinds
+     they described (`spec-return-choice.md` §1). Stored rows stay in the database — D24's pins
+     reference them and the nightly erasure runs unchanged — they are simply never returned. */
 }
 
 /** The device's own credential, D74's operator-issued secret pasted on the device screen. Both
@@ -298,41 +218,12 @@ export function touchedLine(a: { touched: number; share: number } | undefined, c
   return `${a.touched.toLocaleString('en-US')} 家會比較少中（${pct(a.share)}）`
 }
 
-/**
- * The ingredient half of the pair, **dormant since 2026-08-29 and kept for when the wire wakes**.
- *
- * The two helpers exist as a pair because the two kinds no longer DO the same thing: a category is
- * a discount of `1 − 1/N` — a 火鍋 place can still be drawn, so 比較少中 — and an ingredient is
- * still ×0, so 抽不到 stays true for it. **The whole content of each is its verb**, which is why
- * this is a second function and not a boolean on the first: a shared helper with a flag would put
- * the two claims one typo apart.
- *
- * **Its second branch is A2-G8-zero, and it is the reason this file still holds it.** Where the
- * KIND has no coverage the row must state why there is no number rather than state zero: 「0 家」
- * reads as a RESULT — *we looked and nothing needed excluding* — when what is true is that nothing
- * was measured. Opposite meanings, and the false one is the reassuring one, on the kind the owner
- * ruled about because 「過敏是會致死的」.
- *
- * **Why nothing calls it today.** A19 gave ingredients coverage (4,509 places), which flips this
- * function to its count branch — and the count on the wire is a placeholder: the GET answers
- * `touched: 0, share: 0.0` for every ingredient because the per-ingredient figure is not computed
- * yet. So both branches are false at once, and the row renders no stat at all until the field is
- * real. Deleting this would mean rewriting the argument above when it is; leaving it, unused and
- * explained, costs one export.
- */
-export function zeroLine(
-  a: { touched: number; share: number; touched_is_a_floor?: boolean } | undefined,
-  coverage: number,
-): string | null {
-  if (!a) return null
-  if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此抽不到。'
-  /* **One word, and it is the wire's own claim rather than a hedge on ours** (evaluator-ruled
-     2026-08-29). 「至少」 renders exactly when `touched_is_a_floor` is true; no footnote, no second
-     qualifier, no asterisk. A number that is silently a floor is the same family of defect as the
-     false zero this line printed for a few hours — it reads as a total and is not one. */
-  const count = `${a.touched.toLocaleString('en-US')} 家抽不到（${pct(a.share)}）`
-  return a.touched_is_a_floor ? `至少 ${count}` : count
-}
+/* `zeroLine` — the ingredient half of the pair — went with the kind on 2026-08-30. Its argument
+   is still live doctrine and is not lost with it: A2-G8-zero, that a count of zero reads as a
+   RESULT (*we looked and nothing needed excluding*) so a kind with no coverage must state why
+   there is no number rather than state zero. `touchedLine` below is the half that survives, and
+   the two verbs differing — 抽不到 for a veto, 比較少中 for a discount — was the whole reason
+   there were two functions rather than one with a flag. */
 
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on
  *  every screen that states one — never written into the markup, because today's figure becomes

@@ -16,48 +16,26 @@ export function device(): Device | null {
   return token && circle ? { token, circle } : null
 }
 
-/** **The routing stamp** (`spec-conditional-routing.md` §3). It answers *has this device been
- *  through the preferences screen for this circle* — which is NOT *does this seat have preferences
- *  in force*. A guest who wants nothing avoided and no budget band has given a complete, valid
- *  answer, and the server cannot tell that answer from a person who never looked; asking it of the
- *  API would march every such guest through the screen on every visit.
- *
- *  It holds the CIRCLE id, not a boolean, so a key into a different circle asks again and the same
- *  key re-pasted does not. Written by the preferences act, never by a value being set — the screen
- *  writes per tap (A1: 204 per press, no "save"), so a write-triggered stamp would eject a person
- *  after their first choice and before their second.
- *
- *  **Separate from `upto_pref_ingredient_ack`, and the two keys must stay separate** (spec §7):
- *  that one is a monthly safety re-ask about allergens, this one is a routing fact. One key doing
- *  both would make a routing change silently re-ask a safety question, or worse, silence one. */
-const PREF_SEEN = 'upto_pref_seen'
-
-export function markPrefSeen(circle: string): void {
-  localStorage.setItem(PREF_SEEN, circle)
-}
-
-export function prefSeen(): boolean {
-  const circle = localStorage.getItem('upto_circle')
-  return Boolean(circle) && localStorage.getItem(PREF_SEEN) === circle
-}
-
 export function remember(d: Device): void {
-  /* **Clear the stamp when the circle changes, and do it BEFORE the new circle is written.**
-     `prefSeen()` compares the stamp against `upto_circle`; writing the circle first would make a
-     stale stamp momentarily read as valid, and any read in between — a re-render, a redirect
-     computed on the same tick — would route a person past a screen they have never seen for this
-     circle. Reading the OLD circle here is what makes the comparison meaningful. */
-  if (localStorage.getItem('upto_circle') !== d.circle) localStorage.removeItem(PREF_SEEN)
+  /* **The stamp this used to clear is gone with the screen it guarded** (`spec-return-choice.md`
+     §2, 2026-08-30). `upto_pref_seen` answered *has this device been through 偏好 for this circle*
+     and had to be cleared before the new circle was written, or a stale stamp read as valid for a
+     tick and routed a person past a screen they had never seen. There is no middle screen to route
+     past any more, so there is nothing to clear and nothing to order. The key left behind in an
+     existing browser is inert. */
   localStorage.setItem('upto_token', d.token)
   localStorage.setItem('upto_circle', d.circle)
 }
 
-/** Where the door leads, from the two local facts alone (§1's table). No request, so it is safe to
- *  call during render — the home's act uses it for an `href`, which is what makes middle-click and
- *  the status bar tell the truth. */
+/** Where the door leads, from one local fact. No request, so it is safe to call during render —
+ *  the home's act uses it for an `href`, which is what makes middle-click and the status bar tell
+ *  the truth.
+ *
+ *  **One fact, not two, since 2026-08-30**: the routing lost its middle step when 偏好 was removed
+ *  (`spec-return-choice.md` §2), so a device with a key goes straight to 這一餐. The three-way
+ *  table this replaced is `spec-conditional-routing.md`'s and is retired with the screen. */
 export function doorHref(): string {
-  if (!device()) return '/device'
-  return prefSeen() ? '/round' : '/preferences'
+  return device() ? '/round' : '/device'
 }
 
 function auth(d: Device): HeadersInit {
@@ -153,15 +131,12 @@ export async function roll(d: Device, roundId: number): Promise<void> {
   throw new Error(body.detail || `擲不出來（${r.status}）`)
 }
 
-/** A19's mark travels per pool row, on the snapshot and on each `pooled` event. **Optional, so a
- *  wire that does not carry it renders no mark rather than a guessed one** — `undefined` is not
- *  `unknown`, and `unknown` is a published fact about the store while `undefined` is our ignorance
- *  of the wire. */
-export type Pooled = {
-  place_id: number
-  name: string
-  ingredient_data?: 'declared' | 'unknown'
-}
+/** A pooled place, as the snapshot and each `pooled` event carry it.
+ *
+ *  **It carried A19's `ingredient_data` until 2026-08-30** and no longer does: the ingredient kind
+ *  was withdrawn wholesale (`spec-return-choice.md`) and backend dropped the field from all three
+ *  wires. A name and an id is the whole row again. */
+export type Pooled = { place_id: number; name: string }
 
 /** The four event shapes as the server actually publishes them, captured off the wire rather than
  *  read off the router — `round_opened` nests its payload under `round`, `pooled` under `place`,

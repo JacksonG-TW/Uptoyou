@@ -5,7 +5,6 @@
    be able to add a utility to the system it documents. */
 @import "tailwindcss" source("./");
 @import "./home.css";
-@import "./preferences.css";
 @import "./reveal.css";
 @import "./round.css";
 @import "./switcher.css";   /* demo scaffolding — delete with the component */

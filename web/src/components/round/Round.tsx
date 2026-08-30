@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  device, prefSeen, openRound, propose, roll, searchPlaces, materialise, subscribe,
+  device, openRound, propose, roll, searchPlaces, materialise, subscribe,
   type Candidate, type Device, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { Input } from '@/components/ui/input'
@@ -187,8 +187,10 @@ export default function Round() {
      device screen and the screen knew it. Now the screen sends them.
 
      Two facts, in order: no key → `/device`; key but this circle's preferences never seen →
-     `/preferences`. Both `replace`, never `href`, so the back arrow does not return to a screen
-     that immediately bounces again.
+     **One check, not two, since 2026-08-30.** This also sent a keyed device that had never seen
+     偏好 to `/preferences`; that screen was removed (`spec-return-choice.md` §2) and the routing
+     lost its middle step, so a key is the only question left. `replace`, never `href`, so the back
+     arrow does not return to a screen that immediately bounces again.
 
      **In an effect, not during render.** A navigation started while React is rendering is a side
      effect in the render phase; under StrictMode's double invoke it fires twice, and it can run
@@ -196,7 +198,6 @@ export default function Round() {
      one — the alternative is a screen that flashes content the person is not entitled to. */
   useEffect(() => {
     if (!dev) window.location.replace('/device')
-    else if (!prefSeen()) window.location.replace('/preferences')
   }, [dev])
 
   /** **The row's state comes from the GET, never from what this device just tapped** (PS-4). A
@@ -252,15 +253,7 @@ export default function Round() {
     }
   }, [dev, readPrefs])
 
-  if (!dev || !prefSeen()) return <main className="round" data-screen="round" />
-
-  /** **Does this wire carry A19's mark at all?** The snapshot's pool rows and each `pooled` event
-   *  carry `ingredient_data` per place, so a row without one on a wire that has them is a gap in
-   *  the map rather than an older api — and a gap reads as `unknown`, which is exactly what
-   *  「原料未公開」 says. An older api carries it on no row, and then nothing is marked: a mark we
-   *  never received is not ours to print. One test for the whole list, so two rows of the same
-   *  pool can never disagree about which rule they are under. */
-  const marksOnWire = pool.some((p) => p.ingredient_data !== undefined)
+  if (!dev) return <main className="round" data-screen="round" />
 
   /** In force per the server, then this device's unconfirmed taps on top. */
   const avoided = new Set((prefs?.avoid_categories ?? []).map((a) => a.value))
@@ -529,20 +522,6 @@ export default function Round() {
               {pool.map((p) => (
                 <li key={p.place_id} className="row" data-part="pool-row">
                   <span className="rowName">{p.name}</span>
-                  {/* **A19's mark — `unknown` is rendered, not omitted.** A blank row reads as clean to a
-    person scanning a list, so an absent mark would itself be a claim. Two states, two facts
-    about the STORE, and nothing about the food: `declared` says the publisher listed materials
-    and this feature read them. It does not say the place is free of anything, which is why
-    there is no third string composed here from an absence.
-    No icon, no colour but muted ink — a tick or a green would be a safety claim in one glyph.
-    A row whose wire does not carry the field renders nothing: `undefined` is our ignorance of
-    the wire and `unknown` is a published fact about the store, and the two must not look
-    alike. */}
-                  {marksOnWire && (
-                    <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data ?? 'unknown'}>
-                      {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
-                    </span>
-                  )}
                 </li>
               ))}
             </ul>
@@ -557,14 +536,6 @@ export default function Round() {
               // else, and the reveal is where numbers are allowed to exist at all.
               <li key={p.place_id} className="row" data-part="pool-row">
                 <span className="rowName">{p.name}</span>
-                {/* The same mark, on the shorter list — see the one above for why `unknown`
-                    renders. Two call sites because the pool is drawn twice (before and after the
-                    two-place floor), not two decisions. */}
-                {marksOnWire && (
-                  <span className="rowTag" data-part="ingredient-mark" data-state={p.ingredient_data ?? 'unknown'}>
-                    {p.ingredient_data === 'declared' ? '原料已公開' : '原料未公開'}
-                  </span>
-                )}
               </li>
             ))}
           </ul>

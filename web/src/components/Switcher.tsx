@@ -15,7 +15,13 @@
  * approved page leaves empty. Raised with the evaluator rather than done quietly; if they want it
  * in the masthead it is a two-line change and the fidelity gate pays for it.
  *
- * **Five destinations, all of them built as of A4.** The rule that got them here stands and is
+ * **Four destinations since 2026-08-30** (`spec-return-choice.md` §2): 偏好 was removed — with the
+ * budget and the ingredient list gone it would have held one sentence about a choice made on
+ * another screen, which is the anti-default list's own case — and a tab pointing at 這一餐 was
+ * rejected as a tab that is another tab. The rule below is unchanged and is what allowed the
+ * removal to be a deletion rather than a disabled stop.
+ *
+ * **The destinations, all of them built as of A4.** The rule that got them here stands and is
  * worth keeping: a stop appears when its screen exists, never before — a demo that walks a person
  * into a blank page is worse than a demo with fewer stops, which is §1a's argument that a disabled
  * control is still a door. The reveal is the one that still comes and goes, because it needs a
@@ -42,7 +48,6 @@ function stops(): Stop[] {
     { href: '/', label: '首頁' },
     { href: '/device', label: '裝置' },
     { href: '/round', label: '這一餐' },
-    { href: '/preferences', label: '偏好' },
   ]
   const round = lastRound()
   if (round) list.push({ href: `/reveal?round=${encodeURIComponent(round)}`, label: '開獎' })

@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { LazyMotion, domAnimation } from './lib/motion'
 import './index.css'
 import App from './App.tsx'
-import Preferences from './components/preferences/Preferences.tsx'
 import Reveal from './components/reveal/Reveal.tsx'
 import Switcher from './components/Switcher.tsx'   // demo scaffolding — see the component
 import Back from './components/Back.tsx'           // demo scaffolding — owner-ruled 2026-08-19
@@ -20,7 +19,12 @@ import Round from './components/round/Round.tsx'
  * the placeholder the ruling replaces, not the answer to it.**
  *
  * The proxy already serves `index.html` for any unmatched path (`try_files $uri $uri/ /index.html`),
- * so `/preferences` reaches this file without an nginx change.
+ * so a path this file does not name reaches it anyway and falls through to the home.
+ *
+ * **`/preferences` is one of those now** (`spec-return-choice.md` §2, 2026-08-30): the screen was
+ * removed, and a typed or bookmarked `/preferences` lands on the home rather than 404ing. That is
+ * the fall-through below and not a redirect — a redirect would be a claim that the address moved
+ * somewhere, and it did not; the thing it addressed is gone.
  *
  * **Nothing links here yet, deliberately.** The home screen is under A0c's fidelity gate — a pixel
  * diff against the owner-approved page — so an affordance added there would fail that gate before
@@ -32,7 +36,6 @@ import Round from './components/round/Round.tsx'
  *  replaced by whatever the ruling says. */
 function route() {
   const path = window.location.pathname.replace(/\/+$/, '')
-  if (path === '/preferences') return <Preferences />
   if (path === '/device') return <DeviceScreen />
   if (path === '/round') return <Round />
   if (path === '/reveal') {

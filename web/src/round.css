@@ -353,6 +353,28 @@
   color: var(--color-paper);
   font-weight: 700;
 }
+/* **The registry's selection mark — `currentColor`, not ink** (evaluator-ruled 2026-08-30).
+   It was `--color-ink` on both the border and the fill, which is right only where the control it
+   sits in is also ink. Two places it was not: on a **selected chip** (ink ground) it would have
+   drawn ink on ink and been invisible in the one state it exists to signal, and on the **留著**
+   control — which is muted — it drew an ink square inside a muted label, the accident rather than
+   the hierarchy. A part that vanishes on one of its grounds is a wrong part, so the part moved
+   rather than each caller patching it.
+
+   Measured after, against the 3:1 UI floor: keep at rest 6.56, everything else 18.56. */
+.mark {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
+/* **`.mark` lives here now.** It was defined in `preferences.css`, which went with the 偏好 screen
+   on 2026-08-30 (`spec-return-choice.md` §2). The chips are its only caller left, so the part
+   moved to the stylesheet of the screen that uses it rather than being left in a file whose reason
+   to exist had gone. `design.md`'s registry still names it; only its address changed. */
+
 /* ■ when the stance is on. `currentColor` is paper here and ink on the off chip, so the one
    declaration covers both grounds — which is the whole reason the part moved to `currentColor`. */
 .round .chip[data-on="yes"] .mark { background: currentColor; }
@@ -389,10 +411,10 @@
   font-size: var(--text-body);
 }
 
-/* A19's mark on a pool row. The tag itself is styled in `preferences.css` (`.rowTag`, one recipe
-   for both screens); this only places it — pushed to the row's right edge, like `.rowStat` on the
-   preferences rows, so a list of names reads as a column of names with the marks in their own. */
-.round .row .rowTag { margin-left: auto; }
+/* **A19's pool mark is gone** (`spec-return-choice.md` §4, 2026-08-30). The rows carried
+   「原料未公開／原料已公開」 beside each name; the ingredient kind was withdrawn wholesale, so the
+   wire no longer sends the state and the surface no longer has one to state. `.rowTag`'s recipe
+   went with `preferences.css`. */
 
 /* The swept-pool sentence takes `.roundWarn`'s register — the accent as a left rule, the one
    cautionary treatment on this screen — at `text-lead` rather than `text-body`, per
