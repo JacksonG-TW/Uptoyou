@@ -21,7 +21,8 @@ defaulted at the query — cosine distance between two models' vectors is a well
 that means nothing, and a filter that could be forgotten is a filter that will be.
 
 **The load is one transaction that empties this embedder's rows and refills them.** Not an
-upsert, and not a whole-table wipe either: the table is a derived cache of `testset_v1.json`
+upsert, and not a whole-table wipe either: the table is a derived cache of the **current** test
+set (`testset_v2.json` since 2026-08-30; see `evaluate.score.TESTSET_PATH`)
 (0018), a partial refresh would leave rows from two digests side by side while
 `testset_sha256` claimed one of them, and a whole-table wipe would destroy the other
 embedders' work to reload one. Delete-where-model then insert means each embedder's rows are
@@ -48,6 +49,7 @@ importable there today. The import happens inside `--rag` alone.
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 
 from sqlalchemy import text
@@ -64,7 +66,7 @@ from upto.classify.embed import (
     embed,
 )
 from upto.db import database_url
-from upto.evaluate.score import load_testset
+from upto.evaluate.score import TESTSET_PATH, load_testset
 
 # One request per 32 names. The service embeds a batch in one pass, and a batch this size
 # keeps the request body small enough to read in a log if it ever has to be.
@@ -342,7 +344,10 @@ async def status() -> int:
             held = await loaded_models(connection)
     finally:
         await engine.dispose()
-    print(f"testset_v1.json sha256 {digest}")
+    # **The name is derived, not typed.** It read `testset_v1.json` until 2026-08-30 and printed
+    # that beside v2's digest the first time a second set existed — a status line naming the wrong
+    # file is worse than none, because it is the line somebody checks instead of the file.
+    print(f"{os.path.basename(TESTSET_PATH)} sha256 {digest}")
     if not held:
         print("example_embedding is empty — no embedder has been loaded.")
         return 0

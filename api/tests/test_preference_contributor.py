@@ -17,7 +17,33 @@ from decimal import Decimal
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+from upto.classify.categories import CATEGORIES as classify_categories  # noqa: E402
 from upto.engine.fold import fold  # noqa: E402
+
+
+def _preference_categories() -> tuple:
+    """`preferences.CATEGORIES` read from the SOURCE, not imported.
+
+    `upto.preferences` imports FastAPI at module load, which is not installed host-side — and this
+    file is host-side on purpose (no network, no database, runs in the pre-commit tempo). Reading
+    the literal with `ast` is this repository's own idiom for the same problem: `tools/server_copy.py`
+    parses the API's source rather than importing it, for the same reason.
+    """
+    import ast
+    import pathlib
+
+    source = pathlib.Path(
+        os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "preferences.py"
+    ).read_text(encoding="utf-8")
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "CATEGORIES" for t in node.targets
+        ):
+            return tuple(ast.literal_eval(node.value))
+    raise AssertionError("preferences.py no longer assigns CATEGORIES — this guard is blind")
+
+
+preference_categories = _preference_categories()
 from upto.engine.preference import (  # noqa: E402
     CONTRIBUTOR_NAME,
     REASON_VISIBILITY,
@@ -81,6 +107,38 @@ class AnAvoidedCategory(unittest.TestCase):
         self.assertEqual(REASON_VISIBILITY, "represented_member_panel")
         self.assertNotEqual(REASON_VISIBILITY, "table")
         self.assertNotEqual(REASON_VISIBILITY, "none")
+
+
+class TheTwoCategoryListsAreRelatedAndNotEqual(unittest.TestCase):
+    """A22/D38's eleventh value: what a place may BE is no longer what a member may AVOID.
+
+    **Added 2026-08-30, and the direction is the whole assertion.** `classify.CATEGORIES` gained
+    `便利商店`; `preferences.CATEGORIES` deliberately did not, because the chip row stays at ten
+    until after 09-10 and a member cannot avoid a kind of place the screen never offers. The two
+    tuples were identical strings for two weeks with **nothing anywhere asserting a relationship**
+    — I looked, and there was no guard. Identical-by-accident is fine until the day they differ on
+    purpose; from that day a silent divergence stops being a typo and becomes invisible.
+
+    So: **⊆, never equality.** An equality test would go red the moment the eleventh value landed
+    and the honest-looking fix would have been to delete the test.
+    """
+
+    def test_every_avoidable_category_is_a_category_a_place_can_have(self):
+        missing = sorted(set(preference_categories) - set(classify_categories))
+        self.assertEqual(missing, [], (
+            "a member could avoid something no place can be — the avoidance would match nothing "
+            "and read as a working filter", missing))
+
+    def test_the_classifier_list_is_allowed_to_be_wider(self):
+        """The other direction is NOT asserted, on purpose. `便利商店` lives only in the
+        classifier's list today, and the day the chip row grows this test still passes."""
+        self.assertIn("便利商店", classify_categories)
+        self.assertNotIn("便利商店", preference_categories)
+
+    def test_the_widening_is_exactly_one_value_today(self):
+        """A count, so a second value cannot be added to one list and not the other in silence."""
+        self.assertEqual(
+            sorted(set(classify_categories) - set(preference_categories)), ["便利商店"])
 
 
 class TheOneOverNTable(unittest.TestCase):

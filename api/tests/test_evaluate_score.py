@@ -140,12 +140,43 @@ class TestConfusionPlacement(unittest.TestCase):
         self.assertEqual(counts["confusion"]["日式"][score.INVALID], 1)
 
     def test_invalid_is_a_column_and_never_a_gold_row(self):
-        # Nothing in the frozen set is unreadable, so 無效 cannot be a gold label — the matrix
-        # is 11 gold rows by 12 answered columns.
+        """Nothing in the frozen set is unreadable, so 無效 cannot be a gold label.
+
+        **The size is derived, not written out, since D38 gained 便利商店 on 2026-08-30** — this
+        assertion said 11×12 and went red on the eleventh value, which is the test doing its job
+        and the number being the wrong thing to pin. What must hold is the *shape*: one row per
+        label, one column per label plus 無效, and 無效 never a row. `label_space` can narrow both
+        for an older set; `tally`'s defaults are today's, which is what this exercises.
+        """
         _, _, _, counts = scored_counts()
         self.assertNotIn(score.INVALID, counts["confusion"])
-        self.assertEqual(len(counts["confusion"]), 11)
-        self.assertEqual(len(score.PREDICTED), 12)
+        self.assertEqual(len(counts["confusion"]), len(score.LABELS))
+        self.assertEqual(len(score.PREDICTED), len(score.LABELS) + 1)
+        self.assertEqual(score.PREDICTED[-1], score.INVALID)
+
+    def test_the_label_space_follows_the_set_and_not_todays_category_list(self):
+        """A22 — a v5 round scored against v1 must not sprout a 便利商店 row.
+
+        This is the assertion behind `label_space`: the tables describe the set that was scored.
+        Before it, adding the eleventh value silently re-rendered every committed report with an
+        empty extra row and column — same numbers, different shape, describing a category that
+        did not exist when the round ran.
+        """
+        gold = [{"label": "麵食"}, {"label": "其他"}]
+        scored = [{"predicted": "麵食"}, {"predicted": "其他"}]
+        labels, predicted = score.label_space(gold, scored)
+        self.assertEqual(labels, ("麵食", "其他"))
+        self.assertEqual(predicted, ("麵食", "其他", score.INVALID))
+        self.assertNotIn("便利商店", predicted)
+
+    def test_an_answer_outside_the_sets_labels_is_still_shown(self):
+        """The other half: a v6 model answering 便利商店 against a v1 set gets a COLUMN, not a
+        silent drop. A matrix that hides an answer is worse than one with an odd column in it."""
+        gold = [{"label": "麵食"}]
+        scored = [{"predicted": "便利商店"}]
+        labels, predicted = score.label_space(gold, scored)
+        self.assertEqual(labels, ("麵食",))
+        self.assertEqual(predicted, ("麵食", "便利商店", score.INVALID))
 
     def test_an_answer_outside_the_list_is_invalid_even_if_the_outcome_says_otherwise(self):
         # Defence in depth: a hand-edited round file cannot smuggle 拉麵 into the matrix.

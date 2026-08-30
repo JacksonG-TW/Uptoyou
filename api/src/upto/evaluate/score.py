@@ -5,7 +5,7 @@
 Prints the report and writes the same bytes to `<round-file>.report.md`. One renderer feeds
 both, so what a reader sees in the terminal is what the commit carries.
 
-**The gold labels are read fresh from `testset_v1.json` every time, never from the round
+**The gold labels are read fresh from the CURRENT test set every time, never from the round
 file.** The set is frozen against re-drawing, not against the owner's corrections — D82's
 review already moved labels once, and a stored round scored against its own stale copy would
 quietly report yesterday's answer. The round file still carries the gold it was asked under,
@@ -39,18 +39,44 @@ import unicodedata
 from upto.classify.categories import CATEGORIES
 from upto.classify.prompt import NO_SIGNAL
 
-# The 11 values a gold label may hold: D38's ten plus D79's recorded verdict.
+# Every value a gold label may hold **today**: D38's eleven plus D79's recorded verdict.
 LABELS: tuple[str, ...] = CATEGORIES + (NO_SIGNAL,)
 
-# The 12th value only a candidate can produce. It is never a gold label — nothing in the
-# frozen set is unreadable — so it is a column and not a row, and the matrix is 11×12.
+# The value only a candidate can produce. It is never a gold label — nothing in the frozen set is
+# unreadable — so it is a column and not a row.
 INVALID = "無效"
 PREDICTED: tuple[str, ...] = LABELS + (INVALID,)
+
+
+def label_space(gold_rows: list[dict], scored: list[dict]) -> tuple[tuple, tuple]:
+    """The rows and columns of THIS round's tables, taken from the set it was scored against.
+
+    **Added 2026-08-30 with `testset_v2.json`, and the reason is a report that changed without
+    its numbers changing.** The tables used to be built from `CATEGORIES`, so the moment D38 gained
+    `便利商店` every old report re-rendered with an extra empty row and column — a v5 round
+    displaying a category that did not exist when it ran. The numbers were identical; the shape
+    lied. A report should describe the run it reports.
+
+    Rows are the gold labels actually present in the set. Columns are those plus anything the
+    candidate answered that is not among them (so a v6 model answering 便利商店 against a v1 set
+    is *shown* rather than silently dropped from the matrix), plus `無效` last. Order follows
+    `PREDICTED`, so two reports over the same set still line up column for column.
+    """
+    present = {row.get("label") for row in gold_rows}
+    answered = {row.get("predicted") for row in scored}
+    rows = tuple(label for label in LABELS if label in present)
+    extra = tuple(label for label in PREDICTED
+                  if label not in rows and label in answered and label != INVALID)
+    return rows, rows + extra + (INVALID,)
 
 LAYERS: tuple[str, ...] = ("sign", "brand", "registered")
 LAYER_NAMES = {"sign": "sign 招牌", "brand": "brand 品牌", "registered": "registered 登記"}
 
-TESTSET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testset_v1.json")
+# **The current set is v2 since 2026-08-30** (D38's eleventh value, 便利商店 — 18 rows relabelled
+# under an owner ruling; same 200 rows, same draw). `testset_v1.json` stays on disk unchanged so
+# every round scored against it remains interpretable, and a v5 round is never re-scored against
+# v2 — `report_for` refuses that rather than doing it quietly. Read `_refuse_wrong_testset`.
+TESTSET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testset_v2.json")
 
 
 # --- the frozen set -------------------------------------------------------------------
@@ -126,11 +152,15 @@ def align(round_rows: list[dict], gold_rows: list[dict]) -> tuple[list[dict], li
     return scored, stale, unanswered
 
 
-def tally(scored: list[dict]) -> dict:
-    """Every table in the report, counted once. Pure: same rows in, same numbers out."""
+def tally(scored: list[dict], labels: tuple = LABELS, predicted: tuple = PREDICTED) -> dict:
+    """Every table in the report, counted once. Pure: same rows in, same numbers out.
+
+    `labels` / `predicted` come from `label_space` so the tables describe the set that was
+    scored; the defaults are today's space, for callers that have no set to hand.
+    """
     per_layer = {layer: [0, 0] for layer in LAYERS}  # [correct, total]
-    per_label = {label: [0, 0] for label in LABELS}
-    confusion = {gold: {predicted: 0 for predicted in PREDICTED} for gold in LABELS}
+    per_label = {label: [0, 0] for label in labels}
+    confusion = {gold: {p: 0 for p in predicted} for gold in labels}
     correct = total = 0
     for row in scored:
         total += 1
@@ -196,7 +226,8 @@ def percent(correct: int, total: int) -> str:
 
 
 def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: list[int],
-           counts: dict, testset_path: str, testset_digest: str) -> str:
+           counts: dict, testset_path: str, testset_digest: str,
+           labels: tuple = LABELS, predicted: tuple = PREDICTED) -> str:
     """The whole report as one string. No clock is read here — same inputs, same bytes."""
     lines: list[str] = []
     candidate = round_doc.get("candidate", "?")
@@ -250,7 +281,7 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
     lines.append("## Accuracy by gold label")
     lines.append("")
     rows = []
-    for label in LABELS:
+    for label in labels:
         got, seen = counts["per_label"][label]
         rows.append([label, str(seen), str(got), percent(got, seen)])
     lines += table(["gold", "n", "correct", "accuracy"], rows)
@@ -258,12 +289,12 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
 
     lines.append("## Confusion — gold down, answered across")
     lines.append("")
-    header = ["gold ＼ answered"] + list(PREDICTED)
+    header = ["gold ＼ answered"] + list(predicted)
     rows = []
-    for gold in LABELS:
+    for gold in labels:
         cells = [gold]
-        for predicted in PREDICTED:
-            value = counts["confusion"][gold][predicted]
+        for column in predicted:
+            value = counts["confusion"][gold][column]
             cells.append(str(value) if value else "")
         rows.append(cells)
     lines += table(header, rows)
@@ -278,25 +309,69 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
     return "\n".join(lines) + "\n"
 
 
+def _refuse_wrong_testset(round_doc: dict, testset_path: str, digest: str) -> None:
+    """Refuse to score a round against a set that is not the one it was run on.
+
+    **Added 2026-08-30 with `testset_v2.json`, and it closes a hole that only existed once there
+    was a second set to be wrong about.** `align`'s `stale` list compares the NAME at each index,
+    so it catches a re-*draw* — different rows — and reports it in the report. A re-*label* keeps
+    every name identical at every index, so `stale` stays empty and an old round would re-score
+    against new gold **silently**, printing a report that looks exactly like the committed one
+    with different numbers in it. The sha256 was already in the report; it was printed and never
+    compared, which is H34's shape — a value shown to a reader in place of a check.
+
+    The round file records both the filename and the sha it ran against, so this is a comparison
+    of two facts the round already carries, not a new one to maintain.
+    """
+    ran_on = round_doc.get("testset")
+    ran_sha = round_doc.get("testset_sha256_at_run")
+    here = os.path.basename(testset_path)
+    if ran_on and ran_on != here:
+        raise SystemExit(
+            "this round was run against {} and you are scoring it against {}. Score it with its "
+            "own set — `--testset .../{}` — or the numbers are a comparison nobody made. D82 "
+            "keeps every set on disk exactly so the old one is still there.".format(
+                ran_on, here, ran_on))
+    if ran_sha and ran_sha != digest:
+        raise SystemExit(
+            "{} has changed since this round ran: the round recorded sha256 {} and the file is "
+            "now {}. A relabel leaves every name in place, so nothing else here would have "
+            "noticed. Score against the file the round names, or re-run the round.".format(
+                here, ran_sha[:16] + "…", digest[:16] + "…"))
+
+
 def report_for(round_path: str, testset_path: str = TESTSET_PATH) -> str:
     with open(round_path, encoding="utf-8") as handle:
         round_doc = json.load(handle)
     gold_rows, digest = load_testset(testset_path)
+    _refuse_wrong_testset(round_doc, testset_path, digest)
     scored, stale, unanswered = align(round_doc.get("rows", []), gold_rows)
-    counts = tally(scored)
-    return render(round_doc, scored, stale, unanswered, counts, testset_path, digest)
+    labels, predicted = label_space(gold_rows, scored)
+    counts = tally(scored, labels, predicted)
+    return render(round_doc, scored, stale, unanswered, counts, testset_path, digest,
+                  labels, predicted)
 
 
 def main(argv: list[str]) -> int:
+    testset_path = TESTSET_PATH
+    argv = list(argv)
+    if "--testset" in argv:
+        at = argv.index("--testset")
+        if at + 1 >= len(argv):
+            print("--testset needs a path", file=sys.stderr)
+            return 2
+        testset_path = argv[at + 1]
+        del argv[at:at + 2]
     if len(argv) != 1:
-        print("usage: python -m upto.evaluate.score <round-file>", file=sys.stderr)
+        print("usage: python -m upto.evaluate.score [--testset <file>] <round-file>",
+              file=sys.stderr)
         return 2
     round_path = argv[0]
     if not os.path.exists(round_path):
         print(f"no round file at {round_path} — run `python -m upto.evaluate.run_round "
               "<candidate>` first", file=sys.stderr)
         return 2
-    text = report_for(round_path)
+    text = report_for(round_path, testset_path)
     sys.stdout.write(text)
     destination = round_path + ".report.md"
     with open(destination, "w", encoding="utf-8") as handle:

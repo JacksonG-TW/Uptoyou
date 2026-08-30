@@ -43,7 +43,7 @@ from datetime import datetime, timezone
 from ..classify import embed as embedding
 from ..classify import examples as example_store
 from ..db import session_factory
-from .score import load_testset
+from .score import TESTSET_PATH, load_testset
 
 # Where a round file goes. **Never under `app/`** — D63: the report is public, the raw round file is
 # not, and `score` writes the public copy itself.
@@ -97,7 +97,11 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str) -
         "candidate": "knn-vote",
         "model": "none — majority vote of the k nearest labelled names",
         "prompt_version": "knn-vote_{}_k{}".format(EMBED_KEY, k),
-        "testset": "testset_v1.json",
+        # **Derived, never typed.** It was the literal string `"testset_v1.json"` until
+        # 2026-08-30, when a second set arrived — a hand-typed name is a claim about which file
+        # was read, and `load_testset()` below reads `TESTSET_PATH`. The two could disagree and
+        # only the wrong one would be recorded.
+        "testset": os.path.basename(TESTSET_PATH),
         "testset_sha256_at_run": sha,
         "started_at": started,
         "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
