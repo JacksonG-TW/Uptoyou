@@ -34,15 +34,44 @@ import Round from './components/round/Round.tsx'
  *  path on purpose**: a path segment is a routing decision, and how a person arrives at a reveal is
  *  part of `[OPEN-2]`. A query parameter is the form that commits to nothing and is trivially
  *  replaced by whatever the ruling says. */
+/**
+ * **The home, and the address bar told so** (evaluator's note, 2026-08-30; held out of candidate 4
+ * and shipped in 5).
+ *
+ * Every unmatched path falls through to the home — the proxy serves `index.html` for anything, so
+ * `/preferences`, a typo or an old bookmark all land here. Until now the address bar kept saying
+ * the path that no longer exists while the home rendered, which made three small things wrong at
+ * once: the URL described a screen the person was not on, a refresh looked like it *might* go
+ * somewhere else, and `Back` had an entry for a page that was never shown.
+ *
+ * `replaceState`, not `pushState` and not a redirect. **Not a redirect** because nothing moved —
+ * a redirect claims the address has a new home, and `/preferences` does not; the screen is gone.
+ * **Not `pushState`** because that would add the very history entry this removes.
+ *
+ * **Safe here, and only here.** `route()` is called once at module scope (`const screen = route()`
+ * below), outside any component render — so this is not the render-phase side effect this codebase
+ * bans in three other files, and StrictMode's double invoke cannot reach it. Moving this call into
+ * a component would break that, which is why it is written beside the fall-through rather than in
+ * an effect.
+ */
+function home() {
+  if (window.location.pathname !== '/' || window.location.search) {
+    window.history.replaceState(null, '', '/')
+  }
+  return <App />
+}
+
 function route() {
   const path = window.location.pathname.replace(/\/+$/, '')
   if (path === '/device') return <DeviceScreen />
   if (path === '/round') return <Round />
   if (path === '/reveal') {
     const round = Number(new URLSearchParams(window.location.search).get('round'))
-    return Number.isFinite(round) && round > 0 ? <Reveal roundId={round} /> : <App />
+    /* A `/reveal` with no usable round is a fall-through like any other, so it is rewritten too:
+       `?round=abc` in the bar over a home screen is the same lie in a different sentence. */
+    return Number.isFinite(round) && round > 0 ? <Reveal roundId={round} /> : home()
   }
-  return <App />
+  return home()
 }
 
 const screen = route()
