@@ -96,6 +96,18 @@ async def scenario(test_url: str, base_url: str) -> None:
             ),
             {"pub": place_pub},
         )
+        # **A second site of the SAME company**, so a pool of two can be swept whole. One reference
+        # place plus a circle-local one cannot: a place a member typed has no publisher, so no
+        # ingredient stance reaches it and its weight never folds to zero.
+        await session.execute(
+            text(
+                "insert into reference_place (publication_id, registry_no, origin, name, "
+                "name_raw, address, address_raw, township_code, township_name) "
+                "values (:pub, 'A-11111111-00002-1', 'reference', '雨中的店', '雨中的店', "
+                "'x', 'x', '63000010', 'x')"
+            ),
+            {"pub": place_pub},
+        )
         weather_pub = (
             await session.execute(
                 text(
@@ -212,6 +224,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         types = [e["type"] for e in events]
         assert types[0] == "snapshot" and types[-1] == "closed"
         assert "round_opened" in types and "pooled" in types
+
         closed = events[-1]["result"]
         assert closed["winning_place_id"] == rolled.json()["winning_place_id"]
         assert closed["places"][str(rainy)] == "雨中的店"
@@ -255,7 +268,92 @@ async def scenario(test_url: str, base_url: str) -> None:
         assert after["last_result"]["round_id"] == round_id
         assert after["last_result"]["dice"] == closed["dice"]
 
+        # **Owner-ruled 2026-08-30: a swept pool tells every seat, and only a stream can prove it.**
+        # The roller learns from the 409; the other seats learn from here, so asserting the 409
+        # alone would test the half that already worked.
+        #
+        # **Its own reader, and LAST in the file.** Three constraints forced this shape, and each
+        # one is the ruling working rather than an obstacle: the reader above RETURNS on `closed`,
+        # so nothing after that reaches `events`; a swept round STAYS OPEN, so opening one before
+        # the ordinary round left D52's one-open-round rule refusing every round after it; and for
+        # the same reason it must come after the later `open_round is None` assertion, which is
+        # true only while nothing is open. A swept round blocks its circle until somebody proposes
+        # into it — the shape that left round 834 holding circle 5.
+        async with Session() as session:
+            swept_brand = (
+                await session.execute(
+                    text("insert into brand_publication "
+                         "  (source, content_sha256, detected_at, payload_bytes, scope) "
+                         "values ('taipei-foodtracer', repeat('9', 64), now(), 1024, 'x') "
+                         "returning id")
+                )
+            ).scalar_one()
+            company = (
+                await session.execute(
+                    text("select name from reference_place where registry_no = ("
+                         "  select registry_no from place where id = :p)"),
+                    {"p": rainy},
+                )
+            ).scalar_one()
+            await session.execute(
+                text("insert into product_material (publication_id, company_name, brand_name, "
+                     "  product_name, material_name, material_name_raw) "
+                     "values (:pub, :c, :c, '蛋餅', '雞蛋', '雞蛋')"),
+                {"pub": swept_brand, "c": company},
+            )
+            await session.commit()
+        assert (await client.post(
+            f"/circles/{circle}/preferences",
+            json={"kind": "avoid_ingredient", "value": "蛋", "stance": "avoid"},
+            headers=auth,
+        )).status_code == 204
+        swept = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
+        assert swept.status_code == 201, swept.text
+        swept_id = swept.json()["round_id"]
+        sibling = await client.post(
+            f"/circles/{circle}/places",
+            json={"registry_no": "A-11111111-00002-1"},
+            headers=auth,
+        )
+        assert sibling.status_code == 201, sibling.text
+        for place in (rainy, sibling.json()["place_id"]):
+            assert (await client.post(
+                f"/rounds/{swept_id}/proposals", json={"place_id": place}, headers=auth
+            )).status_code == 201
+
+        swept_events = []
+        swept_seen = asyncio.Event()
+
+        async def swept_reader():
+            async with client.stream(
+                "GET", f"/circles/{circle}/stream", headers=auth
+            ) as response:
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        event = json.loads(line[6:])
+                        swept_events.append(event)
+                        if event["type"] == "pool_swept":
+                            swept_seen.set()
+                            return
+
+        swept_task = asyncio.create_task(swept_reader())
+        await asyncio.sleep(0.5)
+        swept_roll = await client.post(f"/rounds/{swept_id}/roll", headers=auth)
+        assert swept_roll.status_code == 409, (
+            "the swept round rolled {} — the fixture no longer produces an all-vetoed pool and "
+            "this case is testing nothing".format(swept_roll.status_code))
+        await asyncio.wait_for(swept_seen.wait(), timeout=10)
+        swept_task.cancel()
+
+        notice = [e for e in swept_events if e["type"] == "pool_swept"][0]
+        # The round id is the surface's clear rule — it clears on the next `pooled` for THAT round,
+        # so an event without it would never clear or be cleared by another round's proposal.
+        assert notice["round_id"] == swept_id, notice
+        assert set(notice) == {"type", "round_id"}, (
+            "type and round id, no text — the sentence has one owner and it is the surface", notice)
+
     await engine.dispose()
+
     print(
         "ticket 20: the snapshot is the first event on connect and reconnect alike, the "
         "close is pushed once whole, the last result survives to the next snapshot, and "

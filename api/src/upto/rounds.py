@@ -391,6 +391,20 @@ async def roll(round_id: int, request: Request) -> dict:
         try:
             table = build_table(weights)
         except EmptyPoolError:
+            # **Owner-ruled 2026-08-30: every seat is told, and the round stays open.** The roller
+            # learns from the 409 below; the other four learn from here, because a swept pool is
+            # not a fact about whoever happened to tap — it is the state of their round, and four
+            # people staring at a screen that did nothing is the silence §3.0 is built against.
+            #
+            # **Type and round id, no text.** The sentence lives in the surface and is rendered for
+            # this event *and* for the 409, so one wording has one owner. The 409's `detail` stays
+            # as the API's own contract — a curl reader wants it — and no member reads it, which is
+            # what stops two sentences for one event drifting apart in two repositories.
+            #
+            # **The round id is not decoration: it is the clear rule.** The surface clears this
+            # notice on the next `pooled` event *for that round*, so an event without it would
+            # either never clear or be cleared by a different round's proposal.
+            publish(round_row.circle_id, {"type": "pool_swept", "round_id": round_id})
             raise HTTPException(
                 status_code=409,
                 detail="池子是空的，或每一家的權重都是零，擲不出結果。",
