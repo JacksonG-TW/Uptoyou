@@ -569,26 +569,25 @@ class TheRoundRunnerUnloadsToo(unittest.TestCase):
     left the box with 130 MB. These tests exist so the two cannot drift apart again silently.
     """
 
-    def test_the_constant_is_named_and_is_fifty(self):
-        self.assertEqual(run_round.UNLOAD_EVERY, 50)
+    def test_both_runners_use_the_same_map_object(self):
+        """**The same object, not the same number** — a round and a backfill waiting different
+        amounts on one model service is the divergence nobody notices until one of them dies.
 
-    def test_both_runners_agree(self):
-        """**Read from the classifier's source, not imported** — `classify/run.py` pulls in
-        SQLAlchemy and this file is host-side. A round and a backfill hitting one model service
-        with different unload periods is a bug nobody would look for."""
+        The map moved to `classify/model.py` on 2026-08-31 precisely so this could be an import:
+        `classify/run.py` pulls in SQLAlchemy, and this runner is host-side importable.
+        """
+        from upto.classify import model as model_module
+        self.assertIs(run_round.unload_every, model_module.unload_every)
+
+    def test_the_map_says_it_belongs_to_the_model_AND_the_prompt_version(self):
+        """The rule that stops the next prompt edit — or the next model — from being a silent
+        memory change. Both halves have already moved once."""
         import pathlib
         source = pathlib.Path(
-            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "run.py"
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "model.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("UNLOAD_EVERY = {}".format(run_round.UNLOAD_EVERY), source)
-
-    def test_the_constant_says_it_belongs_to_the_prompt_version(self):
-        """The rule that stops the next prompt edit from being a silent memory change."""
-        import inspect
-        source = inspect.getsource(run_round)
-        head = source[:source.index("UNLOAD_EVERY = ")]
-        for phrase in ("prompt", "v7", "re-measure"):
-            self.assertIn(phrase, head.lower().replace("re-measure", "re-measure"))
+        for phrase in ("prompt", "v7", "re-measure", "model"):
+            self.assertIn(phrase, source.lower())
 
     def test_the_row_after_an_unload_is_cold_and_the_boundary_is_exact(self):
         """**The pairing, and the off-by-one that would make it useless.**
@@ -598,7 +597,7 @@ class TheRoundRunnerUnloadsToo(unittest.TestCase):
         wrong widens the retry on a row that never needed it and leaves the row that does with
         2.5 s against a 14.8 s load, which is the failure this fixes.
         """
-        every = run_round.UNLOAD_EVERY
+        every = run_round.unload_every("gemma2:2b")
         unloads = [i for i in range(3 * every) if (i + 1) % every == 0]
         colds = [i for i in range(3 * every) if i > 0 and i % every == 0]
         self.assertEqual(unloads, [every - 1, 2 * every - 1, 3 * every - 1])
@@ -643,7 +642,7 @@ class TheRoundRunnerUnloadsToo(unittest.TestCase):
         from the start of *this* run would drift the window by wherever the resume began, so two
         halves of one round would have different unload points and neither would match a re-run."""
         source = __import__("inspect").getsource(run_round)
-        self.assertIn("(index + 1) % UNLOAD_EVERY", source)
+        self.assertIn("(index + 1) % every", source)
 
 
 class TheCandidateMap(unittest.TestCase):

@@ -173,6 +173,34 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
         self.assertIs(ordinary, transport.BACKOFF_S)
         self.assertIs(self._captured_backoff, transport.COLD_BACKOFF_S)
 
+    def test_n_is_per_model_and_the_2b_is_the_expensive_one(self):
+        """**Parameter count predicts nothing here, and the map is the assertion.**
+
+        Measured on prompt v7 in a clean window: gemma2:2b ~103 MB per request, llama3.2:3b ~79,
+        qwen2.5:7b ~36, qwen2.5:3b ~23. The **2B costs about three times the 7B**, an inversion
+        that has now held across two independent measurements — so a single N sized on the biggest
+        model would put the smallest one over the ceiling.
+        """
+        from upto.classify.model import unload_every
+        self.assertEqual(unload_every("gemma2:2b"), 25)
+        self.assertEqual(unload_every("llama3.2:3b"), 35)
+        self.assertEqual(unload_every("qwen2.5:7b-instruct-q4_K_M"), 50)
+        self.assertLess(unload_every("gemma2:2b"), unload_every("qwen2.5:7b-instruct-q4_K_M"))
+
+    def test_an_unmeasured_model_gets_the_smallest_n_and_not_a_default(self):
+        """**The case that kills the box is the model nobody measured.** A default of 50 would be a
+        guess sized on the two cheapest entries; the smallest N costs reloads, and a wrong large N
+        costs the pass. Wrong in the direction that only wastes time."""
+        from upto.classify.model import unload_every, UNLOAD_EVERY_BY_MODEL
+        self.assertEqual(unload_every("mistral:7b"), min(UNLOAD_EVERY_BY_MODEL.values()))
+        self.assertEqual(unload_every("something-nobody-has-pulled"), 25)
+
+    def test_a_requantised_tag_still_matches(self):
+        """A re-quantised pull is the same KV geometry and must not fall through to the unknown
+        branch — safe, but it would silently halve N on a model we HAVE measured."""
+        from upto.classify.model import unload_every
+        self.assertEqual(unload_every("qwen2.5:7b-instruct"), 50)
+
     def test_the_constant_is_200_and_says_where_both_numbers_came_from(self):
         """**The source is read, because a constant without its arithmetic cannot be moved.**
 
@@ -184,17 +212,25 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
         source = pathlib.Path(
             os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "run.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("UNLOAD_EVERY = 50", source)
-        for number in ("9.9", "7.7", "10 s", "65", "78"):
-            self.assertIn(number, source, "the constant lost one of its measured quantities")
-        self.assertIn("H43", source)
+        import pathlib as _p
+        model_source = _p.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "model.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("UNLOAD_EVERY_BY_MODEL", model_source)
+        # Every per-request figure the map was derived from, so the map cannot be re-tuned
+        # without the numbers that justify it being visible in the same file.
+        for number in ("103", "79", "36", "23", "7.7"):
+            self.assertIn(number, model_source, "the map lost one of its measured quantities")
+        self.assertIn("H43", model_source)
+        self.assertIn("unload_every", source, "the backfill must consult the map, not a constant")
 
     def test_the_window_fires_on_the_row_it_should(self):
         """The off-by-one that would make this useless: `% N == 0` on a 0-based index unloads on
         row 1 and never again on a boundary. Asserted on the expression the loop uses."""
-        every = 50
-        fires = [i for i in range(101) if (i + 1) % every == 0]
-        self.assertEqual(fires, [49, 99], fires)
+        from upto.classify.model import unload_every
+        every = unload_every("gemma2:2b")
+        fires = [i for i in range(3 * every) if (i + 1) % every == 0]
+        self.assertEqual(fires, [every - 1, 2 * every - 1, 3 * every - 1], fires)
 
 
 if __name__ == "__main__":

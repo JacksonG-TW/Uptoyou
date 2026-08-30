@@ -96,6 +96,8 @@ from upto.classify.classify import Classified, NoSignal, classify_name, classify
 # **The cold-start schedule is imported, not re-typed.** Two clients waiting different amounts
 # for the same model to load is the kind of divergence nobody notices until one of them dies.
 from upto.classify.transport import COLD_BACKOFF_S
+# The per-model unload map, imported and never restated — see the comment above it.
+from upto.classify.model import unload_every
 # `upto.classify.embed` is standard library only — it reaches Ollama over urllib and nothing
 # else — so naming it here does not break the import discipline `examples` is kept out for.
 from upto.classify.embed import DEFAULT_EMBED_KEY, EMBED_MODELS
@@ -114,30 +116,18 @@ RAG_K = 5
 # a retrieval file name, which is the one thing the naming rule exists to prevent.
 RAG_K_MAX = 20
 
-# **H43 — the model is unloaded every N answers, and for prompt v7 N is 50.**
+# **H43 — the model is unloaded every N answers, and N is PER MODEL.** The map, the measurements
+# and the reasoning live in `upto.classify.run`; it is **imported** rather than restated, because
+# a round and a backfill waiting different amounts on one model service is the divergence nobody
+# notices until one of them dies. `test_classify_rag` asserts the two use the same object.
 #
-# **This runner did not have the unload and the classifier did, which is the whole reason it
-# mattered.** `classify/run.py` has carried `UNLOAD_EVERY` since 2026-08-30; a round is the same
-# workload — one distinct prompt per row against a resident model — and nobody carried the fix
-# across. Measured on the live v7 gemma round before it was stopped: **one runner, 77 generate
-# calls, `llama-server` 1,966 → 5,856 MB, the box down to 130 MB available.** A 200-row round
-# needs ~13 GB at that rate on a 7.7 GiB box: it cannot finish.
+# Measured on prompt v7 in a clean window (one runner between two unloads, requests counted from
+# the server's GIN log): gemma2:2b **~103 MB per request** → N = 25 · llama3.2:3b ~79 → 35 ·
+# qwen2.5:7b ~36 → 50 · qwen2.5:3b ~23 → 50. **The 2B is the expensive one**; parameter count
+# predicts nothing. An unknown model gets the smallest N in the map, never a default.
 #
-# **N is a property of the PROMPT VERSION, not of the model, and that is the rule to carry.** The
-# per-row cache cost measured ~17 MB on v6's real prompts and ~65–78 MB on v7's. **Re-measure N
-# whenever the prompt moves** — a prompt edit is a memory change, which is not how anyone reads a
-# prompt edit.
-#
-# **⚠️ The 4× is NOT explained by the prompt being longer, and I have checked rather than assumed.**
-# Rendered and counted: `RAG_INSTRUCTION` went **389 → 593** tokens v6 → v7 (×1.53), and
-# `INSTRUCTION` 519 → 697 (×1.34). A KV cache is **linear** in tokens, so ×1.5 of prompt should be
-# ×1.5 of cache and not ×4. Two things could account for the rest and neither is established: the
-# sample was taken in the window where the warm-up had left **stacked runners** with
-# `keep_alive: 30m` (since fixed), so RSS attributed to one runner may include a neighbour's; and
-# the same v6 prompt measured 9.9 MB synthetic against ~17 MB live, so the instrument itself
-# carries a ~1.7× spread. **50 is therefore a floor chosen to be obviously safe on tonight's worst
-# number, not a figure derived from an understood model.** Read H43 before raising it.
-UNLOAD_EVERY = 50
+# This runner did not have the unload at all until 2026-08-30 — the classifier had it and nobody
+# carried it across, and a v7 gemma round took the box to 130 MB free in 77 requests.
 
 # D64's local slate, owner-ruled 2026-08-14: three contenders, three makers, all under the
 # 4 GB EC2 class's ~2.5 GB resident line (gemma3:4b failed that gate and was replaced by
@@ -796,10 +786,11 @@ def main(argv: list[str]) -> int:
             # in the FROZEN SET, not in this run, so a resumed round unloads on the same rows the
             # first attempt would have: a round that resumes at row 120 must not start its window
             # count from zero and drift.
-            unload = (index + 1) % UNLOAD_EVERY == 0
+            every = unload_every(candidate.model)
+            unload = (index + 1) % every == 0
             # The row after an unload is cold (H52) and gets the wide retry; without it the
             # unload ends the round instead of saving the box — measured, qwen7b at row 50.
-            cold = index > 0 and index % UNLOAD_EVERY == 0
+            cold = index > 0 and index % every == 0
             if unload:
                 asker = lambda p: candidate.ask(p, unload_after=True)  # noqa: E731
             elif cold:
@@ -808,8 +799,8 @@ def main(argv: list[str]) -> int:
                 asker = candidate.ask
             rows.append(answer_row(index, gold_rows[index], asker, examples_for))
             if unload:
-                print(f"  unloaded the model after row {index + 1} "
-                      f"(H43: keep_alive=0, ~10 s to reload)", flush=True)
+                print(f"  unloaded {candidate.model} after row {index + 1} "
+                      f"(H43: N={every} for this model, ~10 s to reload)", flush=True)
             document["model"] = candidate.model
             if len(rows) % SAVE_EVERY == 0:
                 save(path, document)
