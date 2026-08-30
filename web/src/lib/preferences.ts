@@ -15,12 +15,20 @@
    nothing sets a budget any more and the API refuses the kind. The wire's words were
    `tight`/`easy` and appeared on no screen; the labels were 省一點／鬆一點. */
 
-/** D38's ten, in the order the API's closed list carries them. Mirrored, not fetched: the list is
+/** **D38's eleven since 2026-08-30** — `便利商店` is the new value (owner: 「我認為可以開一類就是
+ *  便利商店」), in the order the API's closed list carries them. **`其他` stays last**: the order is
+ *  the row a screen renders and the fallback belongs at the end, so the new value goes before it
+ *  rather than after — mirrored from `upto/preferences.py`, not chosen here.
+ *
+ *  **The API had to accept it first.** The value is enforced by a CHECK (revision 0039 widened it);
+ *  a chip shipped ahead of the migration renders, taps, and is refused by the database, which is
+ *  the worst of the three failures because it looks like it works. Mirrored, not fetched: the list is
  *  closed and versioned by a migration, and a screen that discovered its own controls at runtime
  *  would render an empty settings page on a failed request. The integration test asserts the two
  *  agree; a value outside the list is refused by the database whatever this file believes. */
 export const CATEGORIES = [
-  '麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '早餐', '咖啡飲料', '其他',
+  '麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '早餐', '咖啡飲料',
+  '便利商店', '其他',
 ] as const
 
 /* **The eleven food-label groups and their sourced 「常見於 …」 lines are gone** with the same
@@ -107,6 +115,20 @@ export type Preferences = {
   }
   category_coverage: Coverage
   avoid_categories: Avoidance[]
+  /**
+   * **Which of the eleven no place carries yet, so a true zero can say why.**
+   *
+   * A category with coverage but no places would otherwise print 「0 家會比較少中（0.0%）」, and a
+   * count of zero reads as a RESULT — *we looked and nothing needed excluding* — when what is true
+   * is that the classifier has not run the city with the new value yet. That is A2-G8-zero, and it
+   * is the same defect this surface shipped for a few hours on the allergen rows in August; the
+   * answer then was silence because there was no sentence, and the answer now is the payload's own
+   * sentence because backend wrote one.
+   *
+   * `why` is rendered **verbatim** and never composed here. Optional, because it empties itself the
+   * day the re-pass lands and an older api does not carry it at all.
+   */
+  values_awaiting_classification?: { values: string[]; why: string }
   /* **`ingredient_coverage`, `budget` and `avoid_ingredients[]` left the payload** with the kinds
      they described (`spec-return-choice.md` §1). Stored rows stay in the database — D24's pins
      reference them and the nightly erasure runs unchanged — they are simply never returned. */

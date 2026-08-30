@@ -260,6 +260,19 @@ export default function Round() {
   const chipOn = (c: string) => pending[c] ?? avoided.has(c)
   const catStat = new Map((prefs?.avoid_categories ?? []).map((a) => [a.value, a]))
   const catCoverage = prefs?.category_coverage.share ?? 0
+  /**
+   * **The values no place carries yet — so a true zero says why instead of stating zero.**
+   *
+   * `便利商店` is the whole of this set on 2026-08-30 and leaves it when the classifier re-runs the
+   * city. Without this the row would print 「0 家會比較少中（0.0%）」, and a count of zero reads as a
+   * RESULT — *we looked and nothing needed excluding* — when what is true is that nothing has been
+   * measured for that value yet. That is A2-G8-zero, and this surface shipped exactly that defect
+   * on the allergen rows for a few hours in August; the difference now is that backend wrote the
+   * sentence, so the screen states it **verbatim** rather than composing one.
+   *
+   * Read from the payload every render and never remembered: the set empties itself.
+   */
+  const awaiting = new Set(prefs?.values_awaiting_classification?.values ?? [])
   const anyOn = CATEGORIES.some(chipOn)
 
 
@@ -350,9 +363,12 @@ export default function Round() {
             key={c}
             className="roundNote tonightStat"
             data-part="tonight-stat"
-            data-shape={catCoverage > 0 ? 'count' : 'why'}
+            data-shape={awaiting.has(c) || !(catCoverage > 0) ? 'why' : 'count'}
           >
-            <b>{c}</b> {touchedLine(catStat.get(c), catCoverage)}
+            <b>{c}</b>{' '}
+            {awaiting.has(c)
+              ? prefs?.values_awaiting_classification?.why
+              : touchedLine(catStat.get(c), catCoverage)}
           </p>
         ))}
 
@@ -375,6 +391,23 @@ export default function Round() {
         {anyOn && (
           <p className="roundNote" data-part="pref-category-discount">
             避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
+          </p>
+        )}
+
+        {/* **The cross-kind total, moved here from 偏好 when that screen was removed**
+            (`spec-return-choice.md` §2). It counts what the member's stances reach at all, and
+            with ingredients withdrawn every stance is a chip on this screen — so the number now
+            describes exactly what is above it, which it never quite did on the old page.
+
+            Only while at least one chip is on: with nothing set there is nothing for a total to
+            total. Every figure is the payload's `breadth`, including the denominator, which the
+            sentence names in the screen's own words rather than printing the API's English string
+            or inventing a second definition. */}
+        {anyOn && prefs && prefs.breadth.touched > 0 && (
+          <p className="roundNote" data-part="tonight-total">
+            這些選擇目前碰到 {prefs.breadth.touched.toLocaleString('en-US')} 家，
+            範圍是這個圈子提得出來的 {prefs.breadth.proposable.toLocaleString('en-US')} 家
+            （{pct(prefs.breadth.share)}）。
           </p>
         )}
 
