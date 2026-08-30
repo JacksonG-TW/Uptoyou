@@ -81,23 +81,38 @@ BATCH = 25
 #   * **What a reload costs** — one cold load on that path, measured **~10 s** (and 14.8 s when
 #     the card has to evict an embedder first).
 #
-# So at N = 200 the worst case is the 2B: 200 × 9.9 MB ≈ **2.0 GB** of cache plus the runner's
-# own footprint, against a **7.7 GiB** WSL2 ceiling the owner has ruled stays where it is — the
-# Windows side needs that memory. The price is one ~10 s reload per 200 rows: on a 3,000-row
-# township, 15 reloads ≈ 2.5 minutes against a pass measured in hours.
+# **⚠️ N came down from 200 to 50 on 2026-08-30, hours after it was set, and the reason is that
+# the number is a property of the PROMPT VERSION rather than of the model.** The 9.9 MB above was
+# measured on v6-shaped prompts. On **v7** the live measurement is **~65–78 MB per row** — a v7
+# gemma round took `llama-server` from 1,966 to 5,856 MB in **77 requests**, leaving the box with
+# 130 MB. At that rate N = 200 needs ~13 GB and the pass dies rather than slows.
+#
+# **So: re-measure N whenever the prompt moves.** A prompt edit is a memory change, and nothing
+# about editing a prompt looks like one.
+#
+# At N = 50 the worst case on tonight's numbers is 50 × 78 MB ≈ **3.9 GB** of cache plus the
+# runner's own footprint, against a **7.7 GiB** WSL2 ceiling the owner has ruled stays where it is
+# — the Windows side needs that memory. The price is one ~10 s reload per 50 rows: on a 3,000-row
+# township, 60 reloads ≈ 10 minutes against a pass measured in hours. On v6 arithmetic (9.9 MB)
+# the same N is 0.5 GB, which is wasteful and harmless — the wrong direction to be wrong in.
 #
 # **This is a robustness measure, not a speed one, and it reverses a call I made on 2026-08-28.**
 # I declined a periodic reset then as a ~6.5% throughput gain not worth touching a running server.
 # That was right on the evidence available. It is wrong now: on 2026-08-30 ollama was OOM-killed on
 # that box holding 433 saved prompt states, and the reset empties exactly the thing that killed it.
 #
-# **⚠️ One thing this constant does NOT rest on, and H43 says so: nobody has explained why the
-# 大同 pass survived.** 3,311 rows with no gap over 70 s would need ~21 GB at 9.9 MB/row on a
+# **⚠️ Two things this constant does NOT rest on. First, the 4× between v6 and v7 is unexplained:**
+# rendered and counted, `RAG_INSTRUCTION` grew **389 → 593** tokens (×1.53) and `INSTRUCTION`
+# 519 → 697 (×1.34), and a KV cache is **linear** in tokens — ×1.5 of prompt cannot be ×4 of cache.
+# The v7 sample was also taken while stacked runners were present, and the same v6 prompt measured
+# 9.9 MB synthetic against ~17 MB live, so the instrument carries a ~1.7× spread of its own.
+#
+# **Second, nobody has explained why the 大同 pass survived.** 3,311 rows with no gap over 70 s would need ~21 GB at 9.9 MB/row on a
 # 7.7 GiB box, and it completed. Either the growth bounds, or something frees states mid-pass. The
 # `ps -o rss= -C llama-server` sampling on a real township is the experiment that settles it. Until
 # it runs, 200 is a floor chosen to be obviously safe rather than a number derived from a model
 # anyone has confirmed. **Read H43 before moving it.**
-UNLOAD_EVERY = 200
+UNLOAD_EVERY = 50
 
 
 class CribUnavailable(Exception):

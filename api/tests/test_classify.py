@@ -169,17 +169,17 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
         source = pathlib.Path(
             os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "run.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("UNLOAD_EVERY = 200", source)
-        for number in ("9.9", "3.9", "7.7", "10 s"):
+        self.assertIn("UNLOAD_EVERY = 50", source)
+        for number in ("9.9", "7.7", "10 s", "65", "78"):
             self.assertIn(number, source, "the constant lost one of its measured quantities")
         self.assertIn("H43", source)
 
     def test_the_window_fires_on_the_row_it_should(self):
         """The off-by-one that would make this useless: `% N == 0` on a 0-based index unloads on
         row 1 and never again on a boundary. Asserted on the expression the loop uses."""
-        every = 200
-        fires = [i for i in range(401) if (i + 1) % every == 0]
-        self.assertEqual(fires, [199, 399], fires)
+        every = 50
+        fires = [i for i in range(101) if (i + 1) % every == 0]
+        self.assertEqual(fires, [49, 99], fires)
 
 
 if __name__ == "__main__":

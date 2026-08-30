@@ -139,14 +139,25 @@ class TestTheRagPrompt(unittest.TestCase):
         positions = [ladder.index(step) for step in ("自稱", "主食形式", "菜系", "其他")]
         self.assertEqual(positions, sorted(positions), "the ladder is out of order")
 
-    def test_the_base_is_v3_and_not_v4(self):
-        # v4's three additions, asserted absent. They are in the live INSTRUCTION — so this
-        # also proves the two prompts have genuinely diverged rather than one aliasing the
-        # other — and they measurably lost accuracy, which is why retrieval is not stacked
-        # on top of them.
-        for v4_only in ("忽略名稱裡的分店資訊", "主要賣的是飲品", "宴會館"):
+    def test_the_rag_base_diverges_from_the_plain_one_but_the_drinks_rule_is_shared(self):
+        """**Amended 2026-08-30 (v7), and the amendment is the point.**
+
+        This test used to assert that 「主要賣的是飲品」 was **absent** from `RAG_INSTRUCTION` —
+        it was in the group of three v4 additions the RAG base deliberately skipped. Two of those
+        three were skipped on purpose and still are. **The drinks rule was not: it was collateral,
+        and this test pinned the loss in place.** Every RAG round and the entire city backfill ran
+        without it while 1,972 drinks-shaped names sat in `其他`, and the assertion here is why
+        nobody found it by reading the file — the file was *asserted* to look that way.
+
+        So: the two prompts still genuinely diverge (asserted below, so this file cannot start
+        aliasing one to the other), and the drinks rule is now in **both**.
+        """
+        for v4_only in ("忽略名稱裡的分店資訊", "宴會館"):
             self.assertIn(v4_only, INSTRUCTION, "v4's text moved; this test needs re-deriving")
             self.assertNotIn(v4_only, RAG_INSTRUCTION)
+        for shared in ("主要賣的是飲品", "素食", "台菜", "便利商店"):
+            self.assertIn(shared, INSTRUCTION, shared)
+            self.assertIn(shared, RAG_INSTRUCTION, shared)
 
     def test_the_two_versions_are_different_strings(self):
         self.assertNotEqual(RAG_PROMPT_VERSION, PROMPT_VERSION)
@@ -343,7 +354,7 @@ class Stubbed:
     def check(self) -> None:
         pass
 
-    def ask(self, prompt: str) -> str:
+    def ask(self, prompt: str, unload_after: bool = False) -> str:
         return "日式"
 
 
@@ -547,6 +558,44 @@ class TestTheKAxis(unittest.TestCase):
 
     def test_the_k_axis_pulled_no_sqlalchemy_either(self):
         self.assertNotIn("sqlalchemy", sys.modules)
+
+
+class TheRoundRunnerUnloadsToo(unittest.TestCase):
+    """H43 — the round runner carries the same unload as the classifier, and did not.
+
+    **The gap is the finding.** `classify/run.py` got `UNLOAD_EVERY` on 2026-08-30; a round is the
+    same workload — one distinct prompt per row against a resident model — and nobody carried it
+    across. A v7 gemma round then took `llama-server` from 1,966 to 5,856 MB in 77 requests and
+    left the box with 130 MB. These tests exist so the two cannot drift apart again silently.
+    """
+
+    def test_the_constant_is_named_and_is_fifty(self):
+        self.assertEqual(run_round.UNLOAD_EVERY, 50)
+
+    def test_both_runners_agree(self):
+        """**Read from the classifier's source, not imported** — `classify/run.py` pulls in
+        SQLAlchemy and this file is host-side. A round and a backfill hitting one model service
+        with different unload periods is a bug nobody would look for."""
+        import pathlib
+        source = pathlib.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "classify", "run.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn("UNLOAD_EVERY = {}".format(run_round.UNLOAD_EVERY), source)
+
+    def test_the_constant_says_it_belongs_to_the_prompt_version(self):
+        """The rule that stops the next prompt edit from being a silent memory change."""
+        import inspect
+        source = inspect.getsource(run_round)
+        head = source[:source.index("UNLOAD_EVERY = ")]
+        for phrase in ("prompt", "v7", "re-measure"):
+            self.assertIn(phrase, head.lower().replace("re-measure", "re-measure"))
+
+    def test_the_window_is_keyed_on_the_frozen_row_not_the_run(self):
+        """**A resumed round must unload on the same rows the first attempt would have.** Counting
+        from the start of *this* run would drift the window by wherever the resume began, so two
+        halves of one round would have different unload points and neither would match a re-run."""
+        source = __import__("inspect").getsource(run_round)
+        self.assertIn("(index + 1) % UNLOAD_EVERY", source)
 
 
 class TheCandidateMap(unittest.TestCase):

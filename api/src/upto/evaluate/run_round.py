@@ -111,6 +111,31 @@ RAG_K = 5
 # a retrieval file name, which is the one thing the naming rule exists to prevent.
 RAG_K_MAX = 20
 
+# **H43 — the model is unloaded every N answers, and for prompt v7 N is 50.**
+#
+# **This runner did not have the unload and the classifier did, which is the whole reason it
+# mattered.** `classify/run.py` has carried `UNLOAD_EVERY` since 2026-08-30; a round is the same
+# workload — one distinct prompt per row against a resident model — and nobody carried the fix
+# across. Measured on the live v7 gemma round before it was stopped: **one runner, 77 generate
+# calls, `llama-server` 1,966 → 5,856 MB, the box down to 130 MB available.** A 200-row round
+# needs ~13 GB at that rate on a 7.7 GiB box: it cannot finish.
+#
+# **N is a property of the PROMPT VERSION, not of the model, and that is the rule to carry.** The
+# per-row cache cost measured ~17 MB on v6's real prompts and ~65–78 MB on v7's. **Re-measure N
+# whenever the prompt moves** — a prompt edit is a memory change, which is not how anyone reads a
+# prompt edit.
+#
+# **⚠️ The 4× is NOT explained by the prompt being longer, and I have checked rather than assumed.**
+# Rendered and counted: `RAG_INSTRUCTION` went **389 → 593** tokens v6 → v7 (×1.53), and
+# `INSTRUCTION` 519 → 697 (×1.34). A KV cache is **linear** in tokens, so ×1.5 of prompt should be
+# ×1.5 of cache and not ×4. Two things could account for the rest and neither is established: the
+# sample was taken in the window where the warm-up had left **stacked runners** with
+# `keep_alive: 30m` (since fixed), so RSS attributed to one runner may include a neighbour's; and
+# the same v6 prompt measured 9.9 MB synthetic against ~17 MB live, so the instrument itself
+# carries a ~1.7× spread. **50 is therefore a floor chosen to be obviously safe on tonight's worst
+# number, not a figure derived from an understood model.** Read H43 before raising it.
+UNLOAD_EVERY = 50
+
 # D64's local slate, owner-ruled 2026-08-14: three contenders, three makers, all under the
 # 4 GB EC2 class's ~2.5 GB resident line (gemma3:4b failed that gate and was replaced by
 # gemma2:2b). One CLI name per model; the string is pinned here and written into the round.
@@ -299,18 +324,22 @@ class Local:
                 f"`docker compose exec ollama ollama pull {self.model}`."
             )
 
-    def ask(self, prompt: str) -> str:
-        body = json.dumps(
-            {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                # temperature 0 and a short budget: the answer is a few characters, and a
-                # re-run of the same prompt version should land as close to identical as this
-                # kind of tool gets. D39 admits it is not fully reproducible.
-                "options": {"temperature": 0, "num_predict": 8},
-            }
-        ).encode()
+    def ask(self, prompt: str, unload_after: bool = False) -> str:
+        payload = {
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            # temperature 0 and a short budget: the answer is a few characters, and a
+            # re-run of the same prompt version should land as close to identical as this
+            # kind of tool gets. D39 admits it is not fully reproducible.
+            "options": {"temperature": 0, "num_predict": 8},
+        }
+        if unload_after:
+            # H43 — see `UNLOAD_EVERY` below. The classifier has carried this since
+            # 2026-08-30; the round runner did not, and a v7 gemma round took the box to
+            # 130 MB free in 77 requests before anyone noticed.
+            payload["keep_alive"] = 0
+        body = json.dumps(payload).encode()
         request = urllib.request.Request(
             f"{OLLAMA_URL}/api/generate",
             data=body,
@@ -359,7 +388,15 @@ class Gemini:
         parts = candidate.get("content", {}).get("parts", [])
         return "\n".join(part["text"] for part in parts if "text" in part).strip()
 
-    def ask(self, prompt: str) -> str:
+    def ask(self, prompt: str, unload_after: bool = False) -> str:
+        """`unload_after` is accepted and ignored — there is nothing local to unload.
+
+        **Accepted rather than absent, and that is the bug this signature prevents.** The round
+        loop hands `unload_after=True` on every Nth row without knowing which candidate it holds;
+        a hosted candidate whose `ask` lacked the keyword would raise `TypeError` at row 50 of a
+        gemini round — after fifty of a rationed daily quota had been spent. Found by
+        `test_classify_rag` before it could happen.
+        """
         gap = GEMINI_SLEEP_S - (time.monotonic() - self._last_call)
         if gap > 0:
             time.sleep(gap)
@@ -731,7 +768,17 @@ def main(argv: list[str]) -> int:
     status = 0
     try:
         for index in range(start, len(gold_rows)):
-            rows.append(answer_row(index, gold_rows[index], candidate.ask, examples_for))
+            # **The unload rides the last request of each window** — a field on a request we are
+            # making anyway, so it cannot desynchronise from the work. `index` is the row's place
+            # in the FROZEN SET, not in this run, so a resumed round unloads on the same rows the
+            # first attempt would have: a round that resumes at row 120 must not start its window
+            # count from zero and drift.
+            unload = (index + 1) % UNLOAD_EVERY == 0
+            asker = (lambda p: candidate.ask(p, unload_after=True)) if unload else candidate.ask
+            rows.append(answer_row(index, gold_rows[index], asker, examples_for))
+            if unload:
+                print(f"  unloaded the model after row {index + 1} "
+                      f"(H43: keep_alive=0, ~10 s to reload)", flush=True)
             document["model"] = candidate.model
             if len(rows) % SAVE_EVERY == 0:
                 save(path, document)
