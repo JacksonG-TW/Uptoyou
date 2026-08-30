@@ -331,6 +331,12 @@
    **1.5px is the system's own number for this, not a thinning.** §5 rule 5 names 「the chip's
    border」 at 1.5px explicitly — the 2px I used was the drift, and the ruling puts it back. */
 .round .chip {
+  /* **Geometry only, and it is what a leading mark needs** — `spec-chip-mark.md` §1, accepted as
+     geometry rather than as a change to the chip's construction: 500/700, the 1.5px border, the
+     heights and the no-shadow rule all stand. */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   min-height: 40px;
   padding: 0 14px;
   border: 1.5px solid var(--color-ink);
@@ -347,6 +353,9 @@
   color: var(--color-paper);
   font-weight: 700;
 }
+/* ■ when the stance is on. `currentColor` is paper here and ink on the off chip, so the one
+   declaration covers both grounds — which is the whole reason the part moved to `currentColor`. */
+.round .chip[data-on="yes"] .mark { background: currentColor; }
 .round .chip:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
 
 /* **The hover is colour, because the spec removed the other two.** It says no lift and no shadow

@@ -326,6 +326,17 @@ export default function Round() {
                   aria-pressed={on}
                   onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
                 >
+                  {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
+                      owner's critique. The on-state was an ink fill plus a 500→700 weight: a fill
+                      inversion is a lightness change and survives colour-blindness, but neither is
+                      a shape a person can name, and the product already has one — the 偏好 rows'
+                      □/■ square. The same part, so a chip reads as selected in the vocabulary of
+                      the sheet the person just left (WCAG 1.4.1, and 1.4.11 for the ≥3:1).
+
+                      `aria-hidden`: `aria-pressed` on the button is the accessible state, and a
+                      screen reader announcing a decorative box beside it would say the same thing
+                      twice in two vocabularies. */}
+                  <span className="mark" aria-hidden="true" />
                   {c}
                 </button>
               </li>

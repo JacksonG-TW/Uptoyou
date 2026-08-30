@@ -128,14 +128,26 @@
 .keep:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
 .keep:disabled { cursor: not-allowed; }
 
+/* **The registry's selection mark — `currentColor`, not ink** (evaluator-ruled 2026-08-30).
+   It was `--color-ink` on both the border and the fill, which is right only where the control it
+   sits in is also ink. Two places it was not: on a **selected chip** (ink ground) it would have
+   drawn ink on ink and been invisible in the one state it exists to signal, and on the **留著**
+   control — which is muted — it drew an ink square inside a muted label, the accident rather than
+   the hierarchy. A part that vanishes on one of its grounds is a wrong part, so the part moved
+   rather than each caller patching it.
+
+   Measured after, against the 3:1 UI floor: keep at rest 6.56, everything else 18.56. */
 .mark {
   width: 12px;
   height: 12px;
   flex: 0 0 12px;
-  border: 1.5px solid var(--color-ink);
+  border: 1.5px solid currentColor;
   background: transparent;
 }
-.keep[data-kept="yes"] .mark { background: var(--color-ink); }
+/* A no-op in value — `.keep[data-kept="yes"]` already sets `color: var(--color-ink)` — and not a
+   no-op in kind: it keeps the fill and the border reading from one source, so the two cannot part
+   company the day the kept state's colour is ruled again. */
+.keep[data-kept="yes"] .mark { background: currentColor; }
 
 /* ── B / B-bis · the rows ───────────────────────────────────────────────────
    ROW per design.md: 56 / 60 / 68 px, a 1.5px ink bottom rule, last row none, never alternating
@@ -188,7 +200,7 @@
    wrongly by a stylesheet, which is exactly the state A2-G6 exists to catch, and it was invisible
    in the markup because the marker was right there in the DOM with the correct `data-kept="no"`. */
 .row[data-on="yes"] .rowTap .mark,
-.row[data-on="on"] .rowTap .mark { background: var(--color-ink); }
+.row[data-on="on"] .rowTap .mark { background: currentColor; }
 
 /* The asking state — carried from a previous month or arrived on a new device. Dashed rather than
    solid, because the fact is real and this device has not yet been shown it. */
