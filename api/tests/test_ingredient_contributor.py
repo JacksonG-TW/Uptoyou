@@ -21,34 +21,51 @@ CRUSTACEAN = "甲殼類"
 EGG = "蛋"
 
 
-class ThreeStates(unittest.TestCase):
-    """**The middle one is the whole point (D112).** Two of the three produce no record, and they
-    are not the same absence — the loader keeps them apart so the surface can."""
+class FourStates(unittest.TestCase):
+    """Owner-ruled 2026-08-30 (D103 amended). Two of the four produce no record and they are not
+    the same absence; two produce one and they are not the same record."""
 
-    def test_declared_and_it_names_the_avoided_group(self):
-        record = veto_contribution(1, 7, frozenset({EGG, CRUSTACEAN}), {CRUSTACEAN})
-        self.assertIsNotNone(record)
+    def test_every_published_product_names_it(self):
+        record = veto_contribution(1, 7, {"a": {EGG}, "b": {EGG, CRUSTACEAN}}, {EGG})
         self.assertEqual(record.effect, Decimal(0))
+        self.assertEqual(record.reason, "原料含有：蛋")
         self.assertEqual(record.channel, "private")
         self.assertEqual(record.contributor, CONTRIBUTOR_NAME)
-        self.assertIn(CRUSTACEAN, record.reason)
 
-    def test_declared_and_it_does_not(self):
-        """A real answer: the publisher listed their materials and none names this group."""
-        self.assertIsNone(veto_contribution(1, 7, frozenset({EGG}), {CRUSTACEAN}))
+    def test_some_do_and_some_do_not(self):
+        """**全家's case: 1 of 87.** The place participates at full weight and the member is told.
+
+        Zeroing a store because one of eighty-seven products names 蛋 would tell somebody they
+        cannot go where they can plainly eat something else.
+        """
+        record = veto_contribution(1, 7, {"a": {EGG}, "b": {CRUSTACEAN}, "c": set()}, {EGG})
+        self.assertEqual(record.effect, Decimal(1))
+        self.assertEqual(record.reason, "部分品項含有：蛋")
+
+    def test_a_single_published_product_that_names_it_is_still_zero(self):
+        """"Every" means every PUBLISHED product, and this is the sharp edge of the ruling: a
+        company publishing one product that names 蛋 is ×0 even if it sells fifty. The rest are
+        unknown, never safe, and the rule fails in the direction that does not put somebody in a
+        place they cannot eat in."""
+        record = veto_contribution(1, 7, {"a": {EGG}}, {EGG})
+        self.assertEqual(record.effect, Decimal(0))
+
+    def test_declared_and_none_of_them_names_it(self):
+        """A real answer: the publisher listed their materials and none is this group."""
+        self.assertIsNone(veto_contribution(1, 7, {"a": {CRUSTACEAN}, "b": set()}, {EGG}))
 
     def test_not_declared_at_all(self):
         """87.6% of the city, so this is the ordinary case rather than the edge."""
-        self.assertIsNone(veto_contribution(1, 7, None, {CRUSTACEAN}))
+        self.assertIsNone(veto_contribution(1, 7, None, {EGG}))
 
     def test_declared_nothing_is_not_the_same_object_as_undeclared(self):
-        """`frozenset()` and `None` both produce no record and mean different things.
+        """`{}` and `None` both produce no record and mean different things.
 
         The arithmetic cannot tell them apart and must not try — the difference is in what the
         screen may say, which is why the type carries it out of here rather than a flag.
         """
-        self.assertIsNone(veto_contribution(1, 7, frozenset(), {CRUSTACEAN}))
-        self.assertIsNone(veto_contribution(1, 7, None, {CRUSTACEAN}))
+        self.assertIsNone(veto_contribution(1, 7, {}, {EGG}))
+        self.assertIsNone(veto_contribution(1, 7, None, {EGG}))
 
 
 class TheEffectIsExactlyZero(unittest.TestCase):
@@ -58,27 +75,36 @@ class TheEffectIsExactlyZero(unittest.TestCase):
         「不想吃火鍋」 is a preference and a room of five should still be able to land there.
         「不吃甲殼類」 is a statement about what a person can eat.
         """
-        record = veto_contribution(1, 7, frozenset({CRUSTACEAN}), {CRUSTACEAN})
+        record = veto_contribution(1, 7, {"a": {CRUSTACEAN}}, {CRUSTACEAN})
         self.assertEqual(record.effect, Decimal(0))
 
-    def test_the_effect_is_a_decimal(self):
-        """D46: a float or an int here is D46 undone, and zero is the one value where it would
-        never have shown. `Contribution` refused an int on this module's first run."""
-        record = veto_contribution(1, 7, frozenset({CRUSTACEAN}), {CRUSTACEAN})
-        self.assertIsInstance(record.effect, Decimal)
+    def test_both_effects_are_decimals(self):
+        """D46. Zero and one are the two values where a float would never have shown itself in the
+        arithmetic, which is exactly why the type is enforced when the record is built."""
+        for declared in ({"a": {CRUSTACEAN}}, {"a": {CRUSTACEAN}, "b": set()}):
+            with self.subTest(declared=declared):
+                self.assertIsInstance(veto_contribution(1, 7, declared, {CRUSTACEAN}).effect,
+                                      Decimal)
+
+    def test_the_partial_record_multiplies_by_one(self):
+        """It exists to carry the SENTENCE, not an effect — a deliberate departure from D43's
+        *no record when nothing changed*, because `my_reasons` is read from the ledger and a member
+        cannot be told anything the ledger does not hold."""
+        record = veto_contribution(1, 7, {"a": {CRUSTACEAN}, "b": set()}, {CRUSTACEAN})
+        self.assertEqual(record.effect, Decimal(1))
 
 
 class TheReason(unittest.TestCase):
     def test_it_names_the_group_and_never_a_product(self):
         """Which item it was in is a fact about a menu, not about this round."""
-        record = veto_contribution(1, 7, frozenset({CRUSTACEAN}), {CRUSTACEAN})
+        record = veto_contribution(1, 7, {"a": {CRUSTACEAN}}, {CRUSTACEAN})
         self.assertEqual(record.reason, "原料含有：{}".format(CRUSTACEAN))
 
     def test_several_groups_read_in_a_stable_order(self):
         """Sorted, so two runs of the same round produce the same sentence — H8's record is
         compared against itself by the lineage tool."""
-        a = veto_contribution(1, 7, frozenset({EGG, CRUSTACEAN}), {CRUSTACEAN, EGG})
-        b = veto_contribution(1, 7, frozenset({CRUSTACEAN, EGG}), {EGG, CRUSTACEAN})
+        a = veto_contribution(1, 7, {"a": {EGG, CRUSTACEAN}}, {CRUSTACEAN, EGG})
+        b = veto_contribution(1, 7, {"a": {CRUSTACEAN, EGG}}, {EGG, CRUSTACEAN})
         self.assertEqual(a.reason, b.reason)
 
     def test_it_is_the_members_own_to_read(self):

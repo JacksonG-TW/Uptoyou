@@ -474,9 +474,11 @@ async def scenario(test_url: str) -> None:
         veto_rolled = await client.post(f"/rounds/{veto_round_id}/roll", headers=auth)
         assert veto_rolled.status_code == 200, ("the veto path must not 500", veto_rolled.text)
         veto_result = veto_rolled.json()
-        assert veto_result["weights"][str(chain)] == "0", veto_result["weights"]
-        assert veto_result["winning_place_id"] == locals_[1], (
-            "a vetoed place cannot win — the only other place must", veto_result)
+        # **全家's case, owner-ruled 2026-08-30: 1 of 2 published products names 蛋, so the place
+        # PARTICIPATES at full weight and the member is told.** 拉麵 names 雞蛋; 叉燒 names 豬肉,
+        # which is in no group. Zeroing a store because one of its products names 蛋 would tell
+        # somebody they cannot go where they can plainly eat something else.
+        assert veto_result["weights"][str(chain)] == "1", veto_result["weights"]
         assert veto_result["ingredient_data"][str(chain)] == "declared"
         assert veto_result["ingredient_data"][str(locals_[1])] == "unknown", (
             "a circle-local place has no company and no publisher — unknown, never declared")
@@ -486,13 +488,13 @@ async def scenario(test_url: str) -> None:
             f"/rounds/{veto_round_id}/roll",
             headers={"Authorization": "Bearer " + plain_token},
         )).json()
-        assert any("蛋" in r for r in veto_member["my_reasons"]), veto_member["my_reasons"]
+        assert veto_member["my_reasons"] == ["部分品項含有：蛋"], veto_member["my_reasons"]
         # **The operator's own body DOES carry it, and that is correct — the first version of this
         # assertion had it backwards.** Both device secrets in this file share one `principal_id`:
         # they are two devices of one person, so the operator device belongs to the represented
         # member and is reading their own sentence. D74's rule is that the role belongs to the
         # secret and not to the person, and this is that rule seen from the other side.
-        assert any("蛋" in r for r in veto_result["my_reasons"]), veto_result["my_reasons"]
+        assert veto_result["my_reasons"] == ["部分品項含有：蛋"], veto_result["my_reasons"]
 
         # **The leak that matters is a DIFFERENT member's device**, so the test needs a second
         # person rather than a second device. This is the D105 failure the field could produce:
@@ -520,7 +522,54 @@ async def scenario(test_url: str) -> None:
         assert other_body["my_reasons"] == [], (
             "another member's payload carried a represented-member sentence (D105)",
             other_body["my_reasons"])
-        print("  A19: the veto zeroes the declared place and only its own member reads the reason")
+
+        # **The other side of the ruling: a company whose EVERY published product names 蛋 is ×0.**
+        # Three products, all naming it — the fixture the ruling's sharp edge needs, because "every"
+        # means every *published* product and a company publishing three is zeroed even if it sells
+        # fifty. The rest are unknown, never safe.
+        async with Session() as session:
+            for registry in ("A-44444444-00001-1", "A-44444444-00002-1"):
+                await session.execute(
+                    text("insert into reference_place (publication_id, registry_no, origin, name, "
+                         "name_raw, address, address_raw, township_code, township_name) "
+                         "values (:pub, :r, 'reference', '全蛋屋股份有限公司', '全蛋屋股份有限公司', "
+                         "'臺北市大安區和平東路2段86號', 'x', '63000010', 'x')"),
+                    {"pub": place_pub, "r": registry},
+                )
+            for product in ("蛋餅", "蛋糕捲", "茶葉蛋"):
+                await session.execute(
+                    text("insert into product_material (publication_id, company_name, brand_name, "
+                         "  product_name, material_name, material_name_raw) "
+                         "values (:pub, '全蛋屋股份有限公司', '全蛋屋', :p, '雞蛋', '雞蛋')"),
+                    {"pub": brand_pub_for_chain, "p": product},
+                )
+            all_egg = (
+                await session.execute(
+                    text("insert into place (origin, registry_no) "
+                         "values ('reference', 'A-44444444-00001-1') returning id")
+                )
+            ).scalar_one()
+            await session.commit()
+        zero_round = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
+        assert zero_round.status_code == 201, zero_round.text
+        zero_round_id = zero_round.json()["round_id"]
+        for place in (all_egg, locals_[2]):
+            assert (await client.post(
+                f"/rounds/{zero_round_id}/proposals", json={"place_id": place}, headers=auth
+            )).status_code == 201
+        zero_rolled = await client.post(f"/rounds/{zero_round_id}/roll", headers=auth)
+        assert zero_rolled.status_code == 200, zero_rolled.text
+        zero_result = zero_rolled.json()
+        assert zero_result["weights"][str(all_egg)] == "0", zero_result["weights"]
+        assert zero_result["winning_place_id"] == locals_[2], (
+            "a place whose every published product names the group cannot win", zero_result)
+        zero_member = (await client.post(
+            f"/rounds/{zero_round_id}/roll",
+            headers={"Authorization": "Bearer " + plain_token},
+        )).json()
+        assert zero_member["my_reasons"] == ["原料含有：蛋"], zero_member["my_reasons"]
+        print("  A19: a partly-naming brand participates and says so; an all-naming one is ×0; "
+              "and only the member it speaks for reads either sentence")
 
     # D14, observed through the endpoint path: the close erased authorship, kept the pool.
     async with Session() as session:

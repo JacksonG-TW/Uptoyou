@@ -434,7 +434,8 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
             material_rows = (
                 await session.execute(
                     text(
-                        "select p.id as place_id, pm.material_name as material "
+                        "select p.id as place_id, pm.product_name as product, "
+                        "       pm.material_name as material "
                         "  from place p "
                         "  join reference_place rp on rp.registry_no = p.registry_no "
                         "   and rp.publication_id = ("
@@ -449,12 +450,16 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
                 )
             ).all()
             for row in material_rows:
-                # `setdefault` to an empty set first: a place that appears here at all is
-                # **declared**, whatever its materials turn out to name.
-                declared.setdefault(row.place_id, set())
+                # **Per product since 2026-08-30 (D103 as amended): `{place: {product: groups}}`.**
+                # The veto is ×0 only when EVERY published product names the avoided group, so the
+                # denominator is the product count and the shape has to carry products that name
+                # nothing — `setdefault` to an empty set is what keeps them in the count. A dict
+                # keyed only by group would have thrown away the divisor.
+                by_product = declared.setdefault(row.place_id, {})
+                groups = by_product.setdefault(row.product, set())
                 group = INGREDIENT_TERMS.get(row.material)
                 if group:
-                    declared[row.place_id].add(group)
+                    groups.add(group)
 
         produced = 0
         for member_id, avoided in sorted(avoided_by_member.items()):
