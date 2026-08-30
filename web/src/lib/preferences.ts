@@ -15,8 +15,8 @@
    nothing sets a budget any more and the API refuses the kind. The wire's words were
    `tight`/`easy` and appeared on no screen; the labels were 省一點／鬆一點. */
 
-/** **D38's eleven since 2026-08-30** — `便利商店` is the new value (owner: 「我認為可以開一類就是
- *  便利商店」), in the order the API's closed list carries them. **`其他` stays last**: the order is
+/** **D38's thirteen since 2026-08-30** — `便利商店`, then `台菜` and `素食` the same evening, in the
+ *  order the API's closed list carries them. **`其他` stays last**: the order is
  *  the row a screen renders and the fallback belongs at the end, so the new value goes before it
  *  rather than after — mirrored from `upto/preferences.py`, not chosen here.
  *
@@ -28,7 +28,7 @@
  *  agree; a value outside the list is refused by the database whatever this file believes. */
 export const CATEGORIES = [
   '麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '早餐', '咖啡飲料',
-  '便利商店', '其他',
+  '便利商店', '台菜', '素食', '其他',
 ] as const
 
 /* **The eleven food-label groups and their sourced 「常見於 …」 lines are gone** with the same
