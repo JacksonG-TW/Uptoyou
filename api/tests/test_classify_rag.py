@@ -354,7 +354,7 @@ class Stubbed:
     def check(self) -> None:
         pass
 
-    def ask(self, prompt: str, unload_after: bool = False) -> str:
+    def ask(self, prompt: str, unload_after: bool = False, cold: bool = False) -> str:
         return "日式"
 
 
@@ -589,6 +589,54 @@ class TheRoundRunnerUnloadsToo(unittest.TestCase):
         head = source[:source.index("UNLOAD_EVERY = ")]
         for phrase in ("prompt", "v7", "re-measure"):
             self.assertIn(phrase, head.lower().replace("re-measure", "re-measure"))
+
+    def test_the_row_after_an_unload_is_cold_and_the_boundary_is_exact(self):
+        """**The pairing, and the off-by-one that would make it useless.**
+
+        An unload fires on rows N, 2N…; the row that pays for it is the **next** one — N+1,
+        2N+1 — because that is the request the model is not loaded for. Getting this one index
+        wrong widens the retry on a row that never needed it and leaves the row that does with
+        2.5 s against a 14.8 s load, which is the failure this fixes.
+        """
+        every = run_round.UNLOAD_EVERY
+        unloads = [i for i in range(3 * every) if (i + 1) % every == 0]
+        colds = [i for i in range(3 * every) if i > 0 and i % every == 0]
+        self.assertEqual(unloads, [every - 1, 2 * every - 1, 3 * every - 1])
+        self.assertEqual(colds, [every, 2 * every])
+        # Each cold row is exactly one after an unload, and row 0 is never cold: the model is
+        # loaded by the run's own first request, not by an unload.
+        self.assertEqual([c - 1 for c in colds], unloads[:len(colds)])
+        self.assertNotIn(0, colds)
+
+    def test_the_cold_schedule_covers_the_measured_reload(self):
+        """27 s of waiting against a 14.8 s reload, and the numbers are the assertion.
+
+        **Longer timeouts would not have helped** — H52 says a cold model REFUSES rather than
+        hangs, so what is needed is more attempts spread wider. This asserts the total, because a
+        schedule that adds attempts without adding time would look like a fix and not be one.
+        """
+        from upto.classify import transport
+        self.assertGreaterEqual(sum(transport.COLD_BACKOFF_S), 20.0)
+        self.assertGreater(sum(transport.COLD_BACKOFF_S), sum(transport.BACKOFF_S) * 5)
+        self.assertIs(run_round.COLD_BACKOFF_S, transport.COLD_BACKOFF_S,
+                      "the round runner must not carry its own copy of the schedule")
+
+    def test_every_candidate_accepts_both_keywords(self):
+        """**A gemini round died at row 50 once for the missing keyword; this covers all four.**
+
+        The loop hands `unload_after` or `cold` without knowing which candidate it holds, so a
+        signature that differs is a crash on a rationed quota, hours in.
+        """
+        import inspect
+        for name in list(run_round.LOCAL_MODELS) + ["gemini"]:
+            with self.subTest(candidate=name):
+                if name == "gemini":
+                    ask = run_round.Gemini.ask
+                else:
+                    ask = run_round.build_candidate(name).ask
+                params = inspect.signature(ask).parameters
+                self.assertIn("unload_after", params, name)
+                self.assertIn("cold", params, name)
 
     def test_the_window_is_keyed_on_the_frozen_row_not_the_run(self):
         """**A resumed round must unload on the same rows the first attempt would have.** Counting

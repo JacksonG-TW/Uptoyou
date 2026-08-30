@@ -93,6 +93,9 @@ import urllib.request
 from datetime import datetime, timezone
 
 from upto.classify.classify import Classified, NoSignal, classify_name, classify_name_rag
+# **The cold-start schedule is imported, not re-typed.** Two clients waiting different amounts
+# for the same model to load is the kind of divergence nobody notices until one of them dies.
+from upto.classify.transport import COLD_BACKOFF_S
 # `upto.classify.embed` is standard library only — it reaches Ollama over urllib and nothing
 # else — so naming it here does not break the import discipline `examples` is kept out for.
 from upto.classify.embed import DEFAULT_EMBED_KEY, EMBED_MODELS
@@ -324,7 +327,7 @@ class Local:
                 f"`docker compose exec ollama ollama pull {self.model}`."
             )
 
-    def ask(self, prompt: str, unload_after: bool = False) -> str:
+    def ask(self, prompt: str, unload_after: bool = False, cold: bool = False) -> str:
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -345,11 +348,31 @@ class Local:
             data=body,
             headers={"Content-Type": "application/json"},
         )
-        try:
-            with urllib.request.urlopen(request, timeout=OLLAMA_TIMEOUT_S) as response:
-                return json.load(response)["response"]
-        except (urllib.error.URLError, OSError, ValueError, KeyError) as error:
-            raise ComeBackLater(f"{self.model} stopped answering: {error}")
+        # **This client had NO retry at all, and that is what turned an unload into exit 3.**
+        # One attempt, and any error became `ComeBackLater` — so the `RemoteDisconnected` a cold
+        # model answers with (H52) ended a 200-row round at row 50 with the progress saved and the
+        # operator none the wiser about why. The classifier has always retried through
+        # `transport.fetch`; this runner reached for `urlopen` directly and inherited nothing.
+        #
+        # **Only the request after an unload retries, and only on a connection-level failure.** An
+        # ordinary answer that fails is still a `ComeBackLater`: a round is resumable by design and
+        # retrying a real fault would only delay the exit 3 that tells the operator to look.
+        schedule = COLD_BACKOFF_S if cold else ()
+        for attempt in range(len(schedule) + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=OLLAMA_TIMEOUT_S) as response:
+                    return json.load(response)["response"]
+            except (urllib.error.URLError, OSError) as error:
+                if attempt == len(schedule):
+                    raise ComeBackLater(f"{self.model} stopped answering: {error}")
+                pause = schedule[attempt]
+                print(f"  {self.model} is still loading ({type(error).__name__}) — "
+                      f"attempt {attempt + 1} of {len(schedule) + 1}, retrying in {pause}s",
+                      flush=True)
+                time.sleep(pause)
+            except (ValueError, KeyError) as error:
+                raise ComeBackLater(f"{self.model} stopped answering: {error}")
+        raise AssertionError("unreachable: the loop either returns or raises")
 
 
 class Gemini:
@@ -388,7 +411,7 @@ class Gemini:
         parts = candidate.get("content", {}).get("parts", [])
         return "\n".join(part["text"] for part in parts if "text" in part).strip()
 
-    def ask(self, prompt: str, unload_after: bool = False) -> str:
+    def ask(self, prompt: str, unload_after: bool = False, cold: bool = False) -> str:
         """`unload_after` is accepted and ignored — there is nothing local to unload.
 
         **Accepted rather than absent, and that is the bug this signature prevents.** The round
@@ -774,7 +797,15 @@ def main(argv: list[str]) -> int:
             # first attempt would have: a round that resumes at row 120 must not start its window
             # count from zero and drift.
             unload = (index + 1) % UNLOAD_EVERY == 0
-            asker = (lambda p: candidate.ask(p, unload_after=True)) if unload else candidate.ask
+            # The row after an unload is cold (H52) and gets the wide retry; without it the
+            # unload ends the round instead of saving the box — measured, qwen7b at row 50.
+            cold = index > 0 and index % UNLOAD_EVERY == 0
+            if unload:
+                asker = lambda p: candidate.ask(p, unload_after=True)  # noqa: E731
+            elif cold:
+                asker = lambda p: candidate.ask(p, cold=True)  # noqa: E731
+            else:
+                asker = candidate.ask
             rows.append(answer_row(index, gold_rows[index], asker, examples_for))
             if unload:
                 print(f"  unloaded the model after row {index + 1} "

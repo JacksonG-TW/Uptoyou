@@ -377,7 +377,17 @@ async def main(township_code: str, rag: bool = False, embed_key: str = "bge",
                 # making anyway cannot desynchronise from the work.
                 asked_so_far = start + index
                 unload = (asked_so_far + 1) % UNLOAD_EVERY == 0
-                asker = (lambda p: ask(p, unload_after=True)) if unload else ask
+                # **The row AFTER an unload is cold, and it needs the wide retry (H52).** A cold
+                # model on this path answers the first call with `RemoteDisconnected`, not slowly;
+                # the ordinary 2.5 s schedule gives up while a 7B is still loading its 14.8 s.
+                # Without this pairing the unload that saves the box kills the pass instead.
+                cold = asked_so_far > 0 and asked_so_far % UNLOAD_EVERY == 0
+                if unload:
+                    asker = lambda p: ask(p, unload_after=True)  # noqa: E731
+                elif cold:
+                    asker = lambda p: ask(p, cold=True)  # noqa: E731
+                else:
+                    asker = ask
                 if neighbours is None:
                     outcome = classify_name(name, asker)
                 else:

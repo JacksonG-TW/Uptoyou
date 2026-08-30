@@ -72,6 +72,18 @@ import urllib.request
 RETRIES = 3
 BACKOFF_S = (0.5, 2.0)  # slept after the first failure, then after the second
 
+# **The schedule for the one request that follows an unload (H43 + H52).** A model that has just
+# been unloaded is COLD, and H52's finding is that a cold model on this path presents as **down**,
+# not as slow: the first call comes back `RemoteDisconnected` and the retry a few seconds later
+# answers normally. The ordinary schedule above spends **2.5 s across three attempts** — it was
+# sized for a dropped tunnel, not for a load — and a 7B measured at **14.8 s** to reload never gets
+# a fourth chance. That is exactly how qwen7b died at row 50 of a 200-row round.
+#
+# Five attempts, **27 s of waiting**, which covers 14.8 s with room for a card that has to evict an
+# embedder first. **Longer timeouts would not have helped** — the failure is a refusal, not a hang,
+# so what is needed is more attempts spread wider, and H52 says so in those words.
+COLD_BACKOFF_S = (2.0, 5.0, 8.0, 12.0)
+
 # A dropped call and a dropped connection are the same class of event here, and both are `OSError`
 # subclasses in practice — `RemoteDisconnected` is one. `http.client.HTTPException` is listed anyway
 # because not every member of that family is an `OSError`, and the one that killed 松山 is the one
@@ -92,27 +104,32 @@ def reset_retries() -> None:
     _retried = 0
 
 
-def fetch(request: urllib.request.Request, timeout: int, what: str) -> dict:
+def fetch(request: urllib.request.Request, timeout: int, what: str,
+          backoff: tuple = BACKOFF_S) -> dict:
     """One HTTP call, decoded, retried on a connection-level failure only.
 
     `what` names the caller in the retry line — `model` or `embed` — because a run that retried
     should say *which* link dropped, and the two go to the same host over the same tunnel.
+
+    `backoff` is the sleep schedule and its length sets the attempt count. Pass `COLD_BACKOFF_S`
+    for the first request after an unload; the default is the ordinary one.
     """
     global _retried
-    for attempt in range(1, RETRIES + 1):
+    attempts = len(backoff) + 1
+    for attempt in range(1, attempts + 1):
         try:
             with urllib.request.urlopen(request, timeout=timeout) as response:
                 body = response.read()
         except urllib.error.HTTPError:
             raise  # the server answered; that is not a dropped call
         except TRANSIENT as failure:
-            if attempt == RETRIES:
+            if attempt == attempts:
                 raise
             _retried += 1
-            pause = BACKOFF_S[attempt - 1]
+            pause = backoff[attempt - 1]
             print(
                 f"  {what} call failed ({type(failure).__name__}: {failure}) — attempt "
-                f"{attempt} of {RETRIES}, retrying in {pause}s",
+                f"{attempt} of {attempts}, retrying in {pause}s",
                 file=sys.stderr,
                 flush=True,
             )

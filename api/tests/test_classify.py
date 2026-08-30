@@ -131,8 +131,9 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
 
         captured = {}
 
-        def fake_fetch(request, timeout, what):
+        def fake_fetch(request, timeout, what, backoff=None):
             captured["body"] = _json.loads(request.data.decode())
+            captured["backoff"] = backoff
             return {"response": "早餐"}
 
         original = model_module.fetch
@@ -141,6 +142,7 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
             model_module.ask("某店", **kwargs)
         finally:
             model_module.fetch = original
+        self._captured_backoff = captured["backoff"]
         return captured["body"]
 
     def test_an_ordinary_ask_carries_no_keep_alive(self):
@@ -157,6 +159,19 @@ class TheUnloadThatHoldsTheBoxUp(unittest.TestCase):
         unloading = self._payload(unload_after=True)
         del unloading["keep_alive"]
         self.assertEqual(plain, unloading)
+
+    def test_a_cold_ask_gets_the_wide_retry_and_an_ordinary_one_does_not(self):
+        """**The pairing that makes the unload survivable (H52).** A model that has just been
+        unloaded refuses the next call rather than answering it slowly, and the ordinary 2.5 s
+        schedule gives up while a 7B is still loading its 14.8 s — which is how qwen7b ended a
+        200-row round at row 50."""
+        from upto.classify import transport
+
+        self._payload()
+        ordinary = self._captured_backoff
+        self._payload(cold=True)
+        self.assertIs(ordinary, transport.BACKOFF_S)
+        self.assertIs(self._captured_backoff, transport.COLD_BACKOFF_S)
 
     def test_the_constant_is_200_and_says_where_both_numbers_came_from(self):
         """**The source is read, because a constant without its arithmetic cannot be moved.**

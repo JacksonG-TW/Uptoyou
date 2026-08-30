@@ -18,7 +18,7 @@ import os
 import urllib.error
 import urllib.request
 
-from upto.classify.transport import fetch
+from upto.classify.transport import BACKOFF_S, COLD_BACKOFF_S, fetch
 
 MODEL = os.environ.get("UPTO_MODEL", "qwen2.5:3b-instruct-q4_K_M")
 HOST = os.environ.get("UPTO_MODEL_HOST", "ollama:11434")
@@ -81,7 +81,7 @@ def take_samples() -> list[dict]:
     return taken
 
 
-def ask(prompt: str, unload_after: bool = False) -> str:
+def ask(prompt: str, unload_after: bool = False, cold: bool = False) -> str:
     """One completion, deterministic, short — the answer is at most a few characters.
 
     **`unload_after` sets `keep_alive: 0` on THIS request, which unloads the model the moment it
@@ -104,7 +104,12 @@ def ask(prompt: str, unload_after: bool = False) -> str:
     request = urllib.request.Request(
         f"http://{HOST}/api/generate", data=body, headers={"Content-Type": "application/json"}
     )
-    reply = fetch(request, TIMEOUT_S, "model")
+    # **`cold` is set by the caller on the request AFTER an unload, and it is not optional
+    # politeness.** H52: a cold model on this path answers the first call with
+    # `RemoteDisconnected` and the next one normally. The ordinary retry spends 2.5 s and a 7B
+    # takes 14.8 s to reload, so without this the unload we added to save the box kills the pass
+    # instead — measured, at row 50 of a qwen7b round.
+    reply = fetch(request, TIMEOUT_S, "model", COLD_BACKOFF_S if cold else BACKOFF_S)
     # Durations are nanoseconds on the wire; counts are counts. Missing fields read as 0 rather
     # than raising — a server that stops reporting them must not stop the backfill.
     _samples.append({field: reply.get(field, 0) for field in TIMING_FIELDS})
