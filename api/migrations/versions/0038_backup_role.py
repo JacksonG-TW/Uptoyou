@@ -33,6 +33,12 @@ added without grants goes red" by asking whether any service role can SELECT it.
 SELECT everything.
 
 `pg_read_all_data` is PostgreSQL 14+; the server here is 17.11.
+
+**⚠️ This grant is cluster-scoped and outlives the database it was issued in — read H62.** Every
+grant before this revision was `on <table>`, which dies with the database; a role membership does
+not. `test_role_grants` builds a temporary database, runs this step and drops it, and the
+membership stays in the cluster. Benign here, because it is the grant the live database wants
+anyway; recorded because the next migration to touch a role may not be.
 """
 
 from alembic import op
