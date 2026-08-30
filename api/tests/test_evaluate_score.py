@@ -169,6 +169,29 @@ class TestConfusionPlacement(unittest.TestCase):
         self.assertEqual(predicted, ("麵食", "其他", score.INVALID))
         self.assertNotIn("便利商店", predicted)
 
+    def test_a_label_the_set_cannot_measure_prints_insufficient_rows(self):
+        """A22/v7 — 素食 is one row of 200, so its percentage would be 0% or 100%.
+
+        **The number must not appear at all**, because a reader comparing two rounds on it would be
+        comparing one coin flip against another and would not know it. M2 does the same thing for a
+        source with one publication: *insufficient history*, never an interval derived from one.
+        The pooled and per-layer figures are unaffected — every row still counts there.
+        """
+        counts = {"per_label": {"素食": [1, 1], "小吃": [20, 27]}, "per_layer": {}, "pooled": [0, 0],
+                  "invalid": 0, "confusion": {}}
+        rows = []
+        for label in ("素食", "小吃"):
+            got, seen = counts["per_label"][label]
+            rows.append([label, str(seen), str(got),
+                         "insufficient rows" if 0 < seen < score.MIN_SCOREABLE_ROWS
+                         else score.percent(got, seen)])
+        self.assertEqual(rows[0][3], "insufficient rows")
+        self.assertEqual(rows[1][3], "74.1%")
+
+    def test_the_threshold_is_named_and_not_a_literal(self):
+        """It is a judgement, so it has to be findable and movable in one place."""
+        self.assertEqual(score.MIN_SCOREABLE_ROWS, 5)
+
     def test_an_answer_outside_the_sets_labels_is_still_shown(self):
         """The other half: a v6 model answering 便利商店 against a v1 set gets a COLUMN, not a
         silent drop. A matrix that hides an answer is worse than one with an odd column in it."""

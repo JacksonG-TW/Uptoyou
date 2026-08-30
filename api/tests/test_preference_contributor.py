@@ -129,30 +129,29 @@ class TheTwoCategoryListsAreRelatedAndNotEqual(unittest.TestCase):
             "a member could avoid something no place can be — the avoidance would match nothing "
             "and read as a working filter", missing))
 
-    def test_the_two_lists_are_equal_today_and_that_is_not_what_is_asserted(self):
-        """**They diverged for one day and are equal again, and the guard did not move.**
-
-        On 2026-08-30 the classifier gained `便利商店` first and the screen followed a few hours
-        later (revision 0039). For those hours the classifier's list was strictly wider; today the
-        two hold the same eleven values. **This is precisely why the guard is `⊆` and not `==`**:
-        an equality test would have gone red during the gap and the honest-looking fix would have
-        been to delete it. The relationship is what matters, not the coincidence.
-        """
-        self.assertIn("便利商店", classify_categories)
-        self.assertIn("便利商店", preference_categories)
-        self.assertLessEqual(set(preference_categories), set(classify_categories))
-
     def test_the_screen_may_never_run_ahead_of_the_classifier(self):
-        """The direction that must never hold, named on its own so the failure reads plainly.
+        """**⊆, never equality — and the count assertion that used to sit here is gone.**
 
-        A value the screen offers and the classifier cannot produce is a chip that matches nothing
-        — an avoidance that silently filters no place and reads to the member as a working choice.
-        The reverse is harmless and happens: the classifier can categorise something the screen
-        does not yet let anyone avoid.
+        There was a third test asserting the widening was "exactly one value", written when
+        `便利商店` was the only divergence. It went stale within a day: 台菜 and 素食 landed and the
+        answer became three, then zero once the screen mirrored. **A count that has to be edited
+        every time it is read is a count nobody reads** — it teaches the next person to update the
+        number rather than to ask the question. Dropped on 2026-08-30 with the owner's 「加兩類」.
+
+        What is asserted is the direction, and only the direction. A value the screen offers and
+        the classifier cannot produce is a chip that matches nothing — an avoidance that filters no
+        place and reads to the member as a working choice. The reverse is harmless and has happened
+        twice: the classifier gained a value hours before the screen did, both times.
         """
         ahead = sorted(set(preference_categories) - set(classify_categories))
         self.assertEqual(ahead, [], (
             "the screen offers a value no place can carry", ahead))
+
+    def test_the_new_values_reached_both_lists(self):
+        """Named individually, because ⊆ passes when a value is missing from *both*."""
+        for value in ("便利商店", "台菜", "素食"):
+            self.assertIn(value, classify_categories, value)
+            self.assertIn(value, preference_categories, value)
 
 
 class TheOneOverNTable(unittest.TestCase):

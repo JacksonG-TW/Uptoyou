@@ -47,12 +47,12 @@ from .db import session_factory
 # and the duplication is the cheaper half:** the database refuses a bad value whatever the API
 # believes (D39's condition 2), and this list exists only so the refusal is a 400 naming the list
 # rather than a 500 carrying a constraint name. The integration test asserts they agree.
-# **Eleven since 2026-08-30 — `便利商店` is D38's new value (revision 0039 widens the CHECK).**
+# **Thirteen since 2026-08-30 — `便利商店` (revision 0039), then `台菜` and `素食` (0040).**
 # `其他` stays last: the order is the row a screen renders, and the fallback belongs at the end.
 # This list is the SCREEN's, and `test_preference_contributor` asserts it is a subset of the
 # classifier's — never equality, because the classifier's may legitimately run ahead again.
 CATEGORIES = ("麵食", "飯食", "小吃", "火鍋", "燒烤", "日式", "西式", "早餐", "咖啡飲料",
-              "便利商店", "其他")
+              "便利商店", "台菜", "素食", "其他")
 # 衛福部's eleven food-label allergen groups, mirrored from revision 0023's CHECK for the same
 # reason as the ten above. **D103: the list is these groups because that is what Taiwanese packaging
 # already prints — and no copy on any surface may contain the word 過敏.** The API records 「不吃 X」;

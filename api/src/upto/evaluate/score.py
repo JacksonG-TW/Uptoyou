@@ -70,13 +70,20 @@ def label_space(gold_rows: list[dict], scored: list[dict]) -> tuple[tuple, tuple
     return rows, rows + extra + (INVALID,)
 
 LAYERS: tuple[str, ...] = ("sign", "brand", "registered")
+
+#: Below this many gold rows a per-label accuracy is not reported — the report says
+#: «insufficient rows» instead. **Five, and the number is a judgement rather than a statistic**:
+#: at n = 1 the answer is 0% or 100%, at n = 5 one miss is 20 points, and there is no honest
+#: threshold that makes a small sample large. It is set where a reader would stop quoting the
+#: figure, and the pooled and per-layer numbers are unaffected — every row still counts there.
+MIN_SCOREABLE_ROWS = 5
 LAYER_NAMES = {"sign": "sign 招牌", "brand": "brand 品牌", "registered": "registered 登記"}
 
-# **The current set is v2 since 2026-08-30** (D38's eleventh value, 便利商店 — 18 rows relabelled
-# under an owner ruling; same 200 rows, same draw). `testset_v1.json` stays on disk unchanged so
+# **The current set is v3 since 2026-08-30** (D38's twelfth and thirteenth values, 台菜 and
+# 素食 — one row relabelled under an owner ruling; same 200 rows, same draw. v2 added 便利商店). `testset_v1.json` stays on disk unchanged so
 # every round scored against it remains interpretable, and a v5 round is never re-scored against
 # v2 — `report_for` refuses that rather than doing it quietly. Read `_refuse_wrong_testset`.
-TESTSET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testset_v2.json")
+TESTSET_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "testset_v3.json")
 
 
 # --- the frozen set -------------------------------------------------------------------
@@ -280,10 +287,19 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
 
     lines.append("## Accuracy by gold label")
     lines.append("")
+    # **A label the set cannot measure prints «insufficient rows», never a percentage.** 素食 is
+    # ~1% of the city and the frozen draw holds ONE row of it, so its accuracy is 0% or 100% and
+    # means neither — and a reader comparing two rounds would be comparing one coin flip. This is
+    # M2's own shape, where a source with a single publication prints *insufficient history*
+    # rather than a number derived from one interval. **The threshold is stated, not implied**: it
+    # is `n < MIN_SCOREABLE_ROWS`, so the day a targeted set makes 素食 measurable the column
+    # appears by itself.
     rows = []
     for label in labels:
         got, seen = counts["per_label"][label]
-        rows.append([label, str(seen), str(got), percent(got, seen)])
+        rows.append([label, str(seen), str(got),
+                     "insufficient rows" if 0 < seen < MIN_SCOREABLE_ROWS
+                     else percent(got, seen)])
     lines += table(["gold", "n", "correct", "accuracy"], rows)
     lines.append("")
 

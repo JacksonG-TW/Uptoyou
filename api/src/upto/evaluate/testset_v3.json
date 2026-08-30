@@ -1,0 +1,1215 @@
+{
+  "seed": 82,
+  "township_code": "63000010",
+  "publication_id": 1,
+  "drawn_at": "2026-08-14T03:30:59+00:00",
+  "layer_populations": {
+    "sign": 104,
+    "brand": 330,
+    "registered": 2890
+  },
+  "rows": [
+    {
+      "registry_no": "A-100056611-00001-8",
+      "name": "Q Burger松山南京五店",
+      "layer": "sign",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-100565636-00001-0",
+      "name": "嘎兜商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-104274804-00002-9",
+      "name": "薔薇廳",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-104274804-00003-0",
+      "name": "薔薇廳",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-112411160-00927-2",
+      "name": "麥當勞民生二和德昌(股)公司",
+      "layer": "sign",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-116097091-00008-9",
+      "name": "STARBUCKS COFFEE",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-116097091-00077-5",
+      "name": "STARBUCKS COFFEE",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-116097091-02585-1",
+      "name": "STARBUCKS COFFEE",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-116310136-00001-0",
+      "name": "紅屋餐飲事業有限公司",
+      "layer": "registered",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-116881418-00004-9",
+      "name": "春水堂-慶城店",
+      "layer": "sign",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-120682708-00001-2",
+      "name": "臺北碧瑤飯店",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-120842727-00001-1",
+      "name": "一晉有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-120986441-00001-3",
+      "name": "醉楓園小館",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-122555003-29292-4",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122555003-29303-7",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122555003-29309-3",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122555003-29315-0",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122555003-29324-0",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122555003-58038-4",
+      "name": "統一超商股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-122632971-00003-3",
+      "name": "福田有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-122662550-00367-2",
+      "name": "萬家福",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-122721208-00028-2",
+      "name": "鬍鬚張-臺北八德店",
+      "layer": "sign",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-122853565-45501-9",
+      "name": "OK mart",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-06918-7",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-07923-4",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-08484-7",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-08545-5",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-08547-7",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-12471-8",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123060248-14128-9",
+      "name": "全家便利商店股份有限公司",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123225889-00076-0",
+      "name": "詩特莉手工餅乾",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-123285582-92033-0",
+      "name": "萊爾富",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123285582-92278-1",
+      "name": "萊爾富",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123285582-94970-2",
+      "name": "萊爾富",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123285582-96115-5",
+      "name": "萊爾富",
+      "layer": "brand",
+      "label": "便利商店"
+    },
+    {
+      "registry_no": "A-123309178-00007-8",
+      "name": "漢堡王(股)公司-八德分公司",
+      "layer": "sign",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123309178-00063-0",
+      "name": "漢堡王-南京三民店",
+      "layer": "sign",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123928945-00032-5",
+      "name": "摩斯漢堡",
+      "layer": "brand",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123928945-00070-7",
+      "name": "摩斯漢堡",
+      "layer": "brand",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123928945-00161-8",
+      "name": "摩斯漢堡",
+      "layer": "brand",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123928945-00215-8",
+      "name": "摩斯漢堡",
+      "layer": "brand",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-123932737-00003-7",
+      "name": "樂雅樂餐廳-敦化店",
+      "layer": "sign",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-124399710-00036-2",
+      "name": "紅蕃茄餐飲-臺北市立中崙高中",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-124693586-00304-8",
+      "name": "路易莎咖啡股份有限公司",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-124693586-00567-9",
+      "name": "路易莎咖啡股份有限公司",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-124868065-00002-9",
+      "name": "樂尼尼國際股份有限公司",
+      "layer": "registered",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-124970174-00028-2",
+      "name": "這味泰泰-微風南京",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-124973427-00001-7",
+      "name": "夢想三十八號股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-125119125-00002-6",
+      "name": "COMEBUY-松山機場門市",
+      "layer": "sign",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-125198227-00037-4",
+      "name": "活潑餐飲行銷有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-126221160-00001-9",
+      "name": "正倪文化資訊館",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-127359304-00302-6",
+      "name": "MisterDonut",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-127549234-00002-6",
+      "name": "點水樓-南京店",
+      "layer": "sign",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-127785285-00130-6",
+      "name": "大苑子",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-127829853-00002-4",
+      "name": "啜香有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-128202098-00003-2",
+      "name": "Café Un Deux Trois",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-128202098-00006-5",
+      "name": "聚寶餐廳",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-128203147-00001-6",
+      "name": "薺元小館",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-128210689-00006-0",
+      "name": "香味股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-128337899-00002-9",
+      "name": "茹曦酒店-SUNNY BUFFET",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-128337899-00004-1",
+      "name": "茹曦酒店宴會廳",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-128427006-00083-8",
+      "name": "樂田-松山",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-130305009-00014-3",
+      "name": "好了啦紅茶冰",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-137906581-00001-8",
+      "name": "百蕎工作室",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-138500997-00003-2",
+      "name": "比沙家國際本舖",
+      "layer": "registered",
+      "label": "日式"
+    },
+    {
+      "registry_no": "A-138508626-00001-7",
+      "name": "三片吐司美食坊",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-138567758-00001-8",
+      "name": "Beimaru米三角日式飯糰專賣店",
+      "layer": "sign",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-142349946-00001-0",
+      "name": "饞食小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-142385983-00001-1",
+      "name": "合尊股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-142511736-00001-8",
+      "name": "雲先生創意食堂",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-142591908-00074-7",
+      "name": "麥味登",
+      "layer": "brand",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-142617610-00004-9",
+      "name": "環亞機場貴賓室-臺灣松山國際機場",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-142645587-00002-1",
+      "name": "維利揚有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-150867858-00007-2",
+      "name": "國亨開發股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-150873964-00001-1",
+      "name": "石石餐飲企業股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-150905924-00001-3",
+      "name": "頤樂餐飲有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-152473417-00002-3",
+      "name": "鮨舍股份有限公司",
+      "layer": "registered",
+      "label": "日式"
+    },
+    {
+      "registry_no": "A-152603093-00001-7",
+      "name": "團圓國際股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-153353122-00875-2",
+      "name": "CAMA",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-154055473-00053-9",
+      "name": "Krispy Kreme Doughnuts",
+      "layer": "brand",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-154181892-00215-4",
+      "name": "はま寿司-南京復興店",
+      "layer": "sign",
+      "label": "日式"
+    },
+    {
+      "registry_no": "A-154334320-00002-4",
+      "name": "瘋果子有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-154359378-00001-3",
+      "name": "艾風有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-154384398-00014-7",
+      "name": "薩摩亞商皇盛國際商務有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-155004607-00001-6",
+      "name": "凰品企業有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-160410658-00001-9",
+      "name": "炭物語有限公司",
+      "layer": "registered",
+      "label": "燒烤"
+    },
+    {
+      "registry_no": "A-160502220-00001-6",
+      "name": "小山夜月有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-160550019-00001-5",
+      "name": "后苑餐飲股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-170472679-00171-9",
+      "name": "八方雲集國際股份有限公司",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-170750455-00015-7",
+      "name": "松山機場聯合貴賓室(高雄空廚公司)",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-173705997-00001-6",
+      "name": "磚窯古早味餐廳",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-175920958-00001-4",
+      "name": "甘擔廚房",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-180176590-00004-8",
+      "name": "大心-臺北松山機場店",
+      "layer": "sign",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-180292991-00012-1",
+      "name": "beard papa-微風南京店",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-180507304-00001-6",
+      "name": "石松國際有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-180582719-00505-8",
+      "name": "清心福全",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-182843872-00001-1",
+      "name": "維京人慶城股份有限公司",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-183154769-00001-2",
+      "name": "荐恆軒藝文實業有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-183293333-00105-8",
+      "name": "築間-臺北復興南店",
+      "layer": "sign",
+      "label": "火鍋"
+    },
+    {
+      "registry_no": "A-183701513-00001-7",
+      "name": "饗樂餐飲實業股份有限公司松山民生分公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-183773023-00001-2",
+      "name": "來于生活股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-184836573-00001-3",
+      "name": "敦賀有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-184957153-00210-3",
+      "name": "翰林茶館-松山機場",
+      "layer": "sign",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-185006595-00002-8",
+      "name": "五桐號",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-186025493-00001-6",
+      "name": "金滿有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-186307107-00001-1",
+      "name": "味亦美",
+      "layer": "brand",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-188141785-00001-1",
+      "name": "富錦蔬食小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-188230695-00001-0",
+      "name": "想柒飯食堂",
+      "layer": "registered",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-188293396-00001-7",
+      "name": "燕子廚房",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-189186710-00001-9",
+      "name": "雲川水月 Clavius",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-189400818-00024-2",
+      "name": "WING CAFÉ-松山機場",
+      "layer": "sign",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-190071743-00001-0",
+      "name": "法特曼有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-190245054-00001-8",
+      "name": "晁楷股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-190510454-00001-7",
+      "name": "嘻嘻哈哈有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-190610931-00001-8",
+      "name": "義尼塔股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-191011694-00002-1",
+      "name": "寶林餐飲事業股份有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-191426167-00003-7",
+      "name": "董師傅手工糬企業社",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-193186488-00001-6",
+      "name": "振作小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-196844083-00001-1",
+      "name": "臺灣客美多股份有限公司小巨蛋分公司",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-197161500-00285-2",
+      "name": "肯德基",
+      "layer": "brand",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-197606412-00001-4",
+      "name": "貳虎茶倉餐飲股份有限公司",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-200024360-00001-5",
+      "name": "早安美芝城",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-200029915-00001-6",
+      "name": "瑞麟美又美南京店",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-200030424-00001-3",
+      "name": "美而美早餐店",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-200034995-00001-0",
+      "name": "阿瑪翠斯廚房",
+      "layer": "registered",
+      "label": "西式"
+    },
+    {
+      "registry_no": "A-200073935-00002-8",
+      "name": "臺北溙小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200095305-00001-2",
+      "name": "花娘小館",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200127449-00001-7",
+      "name": "大力士可麗餅舖",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200130089-00001-1",
+      "name": "翁翁小館",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200135558-00001-7",
+      "name": "美食街食品行",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200136033-00001-6",
+      "name": "香港商艾羅伊斯有限公司臺灣分公司南京三民營業所",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200136393-00001-5",
+      "name": "小李子麵食館",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-200137645-00001-6",
+      "name": "才哥甜品舖",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200139332-00001-1",
+      "name": "大正食品社",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200140327-00001-7",
+      "name": "饒河街臨時攤販集中場-吉茶莊",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-200141139-00001-9",
+      "name": "雞啃夠有限公司光復店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200144616-00001-2",
+      "name": "綵肴客家小館",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200146840-00001-3",
+      "name": "滿溢餐盒企業社",
+      "layer": "registered",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-200150327-00001-8",
+      "name": "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200156213-00001-8",
+      "name": "里歐廚房",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200156384-00001-7",
+      "name": "饒河街臨時攤販集中場-堉泓饒河西米露",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-200156856-00001-1",
+      "name": "饒河街臨時攤販集中場-西哥木瓜牛奶",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-200157915-00002-9",
+      "name": "大厝內滷味",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200158300-00001-7",
+      "name": "饒河街臨時攤販集中場-好泰",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-200158477-00001-2",
+      "name": "雲鼎網路有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200163358-00001-6",
+      "name": "營業名稱:好腸好嚐(饒河夜市)",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200164212-00001-6",
+      "name": "發肉餐飲有限公司",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200164599-00001-4",
+      "name": "如玉川菜小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200165845-00001-9",
+      "name": "鄉淳布丁豆花店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200166668-00001-3",
+      "name": "島熊咖哩",
+      "layer": "registered",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-200167129-00001-6",
+      "name": "林少宇",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200167145-00001-4",
+      "name": "中崙市場2F52號攤",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200169450-00001-5",
+      "name": "那琇自家烘焙咖啡廳",
+      "layer": "registered",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-200170628-00001-4",
+      "name": "發達車輪餅舖",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200171094-00001-2",
+      "name": "你回來啦食事坊",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-200182712-00001-1",
+      "name": "韓國雞蛋糕",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200192012-00001-5",
+      "name": "牛鼎火鍋店",
+      "layer": "registered",
+      "label": "火鍋"
+    },
+    {
+      "registry_no": "A-200194408-00001-6",
+      "name": "四時輕燒肉股份有限公司",
+      "layer": "registered",
+      "label": "燒烤"
+    },
+    {
+      "registry_no": "A-200194615-00001-6",
+      "name": "邊城孜然羊肉店",
+      "layer": "registered",
+      "label": "燒烤"
+    },
+    {
+      "registry_no": "A-200197009-00001-6",
+      "name": "九龍商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200200948-00001-3",
+      "name": "儒陵商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200204470-00001-7",
+      "name": "濡果企業社",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200208963-00001-8",
+      "name": "大阪屋章魚燒松山店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200209740-00001-2",
+      "name": "饒河街臨時攤販集中場-魷魚",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200209742-00001-4",
+      "name": "饒河街臨時攤販集中場-旗魚黑輪",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200213466-00001-2",
+      "name": "花敦道鍋物",
+      "layer": "registered",
+      "label": "火鍋"
+    },
+    {
+      "registry_no": "A-200217234-00001-9",
+      "name": "明紅北越河粉",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-200219491-00001-6",
+      "name": "志慶商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200225674-00001-6",
+      "name": "永旺商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200238753-00001-8",
+      "name": "李李豆行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-200241554-00001-1",
+      "name": "吉祥小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-200249200-00001-7",
+      "name": "御膳煲養生雞湯館",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-202264494-00001-1",
+      "name": "營業名稱:藍焰骰子牛",
+      "layer": "registered",
+      "label": "燒烤"
+    },
+    {
+      "registry_no": "A-202264719-00001-1",
+      "name": "臺北市龍城市場118號攤 上海小籠包",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-202264751-00007-3",
+      "name": "茶與布朗 Tea&Brown",
+      "layer": "brand",
+      "label": "咖啡飲料"
+    },
+    {
+      "registry_no": "A-202281779-00001-6",
+      "name": "蘭丸美食館",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-202282922-00001-7",
+      "name": "口口香自助餐",
+      "layer": "registered",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-202290415-00001-3",
+      "name": "蓓老闆吃雞(中崙店)",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202292384-00001-0",
+      "name": "四季割烹 匠味カレー膳 松山店",
+      "layer": "registered",
+      "label": "日式"
+    },
+    {
+      "registry_no": "A-202292788-00001-8",
+      "name": "城市商旅-臺北南東館",
+      "layer": "sign",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-202296031-00001-3",
+      "name": "築川越南美食小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202300355-00007-4",
+      "name": "臺北炸蛋蔥油餅",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202304146-00001-0",
+      "name": "老拌涼麵",
+      "layer": "registered",
+      "label": "麵食"
+    },
+    {
+      "registry_no": "A-202310286-00001-2",
+      "name": "初晨早午餐",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-202315118-00001-1",
+      "name": "現烤脆皮甜甜圈",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202315121-00003-7",
+      "name": "糖葫蘆",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202323931-00001-3",
+      "name": "拾方素食館",
+      "layer": "registered",
+      "label": "素食"
+    },
+    {
+      "registry_no": "A-202327024-00001-0",
+      "name": "丞鑫小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-202332478-00001-9",
+      "name": "炭火食業有限公司",
+      "layer": "registered",
+      "label": "燒烤"
+    },
+    {
+      "registry_no": "A-202338980-00001-3",
+      "name": "林霖商行",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-202340492-00001-4",
+      "name": "安藤雞湯本舖",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-252256715-00001-3",
+      "name": "時尚產後護理之家",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-278960823-00001-3",
+      "name": "饒河夜市 風の燒",
+      "layer": "registered",
+      "label": "小吃"
+    },
+    {
+      "registry_no": "A-278960838-00001-9",
+      "name": "森田雞肉",
+      "layer": "registered",
+      "label": "飯食"
+    },
+    {
+      "registry_no": "A-278961313-00002-9",
+      "name": "煮婦廚房",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-278961397-00001-0",
+      "name": "營業名稱:有家軒私廚料理",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-278965504-00001-4",
+      "name": "庄角囝仔早午餐",
+      "layer": "registered",
+      "label": "早餐"
+    },
+    {
+      "registry_no": "A-278965647-00001-2",
+      "name": "曉食光舖",
+      "layer": "registered",
+      "label": "其他"
+    },
+    {
+      "registry_no": "A-278966605-00001-7",
+      "name": "臺北市龍城市場105號攤",
+      "layer": "registered",
+      "label": "法人"
+    },
+    {
+      "registry_no": "A-278967682-00001-3",
+      "name": "食藝小吃店",
+      "layer": "registered",
+      "label": "小吃"
+    }
+  ],
+  "labels": "D38's thirteen values plus 法人 (D79's decided absence)",
+  "frozen": "2026-08-14 — owner-reviewed per D82; do not re-draw or relabel. **Amended 2026-08-30 (D38's eleventh value, 便利商店):** 18 rows 其他 → 便利商店 on four convenience chains. **Amended again 2026-08-30 (D38's twelfth and thirteenth, 台菜 and 素食, owner 「加兩類」): ONE row moves — 拾方素食館 (registered layer), 其他 → 素食.** 台菜 moves NOTHING: the owner ruled 小館 is a suffix and not a cuisine, so the five 小館 rows (醉楓園小館 · 薺元小館 · 花娘小館 · 翁翁小館 · 綵肴客家小館) stay 其他 and no row in the set carries an explicit 熱炒/快炒/合菜/家常菜/台菜/台式. **The rule-0 sharpening moved nothing either, and that is the point of it:** 42 of the 46 法人 rows already ARE the company-shaped and market-address names, so v7 sharpens the prompt against gold that was already right — the score moves or it does not, and no answer key was bent to meet it. **素食 cannot be scored on this set: one row of 200 (~1% of the city). The report prints «insufficient rows», never a percentage (M2's shape).** Same 200 rows, same seed, same publication — NOT re-drawn. Teacher labels corrected under a ruling, not re-judged. v1 and v2 stay on disk unchanged so every round scored against them remains readable; a round scores against ONE set and the two are never pooled (D82)."
+}
