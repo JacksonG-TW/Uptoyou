@@ -48,8 +48,62 @@ from upto.classify.transport import fetch
 EMBED_MODELS = {
     "bge": "bge-m3",
     "qwen3e": "qwen3-embedding:0.6b",
+    "qwen3e4b": "qwen3-embedding:4b-q8_0",
     "arctic": "snowflake-arctic-embed2",
+    "e5": "zylonai/multilingual-e5-large",
 }
+
+# **What each embedder wants in front of the text, and it is NOT decoration (rung 2, 2026-08-31).**
+# Several of these models were trained with an instruction or a role prefix and lose 1–5% without
+# it — their own model cards say so — while others were trained on bare text and are hurt by one.
+# Sending raw text to all five, which is what this client did until today, silently measured four
+# of them below their own baseline.
+#
+# **`""` is a real answer here, not a missing one.** `bge-m3` is trained without a prefix, so its
+# entry is the empty string and its `prefix_kind` is `none`; a key absent from this map would be
+# ambiguous between "no prefix" and "nobody has checked", and those are different facts.
+EMBED_PREFIX = {
+    "bge": "",
+    "qwen3e": "Instruct: Retrieve semantically similar text.\nQuery: ",
+    "qwen3e4b": "Instruct: Retrieve semantically similar text.\nQuery: ",
+    "arctic": "query: ",
+    "e5": "query: ",
+}
+
+# The word written into `example_embedding.prefix_kind` and into a round file's `rag` block. It is
+# derived from the map above rather than passed in, so a caller cannot label a vector with a
+# convention it was not embedded under.
+PREFIX_KIND = {
+    "bge": "none",
+    "qwen3e": "instruct",
+    "qwen3e4b": "instruct",
+    "arctic": "query",
+    "e5": "query",
+}
+
+
+def prefix_kind(model: str) -> str:
+    """The convention a model string was embedded under — `none` · `query` · `instruct`.
+
+    **Resolved from the model string, because that is what the store keys on.** Callers hold a
+    model string far more often than a CLI key, and a `prefix_kind` derived anywhere else could
+    disagree with the vectors it labels — which is the exact failure this column was added to
+    prevent.
+    """
+    for key, name in EMBED_MODELS.items():
+        if name == model:
+            return PREFIX_KIND[key]
+    # **An unknown model is `unknown`, never `none`.** `none` is a claim that the model was
+    # embedded bare; `unknown` says nobody has recorded what happened, and a crib mixing the two
+    # is exactly what revision 0041 exists to make impossible.
+    return "unknown"
+
+
+def prefix_for(model: str) -> str:
+    for key, name in EMBED_MODELS.items():
+        if name == model:
+            return EMBED_PREFIX[key]
+    return ""
 
 # The default key, and it is `bge` because the three scored v5-rag rounds were embedded by
 # bge-m3 — they are the matrix's first column, and a default that moved would orphan them.
@@ -117,7 +171,12 @@ def embed(texts: list[str], model: str | None = None) -> list[list[float]]:
     if not texts:
         return []
     model = model or EMBED_MODEL
-    body = json.dumps({"model": model, "input": texts}).encode()
+    # **Applied here and nowhere else**, so no caller can forget it and no two callers can
+    # disagree about it. The store's `prefix_kind` is written from the same map (0041).
+    prefix = prefix_for(model)
+    body = json.dumps(
+        {"model": model, "input": [prefix + text for text in texts] if prefix else texts}
+    ).encode()
     request = urllib.request.Request(
         f"http://{HOST}/api/embed", data=body, headers={"Content-Type": "application/json"}
     )

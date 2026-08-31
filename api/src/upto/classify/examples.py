@@ -56,6 +56,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+# `prefix_kind` is resolved through the module so the map has exactly one home.
+from upto.classify import embed as embedding
 from upto.classify.embed import (
     DEFAULT_EMBED_KEY,
     EMBED_MODEL,
@@ -98,8 +100,9 @@ async def stored_sha(target, embed_model: str) -> str | None:
     rows = (
         await _execute(
             target,
-            "select distinct testset_sha256 from example_embedding where embed_model = :model",
-            {"model": embed_model},
+            "select distinct testset_sha256 from example_embedding "
+            " where embed_model = :model and prefix_kind = :prefix_kind",
+            {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model)},
         )
     ).all()
     if not rows:
@@ -124,9 +127,11 @@ async def loaded_models(target) -> list[dict]:
     rows = (
         await _execute(
             target,
-            "select embed_model, count(*) as rows, count(distinct testset_sha256) as digests, "
+            "select embed_model, prefix_kind, count(*) as rows, "
+            "       count(distinct testset_sha256) as digests, "
             "min(testset_sha256) as sha, max(loaded_at) as loaded_at "
-            "from example_embedding group by embed_model order by embed_model",
+            "from example_embedding group by embed_model, prefix_kind "
+            " order by embed_model, prefix_kind",
         )
     ).all()
     return [
@@ -160,12 +165,14 @@ async def nearest(target, query_vector: list[float], embed_model: str, k: int = 
         await _execute(
             target,
             "select name, label, subtype from example_embedding "
-            "where embed_model = :model and name <> :exclude "
+            "where embed_model = :model and prefix_kind = :prefix_kind "
+            "  and name <> :exclude "
             # Cast through text, not straight to vector: the driver would otherwise be asked
             # to send a `vector`-typed parameter and has no codec for one.
             "order by embedding <=> (:vec)::text::vector limit :k",
             {
                 "model": embed_model,
+                "prefix_kind": embedding.prefix_kind(embed_model),
                 "exclude": exclude_name,
                 "vec": as_literal(query_vector),
                 "k": k,
@@ -213,16 +220,23 @@ async def replace_all(connection, rows: list[dict], vectors: list[list[float]],
         }
 
     await connection.execute(
-        text("delete from example_embedding where embed_model = :model"), {"model": embed_model}
+        # Scoped to the convention: re-loading arctic-with-prefix must not delete the bare
+        # arctic crib the experiment is comparing it against.
+        text("delete from example_embedding where embed_model = :model "
+             "  and prefix_kind = :prefix_kind"),
+        {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model)}
     )
     for name, row in seen.items():
         await connection.execute(
             text(
+                # `prefix_kind` is derived from the model string by `embed.prefix_kind`, never
+                # passed in — a caller could otherwise label a vector with a convention it was
+                # not embedded under, which is the one thing revision 0041 exists to prevent.
                 "insert into example_embedding "
-                "(name, label, subtype, layer, embedding, embed_model, testset_sha256, "
-                " labeled_by) "
+                "(name, label, subtype, layer, embedding, embed_model, prefix_kind, "
+                " testset_sha256, labeled_by) "
                 "values (:name, :label, :subtype, :layer, (:vec)::text::vector, :model, "
-                " :sha, :by)"
+                " :prefix_kind, :sha, :by)"
             ),
             {
                 "name": name,
@@ -231,6 +245,7 @@ async def replace_all(connection, rows: list[dict], vectors: list[list[float]],
                 "layer": row["layer"],
                 "vec": as_literal(row["vector"]),
                 "model": embed_model,
+                "prefix_kind": embedding.prefix_kind(embed_model),
                 "sha": digest,
                 "by": labeled_by,
             },

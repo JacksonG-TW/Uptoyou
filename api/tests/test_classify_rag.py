@@ -280,15 +280,23 @@ class TestTheEmbedderAxis(unittest.TestCase):
                 path.endswith(f"round_gemma_{RAG_PROMPT_VERSION}_{key}.json"), path
             )
 
-    def test_the_nine_cells_are_nine_distinct_files(self):
-        # The whole point of the naming rule: no two cells of the matrix may share a file, or
-        # the second round run would resume the first and score a candidate that never existed.
+    def test_every_cell_of_the_matrix_is_its_own_file(self):
+        """The whole point of the naming rule: no two cells may share a file, or the second run
+        would resume the first and score a candidate that never existed.
+
+        **Derived, not counted, since 2026-08-31.** It asserted `9` for three generators and three
+        embedders; rung 2 took the embedders to five and the assertion went red on arithmetic
+        rather than on a defect. What must hold is that the count equals generators × embedders —
+        a literal here has to be edited every time the slate grows, and an edited literal is one
+        nobody re-derives.
+        """
+        generators = sorted(run_round.LOCAL_MODELS)
         paths = {
             run_round.round_path(generator, RAG_PROMPT_VERSION, key)
-            for generator in ("qwen", "gemma", "llama")
+            for generator in generators
             for key in EMBED_MODELS
         }
-        self.assertEqual(len(paths), 9, sorted(paths))
+        self.assertEqual(len(paths), len(generators) * len(EMBED_MODELS), sorted(paths))
 
     def test_the_prompt_version_does_not_move_with_the_embedder(self):
         # The embedder is a retrieval variable, not a prompt one: the prompt text is
@@ -335,7 +343,11 @@ class TestTheEmbedderAxis(unittest.TestCase):
             {
                 "bge": "bge-m3",
                 "qwen3e": "qwen3-embedding:0.6b",
+                # Rung 2, 2026-08-31: the 4B sibling and a multilingual e5, both screened with
+                # the prefix their model cards ask for.
+                "qwen3e4b": "qwen3-embedding:4b-q8_0",
                 "arctic": "snowflake-arctic-embed2",
+                "e5": "zylonai/multilingual-e5-large",
             },
         )
         self.assertIn(run_round.DEFAULT_EMBED_KEY, EMBED_MODELS)
@@ -558,6 +570,74 @@ class TestTheKAxis(unittest.TestCase):
 
     def test_the_k_axis_pulled_no_sqlalchemy_either(self):
         self.assertNotIn("sqlalchemy", sys.modules)
+
+
+class TheEmbedderPrefix(unittest.TestCase):
+    """Rung 2 — every embedder gets the prefix it was trained with, and the crib records which.
+
+    **The failure this guards is invisible to every other check.** Adding a prefix makes the same
+    model string return different vectors; before revision 0041 the crib's key was
+    `(embed_model, name)`, so a prefixed load would upsert over the bare rows and leave half the
+    store in each convention. Both vectors are well-formed and the right width — `embed.py`'s own
+    docstring says the dimension check cannot see it — and neighbours would then be ordered by
+    nothing. It would also have overwritten the very baseline rung 2 compares against.
+    """
+
+    def test_every_model_in_the_map_has_a_prefix_and_a_kind(self):
+        """**`""` is a real answer and a missing key is not.** `bge-m3` is trained without a
+        prefix; a key absent from the map would be ambiguous between "no prefix" and "nobody has
+        checked", which are different facts."""
+        from upto.classify import embed
+        self.assertEqual(set(embed.EMBED_MODELS), set(embed.EMBED_PREFIX))
+        self.assertEqual(set(embed.EMBED_MODELS), set(embed.PREFIX_KIND))
+        self.assertEqual(embed.EMBED_PREFIX["bge"], "")
+        self.assertEqual(embed.PREFIX_KIND["bge"], "none")
+
+    def test_the_kind_is_resolved_from_the_model_string(self):
+        """The store keys on the model string, so the label must come from the same thing."""
+        from upto.classify import embed
+        self.assertEqual(embed.prefix_kind("snowflake-arctic-embed2"), "query")
+        self.assertEqual(embed.prefix_kind("bge-m3"), "none")
+        self.assertEqual(embed.prefix_kind("qwen3-embedding:4b-q8_0"), "instruct")
+
+    def test_an_unrecorded_model_is_unknown_and_never_none(self):
+        """`none` claims the text was sent bare; `unknown` says nobody knows. A crib mixing those
+        is exactly what 0041 exists to make impossible."""
+        from upto.classify import embed
+        self.assertEqual(embed.prefix_kind("nobody/pulled-this"), "unknown")
+        self.assertNotEqual(embed.prefix_kind("nobody/pulled-this"), "none")
+
+    def test_the_prefix_is_applied_inside_embed_and_not_by_a_caller(self):
+        """One place, so no caller can forget it and no two can disagree."""
+        from upto.classify import embed as embed_module
+        captured = {}
+
+        def fake_fetch(request, timeout, what, backoff=None):
+            captured["body"] = json.loads(request.data.decode())
+            return {"embeddings": [[0.0] * 1024]}
+
+        original = embed_module.fetch
+        embed_module.fetch = fake_fetch
+        try:
+            embed_module.embed(["某店"], model="snowflake-arctic-embed2")
+            prefixed = captured["body"]["input"]
+            embed_module.embed(["某店"], model="bge-m3")
+            bare = captured["body"]["input"]
+        finally:
+            embed_module.fetch = original
+        self.assertEqual(prefixed, ["query: 某店"])
+        self.assertEqual(bare, ["某店"], "bge is trained bare and must stay bare")
+
+    def test_the_screen_names_the_convention_in_its_filename(self):
+        """Two runs of one embedder differing only by prefix are two measurements; a name that
+        cannot tell them apart is how the incumbent's baseline gets overwritten."""
+        import pathlib
+        source = pathlib.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "evaluate",
+            "knn_vote.py").read_text(encoding="utf-8")
+        self.assertIn("round_knn-vote_{}-{}-k{}", source)
+        self.assertIn("prefix_kind", source)
+        self.assertNotIn('EMBED_KEY = "arctic"', source)
 
 
 class TheRoundRunnerUnloadsToo(unittest.TestCase):

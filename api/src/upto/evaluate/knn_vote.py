@@ -49,7 +49,10 @@ from .score import TESTSET_PATH, load_testset
 # not, and `score` writes the public copy itself.
 OUTPUT_DIR = os.environ.get("UPTO_EVALUATION_DIR", "/tmp/evaluation")
 
-EMBED_KEY = "arctic"
+# **The embedder is an argument since 2026-08-31 (rung 2), not a constant.** It was `"arctic"`
+# because arctic was the only crib being screened; five configurations are now compared and a
+# hard-coded key would have written all five into one filename and one `prompt_version`.
+DEFAULT_KEY = "arctic"
 
 
 def vote(neighbours: list[dict]) -> tuple[str, list[str]]:
@@ -67,7 +70,8 @@ def vote(neighbours: list[dict]) -> tuple[str, list[str]]:
     return labels[0], [row["name"] for row in neighbours]  # pragma: no cover — unreachable
 
 
-async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str) -> str:
+async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
+                embed_key: str = DEFAULT_KEY) -> str:
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
     # Embedded in one batch: the crib's own loader does the same, and per-name calls were measured
     # 10.8x slower for no different answer.
@@ -96,7 +100,11 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str) -
         # generator was asked, and a reader comparing this row to gemma's needs the name to say so.
         "candidate": "knn-vote",
         "model": "none — majority vote of the k nearest labelled names",
-        "prompt_version": "knn-vote_{}_k{}".format(EMBED_KEY, k),
+        # The prefix convention is in the version string AND in the `rag` block: two runs of the
+        # same embedder that differ only by prefix are two measurements, and a name that could not
+        # tell them apart is how the incumbent's baseline gets overwritten (revision 0041).
+        "prompt_version": "knn-vote_{}_{}_k{}".format(
+            embed_key, embedding.prefix_kind(embed_model), k),
         # **Derived, never typed.** It was the literal string `"testset_v1.json"` until
         # 2026-08-30, when a second set arrived — a hand-typed name is a claim about which file
         # was read, and `load_testset()` below reads `TESTSET_PATH`. The two could disagree and
@@ -106,10 +114,12 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str) -
         "started_at": started,
         "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "rows": out,
-        "rag": {"embed_model": embed_model, "embed_key": EMBED_KEY, "k": k},
+        "rag": {"embed_model": embed_model, "embed_key": embed_key,
+                "prefix_kind": embedding.prefix_kind(embed_model), "k": k},
     }
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    path = os.path.join(OUTPUT_DIR, "round_knn-vote_{}-k{}.json".format(EMBED_KEY, k))
+    path = os.path.join(OUTPUT_DIR, "round_knn-vote_{}-{}-k{}.json".format(
+        embed_key, embedding.prefix_kind(embed_model), k))
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(document, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
@@ -117,12 +127,12 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str) -
     return path
 
 
-async def main(ks: list[int]) -> int:
+async def main(ks: list[int], embed_key: str = DEFAULT_KEY) -> int:
     rows, sha = load_testset()
-    embed_model = embedding.resolve(EMBED_KEY)
+    embed_model = embedding.resolve(embed_key)
     async with session_factory()() as session:
         for k in ks:
-            await one_k(session, rows, sha, k, embed_model)
+            await one_k(session, rows, sha, k, embed_model, embed_key)
     return 0
 
 
@@ -130,8 +140,13 @@ def cli() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--k", type=int, action="append",
                         help="repeatable; default 1, 3, 5, 8")
+    # **`choices` from the map, not a free string.** A mistyped key would otherwise resolve to
+    # nothing and the run would fail deep inside the retrieval with a confusing message; and the
+    # keys are the same ones `examples load --embed` takes, which is the point of naming them once.
+    parser.add_argument("--embed", default=DEFAULT_KEY, choices=sorted(embedding.EMBED_MODELS),
+                        help="which embedder to screen; default {}".format(DEFAULT_KEY))
     arguments = parser.parse_args()
-    return asyncio.run(main(arguments.k or [1, 3, 5, 8]))
+    return asyncio.run(main(arguments.k or [1, 3, 5, 8], arguments.embed))
 
 
 if __name__ == "__main__":
