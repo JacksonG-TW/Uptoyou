@@ -71,16 +71,19 @@ def vote(neighbours: list[dict]) -> tuple[str, list[str]]:
 
 
 async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
-                embed_key: str = DEFAULT_KEY) -> str:
+                embed_key: str = DEFAULT_KEY, prefix: str | None = None) -> str:
     started = datetime.now(timezone.utc).isoformat(timespec="seconds")
     # Embedded in one batch: the crib's own loader does the same, and per-name calls were measured
     # 10.8x slower for no different answer.
-    vectors = embedding.embed([row["name"] for row in rows], model=embed_model)
+    # The query is embedded under the SAME convention as the crib being screened — see
+    # `embed`'s `prefix_kind_override`.
+    vectors = embedding.embed([row["name"] for row in rows], model=embed_model,
+                              prefix_kind_override=prefix)
 
     out = []
     for index, (row, vector) in enumerate(zip(rows, vectors)):
         neighbours = await example_store.nearest(
-            session, vector, embed_model, k=k, exclude_name=row["name"]
+            session, vector, embed_model, k=k, exclude_name=row["name"], prefix=prefix
         )
         if not neighbours:
             # No neighbour at all after the exclusion. Recorded as a refusal, which `score` counts as
@@ -104,7 +107,7 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
         # same embedder that differ only by prefix are two measurements, and a name that could not
         # tell them apart is how the incumbent's baseline gets overwritten (revision 0041).
         "prompt_version": "knn-vote_{}_{}_k{}".format(
-            embed_key, embedding.prefix_kind(embed_model), k),
+            embed_key, prefix or embedding.prefix_kind(embed_model), k),
         # **Derived, never typed.** It was the literal string `"testset_v1.json"` until
         # 2026-08-30, when a second set arrived — a hand-typed name is a claim about which file
         # was read, and `load_testset()` below reads `TESTSET_PATH`. The two could disagree and
@@ -115,11 +118,11 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
         "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "rows": out,
         "rag": {"embed_model": embed_model, "embed_key": embed_key,
-                "prefix_kind": embedding.prefix_kind(embed_model), "k": k},
+                "prefix_kind": prefix or embedding.prefix_kind(embed_model), "k": k},
     }
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     path = os.path.join(OUTPUT_DIR, "round_knn-vote_{}-{}-k{}.json".format(
-        embed_key, embedding.prefix_kind(embed_model), k))
+        embed_key, prefix or embedding.prefix_kind(embed_model), k))
     with open(path, "w", encoding="utf-8") as handle:
         json.dump(document, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
@@ -127,12 +130,12 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
     return path
 
 
-async def main(ks: list[int], embed_key: str = DEFAULT_KEY) -> int:
+async def main(ks: list[int], embed_key: str = DEFAULT_KEY, prefix: str | None = None) -> int:
     rows, sha = load_testset()
     embed_model = embedding.resolve(embed_key)
     async with session_factory()() as session:
         for k in ks:
-            await one_k(session, rows, sha, k, embed_model, embed_key)
+            await one_k(session, rows, sha, k, embed_model, embed_key, prefix)
     return 0
 
 
@@ -145,8 +148,16 @@ def cli() -> int:
     # keys are the same ones `examples load --embed` takes, which is the point of naming them once.
     parser.add_argument("--embed", default=DEFAULT_KEY, choices=sorted(embedding.EMBED_MODELS),
                         help="which embedder to screen; default {}".format(DEFAULT_KEY))
+    # **The convention is screenable on its own, because that is the experiment.** The map says
+    # what an embedder *should* get; this says which stored crib to read. Screening
+    # arctic-with-prefix against arctic-bare is the only way to isolate the prefix's effect on the
+    # incumbent, and without this flag the bare crib — which is still in the table under
+    # `prefix_kind = 'none'` — would be unreachable.
+    parser.add_argument("--prefix", choices=("none", "query", "instruct"),
+                        help="read the crib stored under this convention; "
+                             "default is the embedder's own")
     arguments = parser.parse_args()
-    return asyncio.run(main(arguments.k or [1, 3, 5, 8], arguments.embed))
+    return asyncio.run(main(arguments.k or [1, 3, 5, 8], arguments.embed, arguments.prefix))
 
 
 if __name__ == "__main__":

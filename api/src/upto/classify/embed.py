@@ -39,7 +39,7 @@ import os
 import urllib.error
 import urllib.request
 
-from upto.classify.transport import fetch
+from upto.classify.transport import BACKOFF_S, COLD_BACKOFF_S, fetch
 
 # D88's embedder slate, owner-ruled 2026-08-17: one CLI key per model, the string pinned
 # here and written into every row and every round file. Same shape and same reason as
@@ -152,7 +152,9 @@ def available(model: str | None = None) -> bool:
     return any(entry.get("name", "").startswith(prefix) for entry in tags.get("models", []))
 
 
-def embed(texts: list[str], model: str | None = None) -> list[list[float]]:
+def embed(texts: list[str], model: str | None = None, cold: bool = False,
+          unload_after: bool = False, prefix_kind_override: str | None = None
+          ) -> list[list[float]]:
     """One batch of strings in, one vector each out, in the order they were given.
 
     Order is load-bearing and unstated by the API's docs, so the count is asserted: a reply
@@ -173,15 +175,30 @@ def embed(texts: list[str], model: str | None = None) -> list[list[float]]:
     model = model or EMBED_MODEL
     # **Applied here and nowhere else**, so no caller can forget it and no two callers can
     # disagree about it. The store's `prefix_kind` is written from the same map (0041).
-    prefix = prefix_for(model)
-    body = json.dumps(
-        {"model": model, "input": [prefix + text for text in texts] if prefix else texts}
-    ).encode()
+    # **`prefix_kind_override` exists for the screen and for nothing else, and getting it wrong
+    # silently produces a meaningless number.** The screen compares one embedder's two stored
+    # conventions; the QUERY vector must be embedded the same way the crib was, or it is a
+    # prefixed question asked of bare neighbours — a comparison of two different spaces that
+    # returns a plausible percentage. Caught here before any figure was reported.
+    prefix = "" if prefix_kind_override == "none" else prefix_for(model)
+    payload = {"model": model, "input": [prefix + text for text in texts] if prefix else texts}
+    if unload_after:
+        # **The never-together constraint made structural rather than procedural** (gpu,
+        # 2026-08-31): the 4B and the 0.6B embedders are 6.16 + 2.37 GB and cannot both be
+        # resident. Unloading on a configuration's last call means no sequence has to be
+        # remembered by whoever runs the screen next.
+        payload["keep_alive"] = 0
+    body = json.dumps(payload).encode()
     request = urllib.request.Request(
         f"http://{HOST}/api/embed", data=body, headers={"Content-Type": "application/json"}
     )
     try:
-        reply = fetch(request, TIMEOUT_S, "embed")
+        # **`cold` for the first call against a model that is not resident (H52).** A 6.16 GB
+        # embedder answers the first request with `RemoteDisconnected` rather than slowly, and the
+        # ordinary schedule spends 2.5 s — measured today, when loading the 4B crib died on its
+        # first batch having written nothing. The generator path got this fix yesterday; this one
+        # is the same failure through the same tunnel, and the two now share a schedule.
+        reply = fetch(request, TIMEOUT_S, "embed", COLD_BACKOFF_S if cold else BACKOFF_S)
     # The caught tuple is deliberately unchanged from before the retry landed. `transport` may also
     # raise a bare `http.client.HTTPException` — that is not caught here, and was not caught before
     # either, so it still surfaces as a traceback rather than as "the service did not answer".

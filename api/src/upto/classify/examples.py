@@ -147,7 +147,7 @@ async def loaded_models(target) -> list[dict]:
 
 
 async def nearest(target, query_vector: list[float], embed_model: str, k: int = K,
-                  exclude_name: str = "") -> list[dict]:
+                  exclude_name: str = "", prefix: str | None = None) -> list[dict]:
     """The k labelled names closest to a vector, nearest first, within one embedder.
 
     **`embed_model` is required and is in the WHERE clause (0019).** Two embedders' vectors
@@ -172,7 +172,10 @@ async def nearest(target, query_vector: list[float], embed_model: str, k: int = 
             "order by embedding <=> (:vec)::text::vector limit :k",
             {
                 "model": embed_model,
-                "prefix_kind": embedding.prefix_kind(embed_model),
+                # `prefix` overrides only for the screen, which compares one embedder's two
+                # conventions against each other; every product path leaves it None and gets the
+                # convention the model is actually embedded under.
+                "prefix_kind": prefix or embedding.prefix_kind(embed_model),
                 "exclude": exclude_name,
                 "vec": as_literal(query_vector),
                 "k": k,
@@ -329,7 +332,17 @@ async def main(embed_model: str | None = None) -> int:
     try:
         for start in range(0, len(rows), EMBED_BATCH):
             batch = rows[start : start + EMBED_BATCH]
-            vectors.extend(embed([row["name"] for row in batch], model=model))
+            # **First batch `cold`, last batch `unload_after`.** Cold because a 6.16 GB embedder
+            # answers its first request with `RemoteDisconnected` rather than slowly (H52) and the
+            # ordinary retry spends 2.5 s — the 4B crib died exactly there today, having written
+            # nothing. Unload because the 4B and the 0.6B cannot both be resident (6.16 + 2.37 GB
+            # on an 8 GB card), and a constraint that depends on somebody running the
+            # configurations in the right order is not a constraint.
+            vectors.extend(embed(
+                [row["name"] for row in batch], model=model,
+                cold=(start == 0),
+                unload_after=(start + len(batch) >= len(rows)),
+            ))
             print(f"  embedded {len(vectors)}/{len(rows)}", flush=True)
     except EmbedUnavailable as error:
         print(f"{error}. Nothing was written.", file=sys.stderr)
