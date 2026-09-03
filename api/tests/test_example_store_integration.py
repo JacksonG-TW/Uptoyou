@@ -73,8 +73,16 @@ def _diagonal() -> list[float]:
     return vector
 
 
-def stub_embed(texts, model=None):
+def stub_embed(texts, model=None, **service):
     """Deterministic vectors, and the two stub embedders disagree about which name is nearest.
+
+    **`**service` swallows the real embedder's service arguments — `cold`, `unload_after` —
+    and that is deliberate rather than lazy.** They are H52's and H43's, about a model service
+    this stub does not have: there is no first request to be dropped and nothing resident to
+    unload. Named explicitly the stub would have to be edited every time a hazard adds one, and
+    the edit was missed once already: `cold=`/`unload_after=` landed in `examples.main` on
+    2026-08-31 and this file went red as `TypeError: unexpected keyword argument 'cold'` — which
+    reads as a broken test rather than as a stale stub, and left the crib-load path unverified.
 
     Under `stub-embed:test` the query e0 lands on 小李子麵食館; under `stub-embed:other` it
     lands on 臺北碧瑤飯店 and 小李子麵食館 is parked at distance 1. So a `nearest` that had
@@ -121,7 +129,7 @@ async def scenario(test_url: str) -> None:
         stored = (
             await connection.execute(
                 text(
-                    "select count(*) as n, count(distinct testset_sha256) as shas, "
+                    "select count(*) as n, count(distinct source_digest) as shas, "
                     "count(distinct embed_model) as models, "
                     "count(distinct labeled_by) as authors, "
                     "count(subtype) as subtypes from example_embedding"
@@ -143,14 +151,14 @@ async def scenario(test_url: str) -> None:
         provenance = (
             await connection.execute(
                 text(
-                    "select embed_model, testset_sha256, labeled_by, subtype, layer "
+                    "select embed_model, source_digest, labeled_by, subtype, layer "
                     "from example_embedding where name = :n"
                 ),
                 {"n": NEAR},
             )
         ).one()
     assert provenance.embed_model == STUB_MODEL
-    assert provenance.testset_sha256 == digest, "the stored digest is not the file's"
+    assert provenance.source_digest == digest, "the stored digest is not the file's"
     # Disclosed 2026-08-15: the frozen set's labels were drafted by Fable 5 and cross-checked
     # against Gemini, never hand-adjudicated. The crib says so on every row.
     assert provenance.labeled_by == store.TESTSET_LABELED_BY == "fable5+gemini"
