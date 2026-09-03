@@ -49,6 +49,7 @@ importable there today. The import happens inside `--rag` alone.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import sys
 
@@ -67,6 +68,7 @@ from upto.classify.embed import (
     available,
     embed,
 )
+from upto.classify.brand_labels import BRAND_LABELED_BY, BRAND_LABELS
 from upto.db import database_url
 from upto.evaluate.score import TESTSET_PATH, load_testset
 
@@ -85,12 +87,25 @@ K = 5
 # book written by a different model arrives under its own value and is distinguishable here.
 TESTSET_LABELED_BY = "fable5+gemini"
 
+# 0042's two sources. `TESTSET` rows are drawn from the exam and are held out of their own
+# retrieval; `BRAND` rows are D77's published brand names and are not (D88, 2026-09-03
+# amendment). The strings are constants because the exclusion predicate, the two loads and the
+# test that reads both `nearest()` call sites all have to spell them the same way.
+TESTSET = "testset"
+BRAND = "brand"
+
 
 # --- the store ---------------------------------------------------------------------------
 
 
-async def stored_sha(target, embed_model: str) -> str | None:
-    """The digest this embedder's rows were built from, or None if it has none.
+async def stored_sha(target, embed_model: str, source: str = TESTSET) -> str | None:
+    """The digest this embedder's rows were built from, for ONE source, or None if it has none.
+
+    **`source` is why 0042 exists.** The store now holds two kinds of row and they have
+    unrelated provenance: a frozen-set row's digest is the test-set file's, a brand row's is the
+    D77 publication's. Asking for «the digest» across both would raise the multi-digest error
+    below on a perfectly healthy store, so every read names its source and the default is the
+    one every existing caller meant.
 
     Singular on purpose: one load writes one digest across every row it owns, so more than
     one value under a single `embed_model` means something wrote outside the load, and the
@@ -100,18 +115,20 @@ async def stored_sha(target, embed_model: str) -> str | None:
     rows = (
         await _execute(
             target,
-            "select distinct testset_sha256 from example_embedding "
-            " where embed_model = :model and prefix_kind = :prefix_kind",
-            {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model)},
+            "select distinct source_digest from example_embedding "
+            " where embed_model = :model and prefix_kind = :prefix_kind "
+            "   and source = :source",
+            {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model),
+             "source": source},
         )
     ).all()
     if not rows:
         return None
     if len(rows) > 1:
         raise RuntimeError(
-            f"example_embedding holds {embed_model} rows from {len(rows)} different test-set "
-            "digests — each embedder's rows are written whole by `python -m "
-            f"upto.classify.examples load --embed <key>` and by nothing else. Re-run the load."
+            f"example_embedding holds {embed_model} {source} rows from {len(rows)} different "
+            "digests — each (embedder, source) pair is written whole by one load and by nothing "
+            f"else. Re-run the {source} load."
         )
     return rows[0][0]
 
@@ -127,16 +144,17 @@ async def loaded_models(target) -> list[dict]:
     rows = (
         await _execute(
             target,
-            "select embed_model, prefix_kind, count(*) as rows, "
-            "       count(distinct testset_sha256) as digests, "
-            "min(testset_sha256) as sha, max(loaded_at) as loaded_at "
-            "from example_embedding group by embed_model, prefix_kind "
-            " order by embed_model, prefix_kind",
+            "select embed_model, prefix_kind, source, count(*) as rows, "
+            "       count(distinct source_digest) as digests, "
+            "min(source_digest) as sha, max(loaded_at) as loaded_at "
+            "from example_embedding group by embed_model, prefix_kind, source "
+            " order by embed_model, prefix_kind, source",
         )
     ).all()
     return [
         {
             "embed_model": row.embed_model,
+            "source": row.source,
             "rows": row.rows,
             "digests": row.digests,
             "sha": row.sha,
@@ -160,13 +178,23 @@ async def nearest(target, query_vector: list[float], embed_model: str, k: int = 
     by name rather than by id because 0019's UNIQUE collapses the frozen set's repeated
     names within an embedder — one exclusion therefore removes every copy of the asked string
     from the space being searched.
+
+    **It excludes frozen-set rows ONLY — D88's 2026-09-03 amendment, owner-ruled 「縮」.** The
+    rule above is an argument about rows drawn from the exam, and a brand row is not one: it is
+    a publisher-listed fact from D77, the same kind of thing D113's aliases are, and holding it
+    out removes the only row that carries the fact. Measured before the ruling: 93.7% of the
+    brand-joined places are asked as exactly the brand, so the old rule made a `麥當勞` crib row
+    invisible to every one of them, in production as well as in a round. The `source` column
+    (0042) is what lets the predicate say «drawn from the exam» instead of «has this name».
     """
     rows = (
         await _execute(
             target,
             "select name, label, subtype from example_embedding "
             "where embed_model = :model and prefix_kind = :prefix_kind "
-            "  and name <> :exclude "
+            # D88 (2026-09-03 amendment): the hold-out is scoped to the frozen set. A brand row
+            # with the asked name STAYS — that is the ruling, not an oversight.
+            "  and not (source = :testset_source and name = :exclude) "
             # Cast through text, not straight to vector: the driver would otherwise be asked
             # to send a `vector`-typed parameter and has no codec for one.
             "order by embedding <=> (:vec)::text::vector limit :k",
@@ -176,6 +204,7 @@ async def nearest(target, query_vector: list[float], embed_model: str, k: int = 
                 # conventions against each other; every product path leaves it None and gets the
                 # convention the model is actually embedded under.
                 "prefix_kind": prefix or embedding.prefix_kind(embed_model),
+                "testset_source": TESTSET,
                 "exclude": exclude_name,
                 "vec": as_literal(query_vector),
                 "k": k,
@@ -225,9 +254,13 @@ async def replace_all(connection, rows: list[dict], vectors: list[list[float]],
     await connection.execute(
         # Scoped to the convention: re-loading arctic-with-prefix must not delete the bare
         # arctic crib the experiment is comparing it against.
+        # **Scoped to the source as well as the convention (0042).** Re-loading the frozen set
+        # must not delete the brand rows: they are a different load with a different provenance,
+        # and a whole-embedder wipe would silently empty the crib the D88 amendment exists for.
         text("delete from example_embedding where embed_model = :model "
-             "  and prefix_kind = :prefix_kind"),
-        {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model)}
+             "  and prefix_kind = :prefix_kind and source = :source"),
+        {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model),
+         "source": TESTSET}
     )
     for name, row in seen.items():
         await connection.execute(
@@ -237,9 +270,9 @@ async def replace_all(connection, rows: list[dict], vectors: list[list[float]],
                 # not embedded under, which is the one thing revision 0041 exists to prevent.
                 "insert into example_embedding "
                 "(name, label, subtype, layer, embedding, embed_model, prefix_kind, "
-                " testset_sha256, labeled_by) "
+                " source, source_digest, source_ref, labeled_by) "
                 "values (:name, :label, :subtype, :layer, (:vec)::text::vector, :model, "
-                " :prefix_kind, :sha, :by)"
+                " :prefix_kind, :source, :sha, null, :by)"
             ),
             {
                 "name": name,
@@ -249,11 +282,77 @@ async def replace_all(connection, rows: list[dict], vectors: list[list[float]],
                 "vec": as_literal(row["vector"]),
                 "model": embed_model,
                 "prefix_kind": embedding.prefix_kind(embed_model),
+                "source": TESTSET,
                 "sha": digest,
                 "by": labeled_by,
             },
         )
     return len(seen)
+
+
+def brand_digest() -> str:
+    """The digest of the brand crib's CONTENT — names and labels, not the publication's id.
+
+    **It covers the labels, not just the names, and that is the point.** A crib goes stale when
+    what it teaches changes, and an amended label changes exactly that while leaving D77's
+    publication untouched. `status` compares against this, so a re-labelled row shows as STALE
+    the same way an amended frozen set does, and a round refuses it rather than scoring against
+    a crib that no longer says what its report will claim.
+    """
+    payload = "\n".join(
+        "{}\t{}".format(name, BRAND_LABELS[name][0]) for name in sorted(BRAND_LABELS)
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+async def replace_brands(connection, vectors: list[list[float]], embed_model: str) -> int:
+    """Empty this embedder's BRAND rows and refill them, in the caller's transaction.
+
+    **Scoped to `source = 'brand'` (0042).** The frozen set's rows are a different load with
+    different provenance and must survive this one — and the reverse, which is why `replace_all`
+    gained the same scope. Five names live under both sources by measurement (`麥味登`, `CAMA`,
+    `Krispy Kreme Doughnuts`, `五桐號`, `味亦美`); 0042's key admits both, the frozen-set copy is
+    held out when its name is asked and this one is not, and that difference is D88's
+    2026-09-03 amendment.
+
+    `source_ref` carries the D77 company the brand was published under, so a row states the
+    published basis it rests on without anyone reading prose (D113's shape).
+    """
+    names = sorted(BRAND_LABELS)
+    digest = brand_digest()
+    await connection.execute(
+        text("delete from example_embedding where embed_model = :model "
+             "  and prefix_kind = :prefix_kind and source = :source"),
+        {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model),
+         "source": BRAND},
+    )
+    for name, vector in zip(names, vectors):
+        label, company = BRAND_LABELS[name]
+        await connection.execute(
+            text(
+                "insert into example_embedding "
+                "(name, label, subtype, layer, embedding, embed_model, prefix_kind, "
+                " source, source_digest, source_ref, labeled_by) "
+                "values (:name, :label, null, :layer, (:vec)::text::vector, :model, "
+                " :prefix_kind, :source, :sha, :ref, :by)"
+            ),
+            {
+                "name": name,
+                "label": label,
+                # Every brand row IS the brand layer: the string is what a sign says, which is
+                # D82's own definition of that layer. Recorded rather than left NULL so a later
+                # report can split the crib's contribution by layer without guessing.
+                "layer": "brand",
+                "vec": as_literal(vector),
+                "model": embed_model,
+                "prefix_kind": embedding.prefix_kind(embed_model),
+                "source": BRAND,
+                "sha": digest,
+                "ref": "brand_registration company_name={}".format(company),
+                "by": BRAND_LABELED_BY,
+            },
+        )
+    return len(names)
 
 
 # --- plumbing ----------------------------------------------------------------------------
@@ -363,6 +462,52 @@ async def main(embed_model: str | None = None) -> int:
     return 0
 
 
+async def main_brands(embed_model: str | None = None) -> int:
+    """Load one embedder's copy of the BRAND crib. The frozen set's rows are untouched.
+
+    Same shape and the same exit codes as `main` — 3 when the embedder is unreachable, and
+    nothing written. The one difference worth knowing: this crib's digest is over its labels
+    (`brand_digest`), so re-running after a label amendment is what un-stales it.
+    """
+    model = embed_model or EMBED_MODEL
+    names = sorted(BRAND_LABELS)
+    if not available(model):
+        print(
+            f"the embedding model {model} is not reachable. Nothing was written.",
+            file=sys.stderr,
+        )
+        return 3
+
+    vectors: list[list[float]] = []
+    try:
+        for start in range(0, len(names), EMBED_BATCH):
+            batch = names[start : start + EMBED_BATCH]
+            # H52's cold first call and H43's unload after the last, exactly as the frozen-set
+            # load does them — the hazards are the embedder's, not the crib's.
+            vectors.extend(embed(
+                batch, model=model,
+                cold=(start == 0),
+                unload_after=(start + len(batch) >= len(names)),
+            ))
+            print(f"  embedded {len(vectors)}/{len(names)}", flush=True)
+    except EmbedUnavailable as error:
+        print(f"{error}. Nothing was written.", file=sys.stderr)
+        return 3
+
+    engine = create_async_engine(database_url(), poolclass=NullPool)
+    try:
+        async with engine.begin() as connection:
+            written = await replace_brands(connection, vectors, model)
+    finally:
+        await engine.dispose()
+
+    print(
+        f"example_embedding: {written} brand names embedded by {model}, "
+        f"labels by {BRAND_LABELED_BY}, brand crib sha256 {brand_digest()}"
+    )
+    return 0
+
+
 async def status() -> int:
     """Which cells of the matrix are loaded — one line per embedder, plus the file's digest."""
     _rows, digest = load_testset()
@@ -376,6 +521,7 @@ async def status() -> int:
     # that beside v2's digest the first time a second set existed — a status line naming the wrong
     # file is worse than none, because it is the line somebody checks instead of the file.
     print(f"{os.path.basename(TESTSET_PATH)} sha256 {digest}")
+    print(f"brand crib ({len(BRAND_LABELS)} names) sha256 {brand_digest()}")
     if not held:
         print("example_embedding is empty — no embedder has been loaded.")
         return 0
@@ -383,10 +529,14 @@ async def status() -> int:
         # `stale` is the whole point of printing the digest: a round refuses a crib built
         # from labels the owner has since amended, and this is where that is visible before
         # a round spends minutes discovering it.
-        mark = "current" if entry["sha"] == digest and entry["digests"] == 1 else "STALE"
+        # **The comparison is per source (0042).** A brand row measured against the test-set
+        # file's digest would read STALE for ever, which is the shape of a warning nobody can
+        # act on and therefore stops reading.
+        want = brand_digest() if entry["source"] == BRAND else digest
+        mark = "current" if entry["sha"] == want and entry["digests"] == 1 else "STALE"
         print(
-            f"  {entry['embed_model']:<28} {entry['rows']:>4} rows  sha {entry['sha'][:12]}  "
-            f"{mark}  loaded {entry['loaded_at']:%Y-%m-%d %H:%M}"
+            f"  {entry['embed_model']:<28} {entry['source']:<8} {entry['rows']:>4} rows  "
+            f"sha {entry['sha'][:12]}  {mark}  loaded {entry['loaded_at']:%Y-%m-%d %H:%M}"
         )
     return 0
 
@@ -409,9 +559,9 @@ def parse(argv: list[str]) -> tuple[str, str | None]:
             del arguments[index]
             continue
         index += 1
-    if len(arguments) != 1 or arguments[0] not in ("load", "status"):
+    if len(arguments) != 1 or arguments[0] not in ("load", "load-brands", "status"):
         raise ValueError(
-            "usage: python -m upto.classify.examples load [--embed "
+            "usage: python -m upto.classify.examples load | load-brands [--embed "
             f"<{'|'.join(EMBED_MODELS)}>] | status"
         )
     if key not in EMBED_MODELS:
@@ -431,4 +581,6 @@ if __name__ == "__main__":
         raise SystemExit(2)
     if command == "status":
         raise SystemExit(asyncio.run(status()))
+    if command == "load-brands":
+        raise SystemExit(asyncio.run(main_brands(model_string)))
     raise SystemExit(asyncio.run(main(model_string)))

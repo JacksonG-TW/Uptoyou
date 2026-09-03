@@ -769,5 +769,131 @@ class TheCandidateMap(unittest.TestCase):
         self.assertIn("qwen7b", str(caught.exception))
 
 
+class TheHoldOutIsScopedToTheFrozenSet(unittest.TestCase):
+    """D88's 2026-09-03 amendment (owner 「縮」) — and it has to hold at BOTH call sites.
+
+    **Why this is a source-reading test rather than a behaviour one.** The ruling is a predicate
+    inside one SQL string, and the two callers that depend on it — the round runner and the
+    classifier — reach it through the same function. A behaviour test would pass while one
+    caller had been quietly given its own query, which is exactly the shape H43 met when the
+    round runner did not carry the classifier's unload. So this reads the files.
+
+    **What the ruling says, in one line:** the asked name is held out of its own retrieval
+    **only among rows that came from the frozen set**. A brand row with the asked name stays,
+    because it is a published fact from D77 (`brand_labels.py`) rather than a row of the exam —
+    D113's kind. Measured before the ruling: 93.7% of the brand-joined places are asked as
+    exactly the brand, so the old rule made a `麥當勞` crib row invisible to every one of them.
+    """
+
+    def _source(self, *parts):
+        import pathlib
+        return pathlib.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", *parts
+        ).read_text(encoding="utf-8")
+
+    def test_the_predicate_is_scoped_by_source_and_not_by_name_alone(self):
+        """The bare `name <> :exclude` is what the amendment removed. If it comes back, every
+        brand row goes dark again and nothing else in the suite would notice."""
+        source = self._source("classify", "examples.py")
+        self.assertNotIn("and name <> :exclude", source)
+        self.assertIn("not (source = :testset_source and name = :exclude)", source)
+
+    def test_both_call_sites_go_through_the_one_function(self):
+        """**The gap this closes.** Either caller could grow its own `select … from
+        example_embedding`, and the ruling would then hold in one of them. Both must reach the
+        store through `nearest`, so there is one predicate to rule on."""
+        for parts in (("evaluate", "run_round.py"), ("classify", "run.py")):
+            source = self._source(*parts)
+            with self.subTest(caller="/".join(parts)):
+                self.assertIn("exclude_name=name", source)
+                self.assertNotIn("from example_embedding", source)
+
+    def test_the_classifier_records_why_brand_rows_are_exempt(self):
+        """The exemption is a loosening of a defence; the file that does it says so, or the next
+        reader takes it for an oversight and 'fixes' it."""
+        source = self._source("classify", "run.py")
+        for phrase in ("D88", "2026-09-03", "brand", "source = 'testset'"):
+            self.assertIn(phrase, source)
+
+    def test_the_two_sources_are_constants_not_repeated_strings(self):
+        """The predicate, the two loads and this test all have to spell them the same way.
+
+        **Read, not imported** — `examples.py` pulls SQLAlchemy and this runner is host-side, a
+        constraint its own module docstring states. Importing it here would fail as
+        `ModuleNotFoundError`, which reads as a broken test rather than as the wrong tempo.
+        """
+        source = self._source("classify", "examples.py")
+        self.assertIn('TESTSET = "testset"', source)
+        self.assertIn('BRAND = "brand"', source)
+
+    def test_each_load_deletes_only_its_own_source(self):
+        """0042's other half. A frozen-set reload that wiped the brand rows would empty the crib
+        the amendment exists for, and the next round would score against nothing and say so only
+        as a number."""
+        source = self._source("classify", "examples.py")
+        # Two deletes — the frozen-set load's and the brand load's — and BOTH name a source.
+        self.assertEqual(
+            source.count("delete from example_embedding where embed_model = :model"), 2)
+        self.assertEqual(
+            source.count("and prefix_kind = :prefix_kind and source = :source"), 2)
+
+
+class TheBrandCribIsAFactTable(unittest.TestCase):
+    """`brand_labels.py` — D113's shape, and the limits that must stay stated.
+
+    Host-side: the module is a dict and a docstring, no database and no SQLAlchemy.
+    """
+
+    def test_every_label_is_one_of_the_ruled_values(self):
+        """D39's condition 2 — a value outside the list is rejected, never coerced. `法人` is
+        legal here and is not one of D38's thirteen: it is the decided absence (D79), and the
+        nine supermarkets plus 美廉社 carry it because rule 0 says a 超市 is not a food shop."""
+        from upto.classify.brand_labels import BRAND_LABELS
+        from upto.classify.categories import CATEGORIES
+        allowed = set(CATEGORIES) | {"法人"}
+        for name, (label, _company) in BRAND_LABELS.items():
+            with self.subTest(brand=name):
+                self.assertIn(label, allowed)
+
+    def test_every_row_carries_the_company_it_was_published_under(self):
+        """The basis. 0042's CHECK refuses a brand row with an empty `source_ref`, and this is
+        the same rule one layer up, where it can be read."""
+        from upto.classify.brand_labels import BRAND_LABELS
+        for name, (_label, company) in BRAND_LABELS.items():
+            with self.subTest(brand=name):
+                self.assertTrue(company.strip())
+
+    def test_the_teachers_are_named_in_full(self):
+        """H68 — org, tag and version, never a nickname. The record's older pair reads
+        «Fable 5 + Gemini» and this draft was Opus 5, so that string here would be false."""
+        from upto.classify.brand_labels import BRAND_LABELED_BY
+        for part in ("claude-opus-5[1m]", "gemini-3.5-flash-lite", "owner"):
+            self.assertIn(part, BRAND_LABELED_BY)
+
+    def test_the_source_carries_no_hotpot_no_bbq_no_taicai(self):
+        """**A limit of D77's list, asserted so a later reader does not expect the crib to help
+        those three.** If a future publication adds one, this test fails and the limit comes out
+        of the report — which is the right way round."""
+        from upto.classify.brand_labels import BRAND_LABELS
+        labels = {label for label, _ in BRAND_LABELS.values()}
+        for absent in ("火鍋", "燒烤", "台菜"):
+            self.assertNotIn(absent, labels)
+
+    def test_the_digest_covers_the_labels_and_not_only_the_names(self):
+        """A crib goes stale when what it TEACHES changes. A digest over names alone would call
+        an amended label current, and a round would score against a crib its report misdescribes.
+        """
+        import hashlib
+        from upto.classify import brand_labels
+        before = brand_labels.BRAND_LABELS
+        payload = "\n".join(
+            "{}\t{}".format(n, before[n][0]) for n in sorted(before))
+        names_only = "\n".join(sorted(before))
+        self.assertNotEqual(
+            hashlib.sha256(payload.encode()).hexdigest(),
+            hashlib.sha256(names_only.encode()).hexdigest(),
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

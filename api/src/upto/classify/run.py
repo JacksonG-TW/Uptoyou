@@ -24,6 +24,15 @@ exclude_name=...)` removes every copy of the asked string within the embedder (0
 which is what keeps a re-run a re-run. The evaluation path excludes for a different reason —
 a score of the lookup rather than the classifier — and the two reasons want the same line.
 
+**Brand rows are exempt, and the exemption is the ruling — D88's 2026-09-03 amendment, owner
+「縮」.** Both reasons above are arguments about a row drawn from the population being classified.
+A brand row is not one: it is a published fact from D77 (`brand_labels.py`), the same kind of
+thing D113's aliases are, and it is in the store precisely to say what the name cannot. Holding
+it out removes the only row that carries the fact — measured before the ruling, **93.7% of the
+brand-joined places are asked as exactly the brand**, so a `麥當勞` crib row was invisible to
+every one of them. The predicate is `source = 'testset'` (revision 0042), not the name, so the
+frozen set keeps its hold-out and the brand rows keep their reach.
+
 Two passes, in this order and for a reason:
 
 1. **Materialise (D76).** Every `reference_place` in the township that has no `place` row
