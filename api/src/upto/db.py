@@ -94,10 +94,25 @@ def _role_url(variable: str, what: str) -> str:
     prints, and `test_role_grants.py` asserts that in the *running* stack all three variables are
     set — the fallback's correctness in a test and its absence in production are two different
     checks and both are made.
+
+    **With neither variable set it raises instead of printing.** There is nothing to
+    fall back to, so the loud line would be describing something that did not happen —
+    and it printed one line before the failure, which sent a reader after a role-split
+    breach when the fault was an unset environment.
     """
     url = os.environ.get(variable)
     if url:
         return _checked(url)
+    if not os.environ.get(DATABASE_URL_VAR):
+        # Nothing to fall back TO. Announcing a fallback here and then dying one line later
+        # is a false line on the error path: an operator reads "falling back to the OWNER's
+        # connection" and goes looking for a role-split breach that never happened, when the
+        # real fault is that neither variable is set. Say that instead.
+        raise RuntimeError(
+            "neither {} nor {} is set, so {} has no connection at all — nothing fell back. "
+            "The stack sets the role variable per container (A15/D115); a build-and-drop test "
+            "sets only {}.".format(variable, DATABASE_URL_VAR, what, DATABASE_URL_VAR)
+        )
     print(
         "db: {} is not set — {} is falling back to {}, which is the OWNER's connection. "
         "That is correct only in a build-and-drop test; in the stack it means the role split "
