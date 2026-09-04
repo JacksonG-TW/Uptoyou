@@ -1,0 +1,23 @@
+# **This file exists to survive the extract, and that is its whole reason.**
+#
+# `tools/publish_app.sh` builds the public repository with
+# `git filter-repo --subdirectory-filter app`, so **only files under `app/` survive** — and the
+# repository root's `.gitignore`, which carries the `.env` rules, is not one of them. Measured
+# 2026-09-04 on the first real clone of the published extract: it had **no `.gitignore` at all**,
+# and `.env` showed as an ordinary untracked file.
+#
+# That matters because the runbook tells whoever brings a host up to do exactly this:
+#
+#     git clone https://github.com/JacksonG-TW/Uptoyou.git ~/upto
+#     cd ~/upto && cp .env.example .env && $EDITOR .env
+#
+# — and then one `git add -A` on that box commits every database password, the Fernet key and an
+# IAM secret to a **public** repository. H16's rule is that this line must exist *before* the
+# first `.env` does, because history is not erasable in practice; in the extract it did not exist
+# at all.
+#
+# `app/web/.gitignore` already survives the filter and covers `node_modules` and `dist`, so those
+# are not repeated here. This file is the env rules and nothing else.
+.env
+.env.*
+!.env.example
