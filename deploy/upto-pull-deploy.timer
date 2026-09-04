@@ -1,0 +1,16 @@
+[Unit]
+Description=Up to you — check for a new commit every 5 minutes
+
+[Timer]
+# **Five minutes, and the number is a trade rather than a default.** The window between pushing
+# here and the box serving it is at most this; the cost is a `git fetch` every five minutes
+# against a public repo, which is nothing. The build only runs when HEAD actually moved, so a
+# quiet day costs one fetch per tick and no restarts.
+OnBootSec=2min
+OnUnitActiveSec=5min
+# Spread the ticks so a fleet does not fetch in lockstep. One box today; costs nothing.
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

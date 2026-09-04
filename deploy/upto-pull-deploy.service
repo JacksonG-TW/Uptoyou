@@ -1,0 +1,18 @@
+[Unit]
+Description=Up to you — pull the public extract and bring the stack up (D59)
+# Docker must be up first. `Requires=` rather than `Wants=`: with no docker there is nothing this
+# unit can usefully do, and a run that fails on every tick fills the journal with noise that hides
+# a real failure.
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+# The clone of github.com/Jackson0612/Uptoyou — the PUBLIC extract, which is `app/` (D47). Change
+# this one line if the box keeps it elsewhere; nothing else in the unit hardcodes a path.
+WorkingDirectory=/home/ec2-user/upto
+ExecStart=/home/ec2-user/upto/deploy/pull-deploy.sh
+User=ec2-user
+# **Not root.** The user is in the `docker` group, which is the only privilege this needs. A deploy
+# timer running as root is a way for a repository to become a shell on the box.
+TimeoutStartSec=1800
