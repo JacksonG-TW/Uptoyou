@@ -24,14 +24,23 @@
 
 /* ── masthead ─────────────────────────────────────────────────────────────── */
 .mast {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center;
   border: 2px solid var(--color-ink); padding: 14px 20px; margin-top: 20px;
   /* 甲・日報 §1b — the dateline is a third child of a two-child bar, so the bar has to be able to
      take a second row rather than squeeze the brand. `column-gap` is what keeps the dateline off
-     the picker once `margin-left: auto` below has eaten the free space `space-between` was using. */
+     the picker once `margin-right: auto` on the brand has eaten the free space.
+
+     **`flex-end` + one auto margin on the brand, where it used to be `space-between` + one auto
+     margin on the dateline** (乙, `spec-round-menu-2026-09-03.md` §3). The two are identical while
+     every child fits on one line — an auto margin absorbs all the free space either way — and they
+     differ on the line the switcher wraps onto: `space-between` puts a lone item at the START of
+     its row, so the wrapped switcher would sit left. Moving the auto margin to the brand right-
+     aligns every wrapped row without adding a second auto margin, which would have split the free
+     space and pulled the picker away from the bar's right edge at 1440. */
+  justify-content: flex-end;
   flex-wrap: wrap; row-gap: 6px; column-gap: 18px;
 }
-.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
 .brand b { font-size: var(--text-lead); font-weight: 900; letter-spacing: .02em; }
 .brand span { font-size: var(--text-note); color: var(--color-muted);
               letter-spacing: .1em; text-transform: uppercase; }
@@ -78,9 +87,11 @@
   .hero  { grid-template-columns: 46fr 54fr; gap: 44px; margin-top: auto;
            flex: 1 1 auto; max-height: 480px; align-items: stretch; }
   .homeFoot { margin-bottom: auto; }
-  /* At ≥900 there is room for all three on one line, so the dateline returns to its DOM position
-     and `margin-left: auto` carries it to the right of the bar, beside the picker. */
-  .dateline { order: 0; flex: 0 0 auto; margin-left: auto; }
+  /* At ≥900 there is room for all of them on one line, so the dateline returns to its DOM position
+     and the brand's `margin-right: auto` carries the rest of the bar to the right — dateline,
+     picker, switcher, in that order, the dateline and the picker adjacent because both are
+     「今天的條件」. The auto margin lives on the brand rather than here since 乙; see `.mast`. */
+  .dateline { order: 0; flex: 0 0 auto; }
   /* the weather settles to the collage's foot rather than trailing the body copy */
   .heroL .wx { margin-top: auto; }
 }

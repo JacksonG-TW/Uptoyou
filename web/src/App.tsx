@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { device, doorHref } from './lib/round'
+import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
 import { dateline } from './lib/dateline'
 
 /**
@@ -81,6 +82,17 @@ export default function App() {
               ))}
             </SelectContent>
           </Select>
+          {/* **乙・報頭內** (`spec-round-menu-2026-09-03.md` §3; owner-ruled 軸二, reversing ⑥ of
+              2026-08-20). Last child, so it lands past the picker — the order the evaluator fixed
+              under D101's delegation is brand · dateline · picker · switcher, and the dateline and
+              the picker stay adjacent because both are 「今天的條件」.
+
+              **It is allowed to wrap and is never sized from its link count.** Three links measure
+              188 px and four do once 開獎 exists, so a rule that forced one row would break itself
+              the first time a round was open. At 1440 and 2560 all four children share the row and
+              the masthead's height is unchanged, which is what A0c reads; at ≤ 900 the switcher
+              takes its own row inside the bar and that is the ruled behaviour, not a defect. */}
+          <Switcher />
         </header>
 
         <div className="hero">

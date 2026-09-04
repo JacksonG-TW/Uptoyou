@@ -5,15 +5,24 @@
  * **This is not the product's navigation and it is built to be deleted.** One component, one
  * stylesheet block, one line in `main.tsx`. When the surface is aimed at a phone again the whole
  * question reopens, and the cost of reopening it should be removing this file rather than
- * untangling it from four screens.
+ * untangling it from four screens. **After 乙 that promise is still kept**: the bar the inner
+ * screens now wear is drawn in this file, and `Back` is imported by it rather than by `main.tsx`,
+ * so the deletion is one import shorter than it was. One bar is fewer pieces than two — it must
+ * not spread into the screens.
  *
- * **Why it is `position: fixed` rather than sitting in the masthead, which is what the ruling
- * said.** The approved comparison page has no navigation, and `D101` makes that page the fidelity
- * target — the 1440 pixel diff is measured against it object by object. A switcher *in* or *above*
- * the masthead moves every object below it, and the gate that was just verified goes red the
- * moment it lands. Out of flow, it costs the diff only the pixels it covers, in a corner the
- * approved page leaves empty. Raised with the evaluator rather than done quietly; if they want it
- * in the masthead it is a two-line change and the fidelity gate pays for it.
+ * **It sits in the masthead now, and the paragraph that argued for a fixed corner is spent**
+ * (`spec-round-menu-2026-09-03.md` §3, owner-ruled 軸二 = 乙・報頭內, reversing ruling ⑥ of
+ * 2026-08-20). That paragraph said a switcher in the masthead moves every object below it and
+ * reddens `A0c`'s pixel diff. **Measured on candidate 5 before the change, it does not:** the
+ * masthead is already a three-child wrapping flex row, and at 1440 brand + dateline + picker +
+ * switcher + gaps is 785 of 1160 — one row, height unchanged, nothing below moves. The gate is
+ * paid where it is actually charged, at ≤ 900, where the switcher takes its own row inside the
+ * masthead and A0c does not read.
+ *
+ * **Two shapes, one component.** On the home the nav is a child of `.mast`. On every inner screen
+ * `NavBar` below wraps it with `Back` in ONE slim fixed bar — replacing the two separate fixed
+ * boxes that used to pin opposite corners. `--bar-h` in `switcher.css` is now one bar's height
+ * rather than the taller of two, and `spec-inner-header.md`'s `main` offset is unchanged in shape.
  *
  * **Four destinations since 2026-08-30** (`spec-return-choice.md` §2): 偏好 was removed — with the
  * budget and the ingredient list gone it would have held one sentence about a choice made on
@@ -27,6 +36,8 @@
  * control is still a door. The reveal is the one that still comes and goes, because it needs a
  * round to point at.
  */
+
+import Back from './Back'
 
 /** The reveal needs a round to show. Rather than invent one, the entry carries the last round this
  *  browser actually opened — written by whatever screen last drove a roll — and hides itself until
@@ -71,5 +82,28 @@ export default function Switcher() {
         </a>
       ))}
     </nav>
+  )
+}
+
+/**
+ * The inner screens' single bar — `spec-round-menu-2026-09-03.md` §3, 乙・報頭內.
+ *
+ * **返回 left, the stops right, one 2 px ink rule under the lot.** It replaces `.backLink`'s
+ * top-left box and `.switcher`'s top-right box, which read as two decisions pinned to opposite
+ * corners of a screen they did not belong to. `Back`'s own behaviour is untouched — the referrer
+ * still decides between `history.back()` and a real `<a href="/">`; this moves the box and nothing
+ * inside it.
+ *
+ * **Fixed, and `--bar-h` is why that costs nothing.** `round.css` and `reveal.css` start `main` at
+ * `--bar-h + 24`, derived from this bar's own tokens rather than measured off a screenshot, so a
+ * bar that changes height moves the content with it by construction. Not rendered on the home:
+ * there the nav is a child of the masthead and there is nowhere to go back to.
+ */
+export function NavBar() {
+  return (
+    <div className="navbar" data-part="nav-bar">
+      <Back />
+      <Switcher />
+    </div>
   )
 }

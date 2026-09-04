@@ -4,8 +4,7 @@ import { LazyMotion, domAnimation } from './lib/motion'
 import './index.css'
 import App from './App.tsx'
 import Reveal from './components/reveal/Reveal.tsx'
-import Switcher from './components/Switcher.tsx'   // demo scaffolding — see the component
-import Back from './components/Back.tsx'           // demo scaffolding — owner-ruled 2026-08-19
+import { NavBar } from './components/Switcher.tsx' // demo scaffolding — see the component
 import DeviceScreen from './components/device/Device.tsx'
 import Round from './components/round/Round.tsx'
 
@@ -76,8 +75,9 @@ function route() {
 
 const screen = route()
 
-/** Back is on every screen except the home entry — home is where back goes, so a back control
- *  there is either a no-op or an exit from the product. */
+/** The bar is on every screen except the home entry. Two reasons, and they were one before 乙:
+ *  home is where 返回 goes, so a back control there is either a no-op or an exit from the product;
+ *  and the home's own switcher is a child of the masthead now (`App.tsx`), not of this file. */
 const atHome = window.location.pathname.replace(/\/+$/, '') === ''
 
 createRoot(document.getElementById('root')!).render(
@@ -85,10 +85,12 @@ createRoot(document.getElementById('root')!).render(
     {/* `strict` refuses a `motion.*` component anywhere below it, which is what keeps the feature
         bundle to the half we budgeted for. See `lib/motion.ts`. */}
     <LazyMotion features={domAnimation} strict>
-    {/* Demo scaffolding, ruled 2026-08-19. Removing it is this line plus the import plus the
-        stylesheet import in `index.css` — deliberately three deletions and no untangling. */}
-    <Switcher />
-    {!atHome && <Back />}
+    {/* Demo scaffolding, ruled 2026-08-19; ONE bar since 乙 (`spec-round-menu-2026-09-03.md` §3).
+        Removing it is this line plus the import plus the stylesheet import in `index.css` — still
+        deliberately three deletions and no untangling, and one line shorter than it was, because
+        `Back` is now imported by the bar rather than rendered beside it. The home's switcher is
+        not here: it is a child of the masthead in `App.tsx`. */}
+    {!atHome && <NavBar />}
     {screen}
     </LazyMotion>
   </StrictMode>,

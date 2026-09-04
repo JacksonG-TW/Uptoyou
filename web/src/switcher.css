@@ -1,29 +1,54 @@
-/* Demo scaffolding — the top-level switcher. Deletes with its component and its one import.
+/* Demo scaffolding — the top-level switcher and the inner screens' bar. Deletes with its
+   component and its one import.
 
-   `position: fixed`, so it is out of flow and moves nothing: the 1440 fidelity diff is measured
-   against a reference page that has no navigation, and anything in flow would shift every object
-   below it. Top-RIGHT because that corner is empty on the approved page at 1440; the masthead's
-   own picker sits inside the content column, well left of this. */
+   **The fixed corner is gone** (`spec-round-menu-2026-09-03.md` §3, 軸二 = 乙・報頭內, owner-ruled
+   2026-09-03, reversing ⑥ of 2026-08-20). It was out of flow because the 1440 fidelity diff is
+   measured against a reference page with no navigation and anything in flow shifts every object
+   below it. Two things paid for the reversal: the owner approved `home-r-b.html`, which puts the
+   nav in the masthead, and the masthead was measured before the change — at 1440 all four children
+   share one row and its height does not move, so nothing below it moves either.
+
+   **So the nav itself now carries no box at all.** It is a row of links, and whoever holds it
+   supplies the ground: the masthead on the home, `.navbar` below on every inner screen. A ground
+   declared here would draw a second box inside the one it sits in. */
 
 .switcher {
+  display: flex;
+  gap: 0;
+}
+
+/* **The inner screens' ONE bar** — §3. 返回 at the left edge, the stops at the right, a single 2 px
+   ink rule under both. It replaces two separate fixed boxes pinned to opposite corners; a person
+   met them as two decisions, and the spec's own reason for merging them is that one bar is fewer
+   pieces than two.
+
+   Still `position: fixed`, and `--bar-h` below is why that costs the inner screens nothing: they
+   start `main` at `--bar-h + 24`, computed from this bar's own tokens. `align-items: stretch` so
+   both cells are the bar's full height and the divider between them runs edge to edge — a centred
+   cell would leave the rule floating in the middle of the strip. */
+.navbar {
   position: fixed;
   top: 0;
+  left: 0;
   right: 0;
   z-index: 50;
   display: flex;
-  gap: 0;
-  /* the system's own rule weight and ground — this is scaffolding, not a new visual language */
-  border-left: 2px solid var(--color-ink);
-  border-bottom: 2px solid var(--color-ink);
+  align-items: stretch;
+  justify-content: space-between;
   background: var(--color-paper);
+  border-bottom: 2px solid var(--color-ink);
 }
 
 /**
  * **`--bar-h` — how tall the scaffolding is, derived and not measured off a screenshot.**
  * `spec-inner-header.md` §1 asks the four inner screens to start `--bar-h + 24` down, and asks for
  * the height to come from the same tokens the bars use rather than from a second literal. This is
- * that expression: the two bars are one line of `--text-note` plus their own padding and bottom
- * border, and nothing else.
+ * that expression: the bar is one line of `--text-note` plus its own padding and bottom border,
+ * and nothing else. **It did not change when the two bars became one** — it was always the height
+ * of one of them rather than the sum, because they were the same height by construction. What
+ * changed is that it now measures the only bar there is, so `spec-inner-header.md` §1 reads
+ * simpler without moving a pixel; the `+ 24` is the fix for the 430 clipping (IH-1…3), not a
+ * decoration, and deleting it re-opens that defect.
  *
  * **`line-height` is declared on the bars for this to be true.** Without it the line box is
  * `normal` — a number the CJK face chooses, which no `calc()` can name — and the height could only
@@ -53,23 +78,23 @@
 
 .switcher a:focus-visible { outline: 2px solid var(--color-ring); outline-offset: -2px; }
 
-/* The back affordance — owner-ruled, POC level, and out of flow for the same reason the switcher
-   is: the reveal's answer region is a measured quantity (`R-D9`) and the home entry is a pixel
-   diff, so navigation that pushes content down changes both. Top-LEFT, mirroring the switcher's
-   top-right, so the two read as one scaffolding layer rather than two decisions. */
+/* The back affordance — owner-ruled, POC level. **It is no longer positioned at all**: `.navbar`
+   above holds it at the bar's left edge and the switcher at the right. The old comment here said
+   the two corner boxes read as one scaffolding layer; the stranger's walk and then 乙 both said
+   they did not, and one bar is the answer. Its BEHAVIOUR is untouched — `Back.tsx` still lets the
+   referrer choose between `history.back()` and a real link. */
 
 .backLink {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 50;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
   border: 0;
-  border-right: 2px solid var(--color-ink);
-  border-bottom: 2px solid var(--color-ink);
+  /* 1.5 px, the row divider the switcher's own links use — not the 2 px this box carried as a
+     free-standing control. Inside one bar the two cells are rows of the same strip, and the 2 px
+     that used to separate the box from the page is now the bar's bottom rule, declared once on
+     `.navbar` rather than twice on its children. */
+  border-right: 1.5px solid var(--color-ink);
   background: var(--color-paper);
   color: var(--color-ink);
   font-size: var(--text-note);
