@@ -48,7 +48,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from airflow.exceptions import AirflowSkipException
 from airflow.hooks.base import BaseHook
@@ -146,8 +146,26 @@ def upto_db_backup():
 
         # The run's own logical day, never `date` on the box: a re-run of a past day must name
         # that day. `ds` is Airflow's, and it is UTC like every other time here (D83).
+        #
+        # **But a hand-triggered run has no logical day at all, and `["ds"]` killed it — measured
+        # 2026-09-04, `KeyError: 'ds'` six seconds in.** In Airflow 3 a manual trigger without
+        # `--logical-date` leaves `logical_date` None and `ds` absent from the context. **That is
+        # the path the runbook, A22's proof and every launch-day check use** — «trigger it once
+        # and watch it go green» — so the DAG could not be verified by the only method anybody
+        # would reach for, while its scheduled path was fine.
+        #
+        # Falls back to today in UTC and SAYS SO in the log, rather than silently: the object
+        # name is a claim about which day's data is inside it, and a wrong one is discovered
+        # during a restore.
         from airflow.sdk import get_current_context
-        day = get_current_context()["ds"]
+        context = get_current_context()
+        day = context.get("ds")
+        if not day:
+            logical = context.get("logical_date")
+            day = (logical or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+            print("no logical day on this run (hand-triggered) — naming the object for today, "
+                  "{}, from the box's UTC clock rather than from the schedule".format(day),
+                  flush=True)
 
         key = "{}/upto-{}-{}.dump".format(prefix, day, revision)
         handle, path = tempfile.mkstemp(suffix=".dump", prefix="upto-backup-")
