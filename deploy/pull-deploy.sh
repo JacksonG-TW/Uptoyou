@@ -9,7 +9,7 @@
 # the mechanism. It is deliberately the smallest thing that can be correct.
 #
 # **Where it runs.** On the deployment box, inside a clone of the PUBLIC extract
-# (github.com/Jackson0612/Uptoyou), which is `app/` and nothing else (D47). That repo is public, so
+# (github.com/JacksonG-TW/Uptoyou), which is `app/` and nothing else (D47). That repo is public, so
 # the box holds no credential to read it — the only secrets on the box are in `.env`, which is not
 # in any repo (H16).
 #

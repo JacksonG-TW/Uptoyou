@@ -8,7 +8,7 @@ After=docker.service network-online.target
 
 [Service]
 Type=oneshot
-# The clone of github.com/Jackson0612/Uptoyou — the PUBLIC extract, which is `app/` (D47). Change
+# The clone of github.com/JacksonG-TW/Uptoyou — the PUBLIC extract, which is `app/` (D47). Change
 # this one line if the box keeps it elsewhere; nothing else in the unit hardcodes a path.
 WorkingDirectory=/home/ec2-user/upto
 ExecStart=/home/ec2-user/upto/deploy/pull-deploy.sh

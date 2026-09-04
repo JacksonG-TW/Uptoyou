@@ -12,7 +12,7 @@ mechanism, and it is deliberately the smallest thing that can be correct.
 ## Install, once, on the box
 
 ```sh
-git clone https://github.com/Jackson0612/Uptoyou.git ~/upto   # the PUBLIC extract: app/ only (D47)
+git clone https://github.com/JacksonG-TW/Uptoyou.git ~/upto   # the PUBLIC extract: app/ only (D47)
 cd ~/upto && cp .env.example .env && $EDITOR .env             # H16: secrets never enter the repo
 sudo cp deploy/upto-pull-deploy.{service,timer} /etc/systemd/system/
 sudo systemctl daemon-reload && sudo systemctl enable --now upto-pull-deploy.timer
