@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Sequence
+import itertools
+from typing import Iterable, Optional
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,9 +80,17 @@ class BusinessStore:
         )
         return result.scalar()
 
-    async def write(self, publication_id: int, rows: Sequence[StatusRow]) -> int:
+    async def write(self, publication_id: int, rows: Iterable[StatusRow]) -> int:
+        """Offer every row, CHUNK at a time, **from an iterator it never materialises** (H76).
+
+        One executemany per CHUNK inside the caller's single transaction — a failure anywhere
+        rolls the claim and every chunk back together, so the next run re-claims and re-reads
+        the file (M1). Repeats reach the database and `on conflict … do nothing` drops them;
+        the count returned is what was *offered*, and `accepted` reads what was held.
+        """
         offered = 0
-        for start in range(0, len(rows), CHUNK):
+        pending = iter(rows)
+        while True:
             batch = [
                 {
                     "publication_id": publication_id,
@@ -89,13 +98,23 @@ class BusinessStore:
                     "name_raw": row.name_raw,
                     "status": row.status,
                 }
-                for row in rows[start:start + CHUNK]
+                for row in itertools.islice(pending, CHUNK)
             ]
             if not batch:
-                continue
+                return offered
             await self._session.execute(text(INSERT_ROW), batch)
             offered += len(batch)
-        return offered
+
+    async def distinct_numbers(self, publication_id: int) -> int:
+        """How many distinct 統編 the publication holds — the figure the parse used to count in
+        memory, asked of the rows once they are stored (H76)."""
+        return int(await self._session.scalar(
+            text(
+                "select count(distinct business_no) from business_status_row "
+                "where publication_id = :publication_id"
+            ),
+            {"publication_id": publication_id},
+        ) or 0)
 
     async def accepted(self, publication_id: int) -> int:
         result = await self._session.execute(

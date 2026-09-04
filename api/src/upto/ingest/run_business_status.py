@@ -14,7 +14,7 @@ import os
 import sys
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Optional
+from typing import Callable, Iterable, Optional
 
 from . import runlog
 from .foodtracer import FoodtracerUnavailable, Sheet, read_sheet
@@ -22,9 +22,9 @@ from .gcis import (
     SCOPE,
     SOURCE,
     GcisUnavailable,
-    StatusResult,
+    StatusRow,
+    StatusScan,
     fetch,
-    parse_statuses,
 )
 
 
@@ -47,7 +47,7 @@ class Verdict:
                 "CSV was not parsed".format(self.source, self.content_sha256[:12])
             )
         return (
-            "{}: {} publication {} — {} rows scanned, {} tuples offered, {} held, "
+            "{}: {} publication {} — {} rows scanned, {} rows offered, {} tuples held, "
             "{} distinct numbers (hash {}…)".format(
                 self.source,
                 "stored" if self.stored else "re-parsed into",
@@ -66,9 +66,14 @@ async def ingest_sheet(
     sheet: Sheet,
     scope: str = SCOPE,
     force_parse: bool = False,
-    parse: Callable[[bytes], StatusResult] = parse_statuses,
+    parse: Callable[[bytes], Iterable[StatusRow]] = StatusScan,
 ) -> Verdict:
-    """Claim the publication, and parse only if the claim said the content is new."""
+    """Claim the publication, and read it only if the claim said the content is new.
+
+    The read is a stream (H76): rows go to the store CHUNK by CHUNK as the CSV is read, inside
+    one transaction, and the file is never held as a list — the roster's 209k rows cost a 2 GB
+    box its last 49 MB that way on 2026-09-04.
+    """
     publication_id = await store.claim(sheet, scope)
     content_is_new = publication_id is not None
 
@@ -93,9 +98,10 @@ async def ingest_sheet(
             )
         publication_id = held.publication_id
 
-    parsed = parse(sheet.raw)
-    offered = await store.write(publication_id, parsed.rows)
+    scan = parse(sheet.raw)
+    offered = await store.write(publication_id, scan)
     held_now = await store.accepted(publication_id)
+    numbers = await store.distinct_numbers(publication_id)
     await store.record_count(publication_id, held_now)
     await store.commit()
     return Verdict(
@@ -106,8 +112,8 @@ async def ingest_sheet(
         publication_id=publication_id,
         rows_offered=offered,
         rows_held=held_now,
-        numbers=parsed.numbers,
-        scanned=parsed.scanned,
+        numbers=numbers,
+        scanned=getattr(scan, "scanned", 0),
     )
 
 

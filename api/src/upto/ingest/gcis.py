@@ -25,7 +25,7 @@ from __future__ import annotations
 import csv
 import io
 from dataclasses import dataclass, field
-from typing import List
+from typing import Iterator, List
 
 from .foodtracer import FoodtracerUnavailable, Sheet, fetch_sheet, read_sheet  # noqa: F401
 
@@ -76,34 +76,66 @@ def _require_columns(fieldnames) -> None:
         )
 
 
-def parse_statuses(raw: bytes) -> StatusResult:
-    """Read the CSV down to its distinct tuples. **The expensive call, and the only one.**
+class StatusScan:
+    """The CSV read row by row, **never held whole** (H76, ruled 2026-09-05, owner 「A」).
+
+    Iterating yields one `StatusRow` per row that carries a 統編, in file order, **repeats
+    included** — the store's `on conflict (…) do nothing` is the dedup now, so the 209k-tuple
+    `seen` set and the 209k-row list this parse used to build (about 120 MB of a 172 MB process,
+    measured against the 2026-09 roster) are gone with them. `scanned` counts every data row
+    read so far and `offered` every row yielded; both are final once the iteration ends. The
+    column check happens at construction, so a wrong shape refuses before a single row is
+    offered to anyone, and a file that yields no row at all refuses at the end rather than
+    storing an empty publication.
 
     A row with no 統編 has nothing to join and is skipped rather than refused — unlike the
     storefront list this file is not site-level and carries no key of ours; three rows with
     an empty status existed on the measured file and are kept (an empty status is not in
     any dead set, so they quietly stay visible, which is the safe direction).
     """
-    stream = io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8-sig", newline="")
-    reader = csv.DictReader(stream)
-    _require_columns(reader.fieldnames)
+
+    def __init__(self, raw: bytes) -> None:
+        stream = io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8-sig", newline="")
+        self._reader = csv.DictReader(stream)
+        _require_columns(self._reader.fieldnames)
+        self.scanned = 0
+        self.offered = 0
+
+    def __iter__(self) -> Iterator[StatusRow]:
+        for row in self._reader:
+            self.scanned += 1
+            business_no = (row.get(BUSINESS_NO_COLUMN) or "").strip()
+            if not business_no:
+                continue
+            self.offered += 1
+            yield StatusRow(
+                business_no=business_no,
+                name_raw=(row.get(NAME_COLUMN) or "").strip(),
+                status=(row.get(STATUS_COLUMN) or "").strip(),
+            )
+        if not self.offered:
+            raise GcisUnavailable(
+                "{}: the CSV parsed to no rows — {} were read".format(SOURCE, self.scanned)
+            )
+
+
+def parse_statuses(raw: bytes) -> StatusResult:
+    """The whole file reduced to its distinct tuples — the host-side tests' view of the parse.
+
+    **Nothing on the DAG's path calls this any more (H76):** `run_business_status` iterates
+    `StatusScan` straight into the store. This wrapper keeps the tuple semantics the D81 tests
+    pin (distinct `(統編, 商業名稱, 登記狀態)`, `numbers` = distinct 統編) on top of the same
+    reader, so the two cannot read a row differently.
+    """
+    scan = StatusScan(raw)
     result = StatusResult()
     seen = set()
-    for row in reader:
-        result.scanned += 1
-        business_no = (row.get(BUSINESS_NO_COLUMN) or "").strip()
-        if not business_no:
-            continue
-        name_raw = (row.get(NAME_COLUMN) or "").strip()
-        status = (row.get(STATUS_COLUMN) or "").strip()
-        key = (business_no, name_raw, status)
+    for row in scan:
+        key = (row.business_no, row.name_raw, row.status)
         if key in seen:
             continue
         seen.add(key)
-        result.rows.append(StatusRow(business_no=business_no, name_raw=name_raw, status=status))
+        result.rows.append(row)
+    result.scanned = scan.scanned
     result.numbers = len({row.business_no for row in result.rows})
-    if not result.rows:
-        raise GcisUnavailable(
-            "{}: the CSV parsed to no rows — {} were read".format(SOURCE, result.scanned)
-        )
     return result
