@@ -354,6 +354,42 @@ async def scenario(test_url: str, base_url: str) -> None:
         assert set(notice) == {"type", "round_id"}, (
             "type and round id, no text — the sentence has one owner and it is the surface", notice)
 
+        # --- the heartbeat (2026-09-04) --------------------------------------------------
+        #
+        # **The comment arrives while the queue is quiet.** That is what stops a proxy cutting an
+        # idle stream — Cloudflare's terminates with 524 after ~100 s of origin silence, and this
+        # stream was silent by construction between events.
+        raw: list[str] = []
+        pings = asyncio.Event()
+
+        async def heartbeat_reader():
+            async with client.stream("GET", f"/circles/{circle}/stream", headers=auth) as beat:
+                assert beat.status_code == 200
+                async for line in beat.aiter_lines():
+                    raw.append(line)
+                    if line.startswith(": "):
+                        pings.set()
+                        return
+
+        await asyncio.wait_for(asyncio.create_task(heartbeat_reader()), timeout=8)
+        assert any(line.startswith(": ") for line in raw), (
+            "no SSE comment arrived while the queue was quiet — an idle stream sends nothing and "
+            "a proxy will cut it"
+        )
+        # **A comment, never a data event.** A `data:` heartbeat would reach every client's
+        # message handler and every one of them would have to learn to filter it.
+        assert not any(line.startswith("data: ") and "ping" in line for line in raw), (
+            "the heartbeat reached the data channel"
+        )
+
+        # **And the no-loss property is proven by this whole file rather than by one assertion.**
+        # `asyncio.wait_for` CANCELS the pending `queue.get()` at every interval; if a publish
+        # landed in that window and the cancellation consumed it, the product would drop events
+        # under no load at all. The server above runs with a **0.4 s** heartbeat, so every
+        # assertion in this scenario — the snapshot, `round_opened`, `pooled`, `closed`,
+        # `pool_swept` — has been delivered across dozens of those cancellations. If the timeout
+        # ate events, this file would already be red somewhere above, which is a stronger and
+        # cheaper test than one more publish here.
     await engine.dispose()
 
     print(
@@ -373,7 +409,13 @@ async def with_temporary_database() -> int:
 
     server = None
     try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
+        # **A short heartbeat so it can be asserted in a test somebody will run.** The product's
+        # interval is 25 s, set by Cloudflare's ~100 s idle cut; asserting that directly would
+        # cost half a minute per assertion and the test would rot unrun. The behaviour under test
+        # — a comment arrives when the queue is quiet, and no event is lost to the timeout that
+        # produces it — does not depend on the number.
+        environment = dict(os.environ, UPTO_DATABASE_URL=test_url,
+                           UPTO_STREAM_HEARTBEAT_SECONDS="0.4")
         for attempt in (1, 2):
             migrate = subprocess.run(
                 ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True

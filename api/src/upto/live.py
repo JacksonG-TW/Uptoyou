@@ -19,7 +19,9 @@ is the only input, so two requests cannot disagree, which is D70's argument one 
 
 from __future__ import annotations
 
+import asyncio
 import json
+import os
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import StreamingResponse
@@ -48,6 +50,18 @@ from .engine.table import allocate
 from .stream import subscribe
 
 # No prefix — the proxy strips /api/ before forwarding, same as rounds.py explains.
+# **25 seconds, and the number is set by the shortest proxy timeout in front of us.** Cloudflare's
+# proxy cuts an idle connection at ~100 s; four heartbeats inside that window means three can be
+# lost to a slow moment and the connection still lives. It is deliberately not tuned to "how often
+# does a phone need to hear from us" — nothing on any screen reads it — but to the infrastructure,
+# so it moves when the infrastructure does and not before.
+#
+# **Overridable by `UPTO_STREAM_HEARTBEAT_SECONDS`, and that is not a convenience.** The stream
+# test drives a real uvicorn in a subprocess, so a module constant cannot be patched into it — an
+# interval that could only be 25 s would make the heartbeat testable only by a test that takes
+# half a minute per assertion, which is a test nobody runs. The default is the product's value.
+HEARTBEAT_SECONDS = float(os.environ.get("UPTO_STREAM_HEARTBEAT_SECONDS") or 25)
+
 router = APIRouter()
 
 
@@ -174,7 +188,33 @@ async def stream(circle_id: int, request: Request) -> StreamingResponse:
                 snapshot = await _snapshot(session, circle_id, viewer, is_operator)
             yield "data: " + json.dumps(snapshot, ensure_ascii=False) + "\n\n"
             while True:
-                event = await queue.get()
+                try:
+                    event = await asyncio.wait_for(queue.get(), HEARTBEAT_SECONDS)
+                except asyncio.TimeoutError:
+                    # **The heartbeat, and it fixes three separate things.** Added 2026-09-04.
+                    #
+                    # 1. **A proxy cuts an idle connection.** Cloudflare's terminates with 524
+                    #    after ~100 s of silence from the origin, and this stream was silent by
+                    #    construction — a circle between proposals sends nothing for minutes. The
+                    #    product's live moment (D8) would have died and reopened every 100 s the
+                    #    moment it went behind a proxy.
+                    # 2. **Nothing could detect a dead client.** Writing only on an event means a
+                    #    phone that drops off wifi without closing its TCP connection is never
+                    #    discovered — no write, no broken pipe, no cleanup. Its queue, its task and
+                    #    its `limit_conn` slot were held until `proxy_read_timeout` (1 h). The
+                    #    proxy's `limit_conn 64` is slack standing in for exactly this.
+                    # 3. **A member who walked out still weighted the roll.** `seat_ids` is pinned
+                    #    at open (D108) and D103 discounts by `1 − 1/N` over those seats, so the
+                    #    person on the bus still avoided their category. Detecting the drop is the
+                    #    first half of ever being able to say so.
+                    #
+                    # **A comment line, not an event.** `: ping` is SSE's comment syntax: an
+                    # `EventSource` ignores it entirely, so no screen sees anything and D53's
+                    # "one event goes to every subscriber" is untouched. **It must stay a comment**
+                    # — a `data:` heartbeat would reach `onmessage` and every client would have to
+                    # learn to ignore it.
+                    yield ": ping\n\n"
+                    continue
                 yield "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream")
