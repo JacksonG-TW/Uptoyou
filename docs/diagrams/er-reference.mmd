@@ -68,6 +68,20 @@ erDiagram
         text address
         text industry_code "nullable"
     }
+    search_alias {
+        bigint id PK
+        text alias
+        text registered_name
+        text authored_by
+        text basis
+    }
+    product_material {
+        bigint publication_id PK,FK
+        text company_name PK
+        text brand_name PK
+        text product_name PK
+        text material_name PK
+    }
     township_station {
         text township_code PK
         text township_name
@@ -81,3 +95,4 @@ erDiagram
     storefront_name }o--|| storefront_publication : "publication_id"
     business_status_row }o--|| business_status_publication : "publication_id"
     business_tax_row }o--|| business_tax_publication : "publication_id"
+    product_material }o--|| brand_publication : "publication_id"

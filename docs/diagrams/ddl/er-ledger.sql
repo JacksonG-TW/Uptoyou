@@ -30,8 +30,9 @@ CREATE TABLE example_embedding (
     labeled_by text NOT NULL,
     layer text NOT NULL,
     embed_model text NOT NULL,
-    testset_sha256 character(64) NOT NULL,
+    source_digest character(64) NOT NULL,
     embedding public.vector(1024) NOT NULL,
+    source text NOT NULL,
     PRIMARY KEY (id)
 );
 CREATE TABLE forecast_publication (

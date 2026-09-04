@@ -66,6 +66,8 @@ CLUSTERS = (
             "business_status_row",
             "business_tax_publication",
             "business_tax_row",
+            "search_alias",
+            "product_material",
         ),
         # reference_place.township_code is a real FK into the weather cluster.
         ("township_station",),
@@ -79,7 +81,8 @@ CLUSTERS = (
     (
         "product",
         ("circle", "principal", "member", "device_secret", "place", "round", "proposal",
-         "weight_contribution"),
+         "weight_contribution", "member_roll", "preference", "trip",
+         "round_forecast_baseline"),
         # weight_contribution pins each contextual factor to the exact reading it was
         # computed from — a composite FK into the weather cluster.
         ("forecast_reading", "observation_reading"),
@@ -131,10 +134,27 @@ STORY = {
     "round": ("target_hour", "status", "die1", "die2", "closed_at"),
     "proposal": ("weight", "proposed_at"),
     "weight_contribution": ("channel", "contributor", "effect", "reason_visibility"),
+    # Who actually rolled, and when. It carries no payload of its own — the story is the
+    # three keys and the timestamp — so the columns listed are what a reader needs and no more.
+    "member_roll": ("rolled_at",),
+    # A1's private surface. `stance` and `persist` are the two that change what the row MEANS
+    # (D103's avoid/allow, D17's default-false), so they are drawn and the timestamps are not.
+    "preference": ("kind", "value", "stance", "persist", "expires_on"),
+    # D114's fourth weight source. It carries no place_id and must not gain one (D28) — the kind
+    # of absence a drawn table makes visible.
+    "trip": ("signed_at",),
+    # D71's stored comparison: no row means no comparison happened, which is not the same as a
+    # comparison that found nothing.
+    "round_forecast_baseline": ("element", "measure", "slot_start"),
+    # D113's authored aliases — `basis` is a column so a withdrawable pairing can be told from an
+    # owner-ruled row without reading prose.
+    "search_alias": ("alias", "registered_name", "authored_by", "basis"),
+    # D77's third table: what a product is made of, as the brand ingest publishes it.
+    "product_material": ("brand_name", "product_name", "material_name"),
     # Ledger and the retrieval crib
     "ingest_run": ("source", "started_at", "outcome", "rows_written", "invoked_by"),
     "example_embedding": ("name", "label", "labeled_by", "layer", "embed_model",
-                          "testset_sha256", "embedding"),
+                          "source", "source_digest", "embedding"),
 }
 
 TITLES = {

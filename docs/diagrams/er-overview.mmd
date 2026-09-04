@@ -61,6 +61,12 @@ erDiagram
         bigint principal_id FK
         bigint circle_id FK
     }
+    member_roll {
+        bigint id PK
+        bigint round_id FK
+        bigint circle_id FK
+        bigint member_id FK
+    }
     observation_publication {
         bigint id PK
     }
@@ -77,8 +83,19 @@ erDiagram
     place_publication {
         bigint id PK
     }
+    preference {
+        bigint id PK
+        bigint member_id FK
+    }
     principal {
         bigint id PK
+    }
+    product_material {
+        bigint publication_id PK,FK
+        text company_name PK
+        text brand_name PK
+        text product_name PK
+        text material_name PK
     }
     proposal {
         bigint id PK
@@ -96,6 +113,17 @@ erDiagram
         bigint circle_id FK
         bigint winning_place_id FK "nullable"
     }
+    round_forecast_baseline {
+        bigint round_id PK,FK
+        bigint publication_id FK
+        text township_code FK
+        text element FK
+        text measure FK
+        timestamptz slot_start FK
+    }
+    search_alias {
+        bigint id PK
+    }
     storefront_name {
         bigint publication_id PK,FK
         text registry_no PK
@@ -105,6 +133,12 @@ erDiagram
     }
     township_station {
         text township_code PK
+    }
+    trip {
+        bigint id PK
+        bigint round_id FK
+        bigint circle_id FK
+        bigint member_id FK
     }
     weight_contribution {
         bigint id PK
@@ -120,6 +154,9 @@ erDiagram
         text observation_station_id FK "nullable"
         text observation_element FK "nullable"
         timestamptz observation_observed_at FK "nullable"
+        bigint preference_id FK "nullable"
+        bigint trip_id FK "nullable"
+        bigint brand_publication_id FK "nullable"
     }
     brand_registration }o--|| brand_publication : "publication_id"
     business_status_row }o--|| business_status_publication : "publication_id"
@@ -135,8 +172,13 @@ erDiagram
     ingest_run }o--|| business_tax_publication : "business_tax_publication_id"
     member }o--|| principal : "principal_id"
     member }o--|| circle : "circle_id"
+    member_roll }o--|| round : "round_id"
+    member_roll }o--|| round : "circle_id"
+    member_roll }o--|| member : "member_id"
     observation_reading }o--|| observation_publication : "publication_id"
     place }o--|| circle : "circle_id"
+    preference }o--|| member : "member_id"
+    product_material }o--|| brand_publication : "publication_id"
     proposal }o--|| round : "round_id"
     proposal }o--|| place : "place_id"
     proposal }o--|| member : "member_id"
@@ -144,7 +186,16 @@ erDiagram
     reference_place }o--|| township_station : "township_code"
     round }o--|| circle : "circle_id"
     round }o--|| place : "winning_place_id"
+    round_forecast_baseline }o--|| round : "round_id"
+    round_forecast_baseline }o--|| forecast_reading : "publication_id"
+    round_forecast_baseline }o--|| forecast_reading : "township_code"
+    round_forecast_baseline }o--|| forecast_reading : "element"
+    round_forecast_baseline }o--|| forecast_reading : "measure"
+    round_forecast_baseline }o--|| forecast_reading : "slot_start"
     storefront_name }o--|| storefront_publication : "publication_id"
+    trip }o--|| round : "round_id"
+    trip }o--|| round : "circle_id"
+    trip }o--|| member : "member_id"
     weight_contribution }o--|| proposal : "round_id"
     weight_contribution }o--|| proposal : "place_id"
     weight_contribution }o--|| member : "member_id"
@@ -157,3 +208,6 @@ erDiagram
     weight_contribution }o--|| observation_reading : "observation_station_id"
     weight_contribution }o--|| observation_reading : "observation_element"
     weight_contribution }o--|| observation_reading : "observation_observed_at"
+    weight_contribution }o--|| preference : "preference_id"
+    weight_contribution }o--|| trip : "trip_id"
+    weight_contribution }o--|| brand_publication : "brand_publication_id"

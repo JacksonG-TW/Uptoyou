@@ -84,11 +84,58 @@ CREATE TABLE weight_contribution (
     observation_station_id text,
     observation_element text,
     observation_observed_at timestamp with time zone,
+    preference_id bigint,
+    trip_id bigint,
+    brand_publication_id bigint,
     PRIMARY KEY (id),
     FOREIGN KEY (forecast_publication_id, forecast_township_code, forecast_element, forecast_measure, forecast_slot_start) REFERENCES forecast_reading(publication_id, township_code, element, measure, slot_start),
     FOREIGN KEY (member_id) REFERENCES member(id),
     FOREIGN KEY (observation_publication_id, observation_station_id, observation_element, observation_observed_at) REFERENCES observation_reading(publication_id, station_id, element, observed_at),
-    FOREIGN KEY (round_id, place_id) REFERENCES proposal(round_id, place_id)
+    FOREIGN KEY (round_id, place_id) REFERENCES proposal(round_id, place_id),
+    FOREIGN KEY (preference_id) REFERENCES preference(id),
+    FOREIGN KEY (trip_id) REFERENCES trip(id)
+);
+CREATE TABLE member_roll (
+    id bigint NOT NULL,
+    round_id bigint NOT NULL,
+    circle_id bigint NOT NULL,
+    member_id bigint NOT NULL,
+    rolled_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (circle_id, member_id) REFERENCES member(circle_id, id),
+    FOREIGN KEY (circle_id, round_id) REFERENCES round(circle_id, id)
+);
+CREATE TABLE preference (
+    id bigint NOT NULL,
+    member_id bigint NOT NULL,
+    kind text NOT NULL,
+    value text NOT NULL,
+    stance text,
+    persist boolean NOT NULL,
+    expires_on date,
+    PRIMARY KEY (id),
+    FOREIGN KEY (member_id) REFERENCES member(id)
+);
+CREATE TABLE trip (
+    id bigint NOT NULL,
+    round_id bigint NOT NULL,
+    circle_id bigint NOT NULL,
+    member_id bigint NOT NULL,
+    signed_at timestamp with time zone DEFAULT now() NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (circle_id, member_id) REFERENCES member(circle_id, id),
+    FOREIGN KEY (circle_id, round_id) REFERENCES round(circle_id, id)
+);
+CREATE TABLE round_forecast_baseline (
+    round_id bigint NOT NULL,
+    publication_id bigint NOT NULL,
+    township_code text NOT NULL,
+    element text NOT NULL,
+    measure text NOT NULL,
+    slot_start timestamp with time zone NOT NULL,
+    PRIMARY KEY (round_id),
+    FOREIGN KEY (publication_id, township_code, element, measure, slot_start) REFERENCES forecast_reading(publication_id, township_code, element, measure, slot_start),
+    FOREIGN KEY (round_id) REFERENCES round(id)
 );
 CREATE TABLE forecast_reading (
     publication_id bigint NOT NULL,

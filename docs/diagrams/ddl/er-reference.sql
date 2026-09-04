@@ -85,6 +85,23 @@ CREATE TABLE business_tax_row (
     PRIMARY KEY (publication_id, business_no),
     FOREIGN KEY (publication_id) REFERENCES business_tax_publication(id)
 );
+CREATE TABLE search_alias (
+    id bigint NOT NULL,
+    alias text NOT NULL,
+    registered_name text NOT NULL,
+    authored_by text NOT NULL,
+    basis text NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE TABLE product_material (
+    publication_id bigint NOT NULL,
+    company_name text NOT NULL,
+    brand_name text NOT NULL,
+    product_name text NOT NULL,
+    material_name text NOT NULL,
+    PRIMARY KEY (publication_id, company_name, brand_name, product_name, material_name),
+    FOREIGN KEY (publication_id) REFERENCES brand_publication(id)
+);
 CREATE TABLE township_station (
     township_code text NOT NULL,
     township_name text NOT NULL,

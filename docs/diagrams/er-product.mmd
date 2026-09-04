@@ -67,6 +67,40 @@ erDiagram
         text observation_station_id FK "nullable"
         text observation_element FK "nullable"
         timestamptz observation_observed_at FK "nullable"
+        bigint preference_id FK "nullable"
+        bigint trip_id FK "nullable"
+        bigint brand_publication_id "nullable"
+    }
+    member_roll {
+        bigint id PK
+        bigint round_id FK
+        bigint circle_id FK
+        bigint member_id FK
+        timestamptz rolled_at "default CURRENT_TIMESTAMP()"
+    }
+    preference {
+        bigint id PK
+        bigint member_id FK
+        text kind
+        text value
+        text stance "nullable"
+        boolean persist
+        date expires_on "nullable"
+    }
+    trip {
+        bigint id PK
+        bigint round_id FK
+        bigint circle_id FK
+        bigint member_id FK
+        timestamptz signed_at "default CURRENT_TIMESTAMP()"
+    }
+    round_forecast_baseline {
+        bigint round_id PK,FK
+        bigint publication_id FK
+        text township_code FK
+        text element FK
+        text measure FK
+        timestamptz slot_start FK
     }
     forecast_reading {
         bigint publication_id PK
@@ -106,3 +140,18 @@ erDiagram
     weight_contribution }o--|| observation_reading : "observation_station_id"
     weight_contribution }o--|| observation_reading : "observation_element"
     weight_contribution }o--|| observation_reading : "observation_observed_at"
+    weight_contribution }o--|| preference : "preference_id"
+    weight_contribution }o--|| trip : "trip_id"
+    member_roll }o--|| round : "round_id"
+    member_roll }o--|| round : "circle_id"
+    member_roll }o--|| member : "member_id"
+    preference }o--|| member : "member_id"
+    trip }o--|| round : "round_id"
+    trip }o--|| round : "circle_id"
+    trip }o--|| member : "member_id"
+    round_forecast_baseline }o--|| round : "round_id"
+    round_forecast_baseline }o--|| forecast_reading : "publication_id"
+    round_forecast_baseline }o--|| forecast_reading : "township_code"
+    round_forecast_baseline }o--|| forecast_reading : "element"
+    round_forecast_baseline }o--|| forecast_reading : "measure"
+    round_forecast_baseline }o--|| forecast_reading : "slot_start"
