@@ -727,7 +727,19 @@ services:
       - airflow-auth:/opt/airflow/auth
     ports:
       # Second published port, and it is the orchestrator's own UI rather than the product.
-      - "${AIRFLOW_HTTP_PORT:-8081}:8080"
+      #
+      # **Bound to loopback by default (2026-09-04), so the SSH tunnel is the only door by
+      # CONSTRUCTION rather than by the security group alone.** On a public host this was
+      # `0.0.0.0:8081` — unreachable today because the SG allows 80 and 22 and nothing else, and
+      # **one SG edit from being the operator's Airflow UI on the open internet.** A defence that
+      # depends on a setting in a different system, edited by a different tool, is one mistake
+      # deep. The tunnel is in the runbook's §7:
+      #     ssh -N -L 8081:127.0.0.1:8081 ec2-user@<host>
+      #
+      # `AIRFLOW_BIND` exists for the dev VM, which reaches this UI from the LAN; it is set to
+      # `0.0.0.0` in that box's `.env` so nothing there changes, and **the DEFAULT is the safe
+      # one** — a host that says nothing gets loopback.
+      - "${AIRFLOW_BIND:-127.0.0.1}:${AIRFLOW_HTTP_PORT:-8081}:8080"
     depends_on:
       airflow-init:
         condition: service_completed_successfully
