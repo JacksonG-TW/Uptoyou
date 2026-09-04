@@ -379,7 +379,16 @@ async def _with_connection(work):
         await engine.dispose()
 
 
-def stored_sha_sync(embed_model: str) -> str | None:
+def brand_digest_sync() -> str:
+    """`brand_digest` for a caller that wants it without touching the database.
+
+    It reads a Python dict, so it needs no connection at all — kept beside its siblings so a
+    round runner asking about the crib finds every question answered in one place.
+    """
+    return brand_digest()
+
+
+def stored_sha_sync(embed_model: str, source: str = TESTSET) -> str | None:
     """`stored_sha` for a synchronous caller — the round runner, which has no loop of its own.
 
     A fresh engine per call, disposed per call: an asyncpg connection belongs to the loop
@@ -388,7 +397,27 @@ def stored_sha_sync(embed_model: str) -> str | None:
     """
 
     async def work(connection):
-        return await stored_sha(connection, embed_model)
+        return await stored_sha(connection, embed_model, source)
+
+    return asyncio.run(_with_connection(work))
+
+
+def crib_counts_sync(embed_model: str) -> dict[str, int]:
+    """How many rows this embedder holds per source — what a report has to state.
+
+    The Done line asks for the crib's size before and after, and «the crib» is now two numbers.
+    Reading them from the store rather than from `len(BRAND_LABELS)` is the point: the file says
+    what was authored, this says what was loaded, and a load that half-failed differs.
+    """
+
+    async def work(connection):
+        rows = (await _execute(
+            connection,
+            "select source, count(*) as n from example_embedding "
+            " where embed_model = :model and prefix_kind = :prefix_kind group by source",
+            {"model": embed_model, "prefix_kind": embedding.prefix_kind(embed_model)},
+        )).all()
+        return {row.source: row.n for row in rows}
 
     return asyncio.run(_with_connection(work))
 

@@ -458,6 +458,34 @@ def read_key(path: str = GEMINI_KEY_FILE) -> str:
     return key
 
 
+def _crib_provenance(embed_model: str) -> dict:
+    """What the round retrieved from, per source — sizes and digests.
+
+    **Imported inside the function, like every other `classify.examples` use here.** That module
+    pulls SQLAlchemy and this runner is host-side importable; a module-level import would move
+    the whole file to the other tempo, which its own docstring exists to prevent.
+    """
+    try:
+        from upto.classify import examples as example_store
+    except ImportError:
+        # **Only ImportError, and only because it means one exact thing here:** this process has
+        # no SQLAlchemy, so it is the host-side tempo and no store was consulted — the offline
+        # round tests stub retrieval entirely. Recording nothing is then the true statement. A
+        # database error is NOT caught: the staleness guard above already ran against the real
+        # store, so a failure at this point is a fault and must be seen.
+        return {}
+
+    counts = example_store.crib_counts_sync(embed_model)
+    out = {"crib_rows": counts}
+    testset_sha = example_store.stored_sha_sync(embed_model)
+    if testset_sha:
+        out["crib_testset_sha256"] = testset_sha
+    brand_sha = example_store.stored_sha_sync(embed_model, source=example_store.BRAND)
+    if brand_sha:
+        out["crib_brand_sha256"] = brand_sha
+    return out
+
+
 def build_candidate(name: str):
     if name in LOCAL_MODELS:
         return Local(name)
@@ -550,6 +578,21 @@ def rag_examples(digest: str, embed_model: str, k: int = RAG_K):
             f"example_embedding's {embed_model} rows were built from test set {stored} and the "
             f"file now hashes to {digest} — the owner amended a label under the crib. Re-run "
             "`docker compose exec api python -m upto.classify.examples load --embed <key>`."
+        )
+
+    # **The brand half is checked the same way, and it has to be.** Since D88's 2026-09-03
+    # amendment the store holds a second source and a round retrieves from BOTH; a guard that
+    # only knew about the frozen set would run happily against brand rows built from labels the
+    # owner has since amended, and the report would describe a crib that no longer exists. The
+    # brand digest covers the LABELS, so an amendment is exactly what makes it move.
+    brand_digest = example_store.brand_digest_sync()
+    brand_stored = example_store.stored_sha_sync(embed_model, source=example_store.BRAND)
+    if brand_stored is not None and brand_stored != brand_digest:
+        raise UsageError(
+            f"example_embedding's {embed_model} BRAND rows were built from {brand_stored} and "
+            f"brand_labels.py now hashes to {brand_digest} — a label was amended under the crib. "
+            "Re-run `docker compose run --rm tests python -m upto.classify.examples load-brands "
+            "--embed <key>`."
         )
 
     def examples_for(name: str) -> list[tuple[str, str]]:
@@ -704,6 +747,11 @@ def main(argv: list[str]) -> int:
         # what names this cell of the matrix and what the file name carries. `k` is the real k
         # this run retrieves with, never the constant — M10's scan is unreadable otherwise.
         document["rag"] = {"embed_model": embed_model, "embed_key": embed_key, "k": k}
+        # **The crib's identity travels with the round, both halves.** The report claims a
+        # number against a named crib; without this the claim rests on whatever was loaded at
+        # the time, which nobody can check afterwards. `brand` is absent on a round run before
+        # the crib was grown, which is a true statement about that round rather than a gap.
+        document["rag"].update(_crib_provenance(embed_model))
     if os.path.exists(path):
         with open(path, encoding="utf-8") as handle:
             existing = json.load(handle)
