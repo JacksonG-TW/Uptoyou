@@ -773,10 +773,34 @@ shown to work on a phone; it has been shown to photograph well on a laptop.
 
 **Do not read a green 1440 gate as a green product.**
 
-### The switcher's corner at ultra-wide — ruled 2026-08-21 by the evaluator under `D101`'s delegation
+### The switcher's corner at ultra-wide — ruled 2026-08-21, WITHDRAWN by the owner 2026-09-04
 
-**The switcher and the back arrow stay pinned to the viewport's corners at every width. No code
-change.** Measured at 2560: the home composition scales as one object (9ad903d, 甲) and centres,
+> **This paragraph no longer describes the product. Owner-ruled 2026-09-03, 軸二 = 乙 報頭內
+> (`D101` amendment (10)'s sibling ruling; `spec-round-menu-2026-09-03.md` §3): the switcher moves
+> INTO the home's masthead row — brand · dateline · picker · switcher — and the four inner screens
+> get ONE slim fixed bar carrying 返回 at the left and the links at the right. It reverses ruling ⑥
+> of 2026-08-20 and it reverses the sentence below.**
+>
+> **It is kept rather than deleted because its argument is still the live constraint.** *Chrome
+> belongs to the window; the page belongs to the page* is why the inner screens keep a fixed bar
+> instead of putting navigation into each screen's own flow, and why the bar is one full-width rule
+> rather than something aligned to the composition. What the ruling changed is the HOME, where the
+> masthead is itself chrome and the switcher inside it is no longer a second, competing frame.
+>
+> **What it cost, measured before the build** (candidate 5, `idea & img/evaluator/baseline-cand5/`):
+> the masthead is a wrapping flex row already holding brand, dateline and the picker. At **1440 and
+> 2560 the switcher fits on that row and the masthead's height does not change**, which is why A0c
+> stayed at 0.00 px through this change. At **≤900 it does not fit** (752 px of content against 777
+> needed) and the masthead grows by the switcher's own row — **+44 at 900, +43 uniform at 430**,
+> verified as a uniform delta with nothing else moving. Nothing was shrunk to prevent it: a cramped
+> four-item row is worse than an honest second line, and 900 is not a gated fidelity width.
+>
+> **`D107` still stands and the deletability promise with it.** The switcher is still demo
+> scaffolding — one component, one stylesheet block, one line in `main.tsx`. One bar is fewer
+> pieces than two.
+
+*(The withdrawn text, kept whole:)* **The switcher and the back arrow stay pinned to the viewport's
+corners at every width. No code change.** Measured at 2560: the home composition scales as one object (9ad903d, 甲) and centres,
 so the 273px switcher strip sits 167px clear of the column's right edge — visibly detached from
 the composition. **That detachment is correct, not a defect.** The switcher is demo scaffolding
 (`D107`: it disappears with the demo), and scaffolding that aligns itself to the composition
