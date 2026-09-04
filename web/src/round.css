@@ -148,7 +148,42 @@
 .hitName { font-weight: 700; }
 .hitWhere { font-size: var(--text-note); color: var(--color-muted); margin-left: auto; }
 
-.poolBlock { margin-top: 32px; padding-top: 24px; border-top: 3px solid var(--color-ink); }
+/* 角花 — the corner ornament. `spec-round-menu-2026-09-03.md` sec. 4; owner-ruled 2026-09-03 as
+   路（a）, over 路（b）'s 茶綠 second colour; arms, stroke and colour ruled 2026-09-04 and recorded
+   as **D101 (10)**.
+
+   **Two corners, top-left and bottom-right, not four.** That is what the owner ruled from; four is
+   a different ornament. **Arms 28 px, stroke 3 px** — 3 px is rule 5's structural weight, so no
+   fifth stroke weight enters the system; the 4 px variant on `round-ornament.html` is labelled
+   there as needing rule 5 amended and is not built. The diagnosis the ruling rests on: the
+   complaint was arm LENGTH, not value — the hue dies at 14 px, not at its own contrast.
+
+   **The 3 px top rule this block used to carry is now the 1.5 px frame around it.** A block with a
+   frame and a heavy top rule reads as two boxes; the corner marks need something to sit on the
+   corners of, and 1.5 px is rule 5's row layer, already the weight of the rows inside.
+
+   **One site, and the token is used here and nowhere else** (D101 (10)'s guardrail). No `.ornament`
+   class: a named, single-use class is an invitation to a second caller, and the ruling says a
+   second site is a new decision rather than an extension. The negative offsets are the stroke's own
+   width, so an arm's outer edge lands exactly on the frame rather than a hair inside it.
+
+   `::before`/`::after` reach no accessibility tree, which is correct — the ornament says nothing. */
+.poolBlock {
+  position: relative;
+  margin-top: 32px;
+  padding: 16px 20px;
+  border: 1.5px solid var(--color-ink);
+}
+.poolBlock::before,
+.poolBlock::after {
+  content: "";
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--color-ornament);
+}
+.poolBlock::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
+.poolBlock::after { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
 .round .rows { list-style: none; margin: 0; padding: 0; }
 .round .row {
   display: flex; align-items: center; min-height: 56px;

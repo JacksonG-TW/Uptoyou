@@ -186,6 +186,26 @@
   --color-onflood-jade-deep: #FFFDF7;
   --color-onflood-sun-deep: #101114;
 
+  /* **The ornament's green — D101 (10), owner-ruled 2026-09-04.** A SIXTH colour, and the
+     restriction is what pays for it: **ornament stroke only.** Never a ground, never text, never a
+     fill, never a border on a component, never a state. It deliberately has **no on-colour
+     companion** — every other colour here has one and this one must not, because nothing is ever
+     drawn on top of it; if someone needs one, the use is already outside this rule. (The partner
+     token's name is left unwritten on purpose, so a grep for it finds no hit at all rather than
+     finding this sentence.) One use site on the surface today (`round.css`, 這一輪的名單);
+     a second is a new decision, not an extension.
+
+     **Named by its job, not by its hue.** Rejected: `--color-leaf` / `--color-tea` — a hue name
+     invites the next reader to reach for it as *a green*, and general reuse is exactly what
+     dilutes 「一面出來就擁有整個畫面」, which was D101's own argument for one accent. Named for the
+     job, a second use site reads as a mistake.
+
+     Measured: **3.72** on the paper (graphic floor 3.0) and **4.98** against the ink line it sits
+     on. `jade #00A870` was the only green needing no new token and was rejected — it clears the
+     floor by 0.02 and is one of the four die-face colours. **This is not a fifth die face**: the
+     four below keep their meaning and this green must never appear where a face colour belongs. */
+  --color-ornament: #009663;
+
   /* the die is an OBJECT, not a surface — identical in both schemes. `pipred` is its
      own token and never follows an accent that flips (reusing the accent measured
      2.74:1 on a bone face in dark, under the 3:1 floor for a graphical object). */
