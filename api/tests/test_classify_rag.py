@@ -596,9 +596,24 @@ class TheEmbedderPrefix(unittest.TestCase):
     def test_the_kind_is_resolved_from_the_model_string(self):
         """The store keys on the model string, so the label must come from the same thing."""
         from upto.classify import embed
-        self.assertEqual(embed.prefix_kind("snowflake-arctic-embed2"), "query")
         self.assertEqual(embed.prefix_kind("bge-m3"), "none")
         self.assertEqual(embed.prefix_kind("qwen3-embedding:4b-q8_0"), "instruct")
+        self.assertEqual(embed.prefix_kind("zylonai/multilingual-e5-large"), "query")
+
+    def test_the_incumbent_is_bare_because_the_screen_said_so(self):
+        """**The 2026-08-31 ruling, pinned where the code can be checked against it.**
+
+        The kNN-1 screen measured `arctic` bare **55.0** against `arctic` + `query: ` **53.5** —
+        the card's own recommended prefix costs 1.5 points on this task — and the row closes «the
+        embedder axis closes: arctic, bare, stays». **The map said `query: ` until 2026-09-04**,
+        so every arctic load after 0041 was embedded on the losing setting and one round pair was
+        confounded by it (H72). This test is the thing that would have said so.
+        """
+        from upto.classify import embed
+        self.assertEqual(embed.EMBED_PREFIX["arctic"], "",
+                         "the 08-31 ruling is `arctic, bare, stays` — a prefix here is the "
+                         "ruling not reaching the code")
+        self.assertEqual(embed.prefix_kind("snowflake-arctic-embed2"), "none")
 
     def test_an_unrecorded_model_is_unknown_and_never_none(self):
         """`none` claims the text was sent bare; `unknown` says nobody knows. A crib mixing those
@@ -619,14 +634,21 @@ class TheEmbedderPrefix(unittest.TestCase):
         original = embed_module.fetch
         embed_module.fetch = fake_fetch
         try:
-            embed_module.embed(["某店"], model="snowflake-arctic-embed2")
+            # **`e5`, not `arctic`.** The behaviour under test is «one place applies the
+            # prefix»; arctic went bare on 2026-09-04 by the 08-31 ruling, so asserting it here
+            # would be asserting the ruling twice and would delete this test's actual subject the
+            # next time a model's convention moves. e5 still carries `query: `.
+            embed_module.embed(["某店"], model="zylonai/multilingual-e5-large")
             prefixed = captured["body"]["input"]
             embed_module.embed(["某店"], model="bge-m3")
             bare = captured["body"]["input"]
+            embed_module.embed(["某店"], model="snowflake-arctic-embed2")
+            incumbent = captured["body"]["input"]
         finally:
             embed_module.fetch = original
         self.assertEqual(prefixed, ["query: 某店"])
         self.assertEqual(bare, ["某店"], "bge is trained bare and must stay bare")
+        self.assertEqual(incumbent, ["某店"], "arctic is bare by the 08-31 ruling")
 
     def test_the_screen_names_the_convention_in_its_filename(self):
         """Two runs of one embedder differing only by prefix are two measurements; a name that

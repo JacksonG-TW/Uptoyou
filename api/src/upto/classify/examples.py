@@ -402,6 +402,28 @@ def stored_sha_sync(embed_model: str, source: str = TESTSET) -> str | None:
     return asyncio.run(_with_connection(work))
 
 
+def crib_prefixes_sync(embed_model: str) -> dict[str, int]:
+    """Which prefix conventions this embedder's rows are stored under, and how many of each.
+
+    **Asked when a lookup finds nothing, to tell «never loaded» from «loaded under the other
+    convention».** `nearest` filters on `prefix_kind`, so a crib embedded `query` is *invisible*
+    to a bare query rather than wrong — and the existing «has never been loaded» message would
+    then be false in the one way that costs a night: 179 rows are right there, under a word the
+    caller is not asking for.
+    """
+
+    async def work(connection):
+        rows = (await _execute(
+            connection,
+            "select prefix_kind, count(*) as n from example_embedding "
+            " where embed_model = :model group by prefix_kind order by prefix_kind",
+            {"model": embed_model},
+        )).all()
+        return {row.prefix_kind: row.n for row in rows}
+
+    return asyncio.run(_with_connection(work))
+
+
 def crib_counts_sync(embed_model: str) -> dict[str, int]:
     """How many rows this embedder holds per source — what a report has to state.
 

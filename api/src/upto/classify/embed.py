@@ -66,7 +66,13 @@ EMBED_PREFIX = {
     "bge": "",
     "qwen3e": "Instruct: Retrieve semantically similar text.\nQuery: ",
     "qwen3e4b": "Instruct: Retrieve semantically similar text.\nQuery: ",
-    "arctic": "query: ",
+    # **`arctic` is BARE, and that is the 2026-08-31 ruling reaching the code.** The kNN-1 screen
+    # measured `arctic` bare **55.0** against `arctic` + `query: ` **53.5** — the card's own
+    # recommended prefix costs 1.5 points on this task — and the row closes with «the embedder
+    # axis closes: arctic, bare, stays». D88's 2026-09-03 amendment repeats «arctic bare» as the
+    # live setting. **The map said `query: ` until 2026-09-04**, so every arctic load after 0041
+    # was embedded on the losing setting, including the crib the city pass used. H72.
+    "arctic": "",
     "e5": "query: ",
 }
 
@@ -77,7 +83,7 @@ PREFIX_KIND = {
     "bge": "none",
     "qwen3e": "instruct",
     "qwen3e4b": "instruct",
-    "arctic": "query",
+    "arctic": "none",
     "e5": "query",
 }
 

@@ -466,6 +466,7 @@ def _crib_provenance(embed_model: str) -> dict:
     the whole file to the other tempo, which its own docstring exists to prevent.
     """
     try:
+        from upto.classify import embed as embedding
         from upto.classify import examples as example_store
     except ImportError:
         # **Only ImportError, and only because it means one exact thing here:** this process has
@@ -476,7 +477,10 @@ def _crib_provenance(embed_model: str) -> dict:
         return {}
 
     counts = example_store.crib_counts_sync(embed_model)
-    out = {"crib_rows": counts}
+    # **The field that would have caught 2026-09-04.** Two rounds of the same candidate, prompt,
+    # embedder and k are still not comparable if one embedded bare and the other prefixed — the
+    # screen measured 1.5 points between them — and neither round file recorded it. H72.
+    out = {"crib_rows": counts, "prefix_kind": embedding.prefix_kind(embed_model)}
     testset_sha = example_store.stored_sha_sync(embed_model)
     if testset_sha:
         out["crib_testset_sha256"] = testset_sha
@@ -568,6 +572,22 @@ def rag_examples(digest: str, embed_model: str, k: int = RAG_K):
 
     stored = example_store.stored_sha_sync(embed_model)
     if stored is None:
+        # **«Never loaded» and «loaded under the other convention» are different faults and the
+        # second one used to read as the first (H72).** `nearest` filters on `prefix_kind`, so a
+        # crib embedded `query:` is INVISIBLE to a bare query rather than wrong — and on
+        # 2026-09-04 that produced a round whose crib and whose baseline were embedded
+        # differently, with nothing in either file recording the field that differed.
+        held = example_store.crib_prefixes_sync(embed_model)
+        want = embedding.prefix_kind(embed_model)
+        if held:
+            raise UsageError(
+                f"example_embedding holds {embed_model} rows under {sorted(held)} and this round "
+                f"embeds its queries as {want!r} — a crib under another convention is invisible "
+                "to the search, not wrong, so the round would score against an empty crib. "
+                "Re-load this embedder: `docker compose run --rm tests python -m "
+                "upto.classify.examples load --embed <key>` (and `load-brands` if the brand crib "
+                "is wanted)."
+            )
         raise UsageError(
             f"example_embedding holds no {embed_model} rows — D88's crib has never been loaded "
             "for this embedder. Run `docker compose exec api python -m upto.classify.examples "
