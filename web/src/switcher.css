@@ -204,24 +204,39 @@
   transition: background-color .45s ease-out, color .45s ease-out, border-color .45s ease-out;
 }
 
-/* INK-FILL for the chrome, inverted into the flood's own colour. The base pair is in
-   `switcher.css`; this screen floods to one of four saturated grounds.
+/* INK-FILL for the chrome, inverted into the flood's own colour. This screen floods to one of four
+   saturated grounds, so the base pair in the ordinary bar above cannot serve here.
 
-   **The old pair here was `{ background: currentColor; color: var(--color-ink) }` and it was worse
-   than the one above.** Over the flood `currentColor` IS the face's on-colour, which is ink on hot,
-   jade and sun — so the press state filled ink and wrote ink: invisible on three faces of four, and
-   invisible in every screenshot too, because it is a press state. Filling with the on-colour and
-   writing the FLOOD's colour is the same measured pair the other way round, so it passes on all
-   four: 7.98 · 6.56 · 6.14 · 11.74. */
-.navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-hot); }
-.navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-cobalt); }
-.navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-jade); }
-.navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-sun); }
+   **`currentColor` is banned in this block, and both of the first two attempts proved why**
+   (evaluator, RC-13, measured with a real held press on all four faces).
+
+   `currentColor` in `background` resolves against the **same element's** computed `color` — so any
+   rule of the shape `{ background: currentColor; color: <anything> }` paints its ground and its
+   text the same colour. Ratio **1.00**, on every face, invisible.
+
+   That is what the original block did (`{ background: currentColor; color: var(--color-ink) }`),
+   and it is what MY first fix did too (`{ background: currentColor; color: var(--color-flood-*) }`)
+   — I changed which colour it collided on and not the collision. **Neither the stylesheet nor a
+   screenshot can see this**: each declared value is individually correct, and a press state is not
+   in any screenshot. Only a held press finds it, which is why RC-13 is now specified as a held
+   press rather than as a rule that resolves.
+
+   **Correction on the record:** the commit that introduced this block described the original as
+   «ink on hot, jade and sun — invisible on three faces of four». That was wrong in the same
+   direction and inherited from the same misreading. The original was same-on-same on **all four**,
+   and it never had a working press state at all.
+
+   So both colours are named explicitly. Filling with the face's `on-*` and writing the flood's own
+   colour is the measured pair the other way round: **7.98 · 6.56 · 6.14 · 11.74**. */
+.navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: var(--color-on-hot); color: var(--color-flood-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: var(--color-on-cobalt); color: var(--color-flood-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: var(--color-on-jade); color: var(--color-flood-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):active { background: var(--color-on-sun); color: var(--color-flood-sun); }
 @media (hover: hover) {
-  .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-hot); }
-  .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-cobalt); }
-  .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-jade); }
-  .navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-sun); }
+  .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):hover { background: var(--color-on-hot); color: var(--color-flood-hot); }
+  .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):hover { background: var(--color-on-cobalt); color: var(--color-flood-cobalt); }
+  .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):hover { background: var(--color-on-jade); color: var(--color-flood-jade); }
+  .navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):hover { background: var(--color-on-sun); color: var(--color-flood-sun); }
 }
 @media (prefers-reduced-motion: reduce) {
   .navbar:has(~ .reveal[data-face]),
