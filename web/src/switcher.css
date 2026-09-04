@@ -140,3 +140,91 @@
 @media (prefers-reduced-motion: reduce) {
   .switcher a, .backLink { transition: none; }
 }
+
+/* ═══ over the reveal's flood ═══════════════════════════════════════════════════════════════
+   Moved here from `reveal.css` on 2026-09-04, by the same rule that used to keep it there: the
+   global-namespace check refuses two stylesheets claiming one root-reachable class, and the
+   `:has()` form makes `.navbar` the class this selector leads with. So the block belongs to the
+   bar's own stylesheet now. `.reveal` sits after a combinator inside `:has()`, so this file does
+   not claim it and the check stays satisfied both ways.
+
+   **THE RULING, and it is kept whole because it is the thing that survived:** paper-on-flood would
+   read as a sticker stuck to the page. The scaffolding takes the flood's own ink pair instead,
+   which is legible on all four faces because `on-*` is exactly the pair measured against that
+   ground. Owner-restated 2026-09-04 — 「開獎頁，我不喜歡貫穿式的」 — and 貫穿 names the LINE that runs
+   across, so the full-width bottom rule goes with the ground.
+
+   **Why the selectors are `:has()` and not `~` (spec-reveal-chrome-2026-09-04.md).** 乙 put the
+   chrome in ONE bar that precedes `{screen}` in `main.tsx` — correct for tab order — so a general
+   sibling combinator can never reach it and these rules matched nothing on candidate 6, with every
+   gate green. A ruling stayed in the file and stopped reaching the page. The evaluator's §0 records
+   that dead code and a withdrawn ruling look identical in a diff, and this paragraph was the only
+   thing that told them apart; do not delete it to tidy the file.
+
+   **Why four rules and not one `inherit` — measured, not reasoned.** The flood's colour is set on
+   `.reveal` itself (`:44–47`) and `.navbar` is its SIBLING, so `inherit` on the bar resolves
+   against the root, i.e. ink, on every face. Against the four floods that is 7.98 · **2.83** ·
+   6.14 · 11.74 — cobalt fails 4.5 for text AND the 3.0 graphic floor, and the other three pass by
+   luck. So each face names its own `on-*` pair. `inherit` appears exactly once below, on the bar's
+   CHILDREN, where the parent IS `.navbar` and the word means what it says. */
+.navbar:has(~ .reveal[data-face]) {
+  background: transparent;
+  /* §3a — the 2 px rule across the screen is the 貫穿 the owner named. The WIDTH goes to zero
+     rather than the colour going transparent, because a transparent 2 px border still reserves
+     2 px and RC-11 measures the width. `.navbar` is fixed and `--bar-h` is a static calc, so
+     nothing in `main` moves when it goes. */
+  border-bottom-width: 0;
+  /* The flood's own .45s, matched on every property that moves — including the border width, or
+     the rule snaps away while the ground is still fading and the two read as two events (RC-14).
+     Declared here rather than on `.navbar` so the whole item stays in one block and deletes with
+     the screen. */
+  transition: background-color .45s ease-out, color .45s ease-out,
+              border-color .45s ease-out, border-bottom-width .45s ease-out;
+}
+.navbar:has(~ .reveal[data-face="hot"])    { color: var(--color-on-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) { color: var(--color-on-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   { color: var(--color-on-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    { color: var(--color-on-sun); }
+
+/* **The bar's children carry their own paper ground and their own ink, so zeroing the bar is not
+   enough** — `switcher.css` sets `background: var(--color-paper)` and `color: var(--color-ink)` on
+   `.backLink`, and `color: var(--color-ink)` on every `.switcher a`. Without this block RC-11
+   passes on `.navbar` while 返回 still wears a paper chip and every link still writes ink, which on
+   cobalt is the 2.83 above. **`inherit` is correct HERE and only here**: these elements' parent is
+   `.navbar`, which carries the face's pair four rules up.
+
+   The short vertical dividers stay and follow the face (evaluator's ruling 2): they group the links
+   without drawing a line across anything, and without them the bar reads as loose floating words
+   rather than as chrome. */
+.navbar:has(~ .reveal[data-face]) .switcher a,
+.navbar:has(~ .reveal[data-face]) .backLink {
+  background: transparent;
+  color: inherit;
+  border-color: currentColor;
+  transition: background-color .45s ease-out, color .45s ease-out, border-color .45s ease-out;
+}
+
+/* INK-FILL for the chrome, inverted into the flood's own colour. The base pair is in
+   `switcher.css`; this screen floods to one of four saturated grounds.
+
+   **The old pair here was `{ background: currentColor; color: var(--color-ink) }` and it was worse
+   than the one above.** Over the flood `currentColor` IS the face's on-colour, which is ink on hot,
+   jade and sun — so the press state filled ink and wrote ink: invisible on three faces of four, and
+   invisible in every screenshot too, because it is a press state. Filling with the on-colour and
+   writing the FLOOD's colour is the same measured pair the other way round, so it passes on all
+   four: 7.98 · 6.56 · 6.14 · 11.74. */
+.navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):active { background: currentColor; color: var(--color-flood-sun); }
+@media (hover: hover) {
+  .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-hot); }
+  .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-cobalt); }
+  .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-jade); }
+  .navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):hover { background: currentColor; color: var(--color-flood-sun); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navbar:has(~ .reveal[data-face]),
+  .navbar:has(~ .reveal[data-face]) .switcher a,
+  .navbar:has(~ .reveal[data-face]) .backLink { transition: none; }
+}

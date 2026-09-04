@@ -595,28 +595,13 @@
   max-width: min(1200px, 88vw); text-align: center; line-height: 1.7;
 }
 
-/* The demo scaffolding, over the flood. **Here rather than in `switcher.css` because these
-   selectors lead with `.reveal`**, and a second stylesheet claiming that class is what the
-   global-namespace check refuses — the same collision that made the die render as a black blob,
-   caught by a rule instead of by a screenshot this time.
-
-   Paper-on-flood would read as a sticker stuck to the page. The scaffolding takes the flood's own
-   ink pair instead, which is legible on all four faces because `on-*` is exactly the pair measured
-   against that ground. */
-.reveal ~ .backLink,
-.reveal ~ .switcher { background: transparent; color: inherit; }
-
-/* INK-FILL for the chrome, in the flood's own colours. The base pair is in `switcher.css`; this
-   screen floods to one of four saturated grounds, so ink-on-ink is reachable there and
-   `currentColor` is the only pair that cannot be. Kept in this file because a `.reveal ~ …` rule
-   in `switcher.css` would claim `.reveal` as a root class in a second stylesheet — no CSS modules
-   here, so the later load would win on every screen. */
-.reveal ~ .switcher a:active,
-.reveal ~ .backLink:active { background: currentColor; color: var(--color-ink); }
-@media (hover: hover) {
-  .reveal ~ .switcher a:hover,
-  .reveal ~ .backLink:hover { background: currentColor; color: var(--color-ink); }
-}
+/* The demo scaffolding over the flood — **the rules moved to `switcher.css` on 2026-09-04 and the
+   move was forced by a gate, not by taste.** They used to live here because they led with
+   `.reveal`, and `test_web_surface`'s global-namespace check refuses a second stylesheet claiming a
+   root-reachable class. The `:has()` form inverts exactly that: the selector now leads with
+   `.navbar`, so keeping it here made THIS file the second claimant of `.navbar` and `.backLink` and
+   the check failed the commit — the same rule that kept them here now sends them away. The ruling
+   they carry, and the measurements behind it, moved with them whole. */
 
 /* ── the operator's evidence (D105, §4b) ────────────────────────────────────
    Appends below the answer region. Nothing above it moves when it is present. */
