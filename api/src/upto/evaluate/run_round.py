@@ -221,7 +221,8 @@ def evaluation_dir(start: str | None = None) -> str:
 
 
 def round_path(candidate: str, prompt_version: str = PROMPT_VERSION,
-               embed_key: str | None = None, k: int | None = None) -> str:
+               embed_key: str | None = None, k: int | None = None,
+               crib_digest: str | None = None) -> str:
     """Where a round is written. `embed_key` is D88's second axis and `bge` is spelled by omission.
 
     The default embedder appends nothing, and that is a compatibility rule rather than
@@ -240,11 +241,52 @@ def round_path(candidate: str, prompt_version: str = PROMPT_VERSION,
         suffix = "_" + embed_key
     if k is not None and k != RAG_K:
         suffix += f"_k{k}"
+    # **A grown crib is a fourth axis, and it was not in the name until 2026-09-04 (H72).** Two
+    # rounds of the same candidate, prompt, embedder and k retrieved from different stores are
+    # two measurements, and the first pair collided: the brand-crib run silently overwrote the
+    # committed v7 baselines, which are the comparability of every number on the ladder. **A crib
+    # with no brand rows appends nothing**, so every filename already on disk stays reachable by
+    # the runner that wrote it — the same compatibility rule the embedder and k follow.
+    if crib_digest:
+        suffix += "_brand" + crib_digest[:8]
     return os.path.join(evaluation_dir(), f"round_{candidate}_{prompt_version}{suffix}.json")
 
 
+# The `rag` fields that make two rounds different MEASUREMENTS rather than two attempts at one.
+# A round may freely overwrite its own file; it may not overwrite a file whose retrieval differed.
+_IDENTITY = ("prefix_kind", "crib_testset_sha256", "crib_brand_sha256", "embed_model", "k")
+
+
 def save(path: str, document: dict) -> None:
-    """Write whole, then move into place — a crash mid-write must not eat the round so far."""
+    """Write whole, then move into place — a crash mid-write must not eat the round so far.
+
+    **And refuse to write over a different measurement (H72).** On 2026-09-04 a run whose crib and
+    whose prefix convention both differed from the committed baseline wrote straight over it,
+    under a name that encodes candidate, prompt, embedder and k and nothing about retrieval. The
+    name now carries the crib, which prevents the common case; this is the guard for the rest,
+    because a name can only encode what somebody thought of.
+
+    **Same `started_at` means the same run**, which is what makes resume and per-batch saves work
+    — only a *different* run with *different* retrieval is refused.
+    """
+    if os.path.exists(path):
+        try:
+            with open(path, encoding="utf-8") as handle:
+                existing = json.load(handle)
+        except (OSError, ValueError):
+            existing = None
+        if existing and existing.get("started_at") != document.get("started_at"):
+            was, now = existing.get("rag") or {}, document.get("rag") or {}
+            differing = [f for f in _IDENTITY if f in was and was.get(f) != now.get(f)]
+            if differing:
+                raise UsageError(
+                    "{} holds a round retrieved differently — {} — so writing over it would "
+                    "destroy a measurement rather than replace an attempt. Move it aside, or "
+                    "give this run a name of its own.".format(
+                        os.path.basename(path),
+                        "; ".join("{}: {!r} vs {!r}".format(f, was.get(f), now.get(f))
+                                  for f in differing))
+                )
     os.makedirs(os.path.dirname(path), exist_ok=True)
     temporary = path + ".partial"
     with open(temporary, "w", encoding="utf-8") as handle:
@@ -742,7 +784,11 @@ def main(argv: list[str]) -> int:
 
     gold_rows, digest = load_testset()
     prompt_version = RAG_PROMPT_VERSION if rag else PROMPT_VERSION
-    path = round_path(name, prompt_version, embed_key if rag else None, k if rag else None)
+    # **The crib's identity is read BEFORE the name is chosen**, because it is part of the name
+    # now (H72). A plain round retrieves from nothing and asks the store nothing.
+    provenance = _crib_provenance(EMBED_MODELS[embed_key]) if rag else {}
+    path = round_path(name, prompt_version, embed_key if rag else None, k if rag else None,
+                      provenance.get("crib_brand_sha256"))
 
     examples_for = None
     document = {
