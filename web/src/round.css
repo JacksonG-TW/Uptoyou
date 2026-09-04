@@ -315,10 +315,31 @@
    and they take the same recipe rather than a second one invented here. */
 .round .tonightBlock { margin-top: 28px; }
 
-.round .chips {
+/* 甲・菜單 — `spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and 帳本.
+
+   **Two columns, filled DOWN then across, which is what `columns` does and what a printed menu
+   does.** Do not "fix" it to across-then-down: the reading order of a menu is a column at a time,
+   and CSS columns is the one layout primitive that gives it without numbering the rows by hand.
+   `break-inside: avoid` keeps a row whole; one column below 900, where two would put four
+   characters and a number in 150 px. */
+.round .menu {
   list-style: none; margin: 0; padding: 0;
-  display: flex; flex-wrap: wrap; gap: 8px;
+  columns: 2; column-gap: 48px;
 }
+.round .menu li { break-inside: avoid; }
+@media (max-width: 900px) { .round .menu { columns: 1; } }
+
+/* 密度一's section mark — sec. 2. One lucide icon, one heading, one line. `hot-ink` is the
+   surface's accent and the icon inherits it through `currentColor` rather than setting a colour of
+   its own, so a palette change reaches it. No rule above it: the reference the owner ruled from
+   carries none, and the screen's 3 px weight belongs to `.poolBlock`'s own top rule. */
+.round .menuSection {
+  display: flex; align-items: center; gap: 10px;
+  margin: 18px 0 2px;
+  font-size: var(--text-body); font-weight: 900;
+  color: var(--color-hot-ink);
+}
+.round .menuSection svg { flex: none; }
 
 /* **A chip carries a STANCE, not an act — so it does not get the act's construction.**
    Evaluator-ruled 2026-08-28 from the stranger's walk (`spec-tonight-chips.md`), and the defect it
@@ -330,29 +351,68 @@
 
    **1.5px is the system's own number for this, not a thinning.** §5 rule 5 names 「the chip's
    border」 at 1.5px explicitly — the 2px I used was the drift, and the ruling puts it back. */
+/* **A row, not a chip — the box went and the rule under it took its job** (sec. 1). The 1.5 px
+   border that used to draw four sides now draws one, which is `design.md` rule 5's row layer and
+   the same number the chip carried; no weight is introduced or removed. Everything else the chip
+   ruling settled stands: no shadow (the fill is the signal, R-2), 500 at rest and 700 on, and the
+   leading mark. `align-items: baseline` so the name, the dots and the count sit on one line rather
+   than being centred against each other's boxes. */
 .round .chip {
-  /* **Geometry only, and it is what a leading mark needs** — `spec-chip-mark.md` §1, accepted as
-     geometry rather than as a change to the chip's construction: 500/700, the 1.5px border, the
-     heights and the no-shadow rule all stand. */
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1.5px solid var(--color-ink);
-  background: var(--color-paper);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1.5px solid var(--color-ink);
+  background: none;
   color: var(--color-ink);
+  font-family: inherit;
   font-size: var(--text-body);
   font-weight: 500;
+  text-align: left;
   cursor: pointer;
   /* No `box-shadow`, at rest or on. The fill IS the signal (R-2). */
   transition: background-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
 }
+.round .chip .n { font-weight: 700; white-space: nowrap; }
+/* **The leader dots, and they are the menu's whole signature.** `flex: 1` so they take whatever is
+   left between the name and the count — and run to the row's end when there is no count, which is
+   what an un-avoided row looks like under sec. 2b's build default. `translateY` lifts the dotted
+   rule off the baseline to where a menu prints it; `min-width` keeps a hint of dots on the longest
+   name at the narrowest column, where the free space is nearly nothing. */
+.round .chip .lead {
+  flex: 1;
+  min-width: 24px;
+  border-bottom: 2px dotted var(--color-ink);
+  transform: translateY(-.35em);
+  opacity: .55;
+}
+/* The count. **`tabular-nums` because these are figures in a column** — proportional digits make
+   two counts of the same magnitude read as different lengths. */
+.round .chip .c {
+  color: var(--color-muted);
+  font-size: var(--text-note);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* The awaiting-classification sentence is prose, not a figure, so it is allowed to wrap. Without
+   this it would be one `nowrap` line long enough to push the row past the column. */
+.round .chip .c[data-shape="why"] { white-space: normal; }
+
+/* **The flood reads as a printed bar rather than as a hover**, which is what the 10 px of
+   horizontal padding buys: the ink runs past the text on both sides the way a menu's selected line
+   does. The dots and the count must take paper with it — on ink they are `--color-muted` and
+   `--color-ink` respectively, which is invisible in the one state they exist to be read in. */
 .round .chip[data-on="yes"] {
   background: var(--color-ink);
   color: var(--color-paper);
   font-weight: 700;
+  padding-left: 10px;
+  padding-right: 10px;
 }
+.round .chip[data-on="yes"] .c { color: var(--color-paper); }
+.round .chip[data-on="yes"] .lead { border-color: var(--color-paper); }
 /* **The registry's selection mark — `currentColor`, not ink** (evaluator-ruled 2026-08-30).
    It was `--color-ink` on both the border and the fill, which is right only where the control it
    sits in is also ink. Two places it was not: on a **selected chip** (ink ground) it would have
@@ -395,13 +455,11 @@
 /* 38 at phone width. **600 is not a new breakpoint** — it is the width `spec-inner-header.md` §1
    names for where the two fixed bars read as one row, so the two specs share one number rather
    than each carrying its own. */
-@media (max-width: 600px) {
-  .round .chip { min-height: 38px; }
-}
+/* The 38 px phone height went with the chip's box: a menu row is sized by its own padding and its
+   line, and a `min-height` on it would only ever fight the two. The tap target is 12 + line + 12,
+   which is larger than the 40 the chip declared. */
 
-/* The per-type count. `roundNote` is muted; the type's own name takes ink so the eye can pair a
-   sentence with the chip it belongs to without reading the whole line. */
-.round .tonightStat b { color: var(--color-ink); font-weight: 700; }
+/* `.tonightStat`'s ink `<b>` went with the `<p>` it led — the name is the row now (sec. 1a). */
 
 /* D22's warning — the accent as a left rule, the same treatment 偏好 gives it, because it is the
    same statement about the same person and a second register would read as a different severity. */

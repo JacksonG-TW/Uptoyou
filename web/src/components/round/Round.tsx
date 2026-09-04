@@ -1,13 +1,51 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import {
   device, openRound, propose, roll, searchPlaces, materialise, subscribe,
   type Candidate, type Device, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
+import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
   CATEGORIES, fetchPreferences, postPreference, touchedLine, pct,
   type Preferences,
 } from '@/lib/preferences'
+
+/**
+ * The menu's three section marks — 密度一, ruled by the owner 2026-09-03
+ * (`spec-round-menu-2026-09-03.md` sec. 2, over 密度〇 and 密度二).
+ *
+ * **This grouping is authored by us and nothing may read it.** D38 has no notion of a section:
+ * the API's closed list is thirteen flat values, and these three groups plus their two invented
+ * headings exist on this screen and nowhere else. They were on the page the owner ruled from, so
+ * they are ruled as rendered — but they are presentation. Not a payload field, not a sort key, not
+ * a filter, and no module outside this file learns they exist. That is why the table lives here
+ * beside the markup rather than in `lib/preferences.ts` with `CATEGORIES`, which is mirrored from
+ * a migration and may only hold what the database holds.
+ *
+ * **One icon per section and none on a row** (ruling 2). `design.md` rule 6's parenthesis — the
+ * surface uses almost no icons, keep it that way rather than decorating — is why this is three and
+ * not sixteen. `Ellipsis`, not the deprecated `MoreHorizontal` alias.
+ *
+ * **The last section takes the remainder rather than a hand-written list, and that is a guard, not
+ * a shortcut.** A fourteenth category would otherwise land in no section and vanish from a screen
+ * that is supposed to state the whole closed list. Placing it by hand is still correct and still
+ * the intent — this only decides where it sits until someone does, and a row under 其他 is a
+ * recoverable wrong answer where a missing row is a silent one. Order inside every section is
+ * `CATEGORIES`' own, because each list is a filter of it and never a re-sort: the API's order is
+ * the reading order and 其他 is last by rule.
+ */
+const HOT = ['麵食', '飯食', '小吃', '火鍋', '燒烤', '日式', '西式', '台菜', '素食']
+const LIGHT = ['早餐', '咖啡飲料', '便利商店']
+
+const MENU_SECTIONS = [
+  { heading: '主食與熱食', Icon: Soup, values: CATEGORIES.filter((c) => HOT.includes(c)) },
+  { heading: '輕食與飲品', Icon: Coffee, values: CATEGORIES.filter((c) => LIGHT.includes(c)) },
+  {
+    heading: '其他',
+    Icon: Ellipsis,
+    values: CATEGORIES.filter((c) => !HOT.includes(c) && !LIGHT.includes(c)),
+  },
+]
 
 /**
  * A4 — the round screen: open, propose, roll.
@@ -319,57 +357,89 @@ export default function Round() {
           1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
       <section className="tonightBlock">
         <h2 className="roundH">這次不吃</h2>
-        <ul className="chips" data-part="tonight-avoid">
-          {CATEGORIES.map((c) => {
-            const on = chipOn(c)
-            return (
-              <li key={c}>
-                <button
-                  type="button"
-                  className="chip"
-                  data-part="tonight-chip"
-                  data-on={on ? 'yes' : 'no'}
-                  aria-pressed={on}
-                  onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
-                >
-                  {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
-                      owner's critique. The on-state was an ink fill plus a 500→700 weight: a fill
-                      inversion is a lightness change and survives colour-blindness, but neither is
-                      a shape a person can name, and the product already has one — the 偏好 rows'
-                      □/■ square. The same part, so a chip reads as selected in the vocabulary of
-                      the sheet the person just left (WCAG 1.4.1, and 1.4.11 for the ≥3:1).
+        {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
+            帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
+            leader dots · count, grouped under three section marks (sec. 2, 密度一).
 
-                      `aria-hidden`: `aria-pressed` on the button is the accessible state, and a
-                      screen reader announcing a decorative box beside it would say the same thing
-                      twice in two vocabularies. */}
-                  <span className="mark" aria-hidden="true" />
-                  {c}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+            **The leader dots are the whole signature.** Without them each row is a list item and
+            the page is a settings sheet; with them it is a menu, which is the thing this screen
+            is pretending to be. They are `aria-hidden` and empty on purpose — a decorative span
+            that a screen reader must not read out as anything.
 
-        {/* **One line per chip that is on, and the count is the payload's** (A2-G8-always). The
-            verb is 比較少中 and not 抽不到: since A13 a category discounts by `1 − 1/N` rather than
-            zeroing, so a 火鍋 place can still be drawn, and `touchedLine` is shared with the
-            preferences page's `zeroLine` precisely so the two verbs cannot converge by accident.
+            **Order is `CATEGORIES` and is never re-sorted.** Each section's list is a filter of
+            it, so the API's closed order is the reading order and 其他 stays last. **Sorting by
+            count would be advice** (D20) and is the one thing a menu of this shape invites. */}
+        {MENU_SECTIONS.map(({ heading, Icon, values }) => (
+          <Fragment key={heading}>
+            {/* The icon is decorative and says nothing the heading beside it does not already say,
+                so it is `aria-hidden` with no label — a labelled one reads the same thing twice.
+                `strokeWidth` is lucide's own prop (1.7); `absoluteStrokeWidth` is deliberately not
+                passed, and the colour is inherited from the heading rather than set here. */}
+            <h3 className="menuSection" data-part="tonight-section">
+              <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+              {heading}
+            </h3>
+            <ul className="menu" data-part="tonight-avoid">
+              {values.map((c) => {
+                const on = chipOn(c)
+                return (
+                  <li key={c}>
+                    <button
+                      type="button"
+                      className="chip"
+                      data-part="tonight-chip"
+                      data-on={on ? 'yes' : 'no'}
+                      aria-pressed={on}
+                      onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
+                    >
+                      {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
+                          owner's critique. The on-state was an ink fill plus a 500→700 weight: a
+                          fill inversion is a lightness change and survives colour-blindness, but
+                          neither is a shape a person can name, and the product already has one —
+                          the 偏好 rows' square. The same part, so a row reads as selected in the
+                          vocabulary of the sheet the person just left (WCAG 1.4.1, and 1.4.11 for
+                          the 3:1). **It is not replaced by an icon and it does not move**: 密度一
+                          took the icon off the row, so this square is the row's only mark.
 
-            The type's own name leads the line because the chips are a wrapping row rather than
-            labelled rows — on the old screen the name was the row the sentence sat in. That is the
-            only thing about this copy that is new. */}
-        {CATEGORIES.filter(chipOn).map((c) => (
-          <p
-            key={c}
-            className="roundNote tonightStat"
-            data-part="tonight-stat"
-            data-shape={awaiting.has(c) || !(catCoverage > 0) ? 'why' : 'count'}
-          >
-            <b>{c}</b>{' '}
-            {awaiting.has(c)
-              ? prefs?.values_awaiting_classification?.why
-              : touchedLine(catStat.get(c), catCoverage)}
-          </p>
+                          `aria-hidden`: `aria-pressed` on the button is the accessible state, and
+                          a screen reader announcing a decorative box beside it would say the same
+                          thing twice in two vocabularies. */}
+                      <span className="mark" aria-hidden="true" />
+                      <span className="n" data-part="tonight-chip-name">{c}</span>
+                      <span className="lead" aria-hidden="true" />
+                      {/* **The count renders only on a row that is ON, and that is a build default
+                          standing in for a ruling** (spec sec. 2b, TBD-2). The reference page shows
+                          a number on all thirteen; today's API cannot supply one — `GET
+                          /preferences` builds `avoid_categories` from the rows the member has
+                          actually avoided, so `touched` and `share` exist for those and for
+                          nothing else. Publishing a size ranking of all thirteen to someone who
+                          has chosen nothing is also the shape D20 forbids. If the owner rules for
+                          all thirteen, backend adds an aggregate and this condition is the only
+                          line that moves.
+
+                          **Same sentence, same helper, moved.** It was a `<p data-part=
+                          "tonight-stat">` below the row and it keeps that part here, because the
+                          harnesses key on it and moving a number is not a reason to make them
+                          re-learn where it lives. What went is the leading `<b>{c}</b>`: the name
+                          led the sentence only because a wrapping chip row gave it no row of its
+                          own, and now it has one. */}
+                      {on && (
+                        <span
+                          className="c"
+                          data-part="tonight-stat"
+                          data-shape={awaiting.has(c) || !(catCoverage > 0) ? 'why' : 'count'}
+                        >
+                          {awaiting.has(c)
+                            ? prefs?.values_awaiting_classification?.why
+                            : touchedLine(catStat.get(c), catCoverage)}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </Fragment>
         ))}
 
         {/* §4's honesty requirement, moved with the types it describes. The number is the
