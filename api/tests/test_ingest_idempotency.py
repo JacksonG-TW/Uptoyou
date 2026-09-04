@@ -525,8 +525,11 @@ def weather_fixtures():
                 town_code="63000040", observed_at=FORECAST_HOUR, element="溫度", value="31.4",
             ),
             # A row whose optional fields are absent, so the NULL-carrying shape is compared too.
+            # Its county is 臺北市 since A18 (2026-08-28): the store keeps that county's stations
+            # and drops the rest, so a `county=None` row is never stored — and a replay that
+            # re-offered it anyway read as «the re-run APPENDED a row» for a week.
             ObservationRow(
-                station_id="C0A981", station_name="無鎮站", county=None, town=None,
+                station_id="C0A981", station_name="無鎮站", county="臺北市", town=None,
                 town_code=None, observed_at=FORECAST_HOUR, element="溫度", value=None,
             ),
         ],
@@ -542,7 +545,7 @@ async def replay_readings(Session, fixtures):
     is the half a duplicate would appear in, so it is done here with `store.py`'s own
     statements rather than a paraphrase of them.
     """
-    from upto.ingest.cwa import FORECAST_DATASET  # noqa: PLC0415
+    from upto.ingest.cwa import FORECAST_DATASET, in_stored_scope  # noqa: PLC0415
     from upto.ingest.store import (  # noqa: PLC0415
         INSERT_FORECAST_READING,
         INSERT_OBSERVATION_READING,
@@ -583,7 +586,10 @@ async def replay_readings(Session, fixtures):
                         "observed_at": row.observed_at, "element": row.element,
                         "value": row.value,
                     }
+                    # The store's own scope rule (A18), by its own function — re-offering a row
+                    # the store would never have stored tests the fixture, not the database.
                     for row in publication.observation_rows
+                    if in_stored_scope(row.county)
                 ]
                 await session.execute(text(INSERT_OBSERVATION_READING), batch)
             await session.commit()
