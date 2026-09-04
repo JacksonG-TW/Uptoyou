@@ -658,7 +658,40 @@ services:
       context: ./
       dockerfile: airflow/Dockerfile
     command: ["dag-processor"]
-    environment: *airflow-env
+    environment:
+      <<: *airflow-env
+      # **300, not Airflow's inherited default of 30 — and it did NOT fix what it was set for.**
+      #
+      # **The measurement, kept because the negative result is the useful part.** This container
+      # burst to ~100% of a core for seconds at a time; mean **29.1%** before. After raising the
+      # interval ten-fold, steady state (measured from this cgroup's own `usage_usec` over a
+      # 55 s window, not by sampling) is **29.9%** — **no change**. The knob the vendor names for
+      # this symptom does not control it here.
+      #
+      # **What is established:** our DAG code is not the cost (`airflow dags report`: 0.13 s for
+      # all ten files) and the burst tracks the `Sync N DAGs` lines. **What is NOT established is
+      # what the sweep consists of, and no second guess is offered** — the first hypothesis
+      # (per-file interpreter startup, measured at 7.7–8.8 s for a cold `python <dagfile>`) was
+      # disproved: the processor forks from a parent that has already imported Airflow, which is
+      # why the report reads 0.13 s. The next step is a profiler inside the container, not
+      # another inference.
+      #
+      # **Kept rather than reverted** so the value is an explicit choice with its result recorded
+      # beside it: someone will reach for this knob again, and this comment is the reason not to.
+      #
+      # The vendor names this exact knob for this exact symptom
+      # (https://airflow.apache.org/docs/apache-airflow/stable/configurations-ref.html, read
+      # 2026-09-04, Airflow 3.0.2): «The DAG file is parsed every
+      # `[dag_processor] min_file_process_interval` number of seconds … **keeping this number low
+      # will increase CPU usage**», and «**You can mitigate CPU usage by increasing the
+      # `min_file_process_interval`** … changes to such files will be picked up slower».
+      #
+      # **The stated cost is free here.** A DAG edit is picked up in up to 5 minutes instead of
+      # 30 seconds — and nothing relies on that path: H46 already requires an explicit
+      # `airflow dags reserialize` after any change under `airflow/dags/`, and H28 a rebuild
+      # before it. The pickup we use is the manual one.
+      #
+      AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL: "300"
     depends_on:
       airflow-init:
         condition: service_completed_successfully
