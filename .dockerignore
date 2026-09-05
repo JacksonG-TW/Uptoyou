@@ -13,3 +13,6 @@
 # tree `npm ci` had just installed with one resolved on a different platform. The exclusion and
 # that COPY belong together; neither is safe alone.
 **/node_modules
+
+# A host's TLS material is mounted at run time (compose.yaml, proxy) and must never be baked in.
+tls/

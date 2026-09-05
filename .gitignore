@@ -21,3 +21,9 @@
 .env
 .env.*
 !.env.example
+
+# **`tls/` holds a host's private key and is mounted, never committed (candidate 12).** The
+# directory itself ships as `.gitkeep` so a fresh clone can bind-mount it; everything else in it
+# — the key, the Origin CA certificate, the `listen 8443 ssl;` snippet — belongs to that one host.
+tls/*
+!tls/.gitkeep
