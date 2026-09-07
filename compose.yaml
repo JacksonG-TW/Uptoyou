@@ -558,7 +558,7 @@ services:
     <<: *logging
     # A11 — peak 664.7 MiB, the highest in the stack, and it is the highest because the ingests run as
     #     its subprocesses: the tax source's 1.7M-row parse is **this** container's memory, not the
-    #     api's. 1.5x is 997m.
+    #     api's. 1.5x is 997m — superseded by candidate 13 below.
     # **Candidate 13 (owner 「先做」, 2026-09-05; decision-log «Airflow's shrink MEASURED», H77):
     # 640m.** Under the shrink the container's floor is ~355 MiB and its peak under the roster
     # ingest ~470, so 640m bites before a 1.9 GB host does, where 1024m never could. The tax
@@ -625,18 +625,21 @@ services:
       # not started, exactly while it was trying to start. At 45s it is under half that.
       #
       # Cost admitted: a scheduler that dies is now called unhealthy after up to
-      # 360 + 3 x (90 + 20) = 690s instead of 480s. That buys nothing back, because nothing
+      # 360 + 3 x (90 + 120) = 990s (it was 690s at the 20s interval, and 480s before that).
+      # That buys nothing back, because nothing
       # acts on this status — `restart: unless-stopped` does not restart on unhealthy, no
       # service depends on it, and the only readers are `up --wait` and a human at
       # `compose ps`.
       # **Which is why retries came down from 20 to 3 while everything else went up.** All 20
       # were ever worth was 300 more seconds of the same failure; one probe allowed to finish
-      # is the whole requirement. And 690s has to stay under split_boot_check.sh's
-      # `--wait-timeout 900`, measured from `up` rather than from these containers — the
+      # is the whole requirement. And 990s has to stay under split_boot_check.sh's
+      # `--wait-timeout`, measured from `up` rather than from these containers — the
       # failed run spent 73s pulling and migrating before Airflow started, so the real
-      # comparison is 73 + 690 against 900. At retries 20 that sum was 823s and the margin
-      # was 77s; a slower pull would have turned a named unhealthy container into a bare
-      # compose timeout that names nobody.
+      # comparison is 73 + 990 = 1063 against that timeout, which candidate 13 raised from
+      # 900 to 1200 for exactly this sum (the reviewer's catch, 2026-09-07: at 900 the
+      # 120s interval would have turned a named unhealthy container back into a bare
+      # compose timeout that names nobody — H65's shape). At retries 20 and 20s the sum
+      # was 823s against 900 and the margin 77s.
       # Rejected: keeping 10s and asserting something cheaper instead — reading the
       # scheduler's heartbeat out of the metadata database, or trusting airflow-api's
       # /monitor/health, which reports every component centrally. Both are faster and both
@@ -794,9 +797,11 @@ services:
       # while its workers were killed and respawned. AIRFLOW__API__WORKERS above is that
       # half of the fix.
       # Worst case here: 360 + 3 x (15 + 20) = 465s.
-      # Every 120 s, not 20 (H77, candidate 13): `airflow jobs check` is a 7.4-s CLI cold start
-      # and a ~150 MB transient; at 20 s two of them were 74% of a core on the launch box.
-      interval: 120s
+      # **This one stays at 20s under candidate 13 (H77) on purpose:** it is a curl, ~0.1s,
+      # not the 7.4-s `airflow jobs check` cold start the scheduler's and the dag-processor's
+      # checks pay — the cost H77 measured is not here, so the interval it justified is not
+      # applied here (the reviewer's catch, 2026-09-07).
+      interval: 20s
       timeout: 15s
       retries: 3
       start_period: 360s
