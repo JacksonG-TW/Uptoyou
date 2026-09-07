@@ -380,7 +380,16 @@ services:
     # reproduces `upto-<service>:latest`, split-boot sets `upto-splitcheck-`, and the box sets
     # `ghcr.io/jacksong-tw/upto-`. `UPTO_IMAGE_TAG` is how a rollback is spelled there: a previous
     # extract sha, `docker compose pull`, `up -d --wait`.
-    image: ${UPTO_IMAGE_PREFIX:-upto-}migrate:${UPTO_IMAGE_TAG:-latest}
+    #
+    # **The default falls back to the PROJECT name, so isolation survives a session that forgets**
+    # (the reviewer, 2026-09-07). Before this field existed, `-p <anything>` isolated image names by
+    # itself; a fixed default would have made isolation depend on somebody remembering a variable —
+    # and this repository has a ruled practice that walks straight into it, the scratch compose
+    # project for any knob needing a compose edit (decision-log 2026-09-05), used as `upto-mem` two
+    # days ago. Without the fallback that bench would overwrite `upto-api:latest` silently. With it:
+    # no `-p` → `upto-<svc>` (compose.yaml's own `name: upto`), `-p upto-mem` → `upto-mem-<svc>`,
+    # `-p upto-splitcheck` → `upto-splitcheck-<svc>`.
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}migrate:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
     environment:
@@ -446,7 +455,7 @@ services:
     networks:
       - edge
       - data
-    image: ${UPTO_IMAGE_PREFIX:-upto-}api:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
     environment:
@@ -497,7 +506,7 @@ services:
     cpus: 0.5
     networks:
       - edge
-    image: ${UPTO_IMAGE_PREFIX:-upto-}proxy:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}proxy:${UPTO_IMAGE_TAG:-latest}
     build:
       # app/ rather than ./proxy: the image carries the nginx config and the static front
       # end, and those are siblings. Both paths stay inside app/, which is what H18 asks.
@@ -577,7 +586,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-init:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-init:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -606,7 +615,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-scheduler:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-scheduler:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -724,7 +733,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-dag-processor:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-dag-processor:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -792,7 +801,7 @@ services:
     cpus: 1.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-api:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile

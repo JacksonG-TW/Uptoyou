@@ -101,9 +101,22 @@ git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
 #
 # **A pull is I/O, not memory**, so the failure this replaces is gone rather than mitigated, and the
 # stack keeps serving until the recreate — the outage window is a container restart instead of a
-# frontend build. `.env` carries `UPTO_IMAGE_PREFIX=ghcr.io/jacksong-tw/upto-`, and `UPTO_IMAGE_TAG`
-# is how a rollback is spelled: set it to a previous extract sha, run this again.
-say "pulling images"
+# frontend build. `.env` carries `UPTO_IMAGE_PREFIX=ghcr.io/jacksong-tw/upto-`; the tag is derived
+# below from the commit this clone just moved to. **A rollback is therefore a `git` operation
+# rather than an `.env` edit**: check the clone out at an earlier extract commit and run this, and
+# the images follow the code by construction.
+# **The tag IS the commit this clone just moved to, and that dissolves a trade** (ruled
+# 2026-09-07). The alternative shapes were: follow `:latest` and inherit H28 one layer up — a tag
+# that resolves to something different each day is the stale image that does not announce itself —
+# or pin a sha by hand in `.env`, which is a person editing a file on every deploy. This clone IS
+# the public extract, so the commit it is standing on is exactly what `publish_images.sh` tagged
+# with. No edit, no moving tag, and **a missing image for this sha fails the pull loudly**, which is
+# the failure we want: the box refuses to start something nobody published rather than quietly
+# serving whatever `:latest` last pointed at. `:latest` still exists in the registry as a human
+# convenience; nothing here reads it.
+UPTO_IMAGE_TAG="$after"
+export UPTO_IMAGE_TAG
+say "pulling images at $after"
 docker compose pull --quiet
 
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
