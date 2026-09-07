@@ -136,12 +136,34 @@ async def scenario(test_url: str, base_url: str) -> None:
               "Kevin" in other.text and signed["signed_at"][:16] in other.text, other.text)
 
         # ---- what the payloads may not carry (H3, §3.0) -----------------------------------
+        #
+        # **The `member_id` half of this check was written eighteen hours before the ruling that
+        # reversed it, and was red for nineteen days** (this test 2026-08-19 00:10, b919af2; D55's
+        # narrowing 2026-08-19 17:57, bc1c6fb; found 2026-09-07 when A17's gate made somebody run
+        # a test that is not in CLAUDE.md's register). **D55 as narrowed: the round payload and the
+        # snapshot MAY carry the seat list — member id, nickname, counts, each pair at and after
+        # close — while the pool and the weight panel still carry no author.** That is D108's whole
+        # mechanism: every member rolls, every pair derives from the seed committed at open, and the
+        # seed is published at close so anyone can recompute the draw. Naming who rolled what is
+        # what makes it checkable; hiding it would leave the reveal unverifiable.
+        #
+        # **What still holds, and is what this loop now asserts:** authorship never travels.
         for label, payload in (("the signing response", first.json()),
                                ("the reveal payload", rolled.json())):
             flat = json.dumps(payload, ensure_ascii=False)
-            check("{} carries no member_id".format(label), "member_id" not in flat)
             check("{} carries no proposer".format(label),
                   "proposer" not in flat and "proposed_by" not in flat)
+
+        # The seat list is the closed round's, and only the closed round's. `rolled` is the roll's
+        # own response, so this reads it at close — the moment D55's narrowing allows.
+        seats = rolled.json().get("rolls") or []
+        check("the reveal names who rolled what, at close (D55 as narrowed, D108)",
+              bool(seats) and all({"member_id", "nickname", "die1", "die2", "counts"} <= set(seat)
+                                  for seat in seats), seats)
+        # The other side of «at and after close»: the OPEN round's payload carries the seed
+        # commitment and no seat list — the pairs do not exist to be shown until the roll.
+        check("and the open round's own payload carried no seat list",
+              "rolls" not in json.dumps(opened.json(), ensure_ascii=False), opened.json())
 
         # ---- nothing on the stream at signing (D53) ---------------------------------------
         # A second round so there is a signing to watch while the stream is open.
@@ -150,9 +172,17 @@ async def scenario(test_url: str, base_url: str) -> None:
             json={"target_hour": meal.isoformat()},
         )
         round2 = opened2.json()["round_id"]
-        await client.post("/rounds/{}/proposals".format(round2), headers=K,
-                          json={"place_id": places[0]})
-        await client.post("/rounds/{}/roll".format(round2), headers=K)
+        # **Two places, not one.** A round of one is refused — 「一輪至少要兩家店。一家店不是決定，
+        # 是通知。」 — a rule that landed in the same 17:57 commit as D55's narrowing, eighteen hours
+        # after this test was written. With one place the roll 409s, the round never closes, and the
+        # signing below then 409s truthfully («這一輪還沒擲出結果。»): two of this file's three red
+        # checks were that one missing proposal.
+        for place in places[:2]:
+            await client.post("/rounds/{}/proposals".format(round2), headers=K,
+                              json={"place_id": place})
+        rolled2 = await client.post("/rounds/{}/roll".format(round2), headers=K)
+        check("the second round rolled, so there is a closed round to sign",
+              rolled2.status_code == 200, rolled2.status_code)
 
         events = []
         async with httpx.AsyncClient(base_url=base_url, timeout=20) as watcher:
