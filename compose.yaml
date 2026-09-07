@@ -559,15 +559,30 @@ services:
     # A11 — peak 664.7 MiB, the highest in the stack, and it is the highest because the ingests run as
     #     its subprocesses: the tax source's 1.7M-row parse is **this** container's memory, not the
     #     api's. 1.5x is 997m.
-    mem_limit: 1024m
+    # **Candidate 13 (owner 「先做」, 2026-09-05; decision-log «Airflow's shrink MEASURED», H77):
+    # 640m.** Under the shrink the container's floor is ~355 MiB and its peak under the roster
+    # ingest ~470, so 640m bites before a 1.9 GB host does, where 1024m never could. The tax
+    # ingest is the one to watch under it: scheduler ~188 + one worker ~220 + its CLI ~141 RSS,
+    # shared pages counted once by the cgroup — measured on the box at its walk, last of the eight.
+    mem_limit: 640m
     cpus: 2.0
     networks:
       - data
     build:
       context: ./
       dockerfile: airflow/Dockerfile
-    command: ["scheduler"]
-    environment: *airflow-env
+    # `--skip-serve-logs` (H77): without it the scheduler also runs a gunicorn master + two
+    # workers whose only job is to serve task logs to the UI over port 8793 — ~90 MiB net on
+    # one host where the shared `airflow-logs` volume hands the api-server the same files.
+    command: ["scheduler", "--skip-serve-logs"]
+    environment:
+      <<: *airflow-env
+      # One task at a time (default 32). Not for throughput — LocalExecutor keeps every worker it
+      # ever spawned at ~220 MB each, so a burst left the launch box's scheduler at 850 MiB (H77).
+      # Two DAGs due in the same minute now queue, which D83's stagger already intended.
+      AIRFLOW__CORE__PARALLELISM: "1"
+    volumes:
+      - airflow-logs:/opt/airflow/logs
     depends_on:
       airflow-init:
         condition: service_completed_successfully
@@ -627,7 +642,9 @@ services:
       # /monitor/health, which reports every component centrally. Both are faster and both
       # change what is asserted: this container would stop vouching for itself. Not a
       # timeout's decision to make.
-      interval: 20s
+      # Every 120 s, not 20 (H77, candidate 13): `airflow jobs check` is a 7.4-s CLI cold start
+      # and a ~150 MB transient; at 20 s two of them were 74% of a core on the launch box.
+      interval: 120s
       timeout: 90s
       retries: 3
       start_period: 360s
@@ -703,6 +720,11 @@ services:
       # before it. The pickup we use is the manual one.
       #
       AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL: "300"
+      # One parsing process (default 2): eight DAG files, no measurable change on the dev VM, one
+      # fewer ~200 MB fork on the launch box (candidate 13).
+      AIRFLOW__DAG_PROCESSOR__PARSING_PROCESSES: "1"
+    volumes:
+      - airflow-logs:/opt/airflow/logs
     depends_on:
       airflow-init:
         condition: service_completed_successfully
@@ -711,7 +733,9 @@ services:
       # airflow-scheduler's healthcheck carries the whole budget and why. Identical here,
       # and for the identical reason: this is the same 8-second CLI cold start. Measured on
       # this container, warm and idle: 7.97 / 8.15 / 8.22 / 8.44 / 8.61s.
-      interval: 20s
+      # Every 120 s, not 20 (H77, candidate 13): `airflow jobs check` is a 7.4-s CLI cold start
+      # and a ~150 MB transient; at 20 s two of them were 74% of a core on the launch box.
+      interval: 120s
       timeout: 90s
       retries: 3
       start_period: 360s
@@ -731,6 +755,8 @@ services:
     command: ["api-server"]
     environment: *airflow-env
     volumes:
+      # Task logs, written by the scheduler's workers, read here for the UI (candidate 13, H77).
+      - airflow-logs:/opt/airflow/logs
       # Writable, and it has to be: the api-server opens this file "a+" on every start and
       # only catches BlockingIOError, so a read-only mount is a PermissionError that stops
       # the container. It leaves an existing admin entry alone, which is what makes
@@ -768,7 +794,9 @@ services:
       # while its workers were killed and respawned. AIRFLOW__API__WORKERS above is that
       # half of the fix.
       # Worst case here: 360 + 3 x (15 + 20) = 465s.
-      interval: 20s
+      # Every 120 s, not 20 (H77, candidate 13): `airflow jobs check` is a 7.4-s CLI cold start
+      # and a ~150 MB transient; at 20 s two of them were 74% of a core on the launch box.
+      interval: 120s
       timeout: 15s
       retries: 3
       start_period: 360s
@@ -831,3 +859,6 @@ volumes:
   # Only ever holds the admin password file. A named volume rather than a bind mount for the
   # reason db-data gives, and because the password does not belong in the repository.
   airflow-auth:
+  # Task logs shared between the scheduler that writes them and the api-server that shows them
+  # (candidate 13, H77) — replaces the scheduler's serve_logs gunicorn on a one-host stack.
+  airflow-logs:
