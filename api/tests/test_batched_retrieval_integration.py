@@ -78,13 +78,25 @@ def vector_for(name: str) -> list[float]:
     return out
 
 
-def stub_embed(texts, model=None):
-    """One vector per input, in order. Records how many requests it was asked to serve."""
+def stub_embed(texts, model=None, **_):
+    """One vector per input, in order. Records how many requests it was asked to serve.
+
+    **`**_` is the point of this signature, not laziness.** What this file tests is *batching and
+    order* — that retrieval asks once per commit batch and that the vectors come back paired with
+    the names they were asked about. `embed`'s parameter list is not its subject, so a stub that
+    mirrors it exactly turns every addition there into a red here about nothing: `embed` gained
+    `cold=` on 2026-09-04 (36af3c5) and this file, written 2026-08-18 (7f236ee), raised
+    `TypeError` from then until 2026-09-07 while the product was correct throughout — three days
+    of a false red that nothing swept, because the file was in no register.
+    **The admitted cost:** a parameter that changes what a caller *means* — `unload_after` is the
+    live example — is swallowed here in silence. A test that cares about one asserts on it
+    explicitly rather than relying on the stub to refuse it.
+    """
     _CALLS.append(len(texts))
     return [vector_for(name) for name in texts]
 
 
-def stub_embed_reversed(texts, model=None):
+def stub_embed_reversed(texts, model=None, **_):
     """A well-formed reply with the right count, the right widths, and the wrong order.
 
     This is the misbehaving API `embed`'s assertions cannot detect: the count matches, the widths
