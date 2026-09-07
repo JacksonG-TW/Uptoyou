@@ -499,13 +499,34 @@ services:
       # **8443 answers only where `tls/` holds a `listen 8443 ssl;` (candidate 12).** Published
       # everywhere so the compose file is one file (§6); on a host whose `tls/` is empty the port
       # is open on the host side and refused inside, which is a closed door, not a fault.
-      - "${UPTO_HTTPS_PORT:-443}:8443"
+      #
+      # **The default is 8443, not 443, and that is the same rule `AIRFLOW_BIND` states above:
+      # the DEFAULT is the safe one** (the reviewer's catch, 2026-09-07). §6's bar is that
+      # `docker compose up` works on a machine that has never seen this repository, and D47
+      # publishes this file — a default of 443 would ask every fresh clone for a privileged port
+      # that is the likeliest one already taken, and rootless Docker refuses it outright. Every
+      # host but one terminates no TLS; the one that does has an `.env` already and writes
+      # `UPTO_HTTPS_PORT=443` in it.
+      - "${UPTO_HTTPS_PORT:-8443}:8443"
     volumes:
       # The one bind mount in the stack, and it carries no code (H28 stands): a host's TLS
       # material — origin certificate, private key, the three-line `listen` snippet — read-only.
       # `tls/` exists in the repository as `.gitkeep` alone so a fresh clone mounts an empty
       # directory rather than failing on a missing one; `.gitignore` refuses everything else in it
       # and `.dockerignore` keeps it out of every image.
+      #
+      # **⚠️ This is the first host file that can stop the proxy, and it takes 8080 down with
+      # 8443** (the reviewer's catch, 2026-09-07). nginx refuses to START on a malformed include
+      # or an `ssl_certificate` it cannot read — and the key is exactly the file that is
+      # unreadable until it is chowned to uid 101 — so with `restart: unless-stopped` a bad
+      # snippet is a restart loop and the whole product is offline, not merely its TLS.
+      # **What makes that non-total: `tls/` is a BIND mount, so a snippet edited on the host is
+      # live inside the running container immediately** — `docker compose exec proxy nginx -t`
+      # validates the real file in the real container BEFORE anything restarts it. Run it after
+      # every edit here. The 8099 worktree preview does not cover this: the snippet is in no
+      # image. To read the key's permissions without printing the key:
+      # `docker compose exec proxy sh -c 'test -r /etc/nginx/tls/origin.key && echo readable'`,
+      # which answers as uid 101, the uid that matters.
       - ./tls:/etc/nginx/tls:ro
     depends_on:
       api:
