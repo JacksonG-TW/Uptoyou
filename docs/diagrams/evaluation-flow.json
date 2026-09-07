@@ -1,0 +1,179 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Up to You — how a classifier candidate is scored",
+    "output": "evaluation-flow.html",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "inputs",
+      "label": "Frozen inputs"
+    },
+    {
+      "id": "machine",
+      "label": "Rounds + scoring"
+    },
+    {
+      "id": "human",
+      "label": "The human loop"
+    }
+  ],
+  "phases": [
+    {
+      "id": "given",
+      "label": "Given",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "asked",
+      "label": "Asked",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "ruled",
+      "label": "Ruled",
+      "fromCol": 3,
+      "toCol": 3
+    }
+  ],
+  "mainPath": [
+    "testset",
+    "local",
+    "roundfile",
+    "score",
+    "owner"
+  ],
+  "nodes": [
+    {
+      "id": "testset",
+      "lane": "inputs",
+      "col": 0,
+      "type": "database",
+      "label": "testset_v3.json",
+      "sublabel": "200 rows · 13 values",
+      "tag": "frozen",
+      "width": 160
+    },
+    {
+      "id": "local",
+      "lane": "machine",
+      "col": 1,
+      "type": "backend",
+      "label": "four candidates",
+      "sublabel": "gemma·llama·qwen·qwen7b",
+      "tag": "GPU box",
+      "width": 160
+    },
+    {
+      "id": "roundfile",
+      "lane": "machine",
+      "col": 2,
+      "type": "database",
+      "label": "round_<name>.json",
+      "sublabel": "one per candidate",
+      "tag": "resumable",
+      "width": 160
+    },
+    {
+      "id": "score",
+      "lane": "machine",
+      "col": 3,
+      "type": "backend",
+      "label": "score → report.md",
+      "sublabel": "per layer, per value",
+      "tag": "±6.5 band",
+      "width": 160
+    },
+    {
+      "id": "gates",
+      "lane": "human",
+      "col": 2,
+      "type": "security",
+      "label": "reviewer + evaluator",
+      "sublabel": "separate contexts",
+      "tag": "comparable?",
+      "width": 160
+    },
+    {
+      "id": "owner",
+      "lane": "human",
+      "col": 3,
+      "type": "security",
+      "label": "owner",
+      "sublabel": "rules the model",
+      "tag": "not delegated",
+      "width": 160
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "testset",
+      "to": "local",
+      "label": "the same 200 rows",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e2",
+      "from": "local",
+      "to": "roundfile",
+      "label": "one round each",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e3",
+      "from": "roundfile",
+      "to": "score",
+      "label": "scored, never re-run",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e4",
+      "from": "roundfile",
+      "to": "gates",
+      "label": "the claim",
+      "bias": 0.2
+    },
+    {
+      "id": "e5",
+      "from": "score",
+      "to": "owner",
+      "label": "one ruling",
+      "variant": "emphasis",
+      "bias": 0.8
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "The v7 table, as measured",
+      "items": [
+        "qwen7b 72.0 · gemma2:2b 71.0 · llama3.2:3b 70.5 · qwen2.5:3b 65.5",
+        "The 7B did not move while every small model gained 5–9: a 10.5-point gap became 1.0, inside the band"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "What makes two numbers comparable",
+      "items": [
+        "A round file names its own test set — read that field before comparing anything",
+        "A prompt or label change makes every crib stale, and a round refuses a stale crib",
+        "gemini is the hosted baseline: host-side only, and --rag is refused — the crib is the answer key",
+        "The crib is example_embedding (pgvector, k=5, leave-one-out); a label change makes it stale and a round refuses it"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Where a human is required",
+      "items": [
+        "The reviewer runs in a separate context and checks the claim against the code",
+        "Selection is the owner's; the evaluator gates whether the number means what it says"
+      ]
+    }
+  ]
+}

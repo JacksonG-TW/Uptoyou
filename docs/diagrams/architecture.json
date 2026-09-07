@@ -1,0 +1,354 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Up to You — the stack as it is served",
+    "output": "architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "members",
+      "type": "external",
+      "label": "Members",
+      "sublabel": "one circle, ≤10 seats",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        140,
+        62
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "type": "cloud",
+      "label": "Cloudflare",
+      "sublabel": "uptoyou.jacksong-tw.com",
+      "pos": [
+        250,
+        300
+      ],
+      "size": [
+        140,
+        62
+      ],
+      "tag": "Full (strict)"
+    },
+    {
+      "id": "proxy",
+      "type": "frontend",
+      "label": "proxy",
+      "sublabel": "nginx · :8080 · :8443",
+      "pos": [
+        470,
+        300
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "tls",
+      "type": "security",
+      "label": "tls/",
+      "sublabel": "read-only bind mount",
+      "pos": [
+        470,
+        160
+      ],
+      "size": [
+        150,
+        58
+      ],
+      "tag": "Origin CA · read-only"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "api",
+      "sublabel": "FastAPI · uvicorn",
+      "pos": [
+        700,
+        300
+      ],
+      "size": [
+        140,
+        62
+      ]
+    },
+    {
+      "id": "migrate",
+      "type": "backend",
+      "label": "migrate",
+      "sublabel": "one-shot · alembic",
+      "pos": [
+        700,
+        160
+      ],
+      "size": [
+        140,
+        58
+      ],
+      "tag": "one-shot, then exits"
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "PostgreSQL 17",
+      "sublabel": "db-data volume",
+      "pos": [
+        1000,
+        300
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "scheduler",
+      "type": "backend",
+      "label": "airflow-scheduler",
+      "sublabel": "11 DAGs, UTC",
+      "pos": [
+        660,
+        455
+      ],
+      "size": [
+        150,
+        58
+      ]
+    },
+    {
+      "id": "dagproc",
+      "type": "backend",
+      "label": "airflow-dag-processor",
+      "sublabel": "parses dags/",
+      "pos": [
+        380,
+        455
+      ],
+      "size": [
+        160,
+        58
+      ]
+    },
+    {
+      "id": "airflowapi",
+      "type": "frontend",
+      "label": "airflow-api",
+      "sublabel": ":8081 · operator only",
+      "pos": [
+        960,
+        455
+      ],
+      "size": [
+        150,
+        58
+      ]
+    },
+    {
+      "id": "relay",
+      "type": "messagebus",
+      "label": "tunnel relay",
+      "sublabel": "172.17.0.1:11434",
+      "pos": [
+        380,
+        590
+      ],
+      "size": [
+        150,
+        58
+      ]
+    },
+    {
+      "id": "gpu",
+      "type": "external",
+      "label": "GPU box",
+      "sublabel": "Ollama · GTX 1070 Ti",
+      "pos": [
+        120,
+        590
+      ],
+      "size": [
+        150,
+        58
+      ]
+    },
+    {
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3 Tokyo",
+      "sublabel": "nightly dump · 30 kept",
+      "pos": [
+        1140,
+        590
+      ],
+      "size": [
+        140,
+        58
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "One host — docker compose (EC2 t3.small, Tokyo)",
+      "wraps": [
+        "proxy",
+        "tls",
+        "api",
+        "migrate",
+        "db",
+        "scheduler",
+        "dagproc",
+        "airflowapi",
+        "relay"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "member-facing",
+      "wraps": [
+        "proxy",
+        "api"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "m-cf",
+      "from": "members",
+      "to": "cloudflare",
+      "label": "HTTPS",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cf-proxy",
+      "from": "cloudflare",
+      "to": "proxy",
+      "label": "Origin CA · 443 → 8443",
+      "variant": "emphasis",
+      "labelDy": 55
+    },
+    {
+      "id": "tls-proxy",
+      "from": "tls",
+      "to": "proxy",
+      "label": "include *.conf",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "proxy-api",
+      "from": "proxy",
+      "to": "api",
+      "label": "strips /api/",
+      "variant": "emphasis"
+    },
+    {
+      "id": "api-db",
+      "from": "api",
+      "to": "db",
+      "label": "asyncpg as upto_api"
+    },
+    {
+      "id": "migrate-db",
+      "from": "migrate",
+      "to": "db",
+      "label": "owner role",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "migrate-api",
+      "from": "migrate",
+      "to": "api",
+      "label": "completed_successfully",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "dag-sched",
+      "from": "dagproc",
+      "to": "scheduler",
+      "label": "serialised DAGs"
+    },
+    {
+      "id": "sched-db",
+      "from": "scheduler",
+      "to": "db",
+      "label": "ingests · erasure · backup",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "sched-logs",
+      "from": "scheduler",
+      "to": "airflowapi",
+      "label": "airflow-logs volume",
+      "variant": "dashed"
+    },
+    {
+      "id": "sched-relay",
+      "from": "scheduler",
+      "to": "relay",
+      "label": "classify backfill",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "relay-gpu",
+      "from": "relay",
+      "to": "gpu",
+      "label": "ssh tunnel",
+      "fromSide": "left",
+      "toSide": "right"
+    },
+    {
+      "id": "sched-s3",
+      "from": "scheduler",
+      "to": "s3",
+      "label": "pg_dump as upto_backup",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Serving — live since 2026-09-07",
+      "items": [
+        "https://uptoyou.jacksong-tw.com — Cloudflare Full (strict) to an Origin CA cert on nginx",
+        "The security group admits 443 from Cloudflare's ranges only; 80 is closed; the host holds an Elastic IP",
+        "TLS is a mounted file, not a build — compose defaults to :8443, so a fresh clone needs no privileged port"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Roles, not one superuser",
+      "items": [
+        "migrate runs as the owner and exits; api never can",
+        "upto_api · upto_ingest · upto_erasure · upto_backup",
+        "A failed migration stops the api one container earlier"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Off the host",
+      "items": [
+        "The GPU box is reached through a user-level relay, not a container",
+        "S3 Tokyo keeps 30 nightly dumps, swept only after a successful upload",
+        "ollama sits behind a compose profile and is off unless a backfill runs"
+      ]
+    }
+  ]
+}

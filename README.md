@@ -441,13 +441,18 @@ the product were fine.
 ## Diagrams
 
 Four views of the same system, in `docs/diagrams/` — each PNG has a self-contained source
-beside it (`.html` for the drawn ones, `.mmd` for the ER set), no external request in any of them.
-The three drawn ones are being redrawn from the code as deployed (2026-09); the ER set regenerates
-from the live schema:
+beside it, and none of them makes an external request. **The three drawn ones were redrawn from the
+code as deployed on 2026-09-07 and every box in them names something that exists**: the compose
+services, the eleven DAG ids and their crons, the seven publication tables, the ports the proxy
+actually listens on. Their editable source is the `.json` beside each — `architecture.json`,
+`etl-flow.json`, `evaluation-flow.json` — with the `.html` a standalone rendering of it; the ER set
+keeps its `.mmd` and regenerates from the live schema (`docs/diagrams/build.sh --check` reports
+drift for that set, and does not touch the drawn three):
 
 - **Architecture** — `architecture.png`: the compose stack as served, the instance behind
   Cloudflare, the home box behind its relay, the nightly dump to S3.
-- **ETL pipeline** — `etl-flow.png`: six sources, six DAGs, the one content-addressed path they
+- **ETL pipeline** — `etl-flow.png`: seven sources, six DAGs (the weather publisher's forecast and
+  observation are two sources on one fetch), the one content-addressed path they
   all take, the run ledger's three outcomes, and the read-time name ladder.
 - **AI evaluation** — `evaluation-flow.png`: the frozen set, the pgvector crib, the four local
   candidates and the hosted yardstick, and the two human gates around a build.

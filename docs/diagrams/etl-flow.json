@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Up to You — seven public sources through six ingest DAGs",
+    "output": "etl-flow.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1000,
+      610
+    ]
+  },
+  "stages": [
+    {
+      "label": "Publishers"
+    },
+    {
+      "label": "Airflow + CLI"
+    },
+    {
+      "label": "Store + ledger"
+    },
+    {
+      "label": "Consumers"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "cwa",
+      "type": "external",
+      "label": "中央氣象署",
+      "sublabel": "two sources, one fetch",
+      "stage": 0,
+      "row": 1,
+      "width": 140,
+      "tag": "hourly"
+    },
+    {
+      "id": "daily",
+      "type": "external",
+      "label": "five daily sources",
+      "sublabel": "zip and csv",
+      "stage": 0,
+      "row": 3,
+      "width": 140,
+      "tag": "19:00 → 20:20 UTC"
+    },
+    {
+      "id": "dags",
+      "type": "backend",
+      "label": "six ingest DAGs",
+      "sublabel": "each runs upto.ingest.run_*",
+      "stage": 1,
+      "row": 2,
+      "width": 180,
+      "tag": "max_active_runs=1 · exit 0·1·2"
+    },
+    {
+      "id": "pubs",
+      "type": "database",
+      "label": "seven publication tables",
+      "sublabel": "one row per fetched file",
+      "stage": 2,
+      "row": 1,
+      "width": 190,
+      "tag": "content_sha256 + archive_stamp"
+    },
+    {
+      "id": "ledger",
+      "type": "database",
+      "label": "ingest_run",
+      "sublabel": "the ledger",
+      "stage": 2,
+      "row": 3,
+      "width": 150,
+      "tag": "stored · no_change · failed"
+    },
+    {
+      "id": "classify",
+      "type": "backend",
+      "label": "classify backfill",
+      "sublabel": "asset, never a cron",
+      "stage": 3,
+      "row": 0,
+      "width": 170,
+      "tag": "Asset(place_publication)"
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "the weight engine",
+      "sublabel": "what a round may propose",
+      "stage": 3,
+      "row": 2,
+      "width": 170,
+      "tag": "reads, never writes"
+    },
+    {
+      "id": "check",
+      "type": "security",
+      "label": "check_publication",
+      "sublabel": "A9 · vs the one before",
+      "stage": 3,
+      "row": 3,
+      "width": 170,
+      "tag": "no −20% drop · same signature"
+    }
+  ],
+  "flows": [
+    {
+      "from": "cwa",
+      "to": "dags",
+      "label": "JSON",
+      "classification": "two publications, one fetch",
+      "variant": "emphasis",
+      "labelAt": [
+        205,
+        314
+      ]
+    },
+    {
+      "from": "daily",
+      "to": "dags",
+      "label": "fetch",
+      "classification": "one task per source",
+      "variant": "emphasis",
+      "labelDx": 28
+    },
+    {
+      "from": "dags",
+      "to": "pubs",
+      "label": "new content only",
+      "classification": "sha256 decides",
+      "variant": "emphasis",
+      "labelAt": [
+        420,
+        322
+      ]
+    },
+    {
+      "from": "dags",
+      "to": "ledger",
+      "label": "every run, even a no-op",
+      "classification": "outcome + rows_written",
+      "labelAt": [
+        480,
+        455
+      ]
+    },
+    {
+      "from": "pubs",
+      "to": "classify",
+      "label": "emits an asset",
+      "classification": "no_change emits nothing",
+      "variant": "emphasis",
+      "labelDx": 55,
+      "labelAt": [
+        698,
+        200
+      ]
+    },
+    {
+      "from": "pubs",
+      "to": "engine",
+      "label": "the reference set",
+      "labelDy": 0,
+      "labelDx": 55
+    },
+    {
+      "from": "pubs",
+      "to": "check",
+      "label": "previous publication",
+      "classification": "A9",
+      "labelDx": 55,
+      "labelAt": [
+        698,
+        428
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Seven sources, six DAGs (UTC)",
+      "items": [
+        "weather @hourly · place 19:00 · brand 19:20 · storefront 19:40 · status 20:00 · tax 20:20",
+        "seven because the weather DAG stores two: forecast and observation are separate sources"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Idempotent, proven not assumed",
+      "items": [
+        "content_sha256 decides new from unchanged — never the publisher's own stamp"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "The ledger, and one at a time",
+      "items": [
+        "Every run writes an ingest_run row, including the ones that store nothing",
+        "max_active_runs=1, catchup=False, crons stepped 20 minutes apart"
+      ]
+    }
+  ]
+}

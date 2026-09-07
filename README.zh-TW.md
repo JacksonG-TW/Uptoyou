@@ -376,13 +376,16 @@ ingest 週期、記憶體的數字撐住 —— 不是「它開起來了」。
 
 ## 圖
 
-同一個系統的四個視角，在 `docs/diagrams/` —— 每個 PNG 旁邊都有一份自足的原始檔（畫出來的那些是
-`.html`，ER 那組是 `.mmd`），其中沒有任何一個會發出外部請求。手畫的三張正依照實際部署的程式碼重畫
-（2026-09）；ER 那組從線上 schema 重新產生：
+同一個系統的四個視角，在 `docs/diagrams/` —— 每個 PNG 旁邊都有一份自足的原始檔，沒有任何一個會發出
+外部請求。**畫出來的那三張已在 2026-09-07 依照實際部署的程式碼重畫，圖上每一個方塊都指向真實存在的
+東西**：compose 的服務、十一個 DAG 的 id 與排程、七張發佈表、proxy 真正在聽的埠。它們可編輯的原始檔是
+旁邊那個 `.json`——`architecture.json`、`etl-flow.json`、`evaluation-flow.json`——`.html` 則是它的
+獨立渲染版；ER 那組維持 `.mmd`，從線上 schema 重新產生（`docs/diagrams/build.sh --check` 只回報那一組
+的漂移，不碰手畫的三張）：
 
 - **架構** — `architecture.png`：實際提供服務的 compose stack、Cloudflare 後面的那台機器、中繼後面的
   家用機器、每晚倒到 S3 的備份。
-- **ETL 管線** — `etl-flow.png`：六個來源、六個 DAG、它們共用的那一條以內容定址的路徑、執行帳本的
+- **ETL 管線** — `etl-flow.png`：七個來源、六個 DAG（氣象署的預報和觀測是一次抓取、兩個來源）、它們共用的那一條以內容定址的路徑、執行帳本的
   三種結果，以及讀取時的名稱階梯。
 - **AI 評估** — `evaluation-flow.png`：凍結測試集、pgvector 小抄、四個本地候選模型和託管量尺，以及
   一個 build 周圍的兩道人為把關。
