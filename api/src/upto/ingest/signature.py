@@ -106,7 +106,6 @@ def csv_header(raw: bytes, encoding: str = "utf-8-sig") -> tuple[str, list[str]]
     taken with a different decode would differ from the header the parser sees, which is the one
     thing it must not do.
     """
-    import csv  # noqa: PLC0415 — only this function needs it
     import io  # noqa: PLC0415
 
     if not raw:

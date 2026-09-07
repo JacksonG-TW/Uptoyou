@@ -93,7 +93,6 @@ async def scenario(test_url: str, base_url: str) -> None:
 
     K = {"Authorization": "Bearer " + kevin_token}
     A = {"Authorization": "Bearer " + amy_token}
-    S = {"Authorization": "Bearer " + stranger_token}
     meal = (datetime.now(TAIPEI) + timedelta(hours=2)).replace(microsecond=0)
 
     async with httpx.AsyncClient(base_url=base_url, timeout=20) as client:

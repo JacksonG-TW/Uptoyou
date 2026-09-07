@@ -30,7 +30,6 @@ convenience:**
 import io
 import os
 import re
-import sys
 import unittest
 from collections import Counter
 

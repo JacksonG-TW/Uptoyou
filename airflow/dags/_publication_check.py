@@ -60,6 +60,12 @@ needs no Airflow, no network and no database.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # the runtime import stays inside the task (below): the provider is heavy and
+    # exists only in the Airflow image, while this module is imported by the host-side test too.
+    from airflow.providers.postgres.hooks.postgres import PostgresHook
+
 # **Airflow is imported inside `make_check_task`, not here, and that is what makes this file
 # testable.** The host has no Airflow — the DAGs run in the airflow images' own interpreter — so a
 # module-level `import airflow` would put the pure comparison behind a dependency the test runner

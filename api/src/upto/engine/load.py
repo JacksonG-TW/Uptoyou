@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sqlalchemy import bindparam, text
+from sqlalchemy import text
 
 # **D25 as amended 2026-08-28: the same in-force predicate the GET uses.** Two reads that derive
 # "in force" separately are two answers waiting to disagree — a lapsed `persist = false` row must

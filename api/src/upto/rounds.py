@@ -46,7 +46,7 @@ from .api_common import (
 )
 from .db import session_factory
 from .engine import draw
-from .engine.fold import Contribution, fold
+from .engine.fold import fold
 from .engine.load import load_contributions
 from .engine.store import write_roll
 from .engine.table import EmptyPoolError, allocate

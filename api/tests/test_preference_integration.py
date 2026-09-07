@@ -21,7 +21,6 @@ remembering.
 
 import asyncio
 import ast
-import inspect
 import os
 import secrets as pysecrets
 import subprocess
@@ -627,7 +626,7 @@ async def scenario(test_url: str) -> None:
         # the price of asserting the thing the owner actually ruled — that the place can still win —
         # and it is named here so a one-in-a-hundred-thousand red run is recognised rather than
         # debugged.
-        check("A13 Done: an avoided category can still win, and did".format(rolls),
+        check("A13 Done: an avoided category can still win, and did in {} rolls".format(rolls),
               winners.get(hot_pot, 0) > 0, winners)
         # **The "wins more often" comparison was written here and removed the same hour, because it
         # is not a property — it is a coin flip.** At 16 against 20 of the 36, twenty rolls put the
