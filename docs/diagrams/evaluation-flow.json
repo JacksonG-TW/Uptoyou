@@ -17,7 +17,7 @@
     },
     {
       "id": "human",
-      "label": "The human loop"
+      "label": "The review loop"
     }
   ],
   "phases": [
@@ -95,8 +95,8 @@
       "col": 2,
       "type": "security",
       "label": "reviewer + evaluator",
-      "sublabel": "separate contexts",
-      "tag": "comparable?",
+      "sublabel": "two model sessions",
+      "tag": "separate contexts",
       "width": 160
     },
     {
@@ -105,8 +105,8 @@
       "col": 3,
       "type": "security",
       "label": "owner",
-      "sublabel": "rules the model",
-      "tag": "not delegated",
+      "sublabel": "the only human here",
+      "tag": "selection is not delegated",
       "width": 160
     }
   ],
@@ -169,10 +169,11 @@
     },
     {
       "dot": "rose",
-      "title": "Where a human is required",
+      "title": "Two automated readers, one human ruling",
       "items": [
-        "The reviewer runs in a separate context and checks the claim against the code",
-        "Selection is the owner's; the evaluator gates whether the number means what it says"
+        "The reviewer is a separate model session with a clean context; it checks the claim against the code",
+        "The evaluator gates whether the number means what it says — also a model session",
+        "The owner rules the model. That is the one human decision in this loop, and it is not delegated"
       ]
     }
   ]

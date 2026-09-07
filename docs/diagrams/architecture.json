@@ -325,7 +325,7 @@
   "cards": [
     {
       "dot": "cyan",
-      "title": "Serving — live since 2026-09-07",
+      "title": "Serving over HTTPS — since 2026-09-07",
       "items": [
         "https://uptoyou.jacksong-tw.com — Cloudflare Full (strict) to an Origin CA cert on nginx",
         "The security group admits 443 from Cloudflare's ranges only; 80 is closed; the host holds an Elastic IP",

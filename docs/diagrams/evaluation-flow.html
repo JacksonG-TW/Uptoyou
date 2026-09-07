@@ -5045,7 +5045,7 @@
         <text x="54" y="200" class="t-dim" font-size="10" font-weight="600">02 / Rounds + scoring</text>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-2" x="40" y="304" width="1026" height="106" rx="10" class="c-lane" stroke-width="1"/>
-        <text x="54" y="326" class="t-dim" font-size="10" font-weight="600">03 / The human loop</text>
+        <text x="54" y="326" class="t-dim" font-size="10" font-weight="600">03 / The review loop</text>
 
         <!-- Phase headers -->
         <line x1="82" y1="35" x2="174" y2="35" class="a-default" stroke-width="1.1"/>
@@ -5119,8 +5119,8 @@
         <text data-detail="fine" x="767.2" y="268" class="t-backend" font-size="7" text-anchor="middle">±6.5 band</text>
         </g>
 
-        <g id="node-gates" data-node-id="gates" data-node-label="reviewer + evaluator" tabindex="0" role="button" aria-label="Focus reviewer + evaluator, separate contexts, The human loop › Asked" aria-pressed="false" data-node-kind="security" data-node-sublabel="separate contexts" data-node-tag="comparable?" data-node-context="The human loop › Asked">
-          <title>reviewer + evaluator · separate contexts · The human loop › Asked · comparable?</title>
+        <g id="node-gates" data-node-id="gates" data-node-label="reviewer + evaluator" tabindex="0" role="button" aria-label="Focus reviewer + evaluator, two model sessions, The review loop › Asked" aria-pressed="false" data-node-kind="security" data-node-sublabel="two model sessions" data-node-tag="separate contexts" data-node-context="The review loop › Asked">
+          <title>reviewer + evaluator · two model sessions · The review loop › Asked · separate contexts</title>
           <rect x="413.2" y="338" width="160" height="68" rx="6" class="c-mask"/>
           <rect x="413.2" y="338" width="160" height="68" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(419.2 344) scale(0.6875)">
@@ -5128,12 +5128,12 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="493.2" y="359" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">reviewer + evaluator</text>
-          <text data-detail="context" x="493.2" y="376" class="t-muted" font-size="8" text-anchor="middle">separate contexts</text>
-        <text data-detail="fine" x="493.2" y="394" class="t-security" font-size="7" text-anchor="middle">comparable?</text>
+          <text data-detail="context" x="493.2" y="376" class="t-muted" font-size="8" text-anchor="middle">two model sessions</text>
+        <text data-detail="fine" x="493.2" y="394" class="t-security" font-size="7" text-anchor="middle">separate contexts</text>
         </g>
 
-        <g id="node-owner" data-node-id="owner" data-node-label="owner" tabindex="0" role="button" aria-label="Focus owner, rules the model, The human loop › Ruled" aria-pressed="false" data-node-kind="security" data-node-sublabel="rules the model" data-node-tag="not delegated" data-node-context="The human loop › Ruled">
-          <title>owner · rules the model · The human loop › Ruled · not delegated</title>
+        <g id="node-owner" data-node-id="owner" data-node-label="owner" tabindex="0" role="button" aria-label="Focus owner, the only human here, The review loop › Ruled" aria-pressed="false" data-node-kind="security" data-node-sublabel="the only human here" data-node-tag="selection is not delegated" data-node-context="The review loop › Ruled">
+          <title>owner · the only human here · The review loop › Ruled · selection is not delegated</title>
           <rect x="687.2" y="338" width="160" height="68" rx="6" class="c-mask"/>
           <rect x="687.2" y="338" width="160" height="68" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(693.2 344) scale(0.6875)">
@@ -5141,8 +5141,8 @@
             <path d="m5.8 8 1.5 1.5 3-3"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="767.2" y="359" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">owner</text>
-          <text data-detail="context" x="767.2" y="376" class="t-muted" font-size="8" text-anchor="middle">rules the model</text>
-        <text data-detail="fine" x="767.2" y="394" class="t-security" font-size="7" text-anchor="middle">not delegated</text>
+          <text data-detail="context" x="767.2" y="376" class="t-muted" font-size="8" text-anchor="middle">the only human here</text>
+        <text data-detail="fine" x="767.2" y="394" class="t-security" font-size="7" text-anchor="middle">selection is not delegated</text>
         </g>
 
         <!-- Edge labels -->
@@ -5396,11 +5396,12 @@
       <div class="card">
         <div class="card-header">
           <div class="card-dot rose"></div>
-          <h3>Where a human is required</h3>
+          <h3>Two automated readers, one human ruling</h3>
         </div>
         <ul>
-          <li>&bull; The reviewer runs in a separate context and checks the claim against the code</li>
-          <li>&bull; Selection is the owner&#39;s; the evaluator gates whether the number means what it says</li>
+          <li>&bull; The reviewer is a separate model session with a clean context; it checks the claim against the code</li>
+          <li>&bull; The evaluator gates whether the number means what it says — also a model session</li>
+          <li>&bull; The owner rules the model. That is the one human decision in this loop, and it is not delegated</li>
         </ul>
       </div>
     </div>
