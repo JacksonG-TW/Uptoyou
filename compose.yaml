@@ -367,6 +367,14 @@ services:
     restart: "no"
     networks:
       - data
+    # **Three images, not seven** (owner 「改成三」, 2026-09-07). `api` and `migrate` are the same
+    # build — `api/Dockerfile`, same context, no target — differing only in the command they run,
+    # and the four airflow services are one `airflow/Dockerfile` build differing in `command` and
+    # `entrypoint`. Seven names for three builds meant seven packages to publish, seven to keep
+    # honest, and a reader counting images and finding more than the stack has. `tests` keeps its
+    # own name: it shares `api`'s build but is profile-gated, never starts on the box, and is never
+    # pushed.
+    #
     # **`image:` beside `build:` so one compose file serves both machines** (owner 「公開」,
     # 2026-09-07). This VM builds — `docker compose build` uses `build:` and names the result with
     # the tag below. The launch box pulls — `docker compose pull` reads `image:` and never `build:`,
@@ -389,7 +397,7 @@ services:
     # days ago. Without the fallback that bench would overwrite `upto-api:latest` silently. With it:
     # no `-p` → `upto-<svc>` (compose.yaml's own `name: upto`), `-p upto-mem` → `upto-mem-<svc>`,
     # `-p upto-splitcheck` → `upto-splitcheck-<svc>`.
-    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}migrate:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
     environment:
@@ -586,7 +594,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-init:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -615,7 +623,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-scheduler:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -733,7 +741,7 @@ services:
     cpus: 2.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-dag-processor:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -801,7 +809,7 @@ services:
     cpus: 1.0
     networks:
       - data
-    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow-api:${UPTO_IMAGE_TAG:-latest}
+    image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}airflow:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
