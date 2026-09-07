@@ -4,7 +4,7 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-[![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-36%2C499%20places-555555)](#the-pipeline) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#deployment)
+[![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-35%2C965%20places-555555)](#the-pipeline) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#deployment)
 
 **A group decides one meal together, and a weighted pair of dice does the choosing fairly.** Every
 factor that moved a place's odds is a stored row, pinned to the reading it came from, so the result
@@ -31,7 +31,7 @@ source that goes quiet shows up as a stale `max`, not as an absence.
 |---|---|
 | **The idea** | Five friends, one meal, nobody wants to be the one who chose. The app chooses, and then shows its work. |
 | **How it decides** | Weighted dice, not a ranking. Every factor multiplies the odds, an avoided category multiplies by zero, and the reveal panel names each factor beside the number it contributed. |
-| **Data** | 7 published sources through 6 ingest DAGs (nine scheduled in all). **On the launch instance:** 35,965 Taipei places, 25,031 of them with a generated category. **The pipeline's history is longer than the instance's**, so the publication counts are given per host and with their start dates: the development database holds **30 publications from the five reference sources since 2026-08-14** and **837 from the hourly weather feed since 2026-08-11**; the launch instance, built on 2026-09-04, holds 5 and 69. Publication rows are kept for ever by design — they are the ledger the freshness probe reads — so the weather figure is a running count rather than a size. |
+| **Data** | 7 published sources through 6 ingest DAGs (nine scheduled in all). **On the launch instance:** 35,965 Taipei places, 25,031 of them with a generated category. **The pipeline's history is longer than the instance's**, so the publication counts are given per host and with their start dates: the development database holds **30 publications from the five reference sources since 2026-08-11** (the place source began that day; the other four on 2026-08-14, when D77, D78, D81 and D85 landed) and **837 from the hourly weather feed since 2026-08-11**; the launch instance, built on 2026-09-04, holds 5 and 69. Publication rows are kept for ever by design — they are the ledger the freshness probe reads — so the weather figure is a running count rather than a size. |
 | **Engineering** | Content-addressed ingest with an idempotent ledger; a dropped table replays from what the ledger kept; a three-layer name derivation; a RAG classifier with a frozen evaluation set. |
 | **Measured** | Storing costs 15.0 s and a no-change day 1.6 s, so the short-circuit is priced. Four local models on one frozen set: 72.0 · 71.0 · 70.5 · 65.5 (v7, 2026-08-30); the hosted yardstick read 60.5 on the first set. The whole city is classified (36,014 rows, 2026-09-03). The 2 GB instance holds its nightly work with 398 MB to spare, after a week that started at 49. |
 | **Why this stack** | One compose file, one database doing both relational and vector work, no service that cannot be run on a 2 GB instance — and it is running on one. |
@@ -251,8 +251,13 @@ one of them. The join itself is safe — 99.78% name agreement once the legal-fo
 stripped — and the address is not: 89.8% differ, 13.7% are registered outside the city.
 
 *Measured again on the set that is actually scored, which is a harder test than the city-wide
-join* — the 200-row frozen evaluation set, against the best model configuration on record
-(gemma2:2b + retrieval, 66.0% pooled; the hosted yardstick is 60.5%):
+join* — the 200-row frozen evaluation set. The accuracy quoted beside it when this was written was
+**66.0%**, `gemma2:2b` with retrieval on `testset_v1` under prompt v5
+(`round_gemma_v5-rag-2026-08-15_arctic.json.report.md`); the same model and configuration now reads
+**71.0%** on `testset_v3` under v7, in the table above. **The join figures below are unaffected and
+that is not luck**: D82 drew the 200 rows once and froze them, and v1, v2 and v3 differ by
+relabelling under a ruling only — the same rows in the same order — so «142 of 200 join a tax row»
+is a fact about the draw, not about the prompt that scored it:
 
 - **142 of 200 rows join a tax row, and 75 of those are a chain's HQ registry number** — the
   guardrail against ruling a multi-site company non-food by code alone is the majority case.
@@ -382,7 +387,7 @@ with a provably identical result — a separate, pending change.
 was chosen.** *Chosen:* stream the one ingest that held its whole file in memory, then shrink Airflow
 with four settings and a memory limit that actually bites. *Rejected:* a bigger instance first (ruled,
 then refused by the account's plan); a swap file (turns a crash into a twelve-hour crawl); tuning
-without a table. *The numbers, in the order they arrived:* the first night, eight DAGs unpaused in one
+without a table. *The numbers, in the order they arrived, over 2026-09-04 to 09-07:* the first night, eight DAGs unpaused in one
 loop wedged the box while every cloud health check stayed green; walked one at a time, the registry
 roster left **49 MB** free against a 150 MB floor; the roster ingest was found holding 209,472 row
 objects until the write ended — streamed in 5,000-row chunks its peak fell **172 → 77 MB** with rows

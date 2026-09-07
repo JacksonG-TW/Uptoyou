@@ -4,7 +4,7 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-[![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-36%2C499%20places-555555)](#資料管線) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#部署)
+[![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-35%2C965%20places-555555)](#資料管線) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#部署)
 
 **一群人一起決定一餐，由一對加了權重的骰子公平地選出來。** 每一個推動過店家機率的因素都是一列存下來
 的資料，並釘住它是從哪一筆讀數來的，所以結果是一個可以查帳的決定，而不是一個憑空出現的數字。
@@ -29,7 +29,7 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "sel
 |---|---|
 | **核心想法** | 五個朋友、一餐飯，沒有人想當那個做決定的人。這個 app 來決定，然後把它的計算過程攤開。 |
 | **決策方式** | 加權骰子，不是排名。每個因素都乘上機率，被避開的類型乘以零，而揭曉面板會把每個因素連同它貢獻的數字一起列出來。 |
-| **資料規模** | 7 個發佈來源、6 個 ingest DAG（排程上共九個）。**線上主機上**：35,965 家臺北餐飲場所，其中 25,031 家帶有模型產生的分類。**這條管線的歷史比這台主機長**，所以發佈數按主機分開列出並標註起算日：開發資料庫自 2026-08-14 起累積 **五個名稱來源的 30 次發佈**，自 2026-08-11 起累積 **每小時天氣的 837 次發佈**；2026-09-04 才建立的線上主機則是 5 次與 69 次。發佈紀錄依設計永久保留——它就是新鮮度探針讀的那本帳——所以天氣那個數字是累計值，不是規模。 |
+| **資料規模** | 7 個發佈來源、6 個 ingest DAG（排程上共九個）。**線上主機上**：35,965 家臺北餐飲場所，其中 25,031 家帶有模型產生的分類。**這條管線的歷史比這台主機長**，所以發佈數按主機分開列出並標註起算日：開發資料庫自 2026-08-11 起累積 **五個名稱來源的 30 次發佈**（場所來源是那天開始的；另外四個是 2026-08-14，D77、D78、D81、D85 落地那天），自 2026-08-11 起累積 **每小時天氣的 837 次發佈**；2026-09-04 才建立的線上主機則是 5 次與 69 次。發佈紀錄依設計永久保留——它就是新鮮度探針讀的那本帳——所以天氣那個數字是累計值，不是規模。 |
 | **技術重點** | 以內容定址的 ingest 加一本幂等的帳本；被丟掉的表可以從帳本留下的東西重播出來；三層的名稱推導；一個帶凍結評估集的 RAG 分類器。 |
 | **量測成果** | 儲存要 15.0 秒、沒有變化的日子 1.6 秒，所以那個短路是被標上價的。四個本地模型在同一個凍結測試集上：72.0 · 71.0 · 70.5 · 65.5（v7，2026-08-30）；託管量尺在第一版集合上是 60.5。全市已經分類完（36,014 列，2026-09-03）。那台 2 GB 的機器跑完每晚的工作還剩 398 MB，而那一週是從 49 開始的。 |
 | **技術選用** | 一個 compose 檔、一個資料庫同時做關聯式和向量的工作，沒有任何一個服務是 2 GB 的機器跑不動的 —— 而它現在就跑在一台上面。 |
@@ -221,8 +221,12 @@ Qdrant）。*那個數字：* 小抄是三個嵌入模型合計 537 列 —— �
 代號會把它們全部貼錯。join 本身是安全的 —— 把法人形式的字尾去掉之後名稱一致度 99.78% —— 而地址不是：
 89.8% 不同，13.7% 登記在市外。
 
-*然後在真正被評分的那個集合上再量一次，這比全市的 join 是更嚴格的測試* —— 200 列的凍結評估集，
-對上紀錄中最好的模型設定（gemma2:2b + 檢索，合計 66.0%；託管量尺是 60.5%）：
+*然後在真正被評分的那個集合上再量一次，這比全市的 join 是更嚴格的測試* —— 200 列的凍結評估集。
+寫下這段時旁邊引的準確率是 **66.0%**，那是 `gemma2:2b` 加檢索、在 `testset_v1` 上跑提示詞 v5 的結果
+（`round_gemma_v5-rag-2026-08-15_arctic.json.report.md`）；同一個模型、同一組設定，現在在 `testset_v3`
+上跑 v7 是 **71.0%**，就在上面那張表裡。**下面那些 join 的數字不受影響，而且這不是運氣**：D82 把這
+200 列抽過一次就凍結了，v1、v2、v3 之間只差在依裁定重新標註——同樣的列、同樣的順序——所以「200 列裡
+有 142 列 join 得到稅籍列」是關於這次抽樣的事實，不是關於評分它的那個提示詞：
 
 - **200 列中有 142 列對上一筆稅籍資料，而其中 75 列是連鎖總部的統編** —— 「不得只靠代號就判定一家
   多點的公司為非餐飲」這條護欄，在這裡是多數情況。
@@ -330,7 +334,7 @@ join 是少 61 倍的 buffer，並且結果可證明相同 —— 那是另一�
 **10. 那台 2 GB 的機器跑不動它自己每晚的工作，而解法是先量過才選的。** *選擇：* 把唯一一個把整份檔案
 抓在記憶體裡的 ingest 改成串流，然後用四個設定和一個真的會擋的記憶體上限把 Airflow 縮小。*否決：*
 先換大機器（裁定了，然後被帳號方案拒絕）；加 swap（把當機變成十二小時的爬行）；沒有表就調參數。
-*那些數字，照它們到來的順序：* 第一晚，八個 DAG 在一個迴圈裡一起解除暫停，機器卡死，而雲端的每一個
+*那些數字，照它們到來的順序，時間是 2026-09-04 到 09-07：* 第一晚，八個 DAG 在一個迴圈裡一起解除暫停，機器卡死，而雲端的每一個
 健康檢查都是綠的；一次一個走過去，登記名冊那一個把可用記憶體壓到 **49 MB**，線是 150 MB；接著發現名冊
 的 ingest 把 209,472 個列物件抓在手上直到寫完 —— 改成每 5,000 列串流寫入，尖峰從 **172 降到 77 MB**，
 存進去的列一模一樣；然後第二晚顯示真正的成本是 Airflow 本身，閒著就吃約 1.35 GB，而同一分鐘的兩個
