@@ -367,6 +367,20 @@ services:
     restart: "no"
     networks:
       - data
+    # **`image:` beside `build:` so one compose file serves both machines** (owner 「公開」,
+    # 2026-09-07). This VM builds — `docker compose build` uses `build:` and names the result with
+    # the tag below. The launch box pulls — `docker compose pull` reads `image:` and never `build:`,
+    # so it needs neither a toolchain nor the memory a Vite build wants (H76).
+    #
+    # **`UPTO_IMAGE_PREFIX` defaults to today's name and that is load-bearing, not politeness.**
+    # A literal `ghcr.io/...` here would rename every locally built image, which breaks CLAUDE.md's
+    # pin recipes — and worse, `split_boot_check.sh` builds `--no-cache` under its own PROJECT, which
+    # isolates image names ONLY while compose derives them from the project. With a literal tag its
+    # throwaway build would overwrite the real one under the same name, silently. So the default
+    # reproduces `upto-<service>:latest`, split-boot sets `upto-splitcheck-`, and the box sets
+    # `ghcr.io/jacksong-tw/upto-`. `UPTO_IMAGE_TAG` is how a rollback is spelled there: a previous
+    # extract sha, `docker compose pull`, `up -d --wait`.
+    image: ${UPTO_IMAGE_PREFIX:-upto-}migrate:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
     environment:
@@ -432,6 +446,7 @@ services:
     networks:
       - edge
       - data
+    image: ${UPTO_IMAGE_PREFIX:-upto-}api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
     environment:
@@ -482,6 +497,7 @@ services:
     cpus: 0.5
     networks:
       - edge
+    image: ${UPTO_IMAGE_PREFIX:-upto-}proxy:${UPTO_IMAGE_TAG:-latest}
     build:
       # app/ rather than ./proxy: the image carries the nginx config and the static front
       # end, and those are siblings. Both paths stay inside app/, which is what H18 asks.
@@ -561,6 +577,7 @@ services:
     cpus: 2.0
     networks:
       - data
+    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-init:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -589,6 +606,7 @@ services:
     cpus: 2.0
     networks:
       - data
+    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-scheduler:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -706,6 +724,7 @@ services:
     cpus: 2.0
     networks:
       - data
+    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-dag-processor:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile
@@ -773,6 +792,7 @@ services:
     cpus: 1.0
     networks:
       - data
+    image: ${UPTO_IMAGE_PREFIX:-upto-}airflow-api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./
       dockerfile: airflow/Dockerfile

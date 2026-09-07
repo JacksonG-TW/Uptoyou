@@ -91,9 +91,20 @@ fi
 say "moved $before -> $after"
 git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
 
-# See the H64-in-reverse block above before adding `--profile test` here.
-say "building"
-docker compose build
+# **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the research is in
+# the private repository, `idea & img/ghcr-research.md`). It built its own images until then, and on
+# 2026-09-05 that wedged it for twelve hours — `npm ci` and a Vite build on a swapless 2 GB instance
+# with the stack running (H76's neighbour). The images are built on the development machine and
+# pushed to GHCR as PUBLIC packages, so this pull needs **no credential**: «You can also access
+# public container images anonymously» (GitHub, read 2026-09-07). What arrives is named by the
+# extract's own commit, so «what is this running» is answerable from a repository anybody can fetch.
+#
+# **A pull is I/O, not memory**, so the failure this replaces is gone rather than mitigated, and the
+# stack keeps serving until the recreate — the outage window is a container restart instead of a
+# frontend build. `.env` carries `UPTO_IMAGE_PREFIX=ghcr.io/jacksong-tw/upto-`, and `UPTO_IMAGE_TAG`
+# is how a rollback is spelled: set it to a previous extract sha, run this again.
+say "pulling images"
+docker compose pull --quiet
 
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
 # as the containers are created, and a container that dies on its healthcheck is discovered by a
