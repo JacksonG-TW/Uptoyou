@@ -408,6 +408,65 @@ heartbeat the same probe through the same hostname reads open and delivering. A 
 nothing for two minutes is the normal case for this product, so this was a launch blocker and not a
 polish item; the comment line carries no timing a member could read (see Privacy).
 
+## How this was built
+
+The code is one third of this repository; the other two are the record of how each decision was
+taken and the instruments that checked it. Eight habits, each with one instance.
+
+- **One decision at a time, with a recommendation, its cost and the branch rejected, and a date.**
+  Every ruling lives once, in a private design log numbered D1 onward; the README's eleven decisions
+  above are its digest. Instance: the launch surface's structure was re-decided three times after a
+  «final» build in early September, which is why a screen's structure is now ruled once from a
+  wireframe and a feature list before anything is built (2026-09-04).
+- **Measured before ruled.** A number from the record beats an adjective, and the instrument is
+  checked before the product is blamed. Instance: the Airflow memory week (2026-09-04 to 09-07):
+  the launch box wedged twice, the first reading blamed the ingest, the measured cause was the
+  scheduler's own footprint and a healthcheck that cold-started the CLI every 20 s; and on one day
+  seven of nine red findings were the harness measuring itself, so each harness now writes down
+  what would make it report a defect if the product were fine.
+- **Gates are local, not in CI.** Six pre-commit gates run on the committer's machine so a clone
+  needs no toolchain; CI re-runs the tests but decides nothing. Instance: the font-subset gate
+  refuses a commit whose member-facing copy needs a glyph the shipped fonts lack (2026-08-28) — a
+  gap invisible on any machine with a system CJK fallback, so the gate is the only place it shows.
+- **The writer never judges its own work.** The served surface is gated from the page and the wire
+  by a reader that never sees the builder's reasoning; every backend diff is read against the
+  rulings it cites and the tests it names before a build is named a candidate (2026-09-07 onward);
+  visual choices are ruled from rendered pages, never from prose. Instance: the reviewer's first day
+  found two findings in a candidate that every test and the boot check had passed.
+- **Licence-clean, or not used.** Every source and model carries its licence in the record before
+  it is touched. Instance: `qwen2.5:3b-instruct` is research-licensed, so it may be asked in an
+  evaluation round and can never be a pipeline's model; the same rule sorted the text-to-speech
+  candidates on 2026-09-07 — four usable, four refused, two uncertain and therefore out.
+- **Provenance over prediction.** Publications are content-addressed and never overwritten; every
+  publication records the shape of the file it came from; every weight that moved a place's odds is
+  a row pinned to the reading it was computed from. Instance: a dropped table replays from what the
+  ledger kept, and a reveal can name the run each factor came from.
+- **The product states; it never advises.** Weather is shown as information and never as a reason
+  to go somewhere; the reveal itemises what happened and recommends nothing. Instance: «the rain
+  made this place less likely» is a stored contribution a member can read; «you should pick the dry
+  one» is a sentence the surface cannot produce.
+- **Off-the-shelf where the shelf is better.** The first surface was hand-rolled with no build step
+  and no framework; on 2026-08-18 it was rebuilt on React 19 + Vite because hand-rolling was too
+  slow for what the screens needed. The same rule now brings in MLflow (2026-09-11) rather than
+  keeping a home-built equivalent.
+
+## Iteration timeline
+
+Dates are the record's; the number in the last column is the one that decided the row.
+
+| Dates | Phase | What changed | The number |
+|---|---|---|---|
+| 2026-08-11 to 08-17 | Skeleton and the architecture walk | `docker compose up` boots db, api and proxy from one command (08-11); the destination, the batch classifier and its stop-loss ladder ruled one at a time (08-13); first evaluation rounds on a fixed set (08-14, 08-15) | v3 → v4 → v5 prompts in two days; v5 with retrieval scored **66.0%** on a 200-row set drawn once |
+| 2026-08-18 | The surface reversed | The hand-rolled, no-build front end is replaced by Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image; the private preference surface ruled the same day | one night to re-rule; the served bundle still fetches nothing at runtime |
+| 2026-08-19 to 08-29 | The engine's factors, and the surface that shows them | Every member rolls and one roll counts, named before the dice are seen (08-19); the rain factor made relative to the pool's driest township (08-27); «last time we went here» halves a place (08-27); the ingredient veto built, measured and withdrawn for want of coverage | rain: gap ÷ 120, floored at 0.5; ingredient coverage 12.4% of places, which is why the kind left the product |
+| 2026-08-29 to 08-31 | Launch candidates 1 to 5 | The surface frozen and re-gated as named candidates; the return-choice surface (candidate 4); an eleventh, then twelfth and thirteenth category and a version-free why-sentence (candidate 5); the nightly S3 backup with a restore drill | drill: 19.7 MB dumped in 3.7 s, restored in 9.4 s, counts identical (08-30) |
+| 2026-08-30 to 09-02 | The classifier ladder | A 7B candidate admitted once the gate followed the machine the pipeline calls; prompts v6 and v7; the test set relabelled twice under rulings (v1 → v3); the whole city re-decided on v7; the per-model unload that removed a slowdown | four models on one set: 72.0 · 71.0 · 70.5 · 65.5; 36,014 rows in 10.5 h with five level curves; 其他 down 38% |
+| 2026-09-04 | The design round, candidates 6 to 8 | The tonight screen as a menu with section marks, one slim bar on every inner screen, corner ornaments; the reveal's chrome receding | three candidates in one day; structure ruled from a wireframe from then on |
+| 2026-09-04 | Candidates 9 and 10: the proxy in front | Connection and rate limits on the proxy; a 25 s heartbeat on the live stream after Cloudflare's idle cut was measured, side by side, twice | a stream silent for 130 s: cut through the proxy, open direct; with the heartbeat, open and delivering |
+| 2026-09-04 to 09-07 | Launch on EC2 | One `t3.small` in Tokyo boots the public extract and passes one ingest cycle the same day; the box wedged twice on memory; the roster ingest streamed instead of held whole (candidate 11); TLS terminated in the existing nginx with an Origin CA certificate (candidate 12); Airflow shrunk to what a 2 GB box holds (candidate 13); Cloudflare live in Full (strict) | 49 MB available under one ingest → 398 MB worst case after; the roster 172 → 77 MB; the stack 1,131 → 1,009 MiB at rest; a healthcheck that cost 7.4 s of CPU every 20 s, gone |
+| 2026-09-08 | Images from a registry | Seven image names collapsed to three; images built here and pushed to GHCR tagged with the extract's commit; the box pulls by digest and builds nothing | pull 9 s; memory 479 → 664 MB during the deploy, never dipping |
+| 2026-09-11 | Candidate 14, and the tools round (in flight) | A member who reloads after the reveal gets the same fairness evidence as one who watched it; MLflow ruled in over the existing round files; a research page on growing to N instances (load balancer allowed, RDS pending a policy) | built and under review at the time of writing |
+
 ## Deployment
 
 **The box pulls; nothing reaches in.** One EC2 `t3.small` in Tokyo runs `docker compose up` on the
@@ -434,9 +493,9 @@ dependency rather than the repository's. Above the gates sit two readers
 who did not write the change: the surface is judged from the served page and the wire, with its own
 harnesses (a five-agent walkthrough, a load ladder, a silence test that requires delivery and not
 merely an open socket); and every backend diff is read against the rulings it cites and the tests it
-names before a build is named a candidate. Seven of nine red findings on one day were the instrument
-measuring itself, which is why the harnesses now write down what would make them report a defect if
-the product were fine.
+names before a build is named a candidate. What the harnesses learned from measuring themselves —
+and why each now writes down what would make it report a defect if the product were fine — is in
+«How this was built» above.
 
 ## Diagrams
 
