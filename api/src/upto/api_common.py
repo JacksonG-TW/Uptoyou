@@ -2,7 +2,7 @@
 
 `resolve_member` is D67's gate. `place_names` is D28's 2026-08-13 ruling executed at read
 time — a reference place carries only its 登錄字號, so its display name comes from the latest
-publication's row, never from a copy that would drift. `result_body` is the one shape a close
+publication's row, never from a copy that would drift. `_result_body` is the one shape a close
 has, whether it answers a roll, a retry (D69), or arrives on the stream (D53) — one builder,
 so the shapes cannot disagree.
 """
@@ -269,7 +269,7 @@ def winner_headline_for(display: dict, winning_place_id: int) -> tuple:
         return None, None
     return (headline_module.headline(entry.get("base"), entry.get("name_source")),
             entry.get("qualifier"))
-def result_body(
+def _result_body(
     round_id: int,
     dice: tuple[int, int] | None,
     winning_place_id: int,
@@ -459,8 +459,12 @@ async def closed_body(
 ) -> dict:
     """The closed round's payload, assembled in ONE place — D108's evidence included.
 
-    **Every path that shows a closed round comes through here**, and that is the point rather
-    than a tidiness: the roll response, D69's retry, the SSE close event and the reconnect
+    **Every path that shows a closed round comes through here, and nothing else can be called**
+    — `_result_body` is private as of 2026-09-11 for exactly that reason (the reviewer: this
+    docstring claimed «there is nothing else to call» while a module-level `result_body` sat
+    beside it with a single caller, so a fifth path could have assembled its own body the way
+    the fourth did). A whitelist is structural; a convention is a promise, and the promise is
+    what failed here the first time. That is the point rather than a tidiness: the roll response, D69's retry, the SSE close event and the reconnect
     snapshot. The snapshot did not, until 2026-09-11, and so a member who reloaded after the
     reveal got dice, sum, winner and trip with **none of D108's four keys** — no seat list, no
     deciding member, no commitment, no revealed seed — which is the apparatus that makes the
@@ -481,7 +485,7 @@ async def closed_body(
     # close cannot disagree about what the headline says.
     display = await place_display(session, weights.keys())
     winner_headline, winner_qualifier = winner_headline_for(display, winning_place_id)
-    body = result_body(
+    body = _result_body(
         round_id,
         dice,
         winning_place_id,
