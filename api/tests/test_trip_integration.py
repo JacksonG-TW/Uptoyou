@@ -241,6 +241,51 @@ async def scenario(test_url: str, base_url: str) -> None:
               trip_in_snapshot is not None and trip_in_snapshot["nickname"] == "Amy",
               trip_in_snapshot)
 
+        # **The «after close» half of D55's narrowing, which nothing asserted until 2026-09-11.**
+        # The reveal is checkable only if the member can see WHO rolled what, the commitment made
+        # before any proposal, and the seed published at close — D108's whole mechanism. The roll
+        # response carried them and this snapshot did not, because it assembled its own body
+        # instead of going through the one place that reads them (the reviewer's finding). A member
+        # who reloads after the reveal is the likeliest reader of all, so this is the path that
+        # most needed them. Asserted on a MEMBER's stream: these four are not operator detail.
+        snap = fresh[0].get("last_result") or {} if fresh else {}
+        seats = snap.get("rolls") or []
+        check("the reconnect snapshot names who rolled what (D108, D55 as narrowed)",
+              bool(seats) and all({"member_id", "nickname", "die1", "die2", "counts"} <= set(seat)
+                                  for seat in seats), seats)
+        check("and the deciding member, the commitment and the revealed seed",
+              snap.get("deciding_member") is not None
+              and bool(snap.get("seed_commit")) and bool(snap.get("revealed_seed")),
+              {k: snap.get(k) for k in ("deciding_member", "seed_commit", "revealed_seed")})
+        # **Against round TWO's roll, not round one's.** The snapshot's `last_result` is the latest
+        # closed round, and this file closes a second one to watch the signing — so comparing with
+        # `result` (round one) compares two different rounds and fails on two correct seeds. It did,
+        # while this assertion was being written: the test caught its own author, which is the
+        # cheaper direction.
+        second = rolled2.json()
+        check("the snapshot's seed is the one that round's roll published, not a fresh read",
+              snap.get("seed_commit") == second.get("seed_commit")
+              and snap.get("revealed_seed") == second.get("revealed_seed"),
+              (snap.get("seed_commit"), second.get("seed_commit")))
+        check("and it still carries no accounting for a member (D105)",
+              "panel" not in snap and "allocation" not in snap and "weights" not in snap,
+              sorted(snap))
+
+    # ---- and the ENDPOINT refuses one, before the database is asked ----------------------
+    #
+    # **A missing test rather than a hole** (the reviewer, 2026-09-11, correcting an alarm this file
+    # helped raise): `sign_trip` resolves the token against the round's own circle and 401s when it
+    # does not belong, and revision 0024's composite foreign keys refuse the insert as a second
+    # line. Both were there all along; nothing asserted the first over HTTP, which is why the
+    # deleted `S = {...}` header in this file read as an abandoned intention. It is exercised now.
+    async with httpx.AsyncClient(base_url=base_url, timeout=20) as client:
+        outsider = await client.post(
+            "/rounds/{}/trip".format(round_id),
+            headers={"Authorization": "Bearer " + stranger_token},
+        )
+        check("a member of another circle cannot sign this round's trip over HTTP",
+              outsider.status_code == 401, (outsider.status_code, outsider.text[:120]))
+
     # ---- the database refuses a signature from outside the circle ------------------------
     #
     # Raw SQL on purpose: the endpoint resolves the member against the round's circle and would

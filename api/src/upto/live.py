@@ -30,23 +30,18 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from .api_common import (
+    closed_body,
     SINGLE_BRAND_GROUPED,
     STOREFRONT,
     compose_names,
-    place_display,
     place_names,
     for_credential,
     deciding_member_for,
-    panel_for,
     seats_for,
     resolve_credential,
     resolve_member,
-    result_body,
-    winner_headline_for,
-    trip_for,
 )
 from .db import session_factory
-from .engine.table import allocate
 from .stream import subscribe
 
 # No prefix — the proxy strips /api/ before forwarding, same as rounds.py explains.
@@ -144,30 +139,32 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         ).all()
         weights = {row.place_id: row.weight for row in stored}
         dice = (last.die1, last.die2) if last.die1 is not None else None
-        # A16: the snapshot carries the same headline the roll response did — one composition,
-        # read twice, so a reconnecting client's reveal reads identically to the live one.
-        display = await place_display(session, weights.keys())
-        winner_headline, winner_qualifier = winner_headline_for(display, last.winning_place_id)
-        last_result = result_body(
+        # **One assembly point, and this branch is here because it was not using it** (the
+        # reviewer's finding, 2026-09-11). It built its own body from `result_body` and re-added
+        # `trip` and `panel` by hand, which is every key the roll response has EXCEPT D108's four —
+        # the seat list, the deciding member, the seed commitment and the revealed seed. So a
+        # member who reloaded after the reveal saw dice, sum, winner and trip and could not check
+        # the draw, on the one path a member is most likely to take. D55 as narrowed names «the
+        # round payload AND the snapshot» as the two places the seat list may travel at and after
+        # close; the open branch above carries them and argues in its own comment that a snapshot
+        # without them «would make the browser reconstruct a fairness claim it cannot verify».
+        # `closed_body` carries A16's shared headline, `trip` and the four, so nothing here has to
+        # remember them.
+        last_result = await closed_body(
+            session,
             last.id,
             dice,
             last.winning_place_id,
             weights,
-            {key: value["name"] for key, value in display.items()},
-            allocate(weights) if weights else {},
-            winner_headline=winner_headline,
-            winner_qualifier=winner_qualifier,
+            viewer=viewer,
+            # A member's snapshot discards `panel` in `for_credential` two lines down, so building
+            # it would be a query and a fold thrown away. An operator's reconnect keeps it.
+            with_panel=operator,
         )
-        # **B2, and this is the half D56 makes necessary.** Nothing is pushed when a trip is signed
-        # (D53), so a client that was not connected at the moment — or that reconnected since — would
-        # otherwise never learn of it. The snapshot *is* the stream's first event, so carrying the
-        # trip here is what makes a silent signing observable at all. Same shape as everywhere else:
-        # nickname and time, never the signer's id.
-        last_result["trip"] = await trip_for(session, last.id)
-        # The evidence table, for an operator only. Built here rather than always, because it costs
-        # a query and a fold that a member's snapshot would immediately discard.
-        if operator:
-            last_result["panel"] = await panel_for(session, last.id, weights, viewer)
+        # **B2's trip comes from `closed_body` too, and D56 is why it must be here at all.** Nothing
+        # is pushed when a trip is signed (D53), so a client that was not connected at the moment —
+        # or that reconnected since — would otherwise never learn of it. The snapshot *is* the
+        # stream's first event, so carrying the trip is what makes a silent signing observable.
         # **D105/D56: the snapshot is per connection, so it is the one broadcast-shaped thing that
         # can be role-aware.** A pushed event goes to every subscriber and must therefore be the
         # member shape; a snapshot is built for the credential that opened *this* stream, so an

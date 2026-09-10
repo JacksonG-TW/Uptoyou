@@ -12,6 +12,7 @@ from __future__ import annotations
 from fastapi import HTTPException, Request
 from sqlalchemy import bindparam, text
 
+from .engine.table import allocate
 from .auth import credential_for, member_for
 from .engine import draw
 from .engine.fold import Contribution, fold
@@ -445,6 +446,90 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # not in this list and is not member-visible until close; `revealed_seed` is only ever
                # populated on a closed round, which is where the reveal is safe.
                "rolls", "deciding_member", "seed_commit", "revealed_seed")
+
+
+async def closed_body(
+    session,
+    round_id: int,
+    dice: tuple[int, int] | None,
+    winning_place_id: int,
+    weights: dict[int, object],
+    viewer: int | None = None,
+    with_panel: bool = True,
+) -> dict:
+    """The closed round's payload, assembled in ONE place — D108's evidence included.
+
+    **Every path that shows a closed round comes through here**, and that is the point rather
+    than a tidiness: the roll response, D69's retry, the SSE close event and the reconnect
+    snapshot. The snapshot did not, until 2026-09-11, and so a member who reloaded after the
+    reveal got dice, sum, winner and trip with **none of D108's four keys** — no seat list, no
+    deciding member, no commitment, no revealed seed — which is the apparatus that makes the
+    draw checkable, missing from the one path a member is most likely to take (the reviewer's
+    finding). The old comment here already promised «every caller gets them without having to
+    remember to»; a fourth caller assembled its own body and the promise was not enforceable
+    from inside this function. It is now, because there is nothing else to call.
+
+    `viewer` is the looking member, for D13's own-reason rule.
+
+    **`viewer` is a member id and never reaches the payload** (H3). It is used for one comparison:
+    a `represented_member` reason is shown to that member and to nobody else — including to an
+    operator, who audits the arithmetic rather than the people.
+    """
+    # A16: one composition, two readings — `places` keeps every row's composed name, and the
+    # headline is the winner's shortened form (registered rung only). Composed here, at the same
+    # single assembly point as `trip` and `panel`, so the roll response, D69's retry and the SSE
+    # close cannot disagree about what the headline says.
+    display = await place_display(session, weights.keys())
+    winner_headline, winner_qualifier = winner_headline_for(display, winning_place_id)
+    body = result_body(
+        round_id,
+        dice,
+        winning_place_id,
+        weights,
+        {key: value["name"] for key, value in display.items()},
+        allocate({p: w for p, w in weights.items()}),
+        winner_headline=winner_headline,
+        winner_qualifier=winner_qualifier,
+    )
+    # B2: `None` until somebody signs, and the same shape wherever a trip appears — nickname and
+    # time, never the signer's id (H3). Read here rather than assembled, so the reveal, the SSE
+    # snapshot and the signing response cannot drift apart.
+    body["trip"] = await trip_for(session, round_id)
+    # **D108's reveal.** Read here rather than passed in, so every caller of this function — the roll
+    # response, D69's retry, the SSE close — gets the seats, the decider, the commitment and the
+    # revealed seed without any of them having to remember to. One assembly point is the same reason
+    # `trip` and `panel` are read here.
+    seed_row = (
+        await session.execute(
+            text("select circle_id, seed_commit, outcome_seed, status, seat_ids "
+                 "from round where id = :r"),
+            {"r": round_id},
+        )
+    ).one()
+    seed = bytes(seed_row.outcome_seed) if seed_row.outcome_seed is not None else None
+    seats = await seats_for(session, round_id, seed_row.seat_ids, seed,
+                            closed=seed_row.status == "closed")
+    body["rolls"] = seats
+    body["deciding_member"] = deciding_member_for(seats)
+    body["seed_commit"] = seed_row.seed_commit
+    # **The seed is revealed only on a closed round, and this is the line that decides it.** Before
+    # close, a member holding it can compute the winner and choose whether to tap — the preference
+    # D91 forbids, and the same last-revealer attack that ruled out per-member commit–reveal. After
+    # close there is nothing left to prefer, and the reveal is what turns *this was fixed before
+    # anyone saw anything* from a promise into something anyone can check against `seed_commit`.
+    body["revealed_seed"] = (
+        seed.hex() if seed is not None and seed_row.status == "closed" else None
+    )
+    # The evidence table lives in `api_common.panel_for`, because the SSE snapshot needs the same
+    # thing for a reconnecting operator and two copies of a visibility rule is one copy too many.
+    # **`with_panel` exists for the snapshot, and it is a cost rather than a rule.** `for_credential`
+    # strips `panel` for a member either way, so building it for one is a query and a fold thrown
+    # away. The round endpoints keep it on: there one body serves the operator's response AND the
+    # member broadcast, so it has to hold the evidence table before it is stripped. A snapshot is
+    # built per connection for one credential, so it can decline the work it would discard.
+    if with_panel:
+        body["panel"] = await panel_for(session, round_id, weights, viewer)
+    return body
 
 
 def for_credential(body: dict, operator: bool) -> dict:
