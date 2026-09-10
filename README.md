@@ -36,6 +36,13 @@ source that goes quiet shows up as a stale `max`, not as an absence.
 | **Measured** | Storing costs 15.0 s and a no-change day 1.6 s, so the short-circuit is priced. Four local models on one frozen set: 72.0 · 71.0 · 70.5 · 65.5 (v7, 2026-08-30); the hosted yardstick read 60.5 on the first set. The whole city is classified (36,014 rows, 2026-09-03). The 2 GB instance holds its nightly work with 398 MB to spare, after a week that started at 49. |
 | **Why this stack** | One compose file, one database doing both relational and vector work, no service that cannot be run on a 2 GB instance — and it is running on one. |
 
+![Architecture — the stack as it is served](docs/diagrams/architecture.png)
+
+*One host, one `docker compose up`: Cloudflare terminates TLS at the edge and the origin
+answers 443 with its own certificate; the four Airflow services and the API share one
+PostgreSQL, each connecting as its own role. Every box names something that exists — the
+editable source is `docs/diagrams/architecture.json`.*
+
 ### 功能展示
 
 Five screens: home · device · 這一餐 (tonight's avoided categories, as a menu with section marks) ·
@@ -68,6 +75,12 @@ lineage from any reading back to the run that wrote it.
 - **Front end** — Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image; nginx serves the bundle and terminates TLS with a Cloudflare Origin CA certificate. No CDN, no runtime fetch; two subset fonts ship with the bundle and a pre-commit gate proves they cover every string a member can read.
 
 ## The pipeline
+
+![The ETL pipeline — seven sources into one ledgered store](docs/diagrams/etl-flow.png)
+
+*Seven published sources through six DAGs; the weather publisher's forecast and observation
+are two sources on one fetch. Every fetch is content-addressed and every run is recorded,
+including the no-ops.*
 
 | DAG | Schedule (UTC) | Taipei | Source |
 |---|---|---|---|
@@ -167,6 +180,11 @@ report names its set and its sha256 so two numbers compare only when both match.
 Eleven choices, each with what was rejected and the number that decided it. The full argument for
 every one — and for the eighty-odd smaller ones — lives in the private design log; this is the
 digest a reader of the code should have.
+
+![The evaluation loop — how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
+
+*The same 200 frozen rows, one round per candidate, scored and never re-run; a human rules
+the model, two automated readers check the claim.*
 
 **1. Classification runs on a local 3B model; the cloud model is a yardstick, not a worker.**
 *Chosen:* a quantized 3B generator on the same box as the database, batch-only, off unless a
@@ -498,6 +516,11 @@ and why each now writes down what would make it report a defect if the product w
 «How this was built» above.
 
 ## Diagrams
+
+![The schema at a glance](docs/diagrams/er-overview.png)
+
+*Regenerated from the live schema rather than drawn, so it cannot drift from what the
+database holds.*
 
 Four views of the same system, in `docs/diagrams/` — each PNG has a self-contained source
 beside it, and none of them makes an external request. **The three drawn ones were redrawn from the
