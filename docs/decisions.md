@@ -101,11 +101,12 @@ the development database were read side by side):
 | **35,965** | `place` | launch instance | the places a circle can choose |
 | **36,376** | `reference_place` | launch instance, and the development database's **current** publication (2026-09-02) | the reference file as published on 2026-09-02 |
 | **36,497** | `place`, origin `reference` | development database | one per reference row ever seen; accumulates across publications and is not pruned (a 36,498th row is one circle's own place) |
-| **36,499** | `reference_place` | development database, publication of **2026-08-11** | the file the name-ladder table in the README was measured against |
+| **36,499** | `reference_place` | development database, publication of **2026-08-11** | the first publication. Kept here because measurements were quoted against it until 2026-09-11 |
 
 **36,499 is the FIRST publication, not the current one.** The reference file moved on 2026-09-02 and
-the current one carries 36,376. Anything quoting 36,499 is quoting a measurement dated 2026-08-11 and
-should say so.
+the current one carries 36,376. The README's name-ladder figures were measured against 36,499 until
+2026-09-11, when the probe was re-run against the current publication and the page's four reach
+figures moved with it — so nothing public quotes 36,499 any more.
 
 **The 532 between 36,497 and 35,965 is the source moving, not a failure.** On 2026-09-07 the
 instance's own publication no longer carried 532 of the registry numbers, and those rows were

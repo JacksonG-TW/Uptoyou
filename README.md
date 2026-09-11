@@ -175,8 +175,7 @@ says how an answer outside them is refused, and how the frozen evaluation set wa
 
 The launch instance holds 35,965 places, 25,031 of them with a generated category, and 36,376
 rows of the reference list it loaded. The
-publication of 2026-08-11 carried 36,499, which is what the name-ladder table
-measures. The three count different things on two hosts — [the long version](docs/decisions.md)
+development database's current publication carries the same 36,376 rows. The three count different things on two hosts — [the long version](docs/decisions.md)
 reconciles them.
 
 ### ETL Flow
@@ -202,7 +201,7 @@ weight to exactly one source row.*
 | Table | Rows | What it holds |
 |---|---|---|
 | `place` | 35,965 | a place a circle can choose |
-| `reference_place` | 36,376 | one row of the government reference list; the count is the publication this instance loaded (the publication of 2026-08-11 had 36,499 rows, which is what the name-ladder table measures) |
+| `reference_place` | 36,376 | one row of the government reference list; the count is the publication this instance loaded (the development database's current publication is the same file, and the name-ladder table measures it) |
 | `storefront_name` | 1,686 | the sign an inspector recorded |
 | `brand_registration` | 288 | company ↔ brand pairs |
 | `business_tax_row` | 72,801 | tax-registry name and industry code |
@@ -232,17 +231,17 @@ sources. A trial of an outside geodata source false-joined 46% on address alone,
 ![The name ladder: sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
 **The result.** The sign differs from the registered name on 93% of the rows that have one. The
-brand table renames 57% of the companies it covers. How far the ladder reaches, measured over the 36,499 rows
-of the publication of 2026-08-11:
+brand table renames 57% of the companies it covers. How far the ladder reaches, measured 2026-09-11 over the
+36,376 rows of the current publication:
 
 | Step | Rows | Share | Of those, still names a company |
 |---|---|---|---|
-| sign (site-level) | 1,379 | 3.8% | 3.3% |
-| brand (single-brand companies only) | 4,001 | 11.0% | 44.0% |
-| registered (what is left) | 31,119 | 85.3% | 33.3% |
+| sign (site-level) | 1,363 | 3.7% | 3.2% |
+| brand (single-brand companies only) | 4,003 | 11.0% | 44.2% |
+| registered (what is left) | 31,010 | 85.2% | 32.9% |
 
-The ladder reaches 14.7% of the city. 33.3% of all rows still display a string that names a
-company. Where a sign exists the name is right. A sign exists for one row in twenty-six.
+The ladder reaches 14.8% of the city. 33.1% of all rows still display a string that names a
+company. Where a sign exists the name is right. A sign exists for one row in twenty-seven.
 
 ### 2. Categories: RAG
 
