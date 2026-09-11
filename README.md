@@ -165,8 +165,8 @@ The tax registry publishes what nothing else does — the 營業人名稱 the ta
 **行業代號 the business registered itself under**, an official category the shop chose rather than
 one a model guessed. The four code/name pairs are stored positionally: the first is the primary
 trade, and compacting the empty tail would silently promote a secondary one. One warning sits in the
-schema — `business_tax_row.address` is the *registered* address, not the storefront (6.2% of matched
-rows sit outside 臺北市), and nothing may join on it.
+schema — `business_tax_row.address` is the *registered* address, not the storefront (13.7% of
+matched rows sit outside 臺北市), and nothing may join on it.
 
 ### Names and categories
 
