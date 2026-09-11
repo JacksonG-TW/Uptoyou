@@ -184,14 +184,23 @@ async def scenario(test_url: str, base_url: str) -> None:
         check("the weight panel names no member", "member_id" not in panel_flat)
 
         # ---- the private row is labelled and reasonless (D13) ----------------------------
+        #
+        # **`fired` is not optional in this filter, and leaving it out made three checks below
+        # vacuous** (the reviewer's catch on candidate 16). Since 甲's pad the panel carries every
+        # contributor whether it fired or not, so a `private` row — the preference contributor's —
+        # is present on every place in every round. Without the filter, «the table contains the
+        # private contribution» could no longer fail, and «another member's reason is withheld»
+        # would pass on a padded row whose reason is null by construction rather than by D13. The
+        # subject here is a contribution somebody actually made.
         private = [
             factor
             for place in operator_body["panel"].values()
             for factor in place["factors"]
-            if factor["channel"] == "private"
+            if factor["channel"] == "private" and factor["fired"]
         ]
         check("the operator's table is not empty at all",
-              any(place["factors"] for place in operator_body["panel"].values()),
+              any(any(f["fired"] for f in place["factors"])
+                  for place in operator_body["panel"].values()),
               operator_body["panel"])
         check("the operator's table contains the private contribution", private, operator_body)
         check("its channel is named", all(f["channel"] == "private" for f in private))
