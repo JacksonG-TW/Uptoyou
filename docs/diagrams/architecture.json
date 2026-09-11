@@ -25,7 +25,7 @@
       "id": "cloudflare",
       "type": "cloud",
       "label": "Cloudflare",
-      "sublabel": "uptoyou.jacksong-tw.com",
+      "sublabel": "the edge",
       "pos": [
         250,
         300
@@ -40,7 +40,7 @@
       "id": "proxy",
       "type": "frontend",
       "label": "proxy",
-      "sublabel": "nginx · :8080 · :8443",
+      "sublabel": "nginx",
       "pos": [
         470,
         300
@@ -140,7 +140,7 @@
       "id": "airflowapi",
       "type": "frontend",
       "label": "airflow-api",
-      "sublabel": ":8081 · operator only",
+      "sublabel": "operator only",
       "pos": [
         960,
         455
@@ -154,7 +154,7 @@
       "id": "relay",
       "type": "messagebus",
       "label": "tunnel relay",
-      "sublabel": "172.17.0.1:11434",
+      "sublabel": "user-level, host side",
       "pos": [
         380,
         590
@@ -230,7 +230,7 @@
       "id": "cf-proxy",
       "from": "cloudflare",
       "to": "proxy",
-      "label": "Origin CA · 443 → 8443",
+      "label": "Origin CA",
       "variant": "emphasis",
       "labelDy": 55
     },
@@ -317,9 +317,9 @@
       "dot": "cyan",
       "title": "Serving over HTTPS — since 2026-09-07",
       "items": [
-        "https://uptoyou.jacksong-tw.com — Cloudflare Full (strict) to an Origin CA cert on nginx",
-        "The security group admits 443 from Cloudflare's ranges only; 80 is closed; the host holds an Elastic IP",
-        "TLS is a mounted file, not a build — compose defaults to :8443, so a fresh clone needs no privileged port"
+        "Cloudflare Full (strict) to an Origin CA certificate on nginx",
+        "The security group admits HTTPS from Cloudflare's ranges only — plain HTTP is closed",
+        "TLS is a mounted file, not a build, so a fresh clone needs no privileged port"
       ]
     },
     {

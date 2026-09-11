@@ -5044,7 +5044,7 @@
 
         <!-- Connection paths (before components for correct z-order) -->
         <path data-edge-from="members" data-edge-to="cloudflare" data-edge-label="HTTPS" data-edge-key="0" data-edge-id="m-cf" data-composition-points="180,331;250,331" d="M 180 331 L 250 331" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <path data-edge-from="cloudflare" data-edge-to="proxy" data-edge-label="Origin CA · 443 → 8443" data-edge-key="1" data-edge-id="cf-proxy" data-composition-points="390,331;470,331" d="M 390 331 L 470 331" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="cloudflare" data-edge-to="proxy" data-edge-label="Origin CA" data-edge-key="1" data-edge-id="cf-proxy" data-composition-points="390,331;470,331" d="M 390 331 L 470 331" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="tls" data-edge-to="proxy" data-edge-label="include *.conf" data-edge-key="2" data-edge-id="tls-proxy" data-composition-points="545,218;545,300" d="M 545 218 L 545 300" class="a-security" stroke-width="1.5" marker-end="url(#arrowhead-security)"/>
         <path data-edge-from="proxy" data-edge-to="api" data-edge-label="strips /api/" data-edge-key="3" data-edge-id="proxy-api" data-composition-points="620,331;700,331" d="M 620 331 L 700 331" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="api" data-edge-to="db" data-edge-label="asyncpg as upto_api" data-edge-key="4" data-edge-id="api-db" data-composition-points="840,331;1000,331" d="M 840 331 L 1000 331" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
@@ -5069,20 +5069,20 @@
         <text data-detail="context" x="110" y="345" class="t-muted" font-size="9" text-anchor="middle">one circle, ≤10 seats</text>
         </g>
 
-        <g id="node-cloudflare" data-node-id="cloudflare" data-node-label="Cloudflare" tabindex="0" role="button" aria-label="Focus Cloudflare, uptoyou.jacksong-tw.com, Architecture component" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="uptoyou.jacksong-tw.com" data-node-tag="Full (strict)" data-node-context="Architecture component">
-          <title>Cloudflare · uptoyou.jacksong-tw.com · Architecture component · Full (strict)</title>
+        <g id="node-cloudflare" data-node-id="cloudflare" data-node-label="Cloudflare" tabindex="0" role="button" aria-label="Focus Cloudflare, the edge, Architecture component" aria-pressed="false" data-node-kind="cloud" data-node-sublabel="the edge" data-node-tag="Full (strict)" data-node-context="Architecture component">
+          <title>Cloudflare · the edge · Architecture component · Full (strict)</title>
           <rect x="250" y="300" width="140" height="62" rx="6" class="c-mask"/>
           <rect x="250" y="300" width="140" height="62" rx="6" class="c-cloud" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="cloud" class="semantic-sigil s-cloud" transform="translate(256 306) scale(0.6875)">
             <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="320" y="329" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">Cloudflare</text>
-        <text data-detail="context" x="320" y="345" class="t-muted" font-size="9" text-anchor="middle">uptoyou.jacksong-tw.com</text>
+        <text data-detail="context" x="320" y="345" class="t-muted" font-size="9" text-anchor="middle">the edge</text>
         <text data-detail="fine" x="320" y="354" class="t-cloud" font-size="7" text-anchor="middle">Full (strict)</text>
         </g>
 
-        <g id="node-proxy" data-node-id="proxy" data-node-label="proxy" tabindex="0" role="button" aria-label="Focus proxy, nginx · :8080 · :8443, One host — docker compose (EC2 t3.medium, Tokyo) › member-facing" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="nginx · :8080 · :8443" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo) › member-facing">
-          <title>proxy · nginx · :8080 · :8443 · One host — docker compose (EC2 t3.medium, Tokyo) › member-facing</title>
+        <g id="node-proxy" data-node-id="proxy" data-node-label="proxy" tabindex="0" role="button" aria-label="Focus proxy, nginx, One host — docker compose (EC2 t3.medium, Tokyo) › member-facing" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="nginx" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo) › member-facing">
+          <title>proxy · nginx · One host — docker compose (EC2 t3.medium, Tokyo) › member-facing</title>
           <rect x="470" y="300" width="150" height="62" rx="6" class="c-mask"/>
           <rect x="470" y="300" width="150" height="62" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(476 306) scale(0.6875)">
@@ -5092,7 +5092,7 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="545" y="329" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">proxy</text>
-        <text data-detail="context" x="545" y="345" class="t-muted" font-size="9" text-anchor="middle">nginx · :8080 · :8443</text>
+        <text data-detail="context" x="545" y="345" class="t-muted" font-size="9" text-anchor="middle">nginx</text>
         </g>
 
         <g id="node-tls" data-node-id="tls" data-node-label="tls/" tabindex="0" role="button" aria-label="Focus tls/, read-only bind mount, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="security" data-node-sublabel="read-only bind mount" data-node-tag="Origin CA · read-only" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
@@ -5165,8 +5165,8 @@
         <text data-detail="context" x="460" y="498" class="t-muted" font-size="9" text-anchor="middle">parses dags/</text>
         </g>
 
-        <g id="node-airflowapi" data-node-id="airflowapi" data-node-label="airflow-api" tabindex="0" role="button" aria-label="Focus airflow-api, :8081 · operator only, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel=":8081 · operator only" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
-          <title>airflow-api · :8081 · operator only · One host — docker compose (EC2 t3.medium, Tokyo)</title>
+        <g id="node-airflowapi" data-node-id="airflowapi" data-node-label="airflow-api" tabindex="0" role="button" aria-label="Focus airflow-api, operator only, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="operator only" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>airflow-api · operator only · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="960" y="455" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="960" y="455" width="150" height="58" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(966 461) scale(0.6875)">
@@ -5176,11 +5176,11 @@
             <circle cx="6.3" cy="4.8" r=".7" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="1035" y="482" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">airflow-api</text>
-        <text data-detail="context" x="1035" y="498" class="t-muted" font-size="9" text-anchor="middle">:8081 · operator only</text>
+        <text data-detail="context" x="1035" y="498" class="t-muted" font-size="9" text-anchor="middle">operator only</text>
         </g>
 
-        <g id="node-relay" data-node-id="relay" data-node-label="tunnel relay" tabindex="0" role="button" aria-label="Focus tunnel relay, 172.17.0.1:11434, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="172.17.0.1:11434" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
-          <title>tunnel relay · 172.17.0.1:11434 · One host — docker compose (EC2 t3.medium, Tokyo)</title>
+        <g id="node-relay" data-node-id="relay" data-node-label="tunnel relay" tabindex="0" role="button" aria-label="Focus tunnel relay, user-level, host side, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="user-level, host side" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>tunnel relay · user-level, host side · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="380" y="590" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="380" y="590" width="150" height="58" rx="6" class="c-messagebus" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(386 596) scale(0.6875)">
@@ -5190,7 +5190,7 @@
             <circle cx="7" cy="11.5" r="1" class="sigil-fill"/>
           </g>
           <text data-node-label="" data-detail-anchor="" x="455" y="617" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">tunnel relay</text>
-        <text data-detail="context" x="455" y="633" class="t-muted" font-size="9" text-anchor="middle">172.17.0.1:11434</text>
+        <text data-detail="context" x="455" y="633" class="t-muted" font-size="9" text-anchor="middle">user-level, host side</text>
         </g>
 
         <g id="node-gpu" data-node-id="gpu" data-node-label="GPU box" tabindex="0" role="button" aria-label="Focus GPU box, Ollama · GTX 1070 Ti, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="Ollama · GTX 1070 Ti" data-node-context="Architecture component">
@@ -5221,9 +5221,9 @@
           <rect x="198" y="311" width="34" height="14" rx="3" class="c-mask"/>
           <text x="215" y="321" class="t-backend" font-size="8" text-anchor="middle">HTTPS</text>
         </g>
-        <g data-detail="context" data-edge-from="cloudflare" data-edge-to="proxy" data-edge-label="Origin CA · 443 → 8443" data-edge-key="1" data-edge-id="cf-proxy">
-          <rect x="372.2" y="366" width="115.6" height="14" rx="3" class="c-mask"/>
-          <text x="430" y="376" class="t-backend" font-size="8" text-anchor="middle">Origin CA · 443 → 8443</text>
+        <g data-detail="context" data-edge-from="cloudflare" data-edge-to="proxy" data-edge-label="Origin CA" data-edge-key="1" data-edge-id="cf-proxy">
+          <rect x="403.4" y="366" width="53.199999999999996" height="14" rx="3" class="c-mask"/>
+          <text x="430" y="376" class="t-backend" font-size="8" text-anchor="middle">Origin CA</text>
         </g>
         <g data-detail="context" data-edge-from="tls" data-edge-to="proxy" data-edge-label="include *.conf" data-edge-key="2" data-edge-id="tls-proxy">
           <rect x="506.4" y="222" width="77.2" height="14" rx="3" class="c-mask"/>
@@ -5501,9 +5501,9 @@
           <h3>Serving over HTTPS — since 2026-09-07</h3>
         </div>
         <ul>
-          <li>&bull; https://uptoyou.jacksong-tw.com — Cloudflare Full (strict) to an Origin CA cert on nginx</li>
-          <li>&bull; The security group admits 443 from Cloudflare&#39;s ranges only; 80 is closed; the host holds an Elastic IP</li>
-          <li>&bull; TLS is a mounted file, not a build — compose defaults to :8443, so a fresh clone needs no privileged port</li>
+          <li>&bull; Cloudflare Full (strict) to an Origin CA certificate on nginx</li>
+          <li>&bull; The security group admits HTTPS from Cloudflare&#39;s ranges only — plain HTTP is closed</li>
+          <li>&bull; TLS is a mounted file, not a build, so a fresh clone needs no privileged port</li>
         </ul>
       </div>
 

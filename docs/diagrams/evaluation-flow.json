@@ -31,7 +31,7 @@
       "variant": "emphasis"
     },
     {
-      "id": "ruled",
+      "id": "measured",
       "label": "Measured",
       "fromCol": 3,
       "toCol": 3
