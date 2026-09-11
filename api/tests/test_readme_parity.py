@@ -102,8 +102,13 @@ class TheTwoReadmesAgree(unittest.TestCase):
         english, chinese = read(EN), read(ZH)
         self.assertIn("README.zh-TW.md", english, "README.md does not mention the Chinese copy")
         self.assertIn("README.md", chinese, "README.zh-TW.md does not link back to the English")
+        # **Before the first `##` section, the same way the Chinese half below is checked.** It
+        # used to split on the literal heading `## Stack`, which stopped existing when the page was
+        # reshaped — and a split on an absent needle returns the WHOLE document, so the assertion
+        # quietly widened from «in the opening» to «anywhere on the page» and could no longer fail
+        # for the thing it was written to catch.
         self.assertIn(
-            "canonical", english.split("## Stack")[0],
+            "canonical", english.split("\n## ")[0],
             "README.md's opening does not say it is canonical — which one wins has to be stated "
             "where a reader arrives, not inferred from filenames",
         )
