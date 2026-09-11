@@ -94,7 +94,7 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 
 ![Architecture — the stack as it is served](docs/diagrams/architecture.png)
 
-*一台主機、一個 compose 檔。Cloudflare 在邊緣終結 TLS，來源端用自己的憑證回應 443；四個 Airflow 服務和
+*一台主機、一個 compose 檔。Cloudflare 在邊緣終結 TLS，來源端用自己的憑證回應；四個 Airflow 服務和
 API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 
 | 層 | 跑什麼 |
@@ -354,10 +354,8 @@ curl -s localhost:8080/health
 **是兩個指令而不是一個**，因為 schema 那一步離開了整套 stack 的開機流程，好讓多個行程不會搶它。它是冪等的
 —— 對一個已經是最新的資料庫跑，它什麼都不會做。
 
-- **`localhost:8080`** —— 這個 app（`UPTO_HTTP_PORT`）；API 和資料庫只在 compose 網路裡面連得到。
-  `UPTO_HTTPS_PORT` 預設是 8443，而且在 `tls/` 的片段出現之前不服務任何東西，所以全新 clone 不需要特權連接埠、
-  也不需要憑證。
-- **`localhost:8081`** —— Airflow 介面（`AIRFLOW_HTTP_PORT`），使用者 `admin`。
+- **`localhost:8080`** —— 這個 app；API 和資料庫只在 compose 網路裡面連得到。Airflow 介面有自己的連接埠和
+  自己的名字，寫在 `.env.example` 裡，連接埠就住在那裡。
 - 氣象匯入需要一把免費的中央氣象署開放資料金鑰（opendata.cwa.gov.tw），在 init 時讀一次進 Fernet 加密的
   Airflow Connection —— 永遠不從環境變數讀、永遠不進 XCom 或被渲染的樣板欄位。另外五個開放資料檔案不需要任何
   憑證。新的排程任務會以**暫停**狀態出現（`airflow dags unpause <dag_id>`）。

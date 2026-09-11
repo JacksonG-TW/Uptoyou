@@ -99,8 +99,8 @@ been resized. [The long version](docs/decisions.md) has the working for the last
 
 ![Architecture — the stack as it is served](docs/diagrams/architecture.png)
 
-*One host, one compose file. Cloudflare terminates TLS at the edge and the origin answers 443 with
-its own certificate; the four Airflow services and the API share one PostgreSQL, each connecting as
+*One host, one compose file. Cloudflare terminates TLS at the edge and the origin answers with its
+own certificate; the four Airflow services and the API share one PostgreSQL, each connecting as
 its own role.*
 
 | Layer | What runs |
@@ -408,10 +408,9 @@ curl -s localhost:8080/health
 **Two commands rather than one**, because the schema step left the stack's boot so that several
 instances cannot race it. It is idempotent — run it on a current database and it does nothing.
 
-- **`localhost:8080`** — the app (`UPTO_HTTP_PORT`); the API and the database are reachable only over
-  the compose network. `UPTO_HTTPS_PORT` defaults to 8443 and serves nothing until a `tls/` snippet
-  exists, so a fresh clone needs no privileged port and no certificate.
-- **`localhost:8081`** — the Airflow UI (`AIRFLOW_HTTP_PORT`), user `admin`.
+- **`localhost:8080`** — the app; the API and the database are reachable only over the compose
+  network. The Airflow UI has its own port and its own name in `.env.example`, which is where the
+  ports live.
 - The weather ingest needs a free CWA Open Data key (opendata.cwa.gov.tw), read once at init into a
   Fernet-encrypted Airflow Connection — never from the environment, never into XCom or a rendered
   template field. The five open-data files need no credential. New scheduled jobs arrive **paused**
