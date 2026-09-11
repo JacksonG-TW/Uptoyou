@@ -5038,7 +5038,7 @@
         <rect width="100%" height="100%" fill="url(#grid)" />
 
         <!-- Boundaries (behind everything) -->
-        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="One host — docker compose (EC2 t3.small, Tokyo)" x="350" y="130" width="830" height="538" rx="12" class="c-region" stroke-width="1"/>
+        <rect data-graph-role="structural-frame" data-composition-frame-kind="region" data-composition-frame-id="0" data-composition-frame-label="One host — docker compose (EC2 t3.medium, Tokyo)" x="350" y="130" width="830" height="538" rx="12" class="c-region" stroke-width="1"/>
 
         <rect data-graph-role="structural-frame" data-composition-frame-kind="security-group" data-composition-frame-id="1" data-composition-frame-label="member-facing" x="440" y="270" width="430" height="112" rx="8" class="c-security-group" stroke-width="1"/>
 
@@ -5049,13 +5049,12 @@
         <path data-edge-from="proxy" data-edge-to="api" data-edge-label="strips /api/" data-edge-key="3" data-edge-id="proxy-api" data-composition-points="620,331;700,331" d="M 620 331 L 700 331" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="api" data-edge-to="db" data-edge-label="asyncpg as upto_api" data-edge-key="4" data-edge-id="api-db" data-composition-points="840,331;1000,331" d="M 840 331 L 1000 331" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
         <path data-edge-from="migrate" data-edge-to="db" data-edge-label="owner role" data-edge-key="5" data-edge-id="migrate-db" data-composition-points="840,189;1075,189;1075,300" d="M 840 189 L 1067 189 Q 1075 189 1075 197 L 1075 300" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="migrate" data-edge-to="api" data-edge-label="completed_successfully" data-edge-key="6" data-edge-id="migrate-api" data-composition-points="770,218;770,300" d="M 770 218 L 770 300" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="dagproc" data-edge-to="scheduler" data-edge-label="serialised DAGs" data-edge-key="7" data-edge-id="dag-sched" data-composition-points="540,484;660,484" d="M 540 484 L 660 484" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="scheduler" data-edge-to="db" data-edge-label="ingests · erasure · backup" data-edge-key="8" data-edge-id="sched-db" data-composition-points="735,455;735,408.5;1075,408.5;1075,362" d="M 735 455 L 735 416.5 Q 735 408.5 743 408.5 L 1067 408.5 Q 1075 408.5 1075 400.5 L 1075 362" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="scheduler" data-edge-to="airflowapi" data-edge-label="airflow-logs volume" data-edge-key="9" data-edge-id="sched-logs" data-composition-points="810,484;960,484" d="M 810 484 L 960 484" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
-        <path data-edge-from="scheduler" data-edge-to="relay" data-edge-label="classify backfill" data-edge-key="10" data-edge-id="sched-relay" data-composition-points="728,513;728,537;554,537;554,619;530,619" d="M 728 513 L 728 529 Q 728 537 720 537 L 562 537 Q 554 537 554 545 L 554 611 Q 554 619 546 619 L 530 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="relay" data-edge-to="gpu" data-edge-label="ssh tunnel" data-edge-key="11" data-edge-id="relay-gpu" data-composition-points="380,619;270,619" d="M 380 619 L 270 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-        <path data-edge-from="scheduler" data-edge-to="s3" data-edge-label="pg_dump as upto_backup" data-edge-key="12" data-edge-id="sched-s3" data-composition-points="742,513;742,537;1116,537;1116,619;1140,619" d="M 742 513 L 742 529 Q 742 537 750 537 L 1108 537 Q 1116 537 1116 545 L 1116 611 Q 1116 619 1124 619 L 1140 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="dagproc" data-edge-to="scheduler" data-edge-label="serialised DAGs" data-edge-key="6" data-edge-id="dag-sched" data-composition-points="540,484;660,484" d="M 540 484 L 660 484" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="scheduler" data-edge-to="db" data-edge-label="ingests · erasure · backup" data-edge-key="7" data-edge-id="sched-db" data-composition-points="735,455;735,408.5;1075,408.5;1075,362" d="M 735 455 L 735 416.5 Q 735 408.5 743 408.5 L 1067 408.5 Q 1075 408.5 1075 400.5 L 1075 362" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="scheduler" data-edge-to="airflowapi" data-edge-label="airflow-logs volume" data-edge-key="8" data-edge-id="sched-logs" data-composition-points="810,484;960,484" d="M 810 484 L 960 484" class="a-dashed" stroke-width="1.5" marker-end="url(#arrowhead-dashed)"/>
+        <path data-edge-from="scheduler" data-edge-to="relay" data-edge-label="classify backfill" data-edge-key="9" data-edge-id="sched-relay" data-composition-points="728,513;728,537;554,537;554,619;530,619" d="M 728 513 L 728 529 Q 728 537 720 537 L 562 537 Q 554 537 554 545 L 554 611 Q 554 619 546 619 L 530 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="relay" data-edge-to="gpu" data-edge-label="ssh tunnel" data-edge-key="10" data-edge-id="relay-gpu" data-composition-points="380,619;270,619" d="M 380 619 L 270 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+        <path data-edge-from="scheduler" data-edge-to="s3" data-edge-label="pg_dump as upto_backup" data-edge-key="11" data-edge-id="sched-s3" data-composition-points="742,513;742,537;1116,537;1116,619;1140,619" d="M 742 513 L 742 529 Q 742 537 750 537 L 1108 537 Q 1116 537 1116 545 L 1116 611 Q 1116 619 1124 619 L 1140 619" class="a-default" stroke-width="1.5" marker-end="url(#arrowhead)"/>
 
         <!-- Components -->
         <g id="node-members" data-node-id="members" data-node-label="Members" tabindex="0" role="button" aria-label="Focus Members, one circle, ≤10 seats, Architecture component" aria-pressed="false" data-node-kind="external" data-node-sublabel="one circle, ≤10 seats" data-node-context="Architecture component">
@@ -5082,8 +5081,8 @@
         <text data-detail="fine" x="320" y="354" class="t-cloud" font-size="7" text-anchor="middle">Full (strict)</text>
         </g>
 
-        <g id="node-proxy" data-node-id="proxy" data-node-label="proxy" tabindex="0" role="button" aria-label="Focus proxy, nginx · :8080 · :8443, One host — docker compose (EC2 t3.small, Tokyo) › member-facing" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="nginx · :8080 · :8443" data-node-context="One host — docker compose (EC2 t3.small, Tokyo) › member-facing">
-          <title>proxy · nginx · :8080 · :8443 · One host — docker compose (EC2 t3.small, Tokyo) › member-facing</title>
+        <g id="node-proxy" data-node-id="proxy" data-node-label="proxy" tabindex="0" role="button" aria-label="Focus proxy, nginx · :8080 · :8443, One host — docker compose (EC2 t3.medium, Tokyo) › member-facing" aria-pressed="false" data-node-kind="frontend" data-node-sublabel="nginx · :8080 · :8443" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo) › member-facing">
+          <title>proxy · nginx · :8080 · :8443 · One host — docker compose (EC2 t3.medium, Tokyo) › member-facing</title>
           <rect x="470" y="300" width="150" height="62" rx="6" class="c-mask"/>
           <rect x="470" y="300" width="150" height="62" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(476 306) scale(0.6875)">
@@ -5096,8 +5095,8 @@
         <text data-detail="context" x="545" y="345" class="t-muted" font-size="9" text-anchor="middle">nginx · :8080 · :8443</text>
         </g>
 
-        <g id="node-tls" data-node-id="tls" data-node-label="tls/" tabindex="0" role="button" aria-label="Focus tls/, read-only bind mount, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="security" data-node-sublabel="read-only bind mount" data-node-tag="Origin CA · read-only" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>tls/ · read-only bind mount · One host — docker compose (EC2 t3.small, Tokyo) · Origin CA · read-only</title>
+        <g id="node-tls" data-node-id="tls" data-node-label="tls/" tabindex="0" role="button" aria-label="Focus tls/, read-only bind mount, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="security" data-node-sublabel="read-only bind mount" data-node-tag="Origin CA · read-only" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>tls/ · read-only bind mount · One host — docker compose (EC2 t3.medium, Tokyo) · Origin CA · read-only</title>
           <rect x="470" y="160" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="470" y="160" width="150" height="58" rx="6" class="c-security" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="security" class="semantic-sigil s-security" transform="translate(476 166) scale(0.6875)">
@@ -5109,8 +5108,8 @@
         <text data-detail="fine" x="545" y="210" class="t-security" font-size="7" text-anchor="middle">Origin CA · read-only</text>
         </g>
 
-        <g id="node-api" data-node-id="api" data-node-label="api" tabindex="0" role="button" aria-label="Focus api, FastAPI · uvicorn, One host — docker compose (EC2 t3.small, Tokyo) › member-facing" aria-pressed="false" data-node-kind="backend" data-node-sublabel="FastAPI · uvicorn" data-node-context="One host — docker compose (EC2 t3.small, Tokyo) › member-facing">
-          <title>api · FastAPI · uvicorn · One host — docker compose (EC2 t3.small, Tokyo) › member-facing</title>
+        <g id="node-api" data-node-id="api" data-node-label="api" tabindex="0" role="button" aria-label="Focus api, FastAPI · uvicorn, One host — docker compose (EC2 t3.medium, Tokyo) › member-facing" aria-pressed="false" data-node-kind="backend" data-node-sublabel="FastAPI · uvicorn" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo) › member-facing">
+          <title>api · FastAPI · uvicorn · One host — docker compose (EC2 t3.medium, Tokyo) › member-facing</title>
           <rect x="700" y="300" width="140" height="62" rx="6" class="c-mask"/>
           <rect x="700" y="300" width="140" height="62" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(706 306) scale(0.6875)">
@@ -5120,8 +5119,8 @@
         <text data-detail="context" x="770" y="345" class="t-muted" font-size="9" text-anchor="middle">FastAPI · uvicorn</text>
         </g>
 
-        <g id="node-migrate" data-node-id="migrate" data-node-label="migrate" tabindex="0" role="button" aria-label="Focus migrate, one-shot · alembic, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="one-shot · alembic" data-node-tag="one-shot, then exits" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>migrate · one-shot · alembic · One host — docker compose (EC2 t3.small, Tokyo) · one-shot, then exits</title>
+        <g id="node-migrate" data-node-id="migrate" data-node-label="migrate" tabindex="0" role="button" aria-label="Focus migrate, one-shot · alembic, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="one-shot · alembic" data-node-tag="one-shot, then exits" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>migrate · one-shot · alembic · One host — docker compose (EC2 t3.medium, Tokyo) · one-shot, then exits</title>
           <rect x="700" y="160" width="140" height="58" rx="6" class="c-mask"/>
           <rect x="700" y="160" width="140" height="58" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(706 166) scale(0.6875)">
@@ -5132,8 +5131,8 @@
         <text data-detail="fine" x="770" y="210" class="t-backend" font-size="7" text-anchor="middle">one-shot, then exits</text>
         </g>
 
-        <g id="node-db" data-node-id="db" data-node-label="PostgreSQL 17" tabindex="0" role="button" aria-label="Focus PostgreSQL 17, db-data volume, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="database" data-node-sublabel="db-data volume" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>PostgreSQL 17 · db-data volume · One host — docker compose (EC2 t3.small, Tokyo)</title>
+        <g id="node-db" data-node-id="db" data-node-label="PostgreSQL 17" tabindex="0" role="button" aria-label="Focus PostgreSQL 17, db-data volume, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="database" data-node-sublabel="db-data volume" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>PostgreSQL 17 · db-data volume · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="1000" y="300" width="150" height="62" rx="6" class="c-mask"/>
           <rect x="1000" y="300" width="150" height="62" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(1006 306) scale(0.6875)">
@@ -5144,8 +5143,8 @@
         <text data-detail="context" x="1075" y="345" class="t-muted" font-size="9" text-anchor="middle">db-data volume</text>
         </g>
 
-        <g id="node-scheduler" data-node-id="scheduler" data-node-label="airflow-scheduler" tabindex="0" role="button" aria-label="Focus airflow-scheduler, 11 DAGs, UTC, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="11 DAGs, UTC" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>airflow-scheduler · 11 DAGs, UTC · One host — docker compose (EC2 t3.small, Tokyo)</title>
+        <g id="node-scheduler" data-node-id="scheduler" data-node-label="airflow-scheduler" tabindex="0" role="button" aria-label="Focus airflow-scheduler, 11 DAGs, UTC, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="11 DAGs, UTC" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>airflow-scheduler · 11 DAGs, UTC · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="660" y="455" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="660" y="455" width="150" height="58" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(666 461) scale(0.6875)">
@@ -5155,8 +5154,8 @@
         <text data-detail="context" x="735" y="498" class="t-muted" font-size="9" text-anchor="middle">11 DAGs, UTC</text>
         </g>
 
-        <g id="node-dagproc" data-node-id="dagproc" data-node-label="airflow-dag-processor" tabindex="0" role="button" aria-label="Focus airflow-dag-processor, parses dags/, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="parses dags/" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>airflow-dag-processor · parses dags/ · One host — docker compose (EC2 t3.small, Tokyo)</title>
+        <g id="node-dagproc" data-node-id="dagproc" data-node-label="airflow-dag-processor" tabindex="0" role="button" aria-label="Focus airflow-dag-processor, parses dags/, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="backend" data-node-sublabel="parses dags/" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>airflow-dag-processor · parses dags/ · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="380" y="455" width="160" height="58" rx="6" class="c-mask"/>
           <rect x="380" y="455" width="160" height="58" rx="6" class="c-backend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="backend" class="semantic-sigil s-backend" transform="translate(386 461) scale(0.6875)">
@@ -5166,8 +5165,8 @@
         <text data-detail="context" x="460" y="498" class="t-muted" font-size="9" text-anchor="middle">parses dags/</text>
         </g>
 
-        <g id="node-airflowapi" data-node-id="airflowapi" data-node-label="airflow-api" tabindex="0" role="button" aria-label="Focus airflow-api, :8081 · operator only, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel=":8081 · operator only" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>airflow-api · :8081 · operator only · One host — docker compose (EC2 t3.small, Tokyo)</title>
+        <g id="node-airflowapi" data-node-id="airflowapi" data-node-label="airflow-api" tabindex="0" role="button" aria-label="Focus airflow-api, :8081 · operator only, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="frontend" data-node-sublabel=":8081 · operator only" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>airflow-api · :8081 · operator only · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="960" y="455" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="960" y="455" width="150" height="58" rx="6" class="c-frontend" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="frontend" class="semantic-sigil s-frontend" transform="translate(966 461) scale(0.6875)">
@@ -5180,8 +5179,8 @@
         <text data-detail="context" x="1035" y="498" class="t-muted" font-size="9" text-anchor="middle">:8081 · operator only</text>
         </g>
 
-        <g id="node-relay" data-node-id="relay" data-node-label="tunnel relay" tabindex="0" role="button" aria-label="Focus tunnel relay, 172.17.0.1:11434, One host — docker compose (EC2 t3.small, Tokyo)" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="172.17.0.1:11434" data-node-context="One host — docker compose (EC2 t3.small, Tokyo)">
-          <title>tunnel relay · 172.17.0.1:11434 · One host — docker compose (EC2 t3.small, Tokyo)</title>
+        <g id="node-relay" data-node-id="relay" data-node-label="tunnel relay" tabindex="0" role="button" aria-label="Focus tunnel relay, 172.17.0.1:11434, One host — docker compose (EC2 t3.medium, Tokyo)" aria-pressed="false" data-node-kind="messagebus" data-node-sublabel="172.17.0.1:11434" data-node-context="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <title>tunnel relay · 172.17.0.1:11434 · One host — docker compose (EC2 t3.medium, Tokyo)</title>
           <rect x="380" y="590" width="150" height="58" rx="6" class="c-mask"/>
           <rect x="380" y="590" width="150" height="58" rx="6" class="c-messagebus" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="messagebus" class="semantic-sigil s-messagebus" transform="translate(386 596) scale(0.6875)">
@@ -5242,39 +5241,35 @@
           <rect x="1046" y="224.5" width="58" height="14" rx="3" class="c-mask"/>
           <text x="1075" y="234.5" class="t-messagebus" font-size="8" text-anchor="middle">owner role</text>
         </g>
-        <g data-detail="context" data-edge-from="migrate" data-edge-to="api" data-edge-label="completed_successfully" data-edge-key="6" data-edge-id="migrate-api">
-          <rect x="712.2" y="222" width="115.6" height="14" rx="3" class="c-mask"/>
-          <text x="770" y="232" class="t-messagebus" font-size="8" text-anchor="middle">completed_successfully</text>
-        </g>
-        <g data-detail="context" data-edge-from="dagproc" data-edge-to="scheduler" data-edge-label="serialised DAGs" data-edge-key="7" data-edge-id="dag-sched">
+        <g data-detail="context" data-edge-from="dagproc" data-edge-to="scheduler" data-edge-label="serialised DAGs" data-edge-key="6" data-edge-id="dag-sched">
           <rect x="559" y="464" width="82" height="14" rx="3" class="c-mask"/>
           <text x="600" y="474" class="t-muted" font-size="8" text-anchor="middle">serialised DAGs</text>
         </g>
-        <g data-detail="context" data-edge-from="scheduler" data-edge-to="db" data-edge-label="ingests · erasure · backup" data-edge-key="8" data-edge-id="sched-db">
+        <g data-detail="context" data-edge-from="scheduler" data-edge-to="db" data-edge-label="ingests · erasure · backup" data-edge-key="7" data-edge-id="sched-db">
           <rect x="837.6" y="388.5" width="134.8" height="14" rx="3" class="c-mask"/>
           <text x="905" y="398.5" class="t-muted" font-size="8" text-anchor="middle">ingests · erasure · backup</text>
         </g>
-        <g data-detail="context" data-edge-from="scheduler" data-edge-to="airflowapi" data-edge-label="airflow-logs volume" data-edge-key="9" data-edge-id="sched-logs">
+        <g data-detail="context" data-edge-from="scheduler" data-edge-to="airflowapi" data-edge-label="airflow-logs volume" data-edge-key="8" data-edge-id="sched-logs">
           <rect x="834.4" y="464" width="101.2" height="14" rx="3" class="c-mask"/>
           <text x="885" y="474" class="t-messagebus" font-size="8" text-anchor="middle">airflow-logs volume</text>
         </g>
-        <g data-detail="context" data-edge-from="scheduler" data-edge-to="relay" data-edge-label="classify backfill" data-edge-key="10" data-edge-id="sched-relay">
+        <g data-detail="context" data-edge-from="scheduler" data-edge-to="relay" data-edge-label="classify backfill" data-edge-key="9" data-edge-id="sched-relay">
           <rect x="595.2" y="517" width="91.6" height="14" rx="3" class="c-mask"/>
           <text x="641" y="527" class="t-muted" font-size="8" text-anchor="middle">classify backfill</text>
         </g>
-        <g data-detail="context" data-edge-from="relay" data-edge-to="gpu" data-edge-label="ssh tunnel" data-edge-key="11" data-edge-id="relay-gpu">
+        <g data-detail="context" data-edge-from="relay" data-edge-to="gpu" data-edge-label="ssh tunnel" data-edge-key="10" data-edge-id="relay-gpu">
           <rect x="296" y="599" width="58" height="14" rx="3" class="c-mask"/>
           <text x="325" y="609" class="t-muted" font-size="8" text-anchor="middle">ssh tunnel</text>
         </g>
-        <g data-detail="context" data-edge-from="scheduler" data-edge-to="s3" data-edge-label="pg_dump as upto_backup" data-edge-key="12" data-edge-id="sched-s3">
+        <g data-detail="context" data-edge-from="scheduler" data-edge-to="s3" data-edge-label="pg_dump as upto_backup" data-edge-key="11" data-edge-id="sched-s3">
           <rect x="871.2" y="517" width="115.6" height="14" rx="3" class="c-mask"/>
           <text x="929" y="527" class="t-muted" font-size="8" text-anchor="middle">pg_dump as upto_backup</text>
         </g>
 
         <!-- Boundary labels (foreground masks keep routes out of titles) -->
-        <g data-graph-role="structural-frame-label" data-composition-frame-id="0" data-composition-frame-kind="region" data-composition-frame-label="One host — docker compose (EC2 t3.small, Tokyo)">
-          <rect data-graph-role="structural-frame-label-mask" x="354" y="140" width="263.79999999999995" height="16" rx="3" class="c-mask"/>
-          <text data-boundary-label="" x="358" y="153" class="t-cloud" font-size="9" font-weight="600">One host — docker compose (EC2 t3.small, Tokyo)</text>
+        <g data-graph-role="structural-frame-label" data-composition-frame-id="0" data-composition-frame-kind="region" data-composition-frame-label="One host — docker compose (EC2 t3.medium, Tokyo)">
+          <rect data-graph-role="structural-frame-label-mask" x="354" y="140" width="269.2" height="16" rx="3" class="c-mask"/>
+          <text data-boundary-label="" x="358" y="153" class="t-cloud" font-size="9" font-weight="600">One host — docker compose (EC2 t3.medium, Tokyo)</text>
         </g>
 
         <g data-graph-role="structural-frame-label" data-composition-frame-id="1" data-composition-frame-kind="security-group" data-composition-frame-label="member-facing">
@@ -5520,7 +5515,7 @@
         <ul>
           <li>&bull; migrate runs as the owner and exits; api never can</li>
           <li>&bull; upto_api · upto_ingest · upto_erasure · upto_backup</li>
-          <li>&bull; A failed migration stops the api one container earlier</li>
+          <li>&bull; the api exits rather than serve a schema it was not written against</li>
         </ul>
       </div>
 

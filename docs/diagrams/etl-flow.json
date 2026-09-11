@@ -99,7 +99,7 @@
       "id": "check",
       "type": "security",
       "label": "check_publication",
-      "sublabel": "A9 · vs the one before",
+      "sublabel": "compared to the previous publication",
       "stage": 3,
       "row": 3,
       "width": 170,
@@ -170,7 +170,7 @@
       "from": "pubs",
       "to": "check",
       "label": "previous publication",
-      "classification": "A9",
+      "classification": "compared, or n/a",
       "labelDx": 55,
       "labelAt": [
         698,
@@ -189,7 +189,7 @@
     },
     {
       "dot": "cyan",
-      "title": "Idempotent, proven not assumed",
+      "title": "Every source idempotent — every column compared, twice",
       "items": [
         "content_sha256 decides new from unchanged — never the publisher's own stamp"
       ]

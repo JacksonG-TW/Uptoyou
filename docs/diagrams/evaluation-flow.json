@@ -14,10 +14,6 @@
     {
       "id": "machine",
       "label": "Rounds + scoring"
-    },
-    {
-      "id": "human",
-      "label": "The review loop"
     }
   ],
   "phases": [
@@ -36,7 +32,7 @@
     },
     {
       "id": "ruled",
-      "label": "Ruled",
+      "label": "Measured",
       "fromCol": 3,
       "toCol": 3
     }
@@ -45,8 +41,7 @@
     "testset",
     "local",
     "roundfile",
-    "score",
-    "owner"
+    "score"
   ],
   "nodes": [
     {
@@ -88,26 +83,6 @@
       "sublabel": "per layer, per value",
       "tag": "±6.5 band",
       "width": 160
-    },
-    {
-      "id": "gates",
-      "lane": "human",
-      "col": 2,
-      "type": "security",
-      "label": "reviewer + evaluator",
-      "sublabel": "two model sessions",
-      "tag": "separate contexts",
-      "width": 160
-    },
-    {
-      "id": "owner",
-      "lane": "human",
-      "col": 3,
-      "type": "security",
-      "label": "owner",
-      "sublabel": "the only human here",
-      "tag": "selection is not delegated",
-      "width": 160
     }
   ],
   "edges": [
@@ -131,21 +106,6 @@
       "to": "score",
       "label": "scored, never re-run",
       "variant": "emphasis"
-    },
-    {
-      "id": "e4",
-      "from": "roundfile",
-      "to": "gates",
-      "label": "the claim",
-      "bias": 0.2
-    },
-    {
-      "id": "e5",
-      "from": "score",
-      "to": "owner",
-      "label": "one ruling",
-      "variant": "emphasis",
-      "bias": 0.8
     }
   ],
   "cards": [
@@ -165,15 +125,6 @@
         "A prompt or label change makes every crib stale, and a round refuses a stale crib",
         "gemini is the hosted baseline: host-side only, and --rag is refused — the crib is the answer key",
         "The crib is example_embedding (pgvector, k=5, leave-one-out); a label change makes it stale and a round refuses it"
-      ]
-    },
-    {
-      "dot": "rose",
-      "title": "Two automated readers, one human ruling",
-      "items": [
-        "The reviewer is a separate model session with a clean context; it checks the claim against the code",
-        "The evaluator gates whether the number means what it says — also a model session",
-        "The owner rules the model. That is the one human decision in this loop, and it is not delegated"
       ]
     }
   ]

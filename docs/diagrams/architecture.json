@@ -196,7 +196,7 @@
   "boundaries": [
     {
       "kind": "region",
-      "label": "One host — docker compose (EC2 t3.small, Tokyo)",
+      "label": "One host — docker compose (EC2 t3.medium, Tokyo)",
       "wraps": [
         "proxy",
         "tls",
@@ -267,16 +267,6 @@
       "toSide": "top"
     },
     {
-      "id": "migrate-api",
-      "from": "migrate",
-      "to": "api",
-      "label": "completed_successfully",
-      "variant": "dashed",
-      "fromSide": "bottom",
-      "toSide": "top",
-      "labelDy": 24
-    },
-    {
       "id": "dag-sched",
       "from": "dagproc",
       "to": "scheduler",
@@ -338,7 +328,7 @@
       "items": [
         "migrate runs as the owner and exits; api never can",
         "upto_api · upto_ingest · upto_erasure · upto_backup",
-        "A failed migration stops the api one container earlier"
+        "the api exits rather than serve a schema it was not written against"
       ]
     },
     {
