@@ -204,7 +204,7 @@ async def scenario(test_url: str) -> None:
     one_pair = rows["38965019"]
     assert one_pair.industry_code_1 is None, "an absent pair is NULL, never an empty string"
     assert one_pair.address == "南投縣中寮鄉永平路371號", (
-        "the REGISTERED address is stored as published — 6.2% of matched rows are outside 臺北市"
+        "the REGISTERED address is stored as published — 13.7% of matched rows are outside 臺北市"
     )
 
     async with Session() as session:

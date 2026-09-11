@@ -115,9 +115,15 @@ class TaxRow:
     """One registered business, kept because our reference list already knows its 統編.
 
     `address` is the **registered** address — where the business is registered for tax, not
-    where the shop stands. 6.2% of the matched rows sit outside 臺北市 entirely (measured
-    2026-08-14), so this column must never be read as a storefront location; the address a
-    diner would walk to is `reference_place.address`.
+    where the shop stands. **13.7% of the matched rows sit outside 臺北市 entirely** — 3,130 of
+    them, measured 2026-08-17 over the join itself (`probes/m5-cross-source.md`). This column must
+    never be read as a storefront location; the address a diner would walk to is
+    `reference_place.address`.
+
+    **The figure here read 6.2% until 2026-09-11 and that was an understatement**, taken on
+    2026-08-14 before the cross-source measurement existed. It is corrected rather than annotated
+    because this number is the whole argument for the rule above it: a warning that halves the size
+    of the problem it is warning about is one somebody talks themselves past.
     """
 
     business_no: str

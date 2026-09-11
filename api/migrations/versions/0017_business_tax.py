@@ -24,9 +24,12 @@ Shape, and the measured facts that forced it:
   * **The four 行業 pairs are positional.** No row carries a later code while its primary one
     is empty, so the first pair is the business's own primary 行業 and compacting the empty
     tail would promote a secondary one into a slot that means "primary".
-  * **`address` is the registered address, not the storefront.** 6.2% of the matched rows are
-    registered outside 臺北市 altogether — an accountant's office, a head office, a home. The
-    address a diner walks to stays `reference_place.address`, and nothing may join on this one.
+  * **`address` is the registered address, not the storefront.** 13.7% of the matched rows are
+    registered outside 臺北市 altogether — 3,130 of them: an accountant's office, a head office, a
+    home. The address a diner walks to stays `reference_place.address`, and nothing may join on
+    this one. *(This line read 6.2% when the revision landed, from a 2026-08-14 reading; the
+    cross-source measurement three days later put it at 13.66% and the text was corrected
+    2026-09-11. The schema this revision creates is untouched.)*
 
 The publication pattern is 0016's, plus the second version signal item 11 has and D77/D78/D81
 lack: `file_stamp` is the date the CSV states about itself in its own row 2, kept beside the
@@ -91,7 +94,7 @@ def upgrade() -> None:
         # registered name and D78's shop sign — kept for the read side to rank, never folded
         # here (D80 owns which name wins).
         sa.Column("tax_name", sa.Text, nullable=False),
-        # **The REGISTERED address, not the storefront.** 6.2% of these are outside 臺北市.
+        # **The REGISTERED address, not the storefront.** 13.7% of these are outside 臺北市.
         # Nothing joins on it and nothing may start: it is audit context for a matched 統編.
         sa.Column("address", sa.Text, nullable=False),
         # The primary 行業 pair, then the three optional ones, positional and never compacted.
