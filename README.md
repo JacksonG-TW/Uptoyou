@@ -34,7 +34,7 @@ Open `localhost:8080`, paste the token, propose three places, roll.
 
 ## See it work
 
-<!-- The moving picture belongs here: docs/reveal-walk.webp, propose → roll → reveal. -->
+![A round from start to finish — propose, roll, reveal](docs/reveal-walk.webp)
 
 Five screens, and each does one thing:
 

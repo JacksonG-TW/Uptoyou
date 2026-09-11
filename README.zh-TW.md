@@ -33,7 +33,7 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 
 ## 看它動起來
 
-<!-- The moving picture belongs here: docs/reveal-walk.webp, propose → roll → reveal. -->
+![A round from start to finish — propose, roll, reveal](docs/reveal-walk.webp)
 
 五個畫面，每個只做一件事：
 
