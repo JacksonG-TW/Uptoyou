@@ -324,14 +324,36 @@ async def scenario(test_url: str) -> None:
         assert result["allocation"][str(result["winning_place_id"])] > 0
         # The panel's evidence rides in the result: the rainy place carries its factor in
         # D46's order, and the weather sentence stays behind ('none' visibility, D13).
+        #
+        # **Every contributor is present whether it fired or not since candidate 16** (甲's
+        # operator picture, `spec-weights-picture-2026-09-11.md` §5). The drawing has one row per
+        # contributor always, because «上次去過 showing nothing is information» — it says this
+        # place was not last week's — and reading that from an *absence* is an inference the
+        # payload can answer instead. `fired` is what separates a padded row from a real ×1, which
+        # this very fixture can produce: the pool's driest township measures a gap of 0.
         rainy_panel = result["panel"][str(rainy)]
+        assert rainy_panel["base"] == "1", rainy_panel
         assert rainy_panel["factors"] == [
-            {"channel": "contextual", "contributor": "weather", "effect": "0.583", "reason": None}
+            {"channel": "private", "contributor": "preference",
+             "effect": "1", "reason": None, "fired": False},
+            {"channel": "contextual", "contributor": "last_trip",
+             "effect": "1", "reason": None, "fired": False},
+            {"channel": "contextual", "contributor": "weather",
+             "effect": "0.583", "reason": None, "fired": True},
         ], rainy_panel
         assert rainy_panel["clamps"] == []
-        assert result["panel"][str(locals_[0])]["factors"] == []
-        # The driest township carries nothing at all — no row, no sentence, no factor of 1.0.
-        assert result["panel"][str(dry)]["factors"] == [], result["panel"][str(dry)]
+
+        # **The pad completes the drawing and changes no arithmetic**, which is the assertion that
+        # keeps it honest: a place with no stored contribution at all still weighs exactly 1, and
+        # its three rows are all un-fired. The driest township carries no weather row — D43, not an
+        # oversight — and the payload now says so in a field instead of by saying nothing.
+        for empty in (locals_[0], dry):
+            panel_rows = result["panel"][str(empty)]["factors"]
+            assert [r["contributor"] for r in panel_rows] == [
+                "preference", "last_trip", "weather"], panel_rows
+            assert all(r["fired"] is False for r in panel_rows), panel_rows
+            assert all(r["effect"] == "1" for r in panel_rows), panel_rows
+            assert result["weights"][str(empty)] == "1", result["weights"]
 
         # **A12 / RR-8 through the real endpoint: the round stored the reading its factors were
         # measured against.** 晴天的店's township is the pool minimum and produces no contribution,

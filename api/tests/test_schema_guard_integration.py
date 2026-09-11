@@ -121,13 +121,18 @@ async def main() -> int:
         check("and one `downgrade -1` moves it", behind is not None and behind != at_head,
               (behind, at_head))
 
-        # **A database older than 0043 cannot be read by the server's role, and that is the honest
-        # first case here rather than an awkward one.** 0043 is the revision that grants `upto_api`
-        # SELECT on `alembic_version`, so `downgrade -1` from head takes the grant away with the
-        # schema. The guard then cannot see which revision the database is at — and it must still
-        # REFUSE, saying it was refused the read, because «I could not ask» is not «the schema is
-        # fine». Every behind-case from 0044 onward keeps the grant and gets the fuller message,
-        # which is the second half below.
+        # **A database older than 0043 cannot be read by the server's role.** 0043 grants
+        # `upto_api` SELECT on `alembic_version`, so a database below it does not carry the grant:
+        # the guard cannot see which revision it is at, and must still REFUSE, saying it was
+        # refused the read — «I could not ask» is not «the schema is fine».
+        #
+        # **The revoke is explicit and must stay explicit** (the reviewer's `should`, 2026-09-11).
+        # Until head moved past 0043, `downgrade -1` produced this state by itself, because the
+        # revision it undid WAS 0043 — so the case passed without saying what it depended on. The
+        # day 0044 lands, that downgrade leaves the grant in place and this assertion goes red on a
+        # migration that has nothing to do with it. Stating the state the case is about costs one
+        # line and makes it true at every head.
+        await run_sql(test_url, 'revoke all on "alembic_version" from "upto_api"', True)
         code, log = wait_for_exit(start_api(api_url))
         check("a database older than the grant itself still stops the API", code == 3, (code, log[-300:]))
         check("and it says the read was REFUSED rather than that the schema was fine",

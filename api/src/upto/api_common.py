@@ -14,6 +14,7 @@ from sqlalchemy import bindparam, text
 
 from .engine.table import allocate
 from .auth import credential_for, member_for
+from .engine import contributors as known_contributors
 from .engine import draw
 from .engine.fold import Contribution, fold
 
@@ -593,8 +594,14 @@ async def panel_for(session, round_id: int, weights, viewer: int | None = None) 
         # preferences, and D14 erased the proposal authorship of this very round.
         represented = {row.id: row.member_id for row in rows}
         panel[str(place_id)] = {
+            # What the fold starts at, before any contributor — 甲's 起點 row. It is NOT a factor
+            # and is deliberately not padded into the list below: `factors` mirrors
+            # `weight_contribution` rows, and the one payload an operator audits against the
+            # database must not carry a row no record backs.
+            "base": known_contributors.BASE,
             # D46's total order, straight from the fold — the panel must never re-sort.
-            "factors": [
+            "factors": known_contributors.pad(
+                [
                 {
                     "channel": c.channel,
                     "contributor": c.contributor,
@@ -613,9 +620,12 @@ async def panel_for(session, round_id: int, weights, viewer: int | None = None) 
                                                  "represented_member_panel")
                             and viewer is not None and represented[c.id] == viewer)
                     ) else None,
+                    # A real row, so the picture draws a bar. See `engine.contributors.pad`.
+                    "fired": True,
                 }
                 for c in folded.contributions
-            ],
+                ]
+            ),
             # D45: a clamped channel is its own line, or the arithmetic visibly fails.
             "clamps": [
                 {

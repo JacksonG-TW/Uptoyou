@@ -37,6 +37,14 @@ non-owner roles may do to Alembic's bookkeeping, and `test_role_grants`' «`alem
 one named exception» line becomes an assertion that `upto_api` holds SELECT and that no role holds
 anything more. D115's entry carries the amendment.
 
+**Where the grant actually lands, which is not always here** (the reviewer's note, 2026-09-11).
+`roles.grants()` folds `ALEMBIC_GRANTS` in, and revision **0032** issues whatever that map says
+today for every table that exists at its point in the history — `alembic_version` exists before
+any migration runs. So on a **fresh** database the grant is issued at 0032 and this revision is a
+no-op re-grant; on an **existing** one 0032 has long since run and this revision is the fix. Both
+paths end at the same state, which is what matters, and 0032's own comment explains why it reads
+the live map. The paragraph below is therefore about the *downgrade* path alone.
+
 **⚠️ One consequence, measured rather than reasoned about — `downgrade` takes the grant with it.**
 A database rolled back below this revision is one the guard can no longer read, so instead of
 «the database is at 0042 and this code ships against 0044» it says «alembic_version could not be
