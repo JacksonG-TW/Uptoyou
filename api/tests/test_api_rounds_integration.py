@@ -419,6 +419,29 @@ async def scenario(test_url: str) -> None:
             str(member_body["winning_place_id"])
         ], (member_body["winner_headline"], member_body["places"])
         print("  A16: the winner headline is on both wires and leaves a circle-local name alone")
+
+        # **Candidate 17: the member gets the board, and nothing countable with it** (owner-ruled
+        # 2026-09-11 — the picture, not the figure). The rule that this board IS the draw is pinned
+        # host-side in `test_board.py`; what is asserted here is the half only a real wire can show:
+        # that the field survives `MEMBER_KEYS`, and that `allocation` still does not.
+        cells = member_body["board"]
+        assert len(cells) == 6 and all(len(row) == 6 for row in cells), cells
+        assert all(isinstance(cell, int) for row in cells for cell in row), cells
+        die1, die2 = member_body["dice"]
+        # **The orientation, checked against a fact the payload states separately.** Reading the
+        # board the way the client will cannot catch a transpose; reading it against
+        # `winning_place_id` can. On a double this is vacuous by construction — the transposed cell
+        # is the same cell — so the vacuous case is named rather than passed over in silence.
+        assert cells[die1 - 1][die2 - 1] == member_body["winning_place_id"], (die1, die2, cells)
+        if die1 == die2:
+            print("  BD-3b vacuous: the deciding pair was a double, so orientation was not tested")
+        # The place ids on the board are the pool's, and every cell is a place the member can name
+        # from `places` — a cell naming something absent from the legend would render as a blank.
+        assert {cell for row in cells for cell in row} <= {int(p) for p in member_body["places"]}
+        # D105 as amended: the figure stays on the operator's side of the wire.
+        assert "allocation" not in member_body, sorted(member_body)
+        assert "weights" not in member_body and "panel" not in member_body, sorted(member_body)
+        print("  candidate 17: the member's 6×6 board carries the draw and no count")
         print("  D105: the member shape withholds the arithmetic and keeps the outcome")
         assert again.json()["allocation"] == result["allocation"]
 

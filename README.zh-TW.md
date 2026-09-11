@@ -339,7 +339,7 @@ docker compose exec -T api python -m upto.lineage.mcp_server
 
 ## 測試
 
-67 個測試檔案。抓取、雜湊和解析都有單元測試，不需要網路、不需要資料庫。排程任務因此可以很薄，只提供*什麼時候*跑、*用哪個資料庫*：
+68 個測試檔案。抓取、雜湊和解析都有單元測試，不需要網路、不需要資料庫。排程任務因此可以很薄，只提供*什麼時候*跑、*用哪個資料庫*：
 
 ```sh
 python3 api/tests/test_cwa_ingest.py    # and test_fda_ingest, test_fia_ingest, test_dice_table,

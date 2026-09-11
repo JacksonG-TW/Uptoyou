@@ -442,7 +442,7 @@ trail runs into private per-member choices. A test asserts the refusal.
 
 ## Tests
 
-67 test files. Fetch, hash and parse are unit-tested with no network and no database. That keeps the
+68 test files. Fetch, hash and parse are unit-tested with no network and no database. That keeps the
 scheduled jobs thin. They supply only *when* and *with which database*:
 
 ```sh

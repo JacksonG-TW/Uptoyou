@@ -12,7 +12,7 @@ from __future__ import annotations
 from fastapi import HTTPException, Request
 from sqlalchemy import bindparam, text
 
-from .engine.table import allocate
+from .engine.table import allocate, board
 from .auth import credential_for, member_for
 from .engine import contributors as known_contributors
 from .engine import draw
@@ -277,6 +277,7 @@ def _result_body(
     weights: dict[int, object],
     names: dict[int, str],
     allocation: dict[int, int],
+    cells: tuple[tuple[int, ...], ...],
     winner_headline: str | None = None,
     winner_qualifier: str | None = None,
 ) -> dict:
@@ -289,7 +290,14 @@ def _result_body(
         # Strings, not floats: the weights are exact decimals and stay that way (D46).
         "weights": {str(p): str(w) for p, w in weights.items()},
         # The table is the truth of the draw (D72): each place's share of the 36 outcomes.
+        # **Operator only** — it is a figure, and the member's form of the same fact is `board`.
         "allocation": {str(p): n for p, n in allocation.items()},
+        # Candidate 17, owner-ruled 2026-09-11: the member's 6×6 board, `board[die1-1][die2-1]`.
+        # **The picture, not the figure.** It carries one place id per cell and nothing countable —
+        # a member sees that one place holds more of the board by looking at it. Derived from the
+        # same 36-slot table the draw landed on, so the cell for the rolled pair IS the winner
+        # rather than agreeing with it.
+        "board": [list(row) for row in cells],
         "places": {str(p): n for p, n in names.items()},
         # A16: the shortened form of the winner's name, for the reveal's one headline line. `None`
         # when the caller did not compute one — a shape the surface must handle by falling back to
@@ -446,7 +454,12 @@ MEMBER_KEYS = ("round_id", "status", "dice", "sum", "winning_place_id", "places"
                # leave the claim unverifiable by the only people it is addressed to. The **seed** is
                # not in this list and is not member-visible until close; `revealed_seed` is only ever
                # populated on a closed round, which is where the reveal is safe.
-               "rolls", "deciding_member", "seed_commit", "revealed_seed")
+               "rolls", "deciding_member", "seed_commit", "revealed_seed",
+               # Candidate 17: the 6×6 board, one place id per cell (owner-ruled 2026-09-11).
+               # `allocation` is NOT here and must not be — it is the same fact as a figure, and
+               # the ruling gave the member the picture. A count reaching this list would make the
+               # board decoration over a number rather than the thing itself.
+               "board")
 
 
 async def closed_body(
@@ -493,6 +506,7 @@ async def closed_body(
         weights,
         {key: value["name"] for key, value in display.items()},
         allocate({p: w for p, w in weights.items()}),
+        board({p: w for p, w in weights.items()}),
         winner_headline=winner_headline,
         winner_qualifier=winner_qualifier,
     )

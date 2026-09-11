@@ -72,6 +72,37 @@ def build(weights: dict[int, Decimal]) -> tuple[int, ...]:
     return tuple(table)
 
 
+def board(weights: dict[int, Decimal]) -> tuple[tuple[int, ...], ...]:
+    """The 6×6 board a member sees at the reveal: `board[die1 - 1][die2 - 1]` is that cell's place.
+
+    *Candidate 17, owner-ruled 2026-09-11 — coloured at the reveal only, row = die 1, column = die
+    2.* The member's wire carries the picture and not the figure: 36 cells, each naming a place, and
+    **no count and no share anywhere** (D105 as amended). A member can see that one place holds more
+    of the board than another by looking at it, which is the same fact a percentage would state and
+    is the form the ruling chose.
+
+    **Nested rather than a flat 36, and the reason is the failure it removes.** The ruling is «row =
+    die 1, column = die 2»; nested, that sentence *is* the access — `board[die1 - 1][die2 - 1]` — and
+    a transposition has to be written on purpose. Flat, the client computes `(die1 - 1) * 6 + die2 -
+    1`, and getting that backwards yields a board that renders perfectly and puts the wrong place
+    under the rolled pair: wrong, plausible, and invisible without checking a cell against the
+    winner. The extra bytes buy an error that cannot be made by accident.
+
+    **Derived from `build`, never from a second apportionment.** The same 36-slot table the draw
+    lands on is re-read here through `place_for`, so the cell for the rolled pair is the winner by
+    construction rather than by agreement between two functions. A vetoed place appears in zero
+    cells for the same reason: `allocate` already gave it zero slots.
+
+    **The dice order is NOT the slot order.** Slots run by `(sum, die1, die2)` — `OUTCOMES` — because
+    that is how the table is laid out; a board runs by die, because that is how a person reads a
+    grid. The two orderings are different on purpose and this function is where they meet.
+    """
+    table = build(weights)
+    return tuple(
+        tuple(place_for(table, die1, die2) for die2 in range(1, 7)) for die1 in range(1, 7)
+    )
+
+
 def place_for(table: tuple[int, ...], die1: int, die2: int) -> int:
     """The draw: a physical roll lands on its slot, the slot names the place."""
     if not (1 <= die1 <= 6 and 1 <= die2 <= 6):
