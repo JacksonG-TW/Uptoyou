@@ -13,7 +13,8 @@ from sqlalchemy import text
 from .db import dispose_all, session_factory
 from .read.weather import ForecastJoinBroken, TownshipUnknown, reading_for
 from .live import router as live_router
-from .stream import listening
+from .schema_guard import check_or_exit
+from .stream import listener_status, listening
 from .preferences import router as preferences_router
 from .rounds import router as rounds_router
 
@@ -26,6 +27,13 @@ async def lifespan(_app: FastAPI):
     own subscribers from here. With one instance it is a no-op in effect — the instance hears its
     own notification — which is why it can be shipped and gated before a second one exists.
     """
+    # **Before anything is served, and before the listener.** `migrate` left the stack's boot so
+    # N instances cannot race one migration (owner 「一次」), which also removed `api`'s
+    # `depends_on` on it — and with it D115's «a failed migration stops the API one container
+    # earlier». The guarantee is structural again rather than a step in a deploy script: this
+    # refuses to serve a schema that is not the one the code ships against, on every path
+    # including a plain `up` on a development machine (the evaluator's catch).
+    await check_or_exit(session_factory)
     async with listening():
         yield
 
@@ -49,6 +57,13 @@ async def health(response: Response) -> dict:
     A health check that reports the process is alive tells the orchestrator nothing worth
     acting on. compose gates the proxy on this endpoint, so it has to mean *the stack can
     serve a request*, which includes reaching the database.
+
+    **Since 2026-09-11 it also means «and this instance can still hear the circle».** An instance
+    whose `LISTEN` connection has died answers every request correctly and moves nobody's screen
+    ever again — and the stream's heartbeat is generated locally, so it does not even go quiet.
+    Reported here, a deaf instance is one a load balancer stops sending members to and one
+    `--wait` refuses; unreported, it was invisible and permanent. It answers **503 while degraded
+    and keeps serving reads**, which is the whole point: the process is useful and not whole.
     """
     try:
         async with session_factory()() as session:
@@ -56,7 +71,11 @@ async def health(response: Response) -> dict:
     except Exception as failure:  # noqa: BLE001 — the reason belongs in the body
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unhealthy", "database": "unreachable", "detail": str(failure)[:200]}
-    return {"status": "ok", "database": "reachable"}
+    listener = listener_status()
+    if listener["stream_listener"] != "up":
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {"status": "degraded", "database": "reachable", **listener}
+    return {"status": "ok", "database": "reachable", **listener}
 
 
 @app.get("/weather")

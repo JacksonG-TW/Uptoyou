@@ -40,10 +40,16 @@ import json
 import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 
 CHANNEL = "upto_stream"
+
+#: The listening connection names itself in `pg_stat_activity`. **Not cosmetic:** it is how an
+#: operator tells this connection from the pool's, and how the listener test finds the backend to
+#: kill — without it both have to be guessed at from `query`, which the keepalive overwrites.
+APPLICATION_NAME = "upto-stream-listener"
 
 #: Postgres refuses a longer payload outright (measured 2026-09-11: 7,999 delivered, 8,000
 #: refused). Asserted from below by the ten-seat test rather than trusted as a number.
@@ -127,36 +133,137 @@ async def subscribe(circle_id: int):
         _subscribers[circle_id].discard(queue)
 
 
+#: The supervisor's backoff, bounded at both ends. One second so a `pg_terminate_backend` or a
+#: `docker compose up -d --no-deps db` is recovered from before anybody notices; thirty so a
+#: database that is genuinely gone is not hammered by every instance in the group at once.
+_BACKOFF_FIRST, _BACKOFF_MAX = 1.0, 30.0
+
+#: How often the listening connection is asked whether it is really still there. asyncpg's
+#: termination callback covers the connection that is *closed*; it cannot cover one that is
+#: silently black-holed, where the socket stays open and nothing ever arrives — and that failure
+#: is indistinguishable from a quiet circle, which is precisely the invisibility this supervisor
+#: exists to remove. One `select 1` a quarter-minute is the cheapest question that has an answer.
+_KEEPALIVE = 15.0
+
+#: How long `listening()` waits for the first connection before letting the app serve. Bounded,
+#: because a database that is slow to accept must not hold the whole process at startup — the
+#: supervisor keeps trying behind a `/health` that says so.
+_FIRST_CONNECT_WAIT = 10.0
+
+_status: dict = {"up": False, "down_since": None, "reason": "not started"}
+
+
+def listener_status() -> dict:
+    """What `/health` publishes about this instance's ear. Never raises, never blocks.
+
+    **The state is reported, not inferred from a failed publish.** A publish that fails says the
+    database is unreachable; a listener that has died says something narrower and far quieter —
+    this instance can still read, write and answer, and its members' screens will simply never
+    move again. Those are different failures and only one of them used to be visible.
+    """
+    if _status["up"]:
+        return {"stream_listener": "up"}
+    since = _status["down_since"]
+    return {"stream_listener": "down since {}".format(since.isoformat() if since else "start"),
+            "stream_listener_detail": str(_status["reason"])[:200]}
+
+
+def listener_is_up() -> bool:
+    return bool(_status["up"])
+
+
+def _mark_up() -> None:
+    was_down_since = _status["down_since"]
+    _status.update({"up": True, "down_since": None, "reason": None})
+    if was_down_since is not None:
+        _log.error("stream: listener recovered (it was down since %s)", was_down_since.isoformat())
+    else:
+        _log.info("stream: listening on %s", CHANNEL)
+
+
+def _mark_down(reason: str) -> None:
+    if _status["up"] or _status["down_since"] is None:
+        _status["down_since"] = datetime.now(timezone.utc)
+    _status.update({"up": False, "reason": reason})
+    # **Error, not warning, and every time rather than once.** The failure this reports is
+    # permanent and silent without it: the stream's 25-second heartbeat is generated locally in
+    # the response loop, so a client on a deaf instance keeps receiving keepalives on a screen
+    # that will never change again. Nothing else in this process would say a word.
+    _log.error("stream: listener is DOWN (%s) — this instance's members receive no live events "
+               "until it reconnects", reason)
+
+
+async def _supervise(dsn: str) -> None:
+    """Hold one `LISTEN` connection up for the process's life, reconnecting when it dies.
+
+    **Written 2026-09-11 on the reviewer's report against e82f16d**, which found the shape D112
+    is about: the first version connected once, caught only the failure of that first connect, and
+    had no path back. A listener that died later — a database restart, `up -d --no-deps db`, a
+    `pg_terminate_backend` — left an instance that looked healthy from every angle and delivered
+    nothing, for ever, without logging a line.
+    """
+    import asyncpg  # noqa: PLC0415
+
+    backoff = _BACKOFF_FIRST
+    while True:
+        connection = None
+        died = asyncio.Event()
+        try:
+            connection = await asyncpg.connect(
+                dsn, server_settings={"application_name": APPLICATION_NAME})
+            connection.add_termination_listener(lambda _c: died.set())
+            await connection.add_listener(CHANNEL, lambda _c, _pid, _ch, p: deliver(p))
+            _mark_up()
+            backoff = _BACKOFF_FIRST
+            while not died.is_set():
+                try:
+                    await asyncio.wait_for(died.wait(), timeout=_KEEPALIVE)
+                except asyncio.TimeoutError:
+                    await connection.fetchval("select 1")  # raises when the socket is really gone
+            _mark_down("the listening connection was terminated by the server")
+        except asyncio.CancelledError:
+            raise
+        except Exception as failure:  # noqa: BLE001 — every transport failure has one answer here
+            _mark_down("{}: {}".format(type(failure).__name__, failure))
+        finally:
+            if connection is not None:
+                try:
+                    await connection.close(timeout=5)
+                except Exception:  # noqa: BLE001 — closing a dead connection is not a new problem
+                    pass
+        await asyncio.sleep(backoff)
+        backoff = min(backoff * 2, _BACKOFF_MAX)
+
+
 @asynccontextmanager
 async def listening(url: str | None = None):
-    """One `LISTEN` connection for this instance, held for the process's life.
+    """This instance's ear, supervised, for the process's life.
 
-    **Raw asyncpg rather than the SQLAlchemy session**, because `LISTEN` is a connection-scoped
-    state that must outlive every request while sessions are borrowed from a pool and returned —
-    a listener on a pooled connection stops listening the moment that connection is recycled.
+    **Raw asyncpg rather than the SQLAlchemy session**, because `LISTEN` is connection-scoped state
+    that must outlive every request while sessions are borrowed from a pool and returned — a
+    listener on a pooled connection stops listening the moment that connection is recycled.
 
-    **A failure here must not stop the API from serving.** If the listener cannot be established
-    the product still answers every request; what it loses is the live stream, and D56's snapshot
-    means a member who reloads still sees the truth. So this logs and continues rather than
-    refusing to start — a stack that will not boot because a notification channel is unavailable
-    is a worse outcome than one that boots quiet.
+    **A failure here still does not stop the API from serving, and that has not changed** — every
+    request is answered, and D56's snapshot means a member who reloads sees the truth. **What
+    changed on 2026-09-11 is that it is no longer silent:** `/health` reports the listener's state
+    and answers non-200 while it is down, so `--wait`, the proxy's gate and a load balancer all see
+    a deaf instance and stop sending members to it. Serving reads while telling the truth about
+    what is broken is the ruled behaviour; serving reads while looking perfect was the defect.
     """
-    import asyncpg  # noqa: PLC0415 — the driver is already a dependency; imported here to keep
-    #                                  this module importable by tests that never listen.
     from .db import database_url  # noqa: PLC0415
 
     dsn = (url or database_url()).replace("postgresql+asyncpg://", "postgresql://")
-    connection = None
-    try:
-        connection = await asyncpg.connect(dsn)
-        await connection.add_listener(CHANNEL, lambda _c, _pid, _ch, payload: deliver(payload))
-        _log.info("stream: listening on %s", CHANNEL)
-    except Exception as failure:  # noqa: BLE001 — any transport failure is the same outcome here
-        _log.warning("stream: no listener (%s) — this instance serves, but its members will "
-                     "not receive live events until it restarts", failure)
-        connection = None
+    supervisor = asyncio.ensure_future(_supervise(dsn))
+    deadline = asyncio.get_event_loop().time() + _FIRST_CONNECT_WAIT
+    while not _status["up"] and asyncio.get_event_loop().time() < deadline:
+        if supervisor.done():
+            break
+        await asyncio.sleep(0.05)
     try:
         yield
     finally:
-        if connection is not None:
-            await connection.close()
+        supervisor.cancel()
+        try:
+            await supervisor
+        except asyncio.CancelledError:
+            pass

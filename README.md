@@ -588,7 +588,7 @@ docker compose exec api python -m upto.classify.run 63000010   # exit 3 = model 
 
 ## Tests
 
-63 test files. Fetch, hash and parse are unit-tested with no network and no
+66 test files. Fetch, hash and parse are unit-tested with no network and no
 database, which is what keeps the DAGs thin — they supply only *when* and *with which database*:
 
 ```sh
