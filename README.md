@@ -40,7 +40,7 @@ Five screens, and each does one thing:
 
 - **Home** — the circle, and tonight's round if one is open.
 - **Device** — paste a token once; the browser remembers the circle.
-- **這一餐** — the categories to avoid tonight, as a menu with section marks.
+- **Tonight (這一餐)** — the categories to avoid tonight, as a menu with section marks.
 - **Round** — propose places, then roll.
 - **Reveal** — the dice stop, then the winner's odds are itemised, factor by factor.
 
@@ -178,6 +178,10 @@ applies only where a company maps to exactly one, because nothing in either sour
 a multi-brand company's site is. A 統編 the registry records as dead, and never alive, drops out of
 the search typeahead.
 
+Measured over the current publication's 36,499 rows, which is a count of published rows and not
+the 35,965 places the serving instance holds — [the long version](docs/decisions.md) reconciles the
+three figures.
+
 | Rung | Rows | Share | Of those, still names a company |
 |---|---|---|---|
 | sign (site-level) | 1,379 | 3.8% | 3.3% |
@@ -213,8 +217,10 @@ match.
 
 ### The schema
 
-<!-- The drawn overview belongs here: docs/diagrams/schema-at-a-glance.png — four clusters,
-     table names only, and the four pins from weight_contribution to the readings. -->
+![The schema at a glance](docs/diagrams/schema-glance.png)
+
+*Four clusters and the tables a reader needs by name, with the pins from a stored weight back to
+the readings it was computed from. Drawn, not generated — the generated set below has the columns.*
 
 Generated ER diagrams, regenerated from the live schema so they cannot drift from what the database
 holds: [reference](docs/diagrams/er-reference.png) · [weather](docs/diagrams/er-weather.png) ·
@@ -260,8 +266,8 @@ re-run on the third, so the two are not compared in one sentence.
 
 **3. Vector search is a Postgres extension, not a second service.**
 *Chosen:* `pgvector` on the database already in the stack. *Turned down:* a dedicated vector store
-(Pinecone, Milvus, Qdrant). *The number:* the crib is 537 rows across three embedders — thousands at
-most — against one more stateful service to run, back up and monitor.
+(Pinecone, Milvus, Qdrant). *The number:* the crib is 537 rows across three embedders
+(`bge-m3`, `qwen3-embedding:0.6b`, `snowflake-arctic-embed2`) — thousands at most — against one more stateful service to run, back up and monitor.
 
 **4. The evaluation set is frozen, stratified, and its authorship is stated.**
 *Chosen:* 200 names, fixed seed, stratified over the three name rungs with a floor of 30, labels by a
@@ -289,8 +295,9 @@ on the 200 scored rows, where the defensible upside is +4 rows.
 *Chosen:* a publication row per fetched file, a data row per record, and a ledger where a no-change
 day writes a heartbeat. *Turned down:* overwrite-in-place; schedules guessed to match each file's
 cadence. *The number:* every source is idempotent on identical bytes — every column of every table
-compared, through the real command-line entry point, twice — and the no-change path costs 1.6 s
-against 15–19 s for a real store.
+compared, through the real command-line entry point, twice — and on the reference source the
+no-change path costs 1.6 s against 15.0 s to store. Per-source figures are in the table below and
+they spread much wider than that one pair.
 
 *Measured on the schedule itself* — 8 days, 332 ledger rows against 361 Airflow task instances,
 nothing instrumented and no column added:

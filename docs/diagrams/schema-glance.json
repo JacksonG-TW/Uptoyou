@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "The schema at a glance",
+    "subtitle": "Thirteen tables of thirty-two, no columns. Every arrow out of weight_contribution is a pin: one weight names exactly one source row.",
+    "output": "schema-glance.html",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 4,
+    "gapX": 90,
+    "gapY": 54,
+    "cellW": 190,
+    "cellH": 66
+  },
+  "components": [
+    {
+      "id": "ingest_run",
+      "type": "database",
+      "label": "ingest_run",
+      "sublabel": "one row per fetch",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "publications",
+      "type": "database",
+      "label": "the publications",
+      "sublabel": "seven, one per source",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "reference_place",
+      "type": "database",
+      "label": "reference_place",
+      "sublabel": "as published",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "place",
+      "type": "database",
+      "label": "place",
+      "sublabel": "ours, three origins",
+      "row": 3,
+      "col": 0
+    },
+    {
+      "id": "forecast_reading",
+      "type": "database",
+      "label": "forecast_reading",
+      "sublabel": "township · hour",
+      "row": 4,
+      "col": 1
+    },
+    {
+      "id": "observation_reading",
+      "type": "database",
+      "label": "observation_reading",
+      "sublabel": "station · hour",
+      "row": 4,
+      "col": 2
+    },
+    {
+      "id": "circle",
+      "type": "database",
+      "label": "circle",
+      "sublabel": "the table",
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "member",
+      "type": "database",
+      "label": "member",
+      "sublabel": "a seat, a nickname",
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "round",
+      "type": "database",
+      "label": "round",
+      "sublabel": "at most one open",
+      "row": 1,
+      "col": 2
+    },
+    {
+      "id": "proposal",
+      "type": "database",
+      "label": "proposal",
+      "sublabel": "the pool",
+      "row": 2,
+      "col": 2
+    },
+    {
+      "id": "preference",
+      "type": "database",
+      "label": "preference",
+      "sublabel": "append-only, per member",
+      "row": 3,
+      "col": 3
+    },
+    {
+      "id": "trip",
+      "type": "database",
+      "label": "trip",
+      "sublabel": "where they went",
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "weight_contribution",
+      "type": "database",
+      "label": "weight_contribution",
+      "sublabel": "one row per reason",
+      "tag": "exactly one of four",
+      "row": 3,
+      "col": 2
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Ledger",
+      "wraps": [
+        "ingest_run"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Reference",
+      "wraps": [
+        "publications",
+        "reference_place",
+        "place"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Weather",
+      "wraps": [
+        "forecast_reading",
+        "observation_reading"
+      ],
+      "pad": 18
+    },
+    {
+      "kind": "region",
+      "label": "Product",
+      "wraps": [
+        "circle",
+        "member",
+        "round",
+        "proposal",
+        "preference",
+        "trip",
+        "weight_contribution"
+      ],
+      "pad": 18
+    }
+  ],
+  "connections": [
+    {
+      "from": "ingest_run",
+      "to": "publications"
+    },
+    {
+      "from": "publications",
+      "to": "reference_place"
+    },
+    {
+      "from": "reference_place",
+      "to": "place"
+    },
+    {
+      "from": "place",
+      "to": "proposal"
+    },
+    {
+      "from": "circle",
+      "to": "member"
+    },
+    {
+      "from": "circle",
+      "to": "round"
+    },
+    {
+      "from": "round",
+      "to": "proposal"
+    },
+    {
+      "from": "proposal",
+      "to": "weight_contribution"
+    },
+    {
+      "from": "weight_contribution",
+      "to": "observation_reading"
+    },
+    {
+      "from": "weight_contribution",
+      "to": "forecast_reading"
+    },
+    {
+      "from": "weight_contribution",
+      "to": "trip"
+    },
+    {
+      "from": "weight_contribution",
+      "to": "preference"
+    }
+  ]
+}

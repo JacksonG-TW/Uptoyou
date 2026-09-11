@@ -184,3 +184,81 @@ sentence the surface cannot produce.
 and no framework; on 2026-08-18 it was rebuilt on React 19 + Vite, because hand-rolling was too slow
 for what the screens needed. The same rule brings in MLflow rather than keeping a home-built
 equivalent.
+
+---
+
+## Figures that left the README
+
+The README was reshaped for a reader deciding whether to read further, and these measurements left
+that page with it. None of them was withdrawn; they are here so that README + this page together
+still hold every figure the longer page carried.
+
+### How fresh the data is, derived from the ledger rather than from what a publisher claims
+
+Two different things, kept apart on purpose: how long after a source republishes we are guaranteed
+to have noticed (ours, bounded by the poll), and how often it actually republishes (theirs,
+observed).
+
+| Source | Detected within | Republishes every | So the data is |
+|---|---|---|---|
+| CWA township forecast | 62 min | 4.3 h median, 8.1 h worst | at most 9.1 h old |
+| CWA station observation | 62 min | 60 min median, 62 min worst | at most 2.1 h old |
+| 營業稅籍 registry | 24.0 h | 24.0 h median, 36.2 h worst | at most 2.5 d old |
+| FDA 餐飲場所 reference | 24.0 h | insufficient history: 1 publication | not yet derivable |
+| 食材登錄 brands | 24.0 h | insufficient history: 1 publication | not yet derivable |
+| 衛生評核 signs | 24.0 h | insufficient history: 1 publication | not yet derivable |
+| 商業登記 status | 24.0 h | insufficient history: 1 publication | not yet derivable |
+
+**The four incomplete rows are a state, not a gap in the work.** A source seen once has published
+once in this history, and *n* publications yield *n−1* intervals; the cell fills itself as the jobs
+run. What it will not do is borrow the number the publisher advertises — the roster calls itself
+monthly and the tax extract is cut monthly, and neither is something this pipeline observed. A cell
+sourced from a web page would wear the same formatting as the measured seconds beside it and mean
+something entirely different.
+
+The half that *is* ours is a real bound and holds for all seven: no poll was missed in the window,
+and the longest stretch with no successful run was 62 minutes on the hourly sources and one day on
+the daily ones. Over the same 8 days the scheduler ran **361 task instances** and lost two — both on
+the township forecast, 162 of 164.
+
+### What is inside the tax file, and what is never written
+
+The CSV holds **1,711,012 rows**. Only rows whose 統編 already appears in the latest reference
+publication are stored, so **the other ~1.69M are never written** — a storage decision rather than
+an optimisation: a tax row for a hardware store two hundred kilometres away answers nothing this
+app asks.
+
+The reference file has the same shape one size down: a 99 MB CSV of **827,784 rows**, of which the
+**36,499** Taipei restaurant rows are kept.
+
+### Two join rates the README states as shares
+
+- **The brand join: 188 of 266 companies join** the current publication. A multi-brand company
+  keeps its registered name, so the rate is not a defect to close.
+- **The tax address disagrees with the storefront on 89.8% of matched rows, and 13.7% are
+  registered outside the city entirely.** That is why nothing may join on it.
+
+### The classifier's own footprint
+
+The quantized 3B model peaks around **2.1 GB** while a backfill runs, which is why it sits behind a
+profile and is off otherwise. The deployment target has 4 GB.
+
+### The backup drill
+
+A nightly `pg_dump` to S3 under a read-only role, thirty kept, swept only after a successful upload.
+The drill on the **338 MB** development database took **3.7 s to dump and 9.4 s to restore**, with
+`alembic current` and the row counts of nine tables identical on both sides. The serving instance's
+own dump is **31.2 MiB in 12 s**.
+
+### One figure deliberately dropped rather than moved
+
+The README used to state the serving stack at rest **twice** — 942 MiB in one decision and 1,009 MiB
+in another, measured on different days and both true when written. One number per fact: the page now
+states 1,009 MiB, which is the one measured after the shrink that both decisions are about.
+
+### A score that is a different experiment, not a better one
+
+Two of the four rounds have `_brandcrib` variants, run with an authored brand crib added. They read
+**2.5 to 4.0 points higher** and are not comparable with the four in the README's table: a different
+crib is a different configuration, so it gets its own round rather than a better number for the same
+one.
