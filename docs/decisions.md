@@ -326,6 +326,59 @@ minutes is the normal case for this product, not an edge. *Turned down:* an unpr
 which gives up the shield the domain exists for; and reconnect-and-hope, which cannot tell a cut
 stream from a quiet one. The comment line carries no timing a member could read.
 
+### The thirteen categories, and why a wrong answer is refused rather than repaired
+
+*The README's «the category is generated … from a closed list of thirteen».*
+
+麵食 · 飯食 · 小吃 · 火鍋 · 燒烤 · 日式 · 西式 · 早餐 · 咖啡飲料 · 便利商店 · 台菜 · 素食 · 其他
+
+Ten of them until 2026-08-30. **便利商店** was added because convenience stores were the largest
+single miss on the frozen set — a measured loss, not a hunch. **台菜** and **素食** followed from
+looking at what 其他 was hiding. 台菜 is the explicit words only: 小館 is a suffix, not a cuisine,
+and was ruled out after measuring 211 of them against 47 熱炒/快炒.
+
+**An answer outside the list is refused, never repaired.** Coercing a near miss — 拉麵 into 麵食 —
+turns a wrong answer into a plausible one and deletes the only step in the process that can fail. A
+refusal is a row that stays undecided and can be re-asked; a repair is a wrong row that looks
+decided for ever.
+
+**A verdict of «this is a legal entity, not a shop» is written as a decided absence** — provenance
+present, category null — so a re-run never re-asks it. That is the same rule from the other side:
+the model's «no» is a result, not a gap.
+
+**素食 cannot be scored on the frozen set**: one row of 200, about 1% of the city. The report prints
+«insufficient rows» rather than a percentage. A targeted set would answer it and nobody has drawn
+one. The next change already decided: 素食 stops being a category and becomes an attribute a place
+carries, because «I cannot eat here» is a requirement rather than a discount — and the list returns
+to twelve.
+
+### What the name derivation actually produces
+
+*Measured 2026-09-11 by `probes/m6_ladder.py` against the publication of 2026-09-02, the same run
+that produced the README's reach figures.* Sign-less sites only, grouped by the registered company
+name — the collision key the read path uses — and run through the shipped `naming.derive_names`, so
+this is the product's rule rather than a query describing it.
+
+| outcome | sites | share of sign-less |
+|---|---|---|
+| layer two — 區＋路＋段 bracket | 9,094 | 26.0% |
+| layer three — house number joins the bracket | 3,220 | 9.2% |
+| no bracket — the only sign-less site of its company | 22,699 | 64.8% |
+| bare base — address parsed to nothing | 0 | 0.0% |
+
+**The four rows sum to 35,013 — every sign-less site — and 35,013 + the ladder's 1,363 signs is
+36,376, the publication itself.** That is the check worth keeping: a derivation table that does not
+close against its own publication is measuring a subset nobody named. It also shows the derivation
+ran on all of them rather than only on the ones that happened to collide. 2,608 companies have two
+or more sign-less sites.
+
+**The previous figures were 9,136 · 3,234 · 22,750**, taken against the publication of 2026-08-11.
+They moved with the source, not with the rules.
+
+**A bare base is not a failure and is counted rather than forced.** An address that parses to
+nothing keeps the plain name — an empty bracket would be a lie about provenance. Today that row is
+zero, which is a fact about this publication and not a guarantee.
+
 ### Two join rates the README states as shares
 
 - **The brand join: 188 of 266 companies join** the current publication. A multi-brand company
