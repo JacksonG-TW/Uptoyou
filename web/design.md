@@ -325,7 +325,7 @@ vanished with no trace); two visual weights for two meanings (the fix for a redu
 **Where the owner's "reference material" point lands, stated plainly:** the chip spec (2026-08-28) ruled weight
 and fill from the depth vocabulary and did not consult the accessibility criteria for state; that is the gap he
 named, and ruling 1 closes it with the sources above. The list of what to consult is now in
-`idea & img/skill-research-sources.md`'s design section.
+`idea & img/research/skill-research-sources.md`'s design section.
 
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 

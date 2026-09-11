@@ -92,7 +92,7 @@ say "moved $before -> $after"
 git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
 
 # **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the research is in
-# the private repository, `idea & img/ghcr-research.md`). It built its own images until then, and on
+# the private repository, `idea & img/research/ghcr-research.md`). It built its own images until then, and on
 # 2026-09-05 that wedged it for twelve hours — `npm ci` and a Vite build on a swapless 2 GB instance
 # with the stack running (H76's neighbour). The images are built on the development machine and
 # pushed to GHCR as PUBLIC packages, so this pull needs **no credential**: «You can also access
