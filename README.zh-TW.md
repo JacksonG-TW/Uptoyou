@@ -67,6 +67,8 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 
 「請你相信」和「你可以查」，差別就在這裡。這也是為什麼偏好進來時私密，出去時看得見。移動機率的東西會顯示。誰要求的，不顯示。
 
+**而且隱私是在資料庫裡執行的，不是介面口頭保證的。** 關閉一個回合會觸發一個 trigger，在讓結果落地的那個交易裡，把 `proposal.member_id` 設成空值 —— 手動用 SQL 關閉、或一個修補腳本，都會把作者身分留下來，而且都不會報錯。寫入一個偏好會回 204 而且**完全不發出事件**，因為在一個小圈子裡，一個事件發生的時刻離一個名字只差一次猜測。偏好預設只存在於這一餐，每晚由一個只能讀和刪那一張表、其他什麼都不能做的角色抹除。
+
 ![Tonight — the categories to avoid, as a menu](docs/round-tonight.png)
 
 ## Up to you 的解法
@@ -267,6 +269,8 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 - **API 行程不會去服務一個它不是照著寫的 schema。** 它在啟動時讀 migration 版本。資料庫落後、超前、或從來沒 migrate 過，它就把兩個版本寫進 log，然後結束。所以部署會在錯的那個 container 上失敗，錯誤到不了成員的請求裡。
 - **對模型的連線會重試，重試次數會印出來。** 這條路徑上，一個冷的模型看起來是*掛掉*，看不出是慢：第一個請求失敗，十二秒後重試，半秒就回。一條不穩的連線在紀錄裡是一個數字，而不是一個很慢的晚上。
 - **排程任務失敗會送一則訊息。** 訊息帶 log 在 container 裡的路徑，永遠沒有 URL。全新 clone 預設關掉通知。另外有一個故意會失敗的任務，用來測這個通道本身。
+- **每個來源都被證明是冪等的，不是假設的。** 每一個都走它真正的命令列入口跑兩次，每一張表的每一個欄位都比對。沒有變化的一天是一個被記錄下來的結果，不是一個空白。
+- **68 個測試檔案**，兩種節奏：host-side 不需要網路也不需要資料庫；build-and-drop 自己建資料庫，跑在唯一握有擁有者憑證的那個服務裡。每一次 commit 還要通過 pre-commit hook 裡的六道本地檢查，其中五道只需要標準函式庫，所以一個 clone 不需要任何工具鏈就能 commit。
 
 ### 其他六個決定
 
@@ -293,7 +297,9 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 | 09-08 | image 來自 registry | 七個 image 名字收成三個。在這裡 build，以抽出版的 commit 為 tag 推到公開 registry。機器拉那個 tag，自己不 build | pull 9 秒。部署中記憶體 479 → 664 MB，從未下降 |
 | 09-11 | 不只一個行程 | 事件匯流排搬進資料庫，兩個 API 行程可以服務同一個圈子。schema 那一步離開開機流程，多個行程不會搶同一次 migration。每個行程的監聽連線有人看著，也會回報 | 從資料庫端砍掉一個監聽連線：0.18 秒回 503，1.23 秒重連 |
 
-## 未來方向
+## 限制與未來方向
+
+只有臺北：十二個行政區、一個城市的開放資料，地址在匯入的邊界就正規化，因為同一份政府檔案把市名寫成兩種寫法。**每一個來源都在它的授權範圍內使用** —— 授權是非商業或不確定的來源就完全不用，整條管線裡沒有任何評分、任何評論、任何爬來的頁面。尺寸是給一個小團體的，房間狀態存在行程裡。這是一個作品集專案，在一個私有 repository 裡開發，每次合併之後抽出到這裡，所以 commit 訊息帶著每一次改動背後的理由。
 
 - **素食 從分類改成一家店帶著的屬性**（素食麵館 = 麵食 + 有素）。「我不能在這裡吃」是桌上的一個需求，折扣處理不了。分類集合回到十二個。
 - **不只一個行程，前面放負載平衡器。** 事件匯流排已經在資料庫裡，schema 那一步也已經是部署的一步。
@@ -311,56 +317,8 @@ curl -s localhost:8080/health
 #   {"status":"ok","database":"reachable","instance":"…","stream_listener":"up"}
 ```
 
-**要打兩個指令。** schema 那一步離開了整套 stack 的開機流程，多個行程才不會搶它。它可以重複跑：對一個已經是最新的資料庫跑，什麼都不會做。
+**兩個指令。** schema 那一步離開了整套 stack 的開機流程，好讓多個行程不會搶它。migrate 是冪等的 —— 對一個已經是最新的資料庫跑，它什麼都不會做。
 
-- **`localhost:8080`** 是這個 app。API 和資料庫只在 compose 網路裡面連得到。Airflow 介面有自己的連接埠和名字，寫在 `.env.example` 裡。連接埠都住在那個檔案裡。
-- 氣象匯入需要一把免費的中央氣象署開放資料金鑰（opendata.cwa.gov.tw）。init 時讀一次，存進 Fernet 加密的 Airflow Connection。永遠不從環境變數讀，永遠不進 XCom 或被渲染的樣板欄位。另外五個開放資料檔案不需要憑證。新的排程任務會以**暫停**狀態出現（`airflow dags unpause <dag_id>`）。
+`localhost:8080` 是這個 app；API 和資料庫只在 compose 網路裡面連得到。氣象匯入需要一把免費的中央氣象署開放資料金鑰（opendata.cwa.gov.tw），在 init 時讀一次進 Fernet 加密的 Airflow Connection，另外五個開放資料檔案不需要任何憑證。新的排程任務會以**暫停**狀態出現。
 
-手動跑一個匯入，結束碼 `0` 有存或沒有變化、`1` 來源失敗、`2` 兩個版本訊號不一致。或是把模型開起來做回填：
-
-```sh
-docker compose exec api python -m upto.ingest.run_places
-docker compose exec api python -m upto.ingest.run_business_tax
-
-docker compose --profile model up -d ollama
-docker compose exec ollama ollama pull gemma2:2b
-docker compose exec ollama ollama pull snowflake-arctic-embed2
-docker compose exec api python -m upto.classify.run 63000010 --rag --embed arctic
-#   exit 3 = model absent, nothing written
-```
-
-**血緣也服務給模型看**，走 stdio 上的 MCP。任何一筆讀數都可以追到它的發佈、它的內容雜湊值，以及寫下它的那次執行：
-
-```sh
-docker compose exec -T api python -m upto.lineage.mcp_server
-```
-
-五個工具會回答。第六個 `explain_place_loss` 列出來**只是為了拒絕**。那條路會走進成員私下的選擇。有一個測試斷言這個拒絕。
-
-## 測試
-
-68 個測試檔案。抓取、雜湊和解析都有單元測試，不需要網路、不需要資料庫。排程任務因此可以很薄，只提供*什麼時候*跑、*用哪個資料庫*：
-
-```sh
-python3 api/tests/test_cwa_ingest.py    # and test_fda_ingest, test_fia_ingest, test_dice_table,
-python3 api/tests/test_weight_fold.py   # test_classify, test_web_surface, test_evaluate_draw …
-```
-
-整合測試自己建立、自己丟掉資料庫。它們跑在只給測試用、握有擁有者憑證的服務裡，永遠不在 `api`。`api` 連線用的角色沒辦法 `create database`。每一個來源都證明重跑結果相同：走它真正的命令列入口跑兩次，每一個欄位都比對：
-
-```sh
-docker compose run --rm tests python /srv/tests/test_place_ingest_integration.py
-docker compose run --rm tests python /srv/tests/test_business_tax_integration.py
-```
-
-每一次 commit 都會通過 pre-commit hook 裡的六道本地檢查。其中五道只需要標準函式庫，一個 clone 不裝工具鏈就能 commit。六道是：機密掃描。`app/` 邊界。每一個成員讀得到的字串，都在字型子集裡。伺服器的文案在出貨字型裡畫得出來。風險登記簿的編號。每一個 staged 的 Python 檔案跑 `ruff`。
-
-## 隱私
-
-**作者身分在結束時就在資料庫裡死掉。** 結束一個回合會觸發一個 trigger，把那個回合的 `proposal.member_id` 設成空值。這發生在讓結果落地的同一個交易裡。這件事交給 trigger，因為應用程式的程式碼擋不住其他路徑。手動用 SQL 結束、修補腳本、第二條程式路徑，都會把作者身分留下來。而且都不會報錯。
-
-即時串流上不帶任何成員，也不帶任何成員讀得出來的時間資訊。寫入一個偏好會回 204，不發出事件。在一個小圈子裡，一個事件發生的時刻離一個名字只差一次猜測。偏好預設只存在於這一餐，除非被留下來。每晚有一個工作抹除它們，那個角色只能讀和刪那張表，其他什麼都不能做。超過九十天的氣象讀數也一樣，除非被某次擲骰連到。
-
-## 範圍
-
-只有臺北。十二個行政區、一個城市的開放資料。地址在匯入的邊界就正規化，因為同一份政府檔案把市名寫成兩種寫法。每一個來源都在它的授權範圍內使用。授權是非商業或不確定的來源就完全不用。整條管線裡沒有任何評分、任何評論、任何爬來的頁面。尺寸是給一個小團體的：房間狀態存在行程裡，規模是一個朋友的圈子。這是一個作品集專案，在一個私有 repository 裡開發。每次合併之後抽出到這裡，所以 commit 訊息帶著每一次改動的理由。
+手動跑匯入、跑分類回填、跑測試、用血緣工具：[docs/operations.md](docs/operations.md)。

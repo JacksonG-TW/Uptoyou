@@ -79,6 +79,13 @@ rows the roll used and names each one.
 So a member can check the result. Nobody has to take it on trust. A preference is private on the way
 in and visible on the way out. The reveal shows what moved the odds. It never shows who asked for it.
 
+**And privacy is enforced in the database rather than promised by the surface.** Closing a round
+fires a trigger that nulls `proposal.member_id`, in the transaction that makes the result durable —
+a manual close over SQL or a fix-up script would each leave authorship behind, and neither would
+error. A preference write returns 204 and emits **no event at all**, because in a small circle the
+moment of an event is one guess away from a name. Preferences are per meal unless kept, and a
+nightly job erases them under a role that can read and delete that one table and nothing else.
+
 ![Tonight: the categories to avoid, as a menu](docs/round-tonight.png)
 
 ## How Up to you approaches it
@@ -350,6 +357,13 @@ of this measures the fetch / parse / store split, because nothing records it.
 - **A failed scheduled task sends one message.** It carries the log's path inside the container and
   never a URL. Alerting is off in a fresh clone by design. A dedicated job fails on purpose, so the
   channel itself can be tested.
+- **Every source is proven idempotent, not assumed.** Each one runs through its real command-line
+  entry point twice and every column of every table is compared. A no-change day is a recorded
+  outcome rather than an absence.
+- **68 test files**, in two tempos: host-side with no network and no database, and build-and-drop
+  tests that build their own database in the one service holding the owner's credential. Every
+  commit also passes six local gates in a pre-commit hook, five of them standard-library only, so a
+  clone needs no toolchain to commit.
 
 ### Six more decisions
 
@@ -382,7 +396,14 @@ of this measures the fetch / parse / store split, because nothing records it.
 | 09-08 | Images from a registry | Seven image names collapsed to three. Images are built here and pushed to a public registry, tagged with the extract's commit. The box pulls that tag and builds nothing. | pull 9 s; memory 479 → 664 MB during the deploy, never dipping |
 | 09-11 | More than one instance | The event bus moved into the database, so two API processes can serve one circle. The schema step left the boot, so instances cannot race one migration. Each process's listening connection is supervised and reported. | a listener killed from the database side: 503 in 0.18 s, reconnected in 1.23 s |
 
-## Future Work
+## Limits and future work
+
+Taipei only: twelve districts, one city's open data, addresses normalised at the ingest boundary
+because the same government file spells the city two ways. **Every source is used inside its
+licence** — one whose licence is non-commercial or uncertain is not used at all, and there are no
+ratings, no reviews and no scraped pages anywhere in the pipeline. Sized for one small group, with
+live room state per process. A portfolio project, developed in a private repository and extracted
+here after every merge, so the commit messages carry the reasoning behind each change.
 
 - **素食 stops being a category and becomes an attribute** a place carries (素食麵館 = 麵食 + 有素).
   «I cannot eat here» is a hard requirement, so a discount does not fit it. The set returns to
@@ -406,83 +427,12 @@ curl -s localhost:8080/health
 ```
 
 **Two commands.** The schema step left the stack's boot, so that several instances cannot race it.
-The migrate step is idempotent. Run it on a current database and it does nothing.
+The migrate step is idempotent — run it on a current database and it does nothing.
 
-- **`localhost:8080`** is the app. The API and the database are reachable only over the compose
-  network. The Airflow UI has its own port and its own name in `.env.example`, which is where the
-  ports live.
-- The weather ingest needs a free CWA Open Data key (opendata.cwa.gov.tw). The key is read once at
-  init into a Fernet-encrypted Airflow Connection. It is never read from the environment, and never
-  written into XCom or a rendered template field. The five open-data files need no credential. New
-  scheduled jobs arrive **paused** (`airflow dags unpause <dag_id>`).
+`localhost:8080` is the app; the API and the database are reachable only over the compose network.
+The weather ingest needs a free CWA Open Data key (opendata.cwa.gov.tw), read once at init into a
+Fernet-encrypted Airflow Connection, and the five open-data files need no credential. New scheduled
+jobs arrive **paused**.
 
-Run an ingest by hand, or bring the model up for a backfill. An ingest exits `0` for stored or no
-change, `1` when the source failed, and `2` when the version signals disagree:
-
-```sh
-docker compose exec api python -m upto.ingest.run_places
-docker compose exec api python -m upto.ingest.run_business_tax
-
-docker compose --profile model up -d ollama
-docker compose exec ollama ollama pull gemma2:2b
-docker compose exec ollama ollama pull snowflake-arctic-embed2
-docker compose exec api python -m upto.classify.run 63000010 --rag --embed arctic
-#   exit 3 = model absent, nothing written
-```
-
-**Lineage is served to a model too**, over MCP on stdio. Any reading traces to the fetched file it
-came from, that file's content hash, and the run that wrote it:
-
-```sh
-docker compose exec -T api python -m upto.lineage.mcp_server
-```
-
-Five tools answer. A sixth, `explain_place_loss`, is listed **only in order to refuse**, because the
-trail runs into private per-member choices. A test asserts the refusal.
-
-## Tests
-
-68 test files. Fetch, hash and parse are unit-tested with no network and no database. That keeps the
-scheduled jobs thin. They supply only *when* and *with which database*:
-
-```sh
-python3 api/tests/test_cwa_ingest.py    # and test_fda_ingest, test_fia_ingest, test_dice_table,
-python3 api/tests/test_weight_fold.py   # test_classify, test_web_surface, test_evaluate_draw …
-```
-
-Integration tests build and drop their own database. They run in the test-only service that holds
-the owner's credential, never in `api`. The `api` service connects as a role that cannot
-`create database`. Every source is proven idempotent by running its real command-line entry point
-twice and comparing every column:
-
-```sh
-docker compose run --rm tests python /srv/tests/test_place_ingest_integration.py
-docker compose run --rm tests python /srv/tests/test_business_tax_integration.py
-```
-
-Every commit passes six local gates in a pre-commit hook. Five of them are standard-library only, so
-a clone needs no toolchain to commit. The gates are a secret scan, the `app/` boundary, and the font
-subset against every member-readable string. The other three: the server's copy drawable in the
-shipped fonts, the hazard register's numbering, and `ruff` on every staged Python file.
-
-## Privacy
-
-**Authorship is removed at the close, in the database.** Closing a round fires a trigger that nulls
-`proposal.member_id` for that round. It runs in the transaction that makes the result durable. A
-trigger was chosen because a manual close over SQL or a fix-up script would each leave authorship
-behind, and neither would error.
-
-Nothing on the live stream carries a member, and nothing on it carries a timing a member could read.
-A preference write returns 204 and emits no event. In a small circle, the moment of an event is one
-guess away from a name. Preferences are per meal unless kept. A nightly job erases them, and its role
-can read and delete that table and nothing else. Weather readings older than ninety days go the same
-way, unless a roll linked to them.
-
-## Scope
-
-Taipei only: twelve districts, one city's open data. Addresses are normalised at the ingest
-boundary, because the same government file spells the city two ways. Every source is used inside its
-licence. A source whose licence is non-commercial or uncertain is not used at all. There are no
-ratings, no reviews and no scraped pages anywhere in the pipeline. The app is sized for one small
-group, with live room state per process. It is a portfolio project, developed in a private repository
-and extracted here after every merge. So the commit messages carry the reasoning behind each change.
+Running an ingest by hand, a classification backfill, the tests and the lineage tool:
+[docs/operations.md](docs/operations.md).
