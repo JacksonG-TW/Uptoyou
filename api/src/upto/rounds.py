@@ -93,9 +93,15 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
                      "seed": seed, "commit": draw.commitment(seed)},
                 )
             ).one()
-            await session.commit()
-            # After the commit, never before: an event for a rolled-back write is a lie.
-            publish(
+            # **Before the commit, not after — and that is the reverse of what this line said
+            # until 2026-09-11.** The old rule («after the commit, never before: an event for a
+            # rolled-back write is a lie») was right about the danger and had only one way to
+            # avoid it. `pg_notify` inside the transaction is delivered **only if that transaction
+            # commits**, measured, so the mechanism now carries what the ordering used to — and it
+            # closes the gap the ordering could not: a crash between the commit and the publish
+            # used to lose the event silently.
+            await publish(
+                session,
                 circle_id,
                 {
                     "type": "round_opened",
@@ -113,6 +119,7 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
                     },
                 },
             )
+            await session.commit()
         except IntegrityError:
             # D52's partial unique index fired: someone else's open won. D68: say so, and
             # hand over the winner so the client enters it without a second fetch.
@@ -181,14 +188,14 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
                 ),
                 {"r": round_id, "p": body.place_id, "m": member},
             )
-            await session.commit()
             names = await place_names(session, [body.place_id])
             # **A19: the mark travels with the place, on the event that puts it in the pool.**
             # 這一餐's list is where a person chooses, so it needs the state before the roll and not
             # only after it — and a list drawn from a wire that lacks the field renders NO mark,
             # which reads as *no allergen here*. §3.0 is satisfied because the value is a fact about
             # the place and about nobody: it is the same string for every member in the room.
-            publish(
+            await publish(
+                session,
                 round_row.circle_id,
                 {
                     "type": "pooled",
@@ -199,6 +206,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
                     },
                 },
             )
+            await session.commit()
         except (IntegrityError, DBAPIError) as failure:
             await session.rollback()
             message = str(getattr(failure, "orig", failure))
@@ -323,7 +331,14 @@ async def roll(round_id: int, request: Request) -> dict:
             # **The round id is not decoration: it is the clear rule.** The surface clears this
             # notice on the next `pooled` event *for that round*, so an event without it would
             # either never clear or be cleared by a different round's proposal.
-            publish(round_row.circle_id, {"type": "pool_swept", "round_id": round_id})
+            # **`transactional=False`, and D37 is the whole reason.** This path raises the 409
+            # below, so its transaction rolls back — and a notification inside a transaction that
+            # rolls back is never delivered (measured 2026-09-11). The other four members would
+            # learn nothing, and «four people staring at a screen that did nothing is the silence
+            # §3.0 is built against». So this one goes on its own connection, unconditionally: the
+            # event says the pool was empty, which is true whatever becomes of this request.
+            await publish(session, round_row.circle_id,
+                          {"type": "pool_swept", "round_id": round_id}, transactional=False)
             raise HTTPException(
                 status_code=409,
                 detail="池子是空的，或每一家的權重都是零，擲不出結果。",
@@ -364,14 +379,14 @@ async def roll(round_id: int, request: Request) -> dict:
             session, round_id, pinned, weights, winner, dice,
             forecast_baseline=loaded.forecast_baseline,
         )
-        await session.commit()
         full = await closed_body(session, round_id, dice, winner, weights, viewer=member)
         # **D53's push carries the member shape, because a broadcast has no credential.** One event
         # goes to every subscriber on the circle's channel, so it can only be the shape everyone may
         # see. An operator's extra detail arrives when that operator asks — its own request, its own
         # credential — which is also why the snapshot is per connection (D56).
-        publish(round_row.circle_id, {"type": "closed",
+        await publish(session, round_row.circle_id, {"type": "closed",
                                       "result": for_credential(full, operator=False)})
+        await session.commit()
     return for_credential(full, operator=is_operator)
 
 @router.post("/rounds/{round_id}/trip", status_code=201)

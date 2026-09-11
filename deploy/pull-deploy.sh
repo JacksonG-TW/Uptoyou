@@ -119,6 +119,15 @@ export UPTO_IMAGE_TAG
 say "pulling images at $after"
 docker compose pull --quiet
 
+# **The schema, once per version, before anything starts on the new code** (owner 「一次」,
+# 2026-09-11). It used to be a service every instance ran at boot; with more than one instance that
+# is N migrations racing one database. `run --rm` on the `bootstrap` profile is one container that
+# exits, and `set -e` means a failed migration stops this deploy here — nothing is recreated, and
+# the box keeps serving the version it has. `alembic upgrade head` is idempotent, so on a deploy
+# that changed no schema this prints its two lines and costs a few seconds.
+say "applying migrations (once, before the stack moves)"
+docker compose run --rm migrate
+
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
 # as the containers are created, and a container that dies on its healthcheck is discovered by a
 # member instead of by this script. The `migrate` one-shot runs here too and `api` waits on its

@@ -14,8 +14,11 @@ is an auditable decision rather than a number that appeared.
 
 ### Two things to try in three minutes
 
+**Two commands rather than one since 2026-09-11.** The schema step left the stack's boot so that N instances cannot race it. It is idempotent — run it on a current database and it does nothing — so it costs a fresh clone one line and buys a deploy that stops on a failed migration instead of half-starting.
+
 ```sh
-docker compose up -d --wait                                  # the stack, one command
+docker compose run --rm migrate                              # the schema, once per version
+docker compose up -d --wait                                  # the stack
 docker compose exec api python -m upto.issue 1 Kevin         # a device token, printed once
 #   → open localhost:8080, paste token + circle id, propose a place, roll
 docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select source, outcome, count(*), max(finished_at) from ingest_run group by 1, 2 order by 1, 2"'
@@ -38,7 +41,7 @@ source that goes quiet shows up as a stale `max`, not as an absence.
 
 ![Architecture — the stack as it is served](docs/diagrams/architecture.png)
 
-*One host, one `docker compose up`: Cloudflare terminates TLS at the edge and the origin
+*One host, one compose file: Cloudflare terminates TLS at the edge and the origin
 answers 443 with its own certificate; the four Airflow services and the API share one
 PostgreSQL, each connecting as its own role. Every box names something that exists — the
 editable source is `docs/diagrams/architecture.json`.*
@@ -585,7 +588,7 @@ docker compose exec api python -m upto.classify.run 63000010   # exit 3 = model 
 
 ## Tests
 
-62 test files. Fetch, hash and parse are unit-tested with no network and no
+63 test files. Fetch, hash and parse are unit-tested with no network and no
 database, which is what keeps the DAGs thin — they supply only *when* and *with which database*:
 
 ```sh

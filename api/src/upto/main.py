@@ -4,6 +4,7 @@ Nothing about the product is here yet. The build order puts the pipeline first, 
 first real endpoints arrive after the ingest tables exist.
 """
 
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query, Response, status
@@ -12,10 +13,25 @@ from sqlalchemy import text
 from .db import dispose_all, session_factory
 from .read.weather import ForecastJoinBroken, TownshipUnknown, reading_for
 from .live import router as live_router
+from .stream import listening
 from .preferences import router as preferences_router
 from .rounds import router as rounds_router
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """The instance's one `LISTEN` connection, opened with the app and closed with it.
+
+    **This is what makes more than one instance possible** (owner 「Notify」, 2026-09-11): events
+    are published as `pg_notify` inside the writing transaction and every instance fans out to its
+    own subscribers from here. With one instance it is a no-op in effect — the instance hears its
+    own notification — which is why it can be shipped and gated before a second one exists.
+    """
+    async with listening():
+        yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Up to you",
     summary="Decide one meal, without anybody having to give something up first.",
     docs_url="/api/docs",

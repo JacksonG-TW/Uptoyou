@@ -13,8 +13,11 @@
 
 ### 三分鐘可以先試試的兩件事
 
+**2026-09-11 起是兩個指令，不是一個。** 資料庫結構那一步離開了整個 stack 的啟動流程，這樣多台機器才不會互相競爭。它是冪等的——在已經是最新的資料庫上跑，什麼都不會做——所以新 clone 多付一行，換到的是「遷移失敗就擋下整次部署」而不是「開起來一半」。
+
 ```sh
-docker compose up -d --wait                                  # 整個 stack，一行指令
+docker compose run --rm migrate                              # 資料庫結構，每個版本跑一次
+docker compose up -d --wait                                  # 整個 stack
 docker compose exec api python -m upto.issue 1 Kevin         # 一組裝置 token，只印一次
 #   → 打開 localhost:8080，貼上 token 和 circle id，提一家店，擲骰
 docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select source, outcome, count(*), max(finished_at) from ingest_run group by 1, 2 order by 1, 2"'
@@ -36,7 +39,7 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "sel
 
 ![架構——實際在提供服務的樣子](docs/diagrams/architecture.png)
 
-*一台主機、一個 `docker compose up`：Cloudflare 在邊緣收 TLS，來源端用自己的憑證回應 443；
+*一台主機、一個 compose 檔：Cloudflare 在邊緣收 TLS，來源端用自己的憑證回應 443；
 四個 Airflow 服務和 API 共用一個 PostgreSQL，各自用各自的角色連線。圖上每個方塊都指向真實
 存在的東西——可編輯的原始檔是 `docs/diagrams/architecture.json`。*
 
@@ -482,7 +485,7 @@ docker compose exec api python -m upto.classify.run 63000010   # exit 3 = 模型
 
 ## 測試
 
-62 個測試檔案。抓取、雜湊和解析都有不需要網路也不需要資料庫的單元測試，那就是
+63 個測試檔案。抓取、雜湊和解析都有不需要網路也不需要資料庫的單元測試，那就是
 DAG 之所以能保持很薄的原因 —— 它們只提供**什麼時候**跑和**用哪個資料庫**：
 
 ```sh

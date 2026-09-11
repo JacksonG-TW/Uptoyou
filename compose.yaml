@@ -364,6 +364,20 @@ services:
   # one-shot for ever.
   migrate:
     <<: *logging
+    # **Behind a profile since 2026-09-11 (owner 「一次」), so a plain `up` no longer runs it.**
+    # It used to start with the stack and `api` waited on it. With N instances each running
+    # compose that is N migrations racing one database — Alembic's lock makes one winner and N−1
+    # waiters *probably*, and «probably» is not what a schema change deserves; the ugly outcome is
+    # a half-applied deploy where some instances hold code newer than the schema. So the schema
+    # runs **once per version, from the deploy**: `docker compose run --rm migrate`, then
+    # `up -d --wait`.
+    #
+    # **The admitted cost, and §6's criterion moved with it.** A fresh clone's «one command»
+    # becomes two, and §6 now reads «brought up by a compose file» rather than counting commands
+    # (owner 「改」, the same day). `split_boot_check.sh` runs both, or it stops testing what a
+    # person actually does. `bootstrap` rather than `test`: this is the one-shot a deploy runs,
+    # not a thing that holds the owner's credential at rest.
+    profiles: ["bootstrap"]
     restart: "no"
     networks:
       - data
@@ -495,9 +509,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      # A15: the schema is somebody else's job now, and the API waits for it rather than doing it.
-      migrate:
-        condition: service_completed_successfully
+      # **A15's «the schema is somebody else's job» stands; the waiting does not** (owner 「一次」,
+      # 2026-09-11). The API used to wait on the `migrate` one-shot, which meant every instance
+      # ran one — N instances, N migrations, one database. The schema now runs once from the
+      # deploy (`docker compose run --rm migrate`) before anything starts on the new code, so an
+      # instance boots expecting a schema that is already current. **What this gives up is real:**
+      # a failed migration used to stop this container, and now it stops the deploy — the same
+      # protection one layer out, which is the layer that has N of these.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).status==200 else 1)"]
       interval: 5s
