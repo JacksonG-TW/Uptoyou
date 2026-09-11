@@ -77,7 +77,7 @@ That is the difference between a result you are asked to trust and one you can c
 a preference is private on the way in and visible on the way out: what moved the odds is shown, who
 asked for it is not.
 
-<!-- Picture belongs here: docs/round-tonight.png -->
+![Tonight — the categories to avoid, as a menu](docs/round-tonight.png)
 
 ### Why the data is the hard part
 
@@ -93,7 +93,7 @@ noodle shop». So the category is generated: a local model reads the best name t
 answers from a closed list of thirteen, and its accuracy is measured on a frozen set rather than
 asserted.
 
-<!-- Picture belongs here: docs/diagrams/name-ladder.png -->
+![The name ladder — sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
 ## How it decides
 

@@ -72,7 +72,7 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 這就是「請你相信的結果」和「你可以查核的結果」之間的差別。這也是為什麼一個偏好進來的時候是私密的、出去的時候
 是看得見的：移動機率的東西會被顯示，是誰要求的不會。
 
-<!-- Picture belongs here: docs/round-tonight.png -->
+![Tonight — the categories to avoid, as a menu](docs/round-tonight.png)
 
 ### 為什麼資料才是難的部分
 
@@ -86,7 +86,7 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 模型讀這個專案握有的最好的名字，從十三個封閉的值裡挑一個回答，而它的正確率是在一個凍結的集合上量出來的，不是
 用講的。
 
-<!-- Picture belongs here: docs/diagrams/name-ladder.png -->
+![The name ladder — sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
 ## 它怎麼決定
 

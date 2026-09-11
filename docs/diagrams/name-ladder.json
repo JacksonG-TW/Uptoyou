@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "How a restaurant gets the name you would recognise",
+    "subtitle": "Three public sources, one ladder. The highest rung that exists for a site wins — nothing is invented, and the registered name is always there as the floor.",
+    "output": "name-ladder.html",
+    "quality_profile": "showcase"
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 2,
+    "gapX": 150,
+    "gapY": 70,
+    "cellW": 230,
+    "cellH": 78
+  },
+  "components": [
+    {
+      "id": "src_sign",
+      "type": "external",
+      "label": "餐飲衛生分級評核",
+      "sublabel": "one row per shopfront",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "src_brand",
+      "type": "external",
+      "label": "臺北市食材登錄平台",
+      "sublabel": "brand ↔ company",
+      "row": 1,
+      "col": 0
+    },
+    {
+      "id": "src_reg",
+      "type": "external",
+      "label": "食品業者登錄",
+      "sublabel": "the registered site",
+      "row": 2,
+      "col": 0
+    },
+    {
+      "id": "sign",
+      "type": "frontend",
+      "label": "the sign",
+      "sublabel": "摩斯漢堡-南港環球店",
+      "tag": "shown as it is",
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "brand",
+      "type": "backend",
+      "label": "the brand",
+      "sublabel": "摩斯漢堡",
+      "tag": "one company, one brand",
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "registered",
+      "type": "database",
+      "label": "the registered name",
+      "sublabel": "安心食品服務股份有限公司",
+      "tag": "always present",
+      "row": 2,
+      "col": 1
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "What the city publishes",
+      "wraps": [
+        "src_sign",
+        "src_brand",
+        "src_reg"
+      ],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "What a person reads — best rung first",
+      "wraps": [
+        "sign",
+        "brand",
+        "registered"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    {
+      "from": "src_sign",
+      "to": "sign",
+      "label": "the shop's own sign"
+    },
+    {
+      "from": "src_brand",
+      "to": "brand",
+      "label": "the brand behind the company"
+    },
+    {
+      "from": "src_reg",
+      "to": "registered",
+      "label": "the name on the register"
+    },
+    {
+      "from": "sign",
+      "to": "brand",
+      "variant": "dashed"
+    },
+    {
+      "from": "brand",
+      "to": "registered",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Why three rungs and not one",
+      "items": [
+        "A register knows 安心食品服務股份有限公司; a hungry person knows 摩斯漢堡",
+        "No sign on file falls to the brand; no brand falls to the registered name",
+        "A branch sign is the only name that tells two shops of one chain apart",
+        "Every rung comes from a published source — no name here is written by us"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "When two branches share one name",
+      "items": [
+        "Sign-less sites of one company get the district, road and section in brackets",
+        "Same road, same section — then the house number, and only then"
+      ]
+    }
+  ]
+}
