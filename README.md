@@ -145,7 +145,7 @@ its own role.*
 |---|---|
 | **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN, no runtime fetch; two subset fonts ship with the bundle. |
 | **API** | Python, FastAPI, SQLAlchemy 2.0, async end to end, 43 hand-written Alembic migrations. |
-| **Database** | PostgreSQL 17. Five login roles, one per boundary: the API, the ingests, the nightly erasure, the backup, and the owner — which only the one-shot migration container ever holds. |
+| **Database** | PostgreSQL 17. Six login roles, one per boundary: the API, the ingests, the lineage tool, the nightly erasure, the backup, and the owner — which only the one-shot migration container ever holds. |
 | **Vector** | pgvector, in that same database. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. Its metadata is a second database in the same PostgreSQL. |
 | **Models** | Ollama on a home box's 8 GB card, reached through a relay. `gemma2:2b` generates, `snowflake-arctic-embed2` retrieves. |

@@ -134,7 +134,7 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 |---|---|
 | **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy image 裡面 build。沒有 CDN、執行時不抓任何東西；兩套子集字型跟著 bundle 一起出貨。 |
 | **API** | Python、FastAPI、SQLAlchemy 2.0，全程 async，43 個手寫的 Alembic migration。 |
-| **資料庫** | PostgreSQL 17。五個登入角色，一個邊界一個：API、匯入、每晚的抹除、備份，以及擁有者 —— 只有那個一次性的 migration container 拿得到擁有者。 |
+| **資料庫** | PostgreSQL 17。六個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份，以及擁有者 —— 只有那個一次性的 migration container 拿得到擁有者。 |
 | **向量** | pgvector，就在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |
 | **模型** | Ollama 跑在家裡那台的 8 GB 顯示卡上，透過一個中繼連過去。`gemma2:2b` 生成、`snowflake-arctic-embed2` 檢索。 |
