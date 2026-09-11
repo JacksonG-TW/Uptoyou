@@ -4,6 +4,8 @@ Nothing about the product is here yet. The build order puts the pipeline first, 
 first real endpoints arrive after the ingest tables exist.
 """
 
+import os
+import socket
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -50,6 +52,13 @@ app.include_router(live_router)
 app.include_router(preferences_router)
 
 
+#: Which of N instances answered. `HOSTNAME` is the container id under compose and the pod name
+#: under anything else; the `gethostname()` fallback covers a bare `uvicorn`. **Not decoration:**
+#: with a load balancer in front, «one instance is deaf» and «the stack is deaf» produce the same
+#: `curl` unless the answer says who gave it, and that was the whole of H81's invisibility.
+INSTANCE = os.environ.get("HOSTNAME") or socket.gethostname()
+
+
 @app.get("/health")
 async def health(response: Response) -> dict:
     """Answer only after the database has answered.
@@ -74,8 +83,8 @@ async def health(response: Response) -> dict:
     listener = listener_status()
     if listener["stream_listener"] != "up":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "degraded", "database": "reachable", **listener}
-    return {"status": "ok", "database": "reachable", **listener}
+        return {"status": "degraded", "database": "reachable", "instance": INSTANCE, **listener}
+    return {"status": "ok", "database": "reachable", "instance": INSTANCE, **listener}
 
 
 @app.get("/weather")
