@@ -115,9 +115,26 @@ INGEST_DENIED = (
     "trip",
 )
 
-# Alembic's own bookkeeping. **The one exception in this file, and it is short on purpose:** a second
-# entry has to be argued for, because "the coverage test skips it" is how a table becomes invisible.
-OWNER_ONLY = ("alembic_version",)
+# Alembic's own bookkeeping. **This tuple is EMPTY since revision 0043, and the emptiness is the
+# point** — it used to hold `alembic_version`, and every table it holds is a table the coverage test
+# below stops looking at, which is how a table becomes invisible. A new entry has to be argued for
+# here and nowhere else.
+#
+# **Why the one entry left, measured 2026-09-11 (the reviewer's re-read of candidate 15).** The
+# startup guard in `upto/schema_guard.py` reads `alembic_version` through the server's own session,
+# which connects as `upto_api`. While this tuple named the table, that read was refused
+# (`permission denied for table alembic_version`), the guard's broad `except` logged «could not be
+# checked — serving anyway», and **D115's «a failed migration stops the API» was not true on any
+# path a member's request ever took.** The integration test passed throughout because it ran the
+# guard as the owner. A table nobody may read is a table a guard cannot guard.
+OWNER_ONLY = ()
+
+# **What a non-owner role may do to Alembic's bookkeeping: `upto_api` reads it, and that is all.**
+# SELECT, one role, one table (revision 0043). Alembic writes the row as the owner, from `migrate`,
+# which is 「一次」's whole shape — the schema is applied once per version, from the deploy, and never
+# by an API instance. Stated as a map rather than as prose so `test_role_grants` asserts it: the
+# grant is held, and no role holds more than it.
+ALEMBIC_GRANTS = {API: READ}
 
 
 # **`upto_erasure` — the narrowest role here, and it needs one table more than its ruling names.**
@@ -172,11 +189,24 @@ def grants() -> dict:
 
     ingest = {t: WRITE for t in INGEST_WRITE}
 
+
     # The lineage tool's reach, taken from the tool's own declaration so the two cannot part company.
     from .lineage.queries import READABLE_TABLES  # noqa: PLC0415 — avoids an import cycle at module load
 
     lineage = {t: READ for t in sorted(READABLE_TABLES)}
-    return {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS)}
+    out = {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS)}
+
+    # Revision 0043 — the startup guard reads `alembic_version` as the server's own role. Folded in
+    # from `ALEMBIC_GRANTS` rather than typed into `api` above, so the grant has one home and the
+    # test asserting «this role holds it, and no role holds more» reads the same tuple the migration
+    # issues. A role named there that is not a service role is a mistake, so it raises.
+    for role_name, privileges in ALEMBIC_GRANTS.items():
+        if role_name not in out:
+            raise KeyError(
+                "ALEMBIC_GRANTS names {}, which is not a service role".format(role_name)
+            )
+        out[role_name]["alembic_version"] = privileges
+    return out
 
 
 # ---------------------------------------------------------------------------

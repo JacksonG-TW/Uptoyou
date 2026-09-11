@@ -462,6 +462,15 @@ services:
     environment:
       # The owner. Alembic and `create database` need it; nothing served does.
       UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # **The SERVER's role, so a test can start a uvicorn that connects the way the product does.**
+      # Added 2026-09-11 with revision 0043: `test_schema_guard_integration` used to run the startup
+      # guard as the owner, which reads `alembic_version` no matter what is granted — so it passed
+      # green for the whole time the guard was dead in the product, where the server connects as
+      # `upto_api` and was refused. A test that proves a rule under a permission the product does
+      # not have is proving the rule and not the wiring. This container already holds the owner's
+      # credential at rest (D115), so a second, strictly narrower one changes nothing about what a
+      # shell in here can reach.
+      UPTO_API_DATABASE_URL: postgresql+asyncpg://upto_api:${UPTO_API_DB_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
       db:
         condition: service_healthy

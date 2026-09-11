@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from upto.schema_guard import SchemaMismatch, decide, head_revision  # noqa: E402
+from upto.schema_guard import SchemaMismatch, _is_unreadable, decide, head_revision  # noqa: E402
 
 
 def chain(directory: Path, revisions: list[str]) -> None:
@@ -110,6 +110,43 @@ class TheGuardDecides(unittest.TestCase):
         with self.assertRaises(SchemaMismatch) as caught:
             self.run_guard(None)
         self.assertIn("never been migrated", str(caught.exception))
+
+
+class AskingAndBeingRefusedIsNotPassing(unittest.TestCase):
+    """`_is_unreadable` — the rule added 2026-09-11 after the guard was found never to fire.
+
+    The server connects as `upto_api`, which held no grant on `alembic_version`, so the read raised
+    an ordinary exception and the broad `except` served anyway. **Being refused the answer says
+    nothing about whether the schema matches**, so it must exit; being unable to reach the database
+    at all is `db`'s healthcheck to report and must not. A pure function on an exception chain, so
+    it is tested here and needs no driver.
+    """
+
+    @staticmethod
+    def _wrapped(name):
+        """SQLAlchemy wraps the driver's error, so the chain is what has to be walked."""
+        inner = type(name, (Exception,), {})("permission denied for table alembic_version")
+        outer = RuntimeError("(sqlalchemy...ProgrammingError) ...")
+        outer.__cause__ = inner
+        return outer
+
+    def test_a_refused_read_is_unreadable(self):
+        self.assertTrue(_is_unreadable(self._wrapped("InsufficientPrivilegeError")))
+
+    def test_a_missing_table_is_unreadable(self):
+        """A database with no `alembic_version` at all has never been migrated — not unreachable."""
+        self.assertTrue(_is_unreadable(self._wrapped("UndefinedTableError")))
+
+    def test_a_transport_failure_is_NOT(self):
+        """The one that must keep warning and serving, or every cold boot is a deploy failure."""
+        self.assertFalse(_is_unreadable(self._wrapped("ConnectionDoesNotExistError")))
+        self.assertFalse(_is_unreadable(OSError("connection refused")))
+
+    def test_the_walk_terminates_on_a_cycle(self):
+        """A chain that points at itself must not hang the boot it was added to protect."""
+        one = RuntimeError("a")
+        one.__cause__ = one
+        self.assertFalse(_is_unreadable(one))
 
 
 if __name__ == "__main__":

@@ -56,7 +56,13 @@ async def ungranted_tables(connection):
     """Every table in `public` that no service role can touch at all.
 
     This is the check that goes red when a table is added without its grants (D115's cost
-    paragraph, H10 extended). `alembic_version` is the one exception and it is named in the map.
+    paragraph, H10 extended).
+
+    **`alembic_version` used to be the one exception and is not one since revision 0043.** It is an
+    ordinary row of the map now — `upto_api` holds SELECT on it, because the startup guard reads it
+    as the server's own role and a table nobody may read is a table a guard cannot guard (the
+    reviewer's re-read of candidate 15, 2026-09-11). `role_map.OWNER_ONLY` is empty, and this loop
+    still consults it so that the next exception has to be argued in that tuple rather than here.
     """
     tables = (
         await connection.execute(
@@ -131,6 +137,24 @@ async def scenario(test_url: str) -> None:
         check("upto_api reads the ledger and never writes it",
               await granted(connection, role_map.API, "ingest_run", "select")
               and not await granted(connection, role_map.API, "ingest_run", "insert"))
+
+        # --- revision 0043: the guard can read its own answer, and nothing more --------------
+        #
+        # **The line that would have caught candidate 15's dead guard.** Until 2026-09-11 the api
+        # could not read `alembic_version` at all, so `check_or_exit` took its «could not be
+        # checked — serving anyway» branch on every startup in the product while the integration
+        # test passed as the owner. Read-yes is the fix; the three write checks are the ruling —
+        # Alembic's row is written once per version by the owner, from `migrate` (「一次」).
+        check("upto_api may READ alembic_version — the startup guard's whole basis (0043)",
+              await granted(connection, role_map.API, "alembic_version", "select"))
+        for privilege in ("insert", "update", "delete"):
+            check("and may not {} it — only `migrate` writes that row".format(privilege),
+                  not await granted(connection, role_map.API, "alembic_version", privilege))
+        for role in role_map.SERVICE_ROLES:
+            if role == role_map.API:
+                continue
+            check("{} may not read alembic_version — one role needs it, not four".format(role),
+                  not await granted(connection, role, "alembic_version", "select"))
 
         # --- A22: the backup role reads everything and writes nothing ----------------------
         #

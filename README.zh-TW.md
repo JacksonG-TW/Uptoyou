@@ -65,7 +65,7 @@ docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "sel
 
 ## 技術組成
 
-- **API** — Python、FastAPI、SQLAlchemy 2.0，全程 async，42 個手寫的 Alembic migration
+- **API** — Python、FastAPI、SQLAlchemy 2.0，全程 async，43 個手寫的 Alembic migration
 - **資料庫** — PostgreSQL 17 加 pgvector 擴充；Airflow 的中介資料是同一個實例裡的第二個資料庫。五個登入角色，一條界線一個：API、ingest、每晚的抹除、備份，以及只有一次性的 migration 容器才拿得到的 owner
 - **排程器** — Apache Airflow 3、LocalExecutor、同一個 compose stack —— 一次只跑一個任務、log 伺服器關掉、健康檢查每兩分鐘一次（見決定 10）
 - **模型** — Ollama 跑在家裡那台機器的 8 GB 顯示卡上，經由一個中繼連過去：四個生成模型互相比較

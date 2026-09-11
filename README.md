@@ -71,7 +71,7 @@ lineage from any reading back to the run that wrote it.
 
 ## Stack
 
-- **API** — Python, FastAPI, SQLAlchemy 2.0, async end to end, 42 hand-written Alembic migrations
+- **API** — Python, FastAPI, SQLAlchemy 2.0, async end to end, 43 hand-written Alembic migrations
 - **Database** — PostgreSQL 17 with the pgvector extension; Airflow's metadata is a second database in the same instance. Five login roles, one per boundary: the API, the ingests, the nightly erasure, the backup, and the owner — which only the one-shot migration container ever holds
 - **Orchestrator** — Apache Airflow 3, LocalExecutor, same compose stack — one task at a time, the log server off, healthchecks every two minutes (see decision 10)
 - **Models** — Ollama on the home box's 8 GB card, reached through a relay: four generators under comparison (`gemma2:2b`, `llama3.2:3b`, `qwen2.5:7b-instruct`, and `qwen2.5:3b-instruct` for evaluation only — its licence is non-commercial) and three embedders for the retrieval crib (`bge-m3`, `qwen3-embedding:0.6b`, `snowflake-arctic-embed2`). The scheduled pair is `gemma2:2b` × `snowflake-arctic-embed2`

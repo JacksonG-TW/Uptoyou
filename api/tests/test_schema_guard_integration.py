@@ -89,6 +89,16 @@ async def main() -> int:
     head_, _, _ = live.rpartition("/")
     admin_url, test_url = head_ + "/postgres", head_ + "/" + TEST_DB
 
+    # **The uvicorn below connects as `upto_api`, and until 2026-09-11 it connected as the owner.**
+    # That one difference is why this file was green for the whole time the guard was dead: the
+    # owner reads `alembic_version` whatever is granted, so every case here passed while the real
+    # server was being refused the same read and serving anyway (the reviewer's re-read of
+    # candidate 15). Alembic still runs as the owner, because applying a schema is the owner's job
+    # — what moves is the role the *product's* process holds.
+    api_live = os.environ["UPTO_API_DATABASE_URL"]
+    api_head, _, _ = api_live.rpartition("/")
+    api_url = api_head + "/" + TEST_DB
+
     await run_sql(admin_url, f'drop database if exists "{TEST_DB}" with (force)', True)
     await run_sql(admin_url, f'create database "{TEST_DB}"', True)
 
@@ -111,7 +121,23 @@ async def main() -> int:
         check("and one `downgrade -1` moves it", behind is not None and behind != at_head,
               (behind, at_head))
 
-        code, log = wait_for_exit(start_api(test_url))
+        # **A database older than 0043 cannot be read by the server's role, and that is the honest
+        # first case here rather than an awkward one.** 0043 is the revision that grants `upto_api`
+        # SELECT on `alembic_version`, so `downgrade -1` from head takes the grant away with the
+        # schema. The guard then cannot see which revision the database is at — and it must still
+        # REFUSE, saying it was refused the read, because «I could not ask» is not «the schema is
+        # fine». Every behind-case from 0044 onward keeps the grant and gets the fuller message,
+        # which is the second half below.
+        code, log = wait_for_exit(start_api(api_url))
+        check("a database older than the grant itself still stops the API", code == 3, (code, log[-300:]))
+        check("and it says the read was REFUSED rather than that the schema was fine",
+              "could not be READ" in log, log[-300:])
+        check("and names the revision that grants it, which is what the reader needs",
+              "0043" in log, log[-300:])
+
+        # --- behind, and readable: the ordinary case for every revision after 0043 --------------
+        await run_sql(test_url, 'grant select on "alembic_version" to "upto_api"', True)
+        code, log = wait_for_exit(start_api(api_url))
         # **The exit code is the contract, not the log line.** `docker compose up --wait` reads a
         # process that ends; a stack whose API logged an error and kept answering nothing is the
         # outcome `os._exit` was chosen over a raised exception to avoid.
@@ -128,9 +154,23 @@ async def main() -> int:
         check("while leaving the schema exactly as it found it (it must never migrate)",
               after == behind, after)
 
-        # --- and the boring direction, without which every assertion above is free ------------
+        # --- refused at HEAD: the branch that WAS the product until 2026-09-11 ----------------
+        #
+        # **This is the line that would have caught it, and it is here because nothing did.** The
+        # schema is correct and only the guard's own SELECT is missing, so the old code logged
+        # «could not be checked — serving anyway» and served — which is what every API instance in
+        # this product did at every startup. A guard that cannot read its own answer has not
+        # passed, it has failed to ask. Separate from the behind-case above because there the
+        # schema really was wrong; here nothing is wrong except that the guard was blindfolded.
         alembic(test_url, "upgrade", "head")
-        serving = start_api(test_url)
+        await run_sql(test_url, 'revoke all on "alembic_version" from "upto_api"', True)
+        code2, log2 = wait_for_exit(start_api(api_url))
+        check("a correct schema the guard may not READ also stops the API, rather than serving anyway",
+              code2 == 3, (code2, log2[-400:]))
+        await run_sql(test_url, 'grant select on "alembic_version" to "upto_api"', True)
+
+        # --- and the boring direction, without which every assertion above is free ------------
+        serving = start_api(api_url)
         try:
             import httpx  # noqa: PLC0415
             answered = None

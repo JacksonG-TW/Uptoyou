@@ -79,7 +79,13 @@ async def health(response: Response) -> dict:
             await session.execute(text("select 1"))
     except Exception as failure:  # noqa: BLE001 — the reason belongs in the body
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "unhealthy", "database": "unreachable", "detail": str(failure)[:200]}
+        # **`instance` is in every branch, and this one needed it most** (the reviewer's note,
+        # 2026-09-11). H81's argument is that behind a load balancer «one instance is deaf» and
+        # «the stack is deaf» produce the same `curl` — and the branch where that matters is the
+        # one that says something is wrong. An unhealthy answer that will not say who gave it
+        # sends the reader to the whole stack for a fault that may be in one container.
+        return {"status": "unhealthy", "database": "unreachable", "instance": INSTANCE,
+                "detail": str(failure)[:200]}
     listener = listener_status()
     if listener["stream_listener"] != "up":
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
