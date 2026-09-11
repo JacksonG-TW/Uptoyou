@@ -392,6 +392,7 @@ export default function Round() {
                           thing twice in two vocabularies. */}
                       <span className="mark" aria-hidden="true" />
                       <span className="n" data-part="tonight-chip-name">{c}</span>
+                      <span className="lead" aria-hidden="true" />
                       {/* **Nothing follows the dots, and that is the ruling** — the owner
                           2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
                           資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
