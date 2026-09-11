@@ -62,7 +62,7 @@ docker compose exec api python -m upto.issue 1 Kevin     # a device token, print
 一份。有人避開的類型是**折扣，不是否決** —— 而且和桌上有幾個人成比例。桌上有 N 個人時，一個人反對讓那家店少掉
 1/N 的機率，所以 N = 5 時少掉五分之一，那家店仍然抽得到；N = 1 時就是否決，因為一個人的一局就是那個人的決定。
 
-<!-- Picture belongs here: docs/reveal-panel.png -->
+![The reveal — the winner, and every factor that moved its odds](docs/reveal-panel.png)
 
 ### 為什麼要把過程攤開
 

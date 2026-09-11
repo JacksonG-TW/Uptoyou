@@ -65,7 +65,7 @@ is a **discount, not a veto** — proportional to how many people are at the tab
 table one objection costs a place 1/N of its odds, so at N = 5 it loses a fifth and stays reachable;
 at N = 1 it is a veto, because a round of one person is that person's decision.
 
-<!-- Picture belongs here: docs/reveal-panel.png -->
+![The reveal — the winner, and every factor that moved its odds](docs/reveal-panel.png)
 
 ### Why show the work
 
