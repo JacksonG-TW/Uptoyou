@@ -203,11 +203,12 @@ equivalent.
 
 ---
 
-## Figures that left the README
+## The short entries in full, and the figures that left the page
 
-The README was reshaped for a reader deciding whether to read further, and these measurements left
-that page with it. None of them was withdrawn; they are here so that README + this page together
-still hold every figure the longer page carried.
+Two things live here. **The six decisions the README states in one line each** — it says «the long
+version has each of these in full», and this is that. And **the measurements that left the page
+when it was reshaped for a reader deciding whether to read further**: none was withdrawn, they are
+here so that README + this page together still hold every figure the longer page carried.
 
 ### How fresh the data is, derived from the ledger rather than from what a publisher claims
 
@@ -239,13 +240,91 @@ the township forecast, 162 of 164.
 
 ### What is inside the tax file, and what is never written
 
-The CSV holds **1,711,012 rows**. Only rows whose 統編 already appears in the latest reference
-publication are stored, so **the other ~1.69M are never written** — a storage decision rather than
-an optimisation: a tax row for a hardware store two hundred kilometres away answers nothing this
-app asks.
+**A 66 MB zip holding one ~320 MB CSV of 1,711,012 rows** — every registered business in the
+country. Only rows whose 統編 already appears in the latest reference publication are stored:
+**14,521 kept against 19,203 reference numbers, in about 15 seconds**, on the day the README's
+figure was taken. Everything else is never written — a storage decision rather than an
+optimisation: a tax row for a hardware store two hundred kilometres away answers nothing this app
+asks.
+
+**Four numbers that sound like the same one, reconciled** (the middle two measured on the
+development database, 2026-09-11):
+
+| Number | What it is |
+|---|---|
+| **1,711,012** | rows in the CSV |
+| **~14,560** | rows kept **per publication** — one per 統編, no duplicates: the newest publication here holds 14,561 rows and 14,561 distinct 統編 |
+| **14,521** | that same per-publication figure on the day the README quotes |
+| **72,801** | `business_tax_row` on the launch instance — the table **accumulates**, one set of rows per publication it has seen, and at ~14,560 a publication that is about five of them |
+
+So «the rest is never written» is about **1.696M rows per run**, not a one-off: each publication
+keeps its own ~14,560 and discards the rest again.
 
 The reference file has the same shape one size down: a 99 MB CSV of **827,784 rows**, of which the
-**36,499** Taipei restaurant rows are kept.
+Taipei restaurant rows are kept — 36,499 in the publication of 2026-08-11, 36,376 in the current
+one.
+
+### Substring search: why the index was turned down
+
+*The README's «a trigram index changed the plan for 0 of 31 realistic queries».*
+
+The typeahead matches with `ILIKE '%q%'`. The obvious fix is `pg_trgm` + GIN on the three searched
+columns. Measured on 31 realistic queries, it **changed the plan for none of them** and left p50 at
+**311 → 324 ms** — slightly worse, within noise.
+
+**Two reasons, and the second is the one nobody would guess.** The predicate ORs a base column
+against two lateral outputs, so the filter cannot reach an index on the base column at all. And the
+cluster runs a deterministic **`C` locale**, under which `pg_trgm` emits **no trigrams for 96.2% of
+the names** — CJK text produces nothing for it to index. The similarity-operator rewrite returned
+zero rows for every CJK query and was refused.
+
+**The scan was never the cost.** A per-row lateral brand lookup executed **35,533 times per
+keystroke** is **93% of the query's buffers**; the reference table is about 1%. Expressed as one
+grouped join it is **61× fewer buffers**, with the result set proved identical (`except all` empty
+both ways over the whole publication).
+
+### Why pgvector rather than a second service
+
+*The README's «the crib is 537 rows across three embedders».*
+
+The retrieval crib is **537 rows per embedder**, three embedders, thousands of vectors at the
+outside. A dedicated vector store (Pinecone, Milvus, Qdrant) buys nothing at that size and costs one
+more stateful service to run, back up, monitor and keep a version of. `pgvector` is an extension on
+a database the stack already has, so the crib is in the same dump as everything else and needs no
+second backup story.
+
+*Turned down, and the condition that would reverse it:* a crib large enough that index build time or
+memory becomes the constraint rather than the query. Nothing here is close.
+
+### Why the evaluation set is frozen
+
+*The README's «it caught a prompt that read better and scored worse».*
+
+200 names, drawn once with a fixed seed, stratified over the three name rungs with a floor of 30 per
+stratum so the small sign and brand strata stay scorable. Labels drafted by a frontier model and
+cross-checked by a second, recorded per row — so a score reads «agreement with the teacher», never
+ground truth.
+
+**What it bought, in one instance:** prompt v4 read better than v3 to a person and scored **51.5 →
+49.5** on the set. Without a frozen set that revision ships on the strength of reading well. That is
+the only thing a fixed set exists to do, and it did it once in the first fortnight.
+
+The draw has never been re-run. v1, v2 and v3 are the same 200 rows in the same order, relabelled
+under a ruling; every report carries the set's sha256 so two scores compare only when it matches.
+
+### Why the live stream sends a heartbeat
+
+*The README's «a stream silent for 130 s was cut».*
+
+Through the proxy, a stream that said nothing for **130 seconds was cut**, and a real event
+afterwards was delivered to nobody. Direct to the origin the same stream stayed open and delivered —
+same code, same seconds, side by side, twice. With a comment line every **25 s** the same probe
+through the same hostname reads open and delivering.
+
+**Why this was a launch blocker rather than a polish item:** a circle that has said nothing for two
+minutes is the normal case for this product, not an edge. *Turned down:* an unproxied hostname,
+which gives up the shield the domain exists for; and reconnect-and-hope, which cannot tell a cut
+stream from a quiet one. The comment line carries no timing a member could read.
 
 ### Two join rates the README states as shares
 
