@@ -91,16 +91,31 @@ classification had been run against — closed or deregistered since — and tho
 there, because the newest publication is the truth about what is open and a place the source no
 longer lists is one the product cannot show.
 
-So three numbers for what sounds like one quantity, each correct about a different thing:
+So four numbers for what sounds like one quantity. **Each is named by its table and its host**,
+because the earlier version of this table named neither and one row was mislabelled for it —
+35,965 was called a reference count and is a `place` count (found 2026-09-11, when the instance and
+the development database were read side by side):
 
-| Number | What it counts |
-|---|---|
-| **35,965** | reference places on the serving instance |
-| **36,497** | reference places in the development database |
-| **36,499** | rows in the publication itself — two of them share a registered number |
+| Number | Table | Host | What it is |
+|---|---|---|---|
+| **35,965** | `place` | launch instance | the places a circle can choose |
+| **36,376** | `reference_place` | launch instance, and the development database's **current** publication (2026-09-02) | the reference file as published on 2026-09-02 |
+| **36,497** | `place`, origin `reference` | development database | one per reference row ever seen; accumulates across publications and is not pruned (a 36,498th row is one circle's own place) |
+| **36,499** | `reference_place` | development database, publication of **2026-08-11** | the file the name-ladder table in the README was measured against |
 
-The gap between the first two is the source moving, not a failure. It closes on the next city pass,
-or when the classifier's output ships nightly instead of by hand.
+**36,499 is the FIRST publication, not the current one.** The reference file moved on 2026-09-02 and
+the current one carries 36,376. Anything quoting 36,499 is quoting a measurement dated 2026-08-11 and
+should say so.
+
+**The 532 between 36,497 and 35,965 is the source moving, not a failure.** On 2026-09-07 the
+instance's own publication no longer carried 532 of the registry numbers, and those rows were
+deleted there; the development database keeps its `place` rows across publications, so it still has
+them. It closes on the next city pass, or when the classifier's output ships nightly instead of by
+hand.
+
+**The 411 between the instance's 36,376 and its 35,965 is an open measurement.** The instance holds
+fewer `place` rows than its current publication has `reference_place` rows, and nothing here has
+measured why. No cause is stated because none has been taken.
 
 ---
 

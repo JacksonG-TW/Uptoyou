@@ -175,7 +175,7 @@ says how an answer outside them is refused, and how the frozen evaluation set wa
 
 The launch instance holds 35,965 places, 25,031 of them with a generated category, and 36,376
 rows of the reference list it loaded. The
-development database's current publication carries 36,499, which is what the name-ladder table
+publication of 2026-08-11 carried 36,499, which is what the name-ladder table
 measures. The three count different things on two hosts — [the long version](docs/decisions.md)
 reconciles them.
 
@@ -202,7 +202,7 @@ weight to exactly one source row.*
 | Table | Rows | What it holds |
 |---|---|---|
 | `place` | 35,965 | a place a circle can choose |
-| `reference_place` | 36,376 | one row of the government reference list; the count is the publication this instance loaded (the development database's current publication has 36,499 rows, which is what the name-ladder table measures) |
+| `reference_place` | 36,376 | one row of the government reference list; the count is the publication this instance loaded (the publication of 2026-08-11 had 36,499 rows, which is what the name-ladder table measures) |
 | `storefront_name` | 1,686 | the sign an inspector recorded |
 | `brand_registration` | 288 | company ↔ brand pairs |
 | `business_tax_row` | 72,801 | tax-registry name and industry code |
@@ -232,8 +232,8 @@ sources. A trial of an outside geodata source false-joined 46% on address alone,
 ![The name ladder: sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
 **The result.** The sign differs from the registered name on 93% of the rows that have one. The
-brand table renames 57% of the companies it covers. How far the ladder reaches, over the 36,499 rows of
-the current reference file:
+brand table renames 57% of the companies it covers. How far the ladder reaches, measured over the 36,499 rows
+of the publication of 2026-08-11:
 
 | Step | Rows | Share | Of those, still names a company |
 |---|---|---|---|
