@@ -23,7 +23,7 @@ Open `localhost:8080`, paste the token, propose three places, roll.
 
 | | |
 |---|---|
-| **The idea** | Five friends, one meal, nobody wants to be the one who chose. The app chooses, and then shows its work. |
+| **The idea** | A few friends, one meal, nobody wants to be the one who chose. The app chooses, and then shows its work. |
 | **How it decides** | Weighted dice, not a ranking. Every factor multiplies a place's odds, and the reveal names each factor beside the number it contributed. |
 | **Data** | Seven published government sources through six scheduled ingests; 35,965 Taipei places, 25,031 of them carrying a generated category. |
 | **Engineering** | Content-addressed ingest with an idempotent ledger, a three-rung name derivation, and a retrieval-augmented classifier scored on a frozen set. |
@@ -44,22 +44,76 @@ Five screens, and each does one thing:
 - **Round** — propose places, then roll.
 - **Reveal** — the dice stop, then the winner's odds are itemised, factor by factor.
 
-## What problem this solves
+## Why this exists
 
-Five friends want dinner. Everybody has a mild preference and nobody wants to own the decision, so
-the group either defaults to the loudest voice or spends twenty minutes not choosing. The usual
-software answer is a ranking, which just moves the argument to whether the ranking is right.
+### The problem
 
-This app rolls dice instead — but the dice are weighted, and the weights are visible. Rain over one
-district lowers its odds a little. A place the circle went to last week is halved. A category
-somebody quietly avoided costs a place a share of its odds proportional to how many people are at
-the table, so at five people one objection is a discount rather than a veto.
+A few friends want dinner. Everybody has a mild preference and nobody wants to own the decision, so
+the group either defaults to the loudest voice or spends twenty minutes not choosing.
 
-**Every one of those factors is a stored row, pinned to the reading it was computed from.** The
-reveal does not recompute anything for display: it reads the same rows the roll used and names each
-one. That is the difference between a result you are asked to trust and a result you can audit —
-and it is why the interesting part of this repository is the pipeline that produces the readings,
-not the dice.
+The usual software answer is a ranking. That only moves the argument: now the group argues about
+whether the ranking is right, and whoever picks from it still owns the choice.
+
+### Why dice, and why weighted
+
+Dice are fair by construction. Nobody picked, so nobody has to defend the pick — and that is the
+social problem, answered by the mechanism rather than by persuasion.
+
+But plain dice ignore everything the group knows. So the dice are weighted: each place gets a share
+of the thirty-six outcomes, and the things that matter move that share. A category somebody avoids
+is a **discount, not a veto** — proportional to how many people are at the table. With N at the
+table one objection costs a place 1/N of its odds, so at N = 5 it loses a fifth and stays reachable;
+at N = 1 it is a veto, because a round of one person is that person's decision.
+
+<!-- Picture belongs here: docs/reveal-panel.png -->
+
+### Why show the work
+
+A weighted die is only trustworthy if you can see the weights. Every factor is a stored row, pinned
+to the reading it was computed from, and the reveal recomputes nothing for display — it reads the
+same rows the roll used and names each one.
+
+That is the difference between a result you are asked to trust and one you can check. It is also why
+a preference is private on the way in and visible on the way out: what moved the odds is shown, who
+asked for it is not.
+
+<!-- Picture belongs here: docs/round-tonight.png -->
+
+### Why the data is the hard part
+
+Deciding is easy once you know the choices. Knowing the choices is the work.
+
+**A registered name is a legal entity, not a shop.** The government's restaurant list knows
+安心食品服務股份有限公司. The people deciding where to eat know 摩斯漢堡. Those are the same company and
+only one of them is a name anybody would recognise, so a display name is resolved down a ladder — the
+sign an inspector recorded, then the brand, then the registered name.
+
+**And no published source says what a place serves.** There is no official field for «this is a
+noodle shop». So the category is generated: a local model reads the best name the project holds and
+answers from a closed list of thirteen, and its accuracy is measured on a frozen set rather than
+asserted.
+
+<!-- Picture belongs here: docs/diagrams/name-ladder.png -->
+
+## How it decides
+
+Each factor multiplies a place's share of the thirty-six outcomes. They are stored, not computed at
+display time.
+
+| Factor | What it does to a place's odds | Why |
+|---|---|---|
+| Rain over its district | Lowers them, relative to the driest district in tonight's pool | Walking somewhere in the rain is a real cost, and it is a fact about tonight rather than about the place |
+| The circle went there last week | Halves them | Variety, without removing the option — only a signed trip counts, so a place the group merely rolled is untouched |
+| Somebody avoided its category | Lowers them by 1/N, where N is the seats at the table | A discount, not a veto: one objection among five is not the same as one among two |
+| Nothing applies | Leaves them alone | The starting weight is 1, and a factor that did not fire draws an empty row rather than vanishing |
+
+## Highlights
+
+- **35,965 places** from seven published government sources, each fetch content-addressed so an
+  unchanged file costs nothing.
+- **A classifier scored on a frozen 200-row set**, four local models compared on it: 72.0 · 71.0 ·
+  70.5 · 65.5.
+- **Every factor a stored row** a member can read on the reveal, pinned to the reading it came from.
 
 ## Terminology
 
@@ -77,23 +131,7 @@ not the dice.
 | **Ingest run** | One attempt at one source. Records what happened, including «nothing had changed». |
 | **Name ladder** | How a display name is chosen: storefront sign, then brand, then registered name. |
 | **Category** | One of thirteen closed values a place can be classified into. |
-| **Crib** | The labeled examples retrieved from pgvector and handed to the classifier as worked examples. |
-
-## What changed, measured
-
-Six numbers where a change was made and both sides were measured.
-
-| What | Before | After | Measured on |
-|---|---|---|---|
-| An ingest day with no new file | 15.0 s | **1.6 s** | the run ledger, 8 days, 7 sources |
-| Embedding one name for the crib | 0.481 s | **0.045 s** | 100 names, twice, 09-04 |
-| Classifying one name | 12–19 s on the CPU | **1.27 → 0.92 s** on an 8 GB card | one district, 1,318 rows |
-| The registry roster ingest's peak memory | 172 MB | **77 MB** | a 2 GB instance, 09-05 |
-| The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB instance, 09-07 |
-| A long classification pass | 1.7× slower first-to-last | **level** | 36,014 rows in 10.5 h, 09-03 |
-
-The memory figures were measured on the 2 GB instance they were taken on; the instance has since
-been resized. [The long version](docs/decisions.md) has the working for the last four.
+| **Crib** | The labeled examples retrieved from the vector store and handed to the classifier as worked examples. |
 
 ## Architecture
 
@@ -117,10 +155,6 @@ its own role.*
 
 ![The ETL pipeline — seven sources into one ledgered store](docs/diagrams/etl-flow.png)
 
-*Seven published sources through six ingests; the weather publisher's forecast and observation are
-two sources on one fetch. Every fetch is content-addressed and every run is recorded, including the
-no-ops.*
-
 | Schedule (UTC) | Taipei | Source |
 |---|---|---|
 | hourly | hourly | CWA township forecast `F-D0047-061` + station observations `O-A0001-001` |
@@ -133,54 +167,16 @@ no-ops.*
 | `40 21 * * *` | 05:40 | deletes unpinned weather readings older than ninety days |
 | `20 22 * * *` | 06:20 | `pg_dump` to S3 after both deletions, thirty kept |
 
-The crons are UTC and the quiet hours they aim at are Taipei's — the daily sources fetch between
-03:00 and 04:20 Taipei, one download at a time.
+**A publication is identified by the hash of its bytes, not by a timestamp**, because a stamp can
+move while the data stands still and stand still while the data moves. The reference ingest hashes a
+17 MB zip and claims the publication with `insert … on conflict do nothing returning id` — the
+database decides whether the content is new — and only then does anything decompress the 99 MB CSV
+inside. Every attempt writes a ledger row, and «no change» and «failed» are different recorded
+outcomes: inferred from an absence they are indistinguishable, which is how a broken source looks
+healthy for a week.
 
-**A publication is identified by the hash of its bytes, not by a timestamp.** A stamp can move while
-the data stands still, and stand still while the data moves. Where a file carries its own stamp it
-is kept beside the hash as a label and the two are compared every run; a disagreement fails the task
-deliberately.
-
-**The cheap half gates the expensive half.** The reference ingest fetches a 17 MB zip, hashes the
-compressed bytes, and claims the publication with `insert … on conflict do nothing returning id` —
-the *database* decides whether the content is new. Only then does anything decompress the 99 MB CSV
-inside. The file is monthly and the poll daily, so about 29 runs a month find nothing and must be
-silent successes.
-
-**A run that wrote nothing is still a run.** Every attempt writes a row, and «no change» and
-«failed» are different recorded outcomes. Inferred from an absence they are indistinguishable, which
-is how a broken source looks healthy for a week.
-
-### What is stored
-
-| | |
-|---|---|
-| **Places** | 35,965 on the serving instance, 25,031 of them with a generated category. |
-| **The tax registry** | A 66 MB zip holding one ~320 MB CSV of 1,711,012 rows — every registered business in the country. Only rows whose 統編 already appears in the latest reference publication are stored: **14,521 kept against 19,203 reference numbers, in about 15 seconds.** |
-| **Signs and brands** | 1,686 inspector-recorded signs (1,379 joining the current publication); 288 company ↔ brand rows. |
-| **Weather** | Hourly forecast and observation readings, kept ninety days unless a roll pinned one. |
-| **The crib** | 537 labeled example names per embedder, in pgvector. |
-
-The tax registry publishes what nothing else does — the 營業人名稱 the tax office holds and the
-**行業代號 the business registered itself under**, an official category the shop chose rather than
-one a model guessed. The four code/name pairs are stored positionally: the first is the primary
-trade, and compacting the empty tail would silently promote a secondary one. One warning sits in the
-schema — `business_tax_row.address` is the *registered* address, not the storefront (13.7% of
-matched rows sit outside 臺北市), and nothing may join on it.
-
-### Names and categories
-
-**A registered name is a legal entity, not a shop.** The reference list knows
-安心食品服務股份有限公司; the people deciding where to eat know 摩斯漢堡. So a display name resolves at
-read time down a ladder — **storefront sign → brand → registered name.** The sign wins: an inspector
-recorded it against the same registry number, so that join needs no name matching at all. The brand
-applies only where a company maps to exactly one, because nothing in either source says which brand
-a multi-brand company's site is. A 統編 the registry records as dead, and never alive, drops out of
-the search typeahead.
-
-Measured over the current publication's 36,499 rows, which is a count of published rows and not
-the 35,965 places the serving instance holds — [the long version](docs/decisions.md) reconciles the
-three figures.
+**How far the name ladder reaches**, over the current publication's 36,499 rows — a count of
+published rows, not the 35,965 places the serving instance holds:
 
 | Rung | Rows | Share | Of those, still names a company |
 |---|---|---|---|
@@ -188,49 +184,16 @@ three figures.
 | brand (single-brand companies only) | 4,001 | 11.0% | 44.0% |
 | registered (what is left) | 31,119 | 85.3% | 33.3% |
 
-**The ladder reaches 14.7% of the city, and 33.3% of all rows still display a string that names a
-company rather than a shop.** Where a sign exists the name is right, and a sign exists for one row
-in twenty-six — which is the argument for the next source rather than against this one. The
-derivation then splits the sign-less rows that would otherwise collide: 9,136 gain a
-district-and-road bracket, 3,234 need the house number, and 22,750 are the only sign-less site of
-their company and stay bare.
+The ladder reaches 14.7% of the city, and 33.3% of all rows still display a string that names a
+company rather than a shop. Where a sign exists the name is right, and a sign exists for one row in
+twenty-six.
 
-**Categories are thirteen values, closed:** 麵食 · 飯食 · 小吃 · 火鍋 · 燒烤 · 日式 · 西式 · 早餐 ·
-咖啡飲料 · 便利商店 · 台菜 · 素食 · 其他. An answer outside the list is **refused, never repaired** —
-coercing 拉麵 into 麵食 turns a wrong answer into a plausible one and deletes the only step in the
-process that can fail.
-
-Classification runs as a batch against a locally deployed quantized model, off unless a backfill is
-running. The model is asked the best name the project holds — the same ladder — and every decided
-row records **the prompt version, the model name, and the exact string that was asked.** A
-legal-entity verdict is written as a decided absence: provenance present, category null, so re-runs
-never re-ask it. Batches commit as they go, so an interrupted seven-hour pass resumes where it
-stopped.
-
-**Set up to be measured, not asserted.** `evaluate/testset_v3.json` is a frozen, teacher-labeled set
-of **200 names** — labels drafted by a frontier model and cross-checked by a second, so a score
-reads «agreement with the teacher», never ground truth — drawn once, deterministically: fixed seed,
-stratified by which rung of the ladder supplied the name, floor of 30 per stratum. The draw has
-never been re-run; v1 and v2 are the same 200 rows relabelled, kept because scores against them
-still stand, and every report names its set and its sha256 so two numbers compare only when both
-match.
-
-### The schema
-
-![The schema at a glance](docs/diagrams/schema-glance.png)
-
-*Four clusters and the tables a reader needs by name, with the pins from a stored weight back to
-the readings it was computed from. Drawn, not generated — the generated set below has the columns.*
-
-Generated ER diagrams, regenerated from the live schema so they cannot drift from what the database
-holds: [reference](docs/diagrams/er-reference.png) · [weather](docs/diagrams/er-weather.png) ·
-[product](docs/diagrams/er-product.png) · [ledger](docs/diagrams/er-ledger.png) ·
-[everything](docs/diagrams/er-overview.png). `docs/diagrams/build.sh --check` fails when the schema
-and the committed diagrams disagree.
+[The long version](docs/decisions.md) has what each source stores, the thirteen categories and how an
+answer outside them is refused, and how the frozen evaluation set was drawn.
 
 ## Key technical decisions
 
-Eleven choices, each with what was turned down and the number that decided it.
+Five choices, each with what was turned down and the number that decided it.
 
 ![The evaluation loop — how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
@@ -261,29 +224,16 @@ scheduled pass uses:
 | `qwen2.5:3b-instruct` | research licence — evaluation only | 65.5% |
 
 Three models inside two points of each other, one of them three times the cost per row; the
-scheduled pass kept `gemma2:2b`. The hosted yardstick read 60.5% on the first set and has not been
-re-run on the third, so the two are not compared in one sentence.
+scheduled pass kept `gemma2:2b`. The hosted yardstick read 60.5% on the first set only.
 
-**3. Vector search is a Postgres extension, not a second service.**
-*Chosen:* `pgvector` on the database already in the stack. *Turned down:* a dedicated vector store
-(Pinecone, Milvus, Qdrant). *The number:* the crib is 537 rows across three embedders
-(`bge-m3`, `qwen3-embedding:0.6b`, `snowflake-arctic-embed2`) — thousands at most — against one more stateful service to run, back up and monitor.
-
-**4. The evaluation set is frozen, stratified, and its authorship is stated.**
-*Chosen:* 200 names, fixed seed, stratified over the three name rungs with a floor of 30, labels by a
-teacher model with a second model's cross-check, provenance recorded per row. *Turned down:* scoring
-against live rows; owner-only labeling. *The number:* the frozen set caught a prompt that read better
-and scored worse, which is the only thing a fixed set exists to do; every report carries the set's
-sha256 so two scores compare only when it matches.
-
-**5. A shop's name is resolved down a ladder — sign, then brand, then registered name.**
+**3. A shop's name is resolved down a ladder — sign, then brand, then registered name.**
 *Chosen:* three sources joined by registry number, precedence fixed, no fuzzy name matching.
 *Turned down:* the registered name alone; string similarity across sources. *The number:* 40.2% of
 registered names are legal-entity strings that name no shop at all; the sign differs from the
 registered name on 93% of the rows that have one; the brand table renames 57% of the companies it
 covers; and a trial of an outside geodata source false-joined 46% on address alone and was dropped.
 
-**6. Official industry codes decide only what they can, and that is one row in ten.**
+**4. Official industry codes decide only what they can, and that is one row in ten.**
 *Chosen:* the tax registry's codes rule where unambiguous, the model takes the rest. *Turned down:*
 codes as the classifier; ignoring codes entirely. *The number:* codes settle 10.9% of city rows, and
 a coffee chain's 245 branches register under a wholesale code — a code alone would mislabel every
@@ -291,7 +241,7 @@ one of them. The join itself is safe (99.78% name agreement once the legal-form 
 the address is not (89.8% differ). [The long version](docs/decisions.md) measures the same question
 on the 200 scored rows, where the defensible upside is +4 rows.
 
-**7. Every source is content-addressed and its no-change days are recorded.**
+**5. Every source is content-addressed and its no-change days are recorded.**
 *Chosen:* a publication row per fetched file, a data row per record, and a ledger where a no-change
 day writes a heartbeat. *Turned down:* overwrite-in-place; schedules guessed to match each file's
 cadence. *The number:* every source is idempotent on identical bytes — every column of every table
@@ -318,37 +268,38 @@ the same whether the source takes half a second or twenty-five. **The scheduler 
 bottleneck:** queue latency is 0.05 s at p50 and 4.2 s at its worst across all 361 tasks. What none
 of this answers is the fetch / parse / store split — nothing records it.
 
-**8. The cloud serves; the home box computes; the ledger is the clock.**
-*Chosen:* a small EC2 instance runs the API and database; model batches run on a home box and land
-through the same ingest ledger. *Turned down:* a resident model on EC2; all-cloud batches. *The
-number:* the whole serving stack sits at 1,009 MiB at rest, while the home box's 8 GB card takes a
-retrieval-shaped batch at **0.92 s a name** against 12–19 s on the same box's CPU. [The long
-version](docs/decisions.md) has the three measurements this went through, including the two that
-were of the wrong thing.
+### Six more, with their numbers
 
-**9. Substring search stays a sequential scan; the trigram index was measured and turned down.**
-*Chosen:* leave the typeahead's `ILIKE '%q%'` as it is. *Turned down:* `pg_trgm` + GIN on the three
-searched columns. *The number:* the index changed the plan for 0 of 31 realistic queries and left
-p50 at 311 → 324 ms, because the predicate ORs a base column against two lateral outputs so the
-filter cannot reach the index — and because the cluster's deterministic `C` locale makes `pg_trgm`
-emit no trigrams for 96.2% of the names. The scan was never the cost: a per-row lateral brand lookup
-executed 35,533 times per keystroke is 93% of the query's buffers, and expressing it as one grouped
-join is 61× fewer buffers with a provably identical result.
+- **Vector search is a Postgres extension, not a second service.** The crib is 537 rows across three
+  embedders, against one more stateful service to run, back up and monitor.
+- **The evaluation set is frozen, stratified, and its authorship is stated.** It caught a prompt that
+  read better and scored worse, which is the only thing a fixed set exists to do.
+- **Substring search stays a sequential scan.** A trigram index changed the plan for 0 of 31
+  realistic queries; the cost was a lateral executed 35,533 times per keystroke, not the scan.
+- **The small instance was too small for its own nightly work.** 49 MB free under one ingest became
+  398 MB worst case, and the stack went 1,131 → 1,009 MiB at rest.
+- **The cloud serves; the home box computes.** An 8 GB card takes a retrieval-shaped batch at 0.92 s
+  a name, against 12–19 s on the same box's CPU.
+- **The live stream sends a heartbeat**, because through the proxy a stream silent for 130 s was cut
+  and a real event afterwards delivered nothing.
 
-**10. The small instance was too small for its own nightly work, and the fix was measured before it
-was chosen.** *Chosen:* stream the one ingest that held its whole file in memory, then shrink Airflow
-with four settings and a memory limit that bites. *Turned down:* a bigger instance first; a swap
-file, which turns a crash into a twelve-hour crawl. *The number:* 49 MB free under one ingest became
-398 MB worst-case after, and the stack went 1,131 → 1,009 MiB at rest. [The long
-version](docs/decisions.md) has the week in the order it happened, including the night that blamed
-the wrong component.
+[The long version](docs/decisions.md) has each of these in full.
 
-**11. The live stream sends a heartbeat because the proxy in front of it cuts silence.** *Chosen:* an
-SSE comment line every 25 s, invisible to every screen. *Turned down:* an unproxied hostname, which
-gives up the shield the domain exists for. *The number:* through Cloudflare, a stream silent for
-130 s was **cut** and a real event afterwards delivered nothing; direct to the origin the same
-stream stayed open and delivered — same code, same seconds, side by side, twice. A circle that has
-said nothing for two minutes is the normal case for this product, so this blocked the launch.
+## What changed, measured
+
+Six numbers where a change was made and both sides were measured.
+
+| What | Before | After | Measured on |
+|---|---|---|---|
+| An ingest day with no new file | 15.0 s | **1.6 s** | the run ledger, 8 days, 7 sources |
+| Embedding one name for the crib | 0.481 s | **0.045 s** | 100 names, twice, 09-04 |
+| Classifying one name | 12–19 s on the CPU | **1.27 → 0.92 s** on an 8 GB card | one district, 1,318 rows |
+| The registry roster ingest's peak memory | 172 MB | **77 MB** | a 2 GB instance, 09-05 |
+| The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB instance, 09-07 |
+| A long classification pass | 1.7× slower first-to-last | **level** | 36,014 rows in 10.5 h, 09-03 |
+
+The memory figures were measured on the 2 GB instance they were taken on; the instance has since
+been resized. [The long version](docs/decisions.md) has the working for the last four.
 
 ## Observability and reliability
 
@@ -430,17 +381,15 @@ docker compose exec api python -m upto.classify.run 63000010 --rag --embed arcti
 #   exit 3 = model absent, nothing written
 ```
 
-**Lineage is served to a model too.** Any reading traces to its publication, its content hash and the
-run that wrote it, over MCP on stdio:
+**Lineage is served to a model too**, over MCP on stdio — any reading traces to its publication, its
+content hash and the run that wrote it:
 
 ```sh
 docker compose exec -T api python -m upto.lineage.mcp_server
 ```
 
-Five tools answer: `run_history`, `run_detail`, `publication_detail`, `forecast_reading_source`,
-`observation_reading_source`. A sixth, `explain_place_loss`, is listed **only in order to refuse** —
-the trail runs into private per-member choices, and a tool that merely lacks a feature today grows it
-the first time somebody finds it useful. A test asserts the refusal.
+Five tools answer; a sixth, `explain_place_loss`, is listed **only in order to refuse**, because the
+trail runs into private per-member choices. A test asserts the refusal.
 
 ## Tests
 
@@ -461,23 +410,21 @@ docker compose run --rm tests python /srv/tests/test_place_ingest_integration.py
 docker compose run --rm tests python /srv/tests/test_business_tax_integration.py
 ```
 
-Every commit passes six local gates in a pre-commit hook. Five need only the standard library, so a
+Every commit passes six local gates in a pre-commit hook — five of them standard-library only, so a
 clone needs no toolchain to commit: a secret scan, the `app/` boundary, the font subset against every
-member-readable string, the server's own copy drawable in the shipped fonts, and the hazard
-register's numbering. The sixth reads every staged Python file with `ruff` and refuses syntax errors
-and real faults — undefined names, unused imports, a `.format` whose arguments go nowhere — and
-nothing about formatting.
+member-readable string, the server's copy drawable in the shipped fonts, the hazard register's
+numbering, and `ruff` on every staged Python file.
 
 ## Privacy
 
 **Authorship dies at the close, in the database.** Closing a round fires a trigger that nulls
-`proposal.member_id` for that round, in the transaction that makes the result durable. A trigger
-rather than application code, because a manual close over SQL, a fix-up script or a second code path
-would each leave authorship behind and none would error.
+`proposal.member_id` for that round, in the transaction that makes the result durable — a trigger
+rather than application code, because a manual close over SQL or a fix-up script would each leave
+authorship behind and neither would error.
 
 Nothing on the live stream carries a member, and nothing on it carries a timing a member could read:
-a preference write returns 204 and emits no event, because at five people the moment of an event is
-one guess away from a name. Preferences are per meal unless kept, erased nightly by a job whose role
+a preference write returns 204 and emits no event, because in a small circle the moment of an event
+is one guess away from a name. Preferences are per meal unless kept, erased nightly by a job whose role
 can read and delete that table and nothing else; weather readings older than ninety days go the same
 way unless a roll pinned them.
 
@@ -487,6 +434,6 @@ Taipei only — twelve districts, one city's open data, addresses normalised at 
 because the same government file spells the city two ways. Every source is used inside its licence,
 and a source whose licence is non-commercial or uncertain is not used at all; there are no ratings,
 no reviews and no scraped pages anywhere in the pipeline. Sized for one small group: live room state
-per process, five friends rather than five thousand. A portfolio project, developed in a private
+per process, a circle of friends rather than a crowd. A portfolio project, developed in a private
 repository and extracted here after every merge, so the commit messages carry the reasoning behind
 each change.
