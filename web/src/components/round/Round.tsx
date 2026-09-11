@@ -6,7 +6,7 @@ import {
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
-  CATEGORIES, fetchPreferences, postPreference, touchedLine, pct,
+  CATEGORIES, fetchPreferences, postPreference,
   type Preferences,
 } from '@/lib/preferences'
 
@@ -297,20 +297,6 @@ export default function Round() {
   const avoided = new Set((prefs?.avoid_categories ?? []).map((a) => a.value))
   const chipOn = (c: string) => pending[c] ?? avoided.has(c)
   const catStat = new Map((prefs?.avoid_categories ?? []).map((a) => [a.value, a]))
-  const catCoverage = prefs?.category_coverage.share ?? 0
-  /**
-   * **The values no place carries yet — so a true zero says why instead of stating zero.**
-   *
-   * `便利商店` is the whole of this set on 2026-08-30 and leaves it when the classifier re-runs the
-   * city. Without this the row would print 「0 家會比較少中（0.0%）」, and a count of zero reads as a
-   * RESULT — *we looked and nothing needed excluding* — when what is true is that nothing has been
-   * measured for that value yet. That is A2-G8-zero, and this surface shipped exactly that defect
-   * on the allergen rows for a few hours in August; the difference now is that backend wrote the
-   * sentence, so the screen states it **verbatim** rather than composing one.
-   *
-   * Read from the payload every render and never remembered: the set empties itself.
-   */
-  const awaiting = new Set(prefs?.values_awaiting_classification?.values ?? [])
   const anyOn = CATEGORIES.some(chipOn)
 
 
@@ -406,34 +392,25 @@ export default function Round() {
                           thing twice in two vocabularies. */}
                       <span className="mark" aria-hidden="true" />
                       <span className="n" data-part="tonight-chip-name">{c}</span>
-                      <span className="lead" aria-hidden="true" />
-                      {/* **The count renders only on a row that is ON, and that is a build default
-                          standing in for a ruling** (spec sec. 2b, TBD-2). The reference page shows
-                          a number on all thirteen; today's API cannot supply one — `GET
-                          /preferences` builds `avoid_categories` from the rows the member has
-                          actually avoided, so `touched` and `share` exist for those and for
-                          nothing else. Publishing a size ranking of all thirteen to someone who
-                          has chosen nothing is also the shape D20 forbids. If the owner rules for
-                          all thirteen, backend adds an aggregate and this condition is the only
-                          line that moves.
+                      {/* **Nothing follows the dots, and that is the ruling** — the owner
+                          2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
+                          資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
+                          So `tonight-stat` is gone — with it the count, the percentage, and the
+                          `data-shape` fork that chose between them. **The dots now run to the row's
+                          end**, which is what they did before the menu spec folded a number into
+                          them; `.lead`'s `flex: 1` needs no change to do it.
 
-                          **Same sentence, same helper, moved.** It was a `<p data-part=
-                          "tonight-stat">` below the row and it keeps that part here, because the
-                          harnesses key on it and moving a number is not a reason to make them
-                          re-learn where it lives. What went is the leading `<b>{c}</b>`: the name
-                          led the sentence only because a wrapping chip row gave it no row of its
-                          own, and now it has one. */}
-                      {on && (
-                        <span
-                          className="c"
-                          data-part="tonight-stat"
-                          data-shape={awaiting.has(c) || !(catCoverage > 0) ? 'why' : 'count'}
-                        >
-                          {awaiting.has(c)
-                            ? prefs?.values_awaiting_classification?.why
-                            : touchedLine(catStat.get(c), catCoverage)}
-                        </span>
-                      )}
+                          **What that fork protected is not lost, and this is the one thing to
+                          check before reviving anything here.** A category no place carries yet
+                          would have printed 「0 家會比較少中（0.0%）」, and a zero count reads as a
+                          RESULT — *we looked and nothing needed excluding* — rather than as *we
+                          have not measured this yet* (A2-G8-zero). With no count on the row there
+                          is no zero to misread, and the honest bound is stated once for the whole
+                          menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
+                          **A count coming back here brings that defect back with it.**
+
+                          The numbers themselves are not deleted from the payload (§5) — they move
+                          to the operator's reveal as bars, §3/§3a, which is the second commit. */}
                     </button>
                   </li>
                 )
@@ -446,11 +423,9 @@ export default function Round() {
             payload's and is never written here — it moved from about 6% to nearly 13% in one day,
             and a constant would have been false by the afternoon while still rendering. Shown once
             and only while something is on: with no stance set there is nothing for it to qualify. */}
-        {anyOn && prefs && (
+        {anyOn && (
           <p className="roundNote" data-part="pref-category-coverage">
-            全市 {prefs.category_coverage.reference_rows.toLocaleString('en-US')} 家登記店家裡，
-            目前有 {(prefs.category_coverage.with_category ?? 0).toLocaleString('en-US')} 家帶有分類
-            （{pct(prefs.category_coverage.share)}）。沒有分類的店，避開讀不到。
+            沒有分類的店，避開讀不到。
           </p>
         )}
 
@@ -464,23 +439,6 @@ export default function Round() {
           </p>
         )}
 
-        {/* **The cross-kind total, moved here from 偏好 when that screen was removed**
-            (`spec-return-choice.md` §2). It counts what the member's stances reach at all, and
-            with ingredients withdrawn every stance is a chip on this screen — so the number now
-            describes exactly what is above it, which it never quite did on the old page.
-
-            Only while at least one chip is on: with nothing set there is nothing for a total to
-            total. Every figure is the payload's `breadth`, including the denominator, which the
-            sentence names in the screen's own words rather than printing the API's English string
-            or inventing a second definition. */}
-        {anyOn && prefs && prefs.breadth.touched > 0 && (
-          <p className="roundNote" data-part="tonight-total">
-            這些選擇目前碰到 {prefs.breadth.touched.toLocaleString('en-US')} 家，
-            範圍是這個圈子提得出來的 {prefs.breadth.proposable.toLocaleString('en-US')} 家
-            （{pct(prefs.breadth.share)}）。
-          </p>
-        )}
-
         {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
             `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
             half is not warned, and a surface that computed it could compute it wrong.
@@ -490,13 +448,16 @@ export default function Round() {
             half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
             to make it appear (A2-G8b stays n/a).
 
-            The cross-kind 碰到 total it used to sit beside stays on 偏好: that number counts
-            ingredients too, and the ingredients are there. */}
+            **The count left this sentence on 2026-09-11 and the warning did not**
+            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
+            this screen; the evaluator's reading is that the denominator was the number and the
+            warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
+            everything that makes it a caution. Same trigger, same `crossed` read, no figure —
+            **removing the sentence itself would remove a protection, and that is the owner's word
+            to give.** Every character is in the shipped body subset, so no font rebuild. */}
         {prefs?.breadth.crossed && (
           <p className="roundWarn" data-part="tonight-breadth">
-            你目前的選擇，讓這個圈子提得出來的
-            {' '}{prefs.breadth.proposable.toLocaleString('en-US')} 家裡，
-            超過一半會受影響。
+            你目前的選擇，已經讓超過一半的選項受影響。
           </p>
         )}
 

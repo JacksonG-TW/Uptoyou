@@ -411,11 +411,11 @@
   transition: background-color var(--t-hover) ease-out, color var(--t-hover) ease-out;
 }
 .round .chip .n { font-weight: 700; white-space: nowrap; }
-/* **The leader dots, and they are the menu's whole signature.** `flex: 1` so they take whatever is
-   left between the name and the count — and run to the row's end when there is no count, which is
-   what an un-avoided row looks like under sec. 2b's build default. `translateY` lifts the dotted
-   rule off the baseline to where a menu prints it; `min-width` keeps a hint of dots on the longest
-   name at the narrowest column, where the free space is nearly nothing. */
+/* **The leader dots, and they are the menu's whole signature.** `flex: 1` so they take the whole
+   row after the name, which since `spec-weights-picture-2026-09-11.md` §1 is every row: there is no
+   count on the right any more, so the dots always run to the row's end. `translateY` lifts the
+   dotted rule off the baseline to where a menu prints it; `min-width` is kept for the case the flex
+   basis cannot help — the longest name at the narrowest column. */
 .round .chip .lead {
   flex: 1;
   min-width: 24px;
@@ -423,22 +423,15 @@
   transform: translateY(-.35em);
   opacity: .55;
 }
-/* The count. **`tabular-nums` because these are figures in a column** — proportional digits make
-   two counts of the same magnitude read as different lengths. */
-.round .chip .c {
-  color: var(--color-muted);
-  font-size: var(--text-note);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-/* The awaiting-classification sentence is prose, not a figure, so it is allowed to wrap. Without
-   this it would be one `nowrap` line long enough to push the row past the column. */
-.round .chip .c[data-shape="why"] { white-space: normal; }
+/* **The count's rules went with the count** (`spec-weights-picture-2026-09-11.md` §1): `.round
+   .chip .c` and its `[data-shape="why"]` wrap exception can no longer match anything, and dead CSS
+   that still reads as live is how a removed element gets revived by accident. The figures move to
+   the operator's reveal, so `tabular-nums` is `reveal.css`'s problem now, not this file's. */
 
 /* **The flood reads as a printed bar rather than as a hover**, which is what the 10 px of
    horizontal padding buys: the ink runs past the text on both sides the way a menu's selected line
-   does. The dots and the count must take paper with it — on ink they are `--color-muted` and
-   `--color-ink` respectively, which is invisible in the one state they exist to be read in. */
+   does. The dots must take paper with it — on ink they are `--color-ink`, which is invisible in
+   the one state they exist to be read in. */
 .round .chip[data-on="yes"] {
   background: var(--color-ink);
   color: var(--color-paper);
@@ -446,7 +439,6 @@
   padding-left: 10px;
   padding-right: 10px;
 }
-.round .chip[data-on="yes"] .c { color: var(--color-paper); }
 .round .chip[data-on="yes"] .lead { border-color: var(--color-paper); }
 /* **The registry's selection mark — `currentColor`, not ink** (evaluator-ruled 2026-08-30).
    It was `--color-ink` on both the border and the fill, which is right only where the control it

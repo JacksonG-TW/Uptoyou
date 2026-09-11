@@ -234,6 +234,13 @@ export async function postPreference(
  * flag**: the whole content of each is its verb, and a shared function with a boolean would put
  * the two claims one typo apart.
  */
+/* **No screen calls these two today, and that is a waiting state rather than dead code**
+   (`spec-weights-picture-2026-09-11.md`, 2026-09-11). §1 took the count and the percentage off the
+   member's 這一餐; §3a puts the same figures on the OPERATOR's reveal, which is the spec's step 3
+   and blocked on §5's payload question. They are left standing for that commit rather than deleted
+   and restored — and `touchedLine`'s coverage-is-zero branch is the sentence A2-G8-zero exists for,
+   so it is the thing to reuse there, not to rewrite. **If step 3 lands without them, delete them
+   then**: an exported helper nothing calls is invisible to `noUnusedLocals`. */
 export function touchedLine(a: { touched: number; share: number } | undefined, coverage: number): string | null {
   if (!a) return null
   if (!(coverage > 0)) return '店家資料還沒有這一項。目前沒有任何店家會因此比較少中。'
