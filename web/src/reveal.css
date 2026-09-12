@@ -671,6 +671,104 @@
 .reveal .evFactor { display: block; }
 .reveal .evNone { opacity: .55; }
 
+/* ─── 甲's bar picture (`spec-weights-picture-2026-09-11.md` §3, owner 「甲」) ───────────────
+   The accounting column became a drawing. Four rows always — 起點 plus one per known
+   contributor — then the place's own share of the 36.
+
+   **`min-width: 0` on the cell and a fixed track**, because the one thing this picture claims is
+   that a bar which reads 0.79 is 0.79 of the track (WP-6 measures the rendered width against the
+   wire). A track that is a share of a table cell is a share of a column width that the longest
+   name decides, so the same factor would draw a different length in two rounds and the same
+   length for two different factors — measurable, and wrong. 140px is fixed, and the percentage
+   inside it is the payload's. */
+/* **The row's other two cells align to the FIRST bar, not to the middle of the group.** A bar
+   group is five rows tall, so a vertically-centred 提名 and 格數 floated level with 上次去過 and
+   read as belonging to that row rather than to the place. Measured at 1440 before the change. */
+.reveal .evTable td { vertical-align: top; }
+.reveal .evBars { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.reveal .evBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+/* The names are a column, so they are one width and the tracks all start at the same x — a track
+   whose left edge moves per row cannot be read against the row above it.
+
+   **`currentColor` at .6, not `--color-muted`, and `FL-1` is why.** At the gated width the whole
+   evidence block sits ON the flood (`.reveal .evidence { background: none; color: inherit }` in
+   the wide breakpoint below), so a fixed grey is a grey on four different grounds — measured
+   unreadable on jade. This is the same treatment `.evTable th` and `.pairsNote` already take. */
+.reveal .evBarName { flex: 0 0 5.5em; opacity: .6; }
+.reveal .evBarTrack {
+  flex: 0 0 140px;
+  height: 10px;
+  /* **`outline`, not `border`, and this is WP-6's line rather than a style choice.** A 1.5px
+     border makes the track's border box 140px and the fill's 100% reference 137 — so a bar drawn
+     at exactly the payload's factor measures 0.657 of the track against the wire's 0.667, and the
+     one gate line that makes this picture worth anything reads FAIL on a correct drawing. An
+     outline is painted outside the box and takes no layout, so `track.width` IS the fill's 100%:
+     `fill / track` is the factor for anyone who measures it, without having to know this rule
+     exists. Measured after the change at 0.667 → 93.38/140.
+     An un-fired row is this empty track and nothing inside it; the outline is what makes the
+     emptiness a statement rather than a gap. */
+  outline: 1.5px solid currentColor;
+  outline-offset: 0;
+  background: none;
+}
+.reveal .evBarFill { display: block; height: 100%; background: currentColor; }
+/* A factor above 1 cannot draw longer than the track, so it says so instead of reading as an
+   honest ×1. Nothing on this build can produce one (`private` and `contextual` both cap at 1,
+   D45); the mark exists so a `commercial` contributor that nudged upward could not arrive
+   silently. */
+.reveal .evBarFill[data-over="yes"] { outline: 2px dashed var(--color-hot-ink); outline-offset: 1px; }
+/* §3's last bullet, and no sixth token: below 1 in `hot`, at 1 in `ink`, the total in its place's
+   own face colour. */
+/* `hot` stays a real hue — it is the one colour in this picture that MEANS something (below 1),
+   and it reads on all four floods and on paper. `ink` is `currentColor`: on paper that is ink, on
+   a flood it is the flood's own ink, which is what `FL-1` requires. */
+.reveal .evBar[data-tone="hot"] .evBarFill { background: var(--color-hot); }
+.reveal .evBar[data-tone="ink"] .evBarFill { background: currentColor; }
+.reveal .evBar[data-tone="face"][data-face="hot"]    .evBarFill { background: var(--color-hot); }
+.reveal .evBar[data-tone="face"][data-face="cobalt"] .evBarFill { background: var(--color-cobalt); }
+.reveal .evBar[data-tone="face"][data-face="jade"]   .evBarFill { background: var(--color-jade); }
+.reveal .evBar[data-tone="face"][data-face="sun"]    .evBarFill { background: var(--color-sun); }
+/* **The face-coloured total needs an edge or it can vanish into its own ground.** On a jade win
+   the flood IS jade, so place 3's jade bar would be jade on jade — the same disappearance the
+   winner's chip and its twelve cells had before that correction landed in this file. The outline
+   is `currentColor`, so the bar keeps its identity colour and still has a boundary on every
+   ground. */
+.reveal .evBar[data-tone="face"] .evBarFill { outline: 1.5px solid currentColor; outline-offset: -1.5px; }
+/* The total is the row a reader looks for, so it carries the weight and a rule above it rather
+   than a fifth colour. */
+.reveal .evBar[data-part="factor-total"] { font-weight: 700; padding-top: 4px; }
+.reveal .evBar[data-part="factor-total"] .evBarName { opacity: 1; }
+.reveal .evBarValue { white-space: nowrap; }
+/* **The reason takes its own line under the bar it belongs to.** Measured at 1440 as a fourth
+   flex child: it wrapped to two lines out to the right and ran into the next place's rows, and
+   the same sentence repeats once per place, so the collision was three collisions. Indented to
+   the track's left edge so it reads as belonging to the row above it. */
+.reveal .evBar { flex-wrap: wrap; }
+.reveal .evBar .evReason { flex: 1 1 100%; margin-left: calc(5.5em + 8px); opacity: .6; }
+
+/* §3a — the counts that left the member's 這一餐, given a home. A definition list because that is
+   what it is: a label and the figure it names. **A rule above it, not a box around it** — §3a asks
+   for «clearly separated», and the bars already carry every border this block can afford to sit
+   next to. */
+.reveal .evCounts {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1.5px solid var(--color-ink);
+  font-size: var(--text-note);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.reveal .evCounts > div { display: flex; align-items: baseline; gap: 8px; }
+.reveal .evCounts dt { flex: 0 0 7em; color: var(--color-muted); }
+.reveal .evCounts dd { margin: 0; font-weight: 700; }
+
 /* §0b — the member's list. No chip, no counts, so the row is a name and the winner is the one the
    headline already named; marking it again in bold is the only distinction the row needs.
 

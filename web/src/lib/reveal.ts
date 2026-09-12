@@ -74,6 +74,21 @@ export type Factor = {
   contributor: string
   effect: string
   reason: string | null
+  /**
+   * **Did this contributor actually run** — candidate 16, `spec-weights-picture-2026-09-11.md` §3.
+   *
+   * The panel carries every known contributor at its D46 position, so the picture has the same
+   * rows every round and 「上次去過 showing nothing」 is a fact the payload states rather than one
+   * the client infers from an absence (§4's last bullet forbids the inference).
+   *
+   * **A padded row and a real one that measured no difference both read `effect: "1"`**, so the
+   * drawing keys the empty track on THIS field and never on the value. `false` = did not run →
+   * empty track and 「—」. `true` at effect 1 = measured, no difference → a full bar. The evaluator
+   * measured on 2026-09-11 that no contributor on today's build can store a 1.000 (`weather`
+   * returns no record at gap 0 per D43, `last_trip` is always ×0.5, D103's `1 − 1/N` reaches 1 at
+   * no finite N), so `effect` would happen to work — which is exactly why it is not what is read.
+   */
+  fired: boolean
 }
 
 /** Operator only. Kept in a separate type so that nothing which renders a member screen can even
@@ -82,7 +97,11 @@ export type Factor = {
 export type Evidence = {
   weights: Record<string, string>
   allocation: Record<string, number>
-  panel: Record<string, { factors: Factor[]; clamps: unknown[] }>
+  /** `base` is the fold's starting weight (`"1"`) and is **not** a `factors` row: `fold()` begins
+   *  at `Decimal("1")` and multiplies, with no `weight_contribution` record behind it, and the one
+   *  payload an operator audits against the database must not carry a row no record backs. The
+   *  picture draws it as its own first row (§3, corrected by the evaluator 2026-09-11). */
+  panel: Record<string, { base: string; factors: Factor[]; clamps: unknown[] }>
 }
 
 /**

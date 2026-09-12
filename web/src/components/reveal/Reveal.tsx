@@ -8,6 +8,9 @@ import {
   device, evidenceIn, faceOf, fetchRaw, signTrip,
   type Device, type Evidence as EvidenceData, type MemberReveal, type Trip,
 } from '@/lib/reveal'
+/* §3a only. The operator's counts come from the same endpoint the member's 這一餐 used to render
+   them from, so there is one definition of each figure and no second arithmetic. */
+import { fetchPreferences, type Preferences } from '@/lib/preferences'
 
 /**
  * A3 — the reveal, **member state**, built to `spec-reveal-two-states.md` §1–§4 and `design.md` §4b.
@@ -222,6 +225,20 @@ export default function Reveal({ roundId }: { roundId: number }) {
   /** `null` for a member, and for a member it is null because **nothing arrived** — not because
    *  this component declined to read something that did. D105's whole point. */
   const [evidence, setEvidence] = useState<EvidenceData | null>(null)
+  /**
+   * §3a — the counts that left the member's 這一餐 arrive here, on the operator's reveal.
+   *
+   * `spec-weights-picture-2026-09-11.md` §3a: the ruling's own logic, «SDE 需要知道的資訊», is
+   * that those figures have a reader — so they were given a home rather than deleted.
+   *
+   * **It is fetched only once `evidence` is non-null, and that guard is the whole of WP-8.** A
+   * member's response carries no accounting, so `evidence` stays null and this request is never
+   * made: no extra call on a member's wire, nothing new on a member's screen. The endpoint is
+   * member-scoped either way — `GET /preferences` answers for the credential that asks — so what
+   * an operator reads here is the operator's OWN avoided categories, never the table's (§3.0,
+   * D13: this view audits the arithmetic, not the people).
+   */
+  const [counts, setCounts] = useState<Preferences | null>(null)
   const [signing, setSigning] = useState(false)
   const reduce = useReducedMotion()
   /** Which row the sweep is lighting, or `null`. A place id, never an index — the row order is the
@@ -294,6 +311,21 @@ export default function Reveal({ roundId }: { roundId: number }) {
       return true
     })
   }, [])
+
+  /* §3a's fetch. Keyed on `evidence` so a member never makes it — see `counts` above. It is
+     deliberately NOT folded into the reveal's own load: that one runs for every reader, and
+     adding a preferences call there would put a member's request on the wire to satisfy an
+     operator's block. A failure is swallowed on purpose — the accounting is the point of this
+     screen and the counts are a footnote to it, so a 500 on the footnote must not cost the
+     operator the bars. */
+  useEffect(() => {
+    if (!dev || !evidence) return
+    let live = true
+    fetchPreferences(dev)
+      .then((p) => { if (live) setCounts(p) })
+      .catch(() => { if (live) setCounts(null) })
+    return () => { live = false }
+  }, [dev, evidence])
 
   useEffect(() => {
     if (!dev) return
@@ -771,6 +803,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
           places={data.places}
           winnerId={data.winning_place_id}
           sweep={sweep}
+          counts={counts}
         />
       )}
       {/* **A19 §2's `my-reasons` block was here and is gone** (2026-08-30,

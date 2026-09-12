@@ -1,4 +1,9 @@
 import { FACES, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
+/* §3a. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
+   moved them here — one definition, so the operator's figure and the payload's cannot part
+   company. `touchedLine` stays where it is: its sentence is written for a member («比較少中»), and
+   this block is a column of figures for a reader auditing them. */
+import { pct, type Preferences } from '@/lib/preferences'
 
 /**
  * A3's second half — `TABLE` and `ALLOC36`, **operator state only** (`D105`, `design.md` §4b).
@@ -18,6 +23,48 @@ import { FACES, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
  * home screen and is not one here — it is this round's real allocation. A caveat left on a true
  * figure is worse than no caveat, because it teaches the reader to discount a real number.
  */
+
+/**
+ * 甲's bar picture — `spec-weights-picture-2026-09-11.md` §3, the owner 「甲」.
+ *
+ * **What a contributor is called on this screen, and nothing else reads this map.** The payload
+ * names contributors the way the engine does (`preference` · `last_trip` · `weather`); those are
+ * `upto.engine`'s own identifiers and they travel in the wire because the operator audits against
+ * the database. An unknown contributor **keeps its payload name** rather than being dropped or
+ * labelled 「其他」: a fifth contributor landing in `engine/contributors.py` must show up on this
+ * drawing as itself, unlabelled and obvious, instead of disappearing into a name that reads
+ * finished (D112 — an absence needs a shape, or it reads as a presence).
+ */
+const LABEL: Record<string, string> = {
+  preference: '有人避開',
+  last_trip: '上次去過',
+  weather: '降雨',
+}
+
+/**
+ * **The bar's width, and this one line is the whole claim the picture makes.**
+ *
+ * `spec-weights-picture-2026-09-11.md` §3: «a bar that reads 0.79 must be 0.79 of the track», and
+ * WP-6 measures the rendered width against the wire. So the width is the payload's own string,
+ * parsed and never rounded for looks, and nothing here recomputes a factor from anything else
+ * (§4: a recomputed number and a pinned one disagree the day the formula moves, and then the
+ * auditable figure is the wrong one).
+ *
+ * **The track is 0 → 1 and a factor above 1 is given a shape rather than a full bar.** Nothing
+ * on today's build can produce one — `private` and `contextual` both cap at 1 (D45) — but a
+ * `commercial` contributor that nudged upward would otherwise draw exactly the same bar as an
+ * honest ×1, which is the `fired` mistake one column over. `over` is returned so the row can say
+ * so; it is never clamped silently.
+ */
+function bar(effect: string): { pct: string; over: boolean; at1: boolean } {
+  const v = Number(effect)
+  if (!Number.isFinite(v) || v < 0) return { pct: '0%', over: false, at1: false }
+  return {
+    pct: `${(Math.min(v, 1) * 100).toFixed(4)}%`,
+    over: v > 1,
+    at1: v === 1,
+  }
+}
 
 /** The 36 outcomes, in pool order, each carrying the face of the place that holds it. Built from
  *  `allocation` alone so the grid cannot drift from the table. */
@@ -53,6 +100,7 @@ export default function Evidence({
   places,
   winnerId,
   sweep = null,
+  counts = null,
 }: {
   ev: EvidenceData | null
   places: Places
@@ -62,6 +110,10 @@ export default function Evidence({
    *  the winner lives in one place, and a component that decided its own highlight would be a
    *  second, unmeasured one. */
   sweep?: string | null
+  /** §3a — the counts that left the member's 這一餐. `null` for a member (the fetch never runs)
+   *  and `null` for an operator whose preferences call failed; both draw nothing, because a
+   *  footnote must not be able to cost this screen its bars. */
+  counts?: Preferences | null
 }) {
   const grid = ev ? cells(ev, places) : []
   const seats = Object.keys(places)
@@ -154,25 +206,165 @@ export default function Evidence({
                 {/* tabular-nums and right-aligned, so the column reads as a column */}
                 {ev && <td className="evNum">{n}<span className="evOf">/36</span></td>}
                 {ev && <td className="evWhy">
-                  {factors.length === 0
-                    ? <span className="evNone">—</span>
-                    : factors.map((f, i) => (
-                        <span key={i} className="evFactor">
-                          {/* **The contributor and the factor travel; the REASON does not, unless
-                              D13 lets it.** A `represented_member` reason reaches that member alone
-                              and nobody else, the operator included — this view audits the
-                              arithmetic, not the people. `null` here is the database enforcing
-                              that, not this component choosing to be discreet. */}
-                          {f.contributor} ×{f.effect}
-                          {f.reason && <span className="evReason">（{f.reason}）</span>}
-                        </span>
-                      ))}
+                  {/* **甲: the numbers became a drawing** (§3). The rows are `base` then
+                      `factors` **in the payload's own order, with no client-side reordering** —
+                      the evaluator's ruling, because the picture's only claim is that it is
+                      auditable, so row *i* must be `factors[i]` and checkable against the wire by
+                      eye. D46's order is private → contextual, which lands as 有人避開 ·
+                      上次去過 · 降雨 and is also the honest reading order: what a person chose,
+                      then what the world did.
+
+                      The first draft of the spec enumerated the last three backwards while calling
+                      it fold order. Nothing here restates an order for exactly that reason. */}
+                  <div className="evBars" data-part="factor-bars">
+                    {/* 起點 — **its own row and not a `factors` entry.** `fold()` starts at 1 and
+                        multiplies, with no `weight_contribution` record behind it; a fabricated
+                        起點 row inside `factors` would put a row in the one payload an operator
+                        audits that no record backs. It always ran, so it always draws a bar. */}
+                    <Bar label="起點" effect={ev.panel[placeId]?.base ?? '1'} fired part="factor-base" />
+                    {factors.map((f, i) => (
+                      <Bar
+                        key={i}
+                        /* An unknown contributor keeps its payload name — see `LABEL`. */
+                        label={LABEL[f.contributor] ?? f.contributor}
+                        effect={f.effect}
+                        fired={f.fired}
+                        part="factor-row"
+                        contributor={f.contributor}
+                        /* **The contributor and the factor travel; the REASON does not, unless
+                           D13 lets it.** A `represented_member` reason reaches that member alone
+                           and nobody else, the operator included — this view audits the
+                           arithmetic, not the people. `null` here is the database enforcing that,
+                           not this component choosing to be discreet. */
+                        reason={f.reason}
+                      />
+                    ))}
+                    {/* The total — the place's own share of the 36, its bar the same fraction, in
+                        that place's face colour. It reads `allocation`, the same single source
+                        `ALLOC36` is filled from (D91's third clause), so the bar and the grid
+                        cannot disagree. */}
+                    <Bar
+                      label="格數"
+                      effect={String(n / 36)}
+                      fired
+                      part="factor-total"
+                      face={FACES[seat % FACES.length]}
+                      value={`${n}／36`}
+                    />
+                  </div>
                 </td>}
               </tr>
             )
           })}
         </tbody>
       </table>
+
+      {/* ─── §3a — where the member-side numbers now live ───────────────────────────────────
+          `spec-weights-picture-2026-09-11.md` §3a. The owner's ruling took the counts off the
+          member's screen because they are 「SDE 需要知道的資訊」; that sentence names a reader, so
+          the figures were moved rather than deleted.
+
+          **Below the bars and clearly separated**, per §3a, because the bars are this round's
+          arithmetic and these are the corpus the round drew from — two different kinds of fact.
+
+          **`ev &&` as well as `counts &&`, and both guards matter.** `counts` is only ever fetched
+          when the response carried accounting, but the operator/member split on this screen is
+          decided by what arrived and by nothing else (see `evidenceIn`), so this block is gated on
+          the same field every other numeric column here is gated on rather than trusting the
+          fetch's own condition one file away.
+
+          **Every figure is the payload's, and the denominators are named in the screen's own
+          words** — the rule the member's 這一餐 followed for the same numbers: today's figure is
+          false the moment a backfill runs, and a hard-coded one says nothing when it does. */}
+      {ev && counts && (
+        <dl className="evCounts" data-part="counts">
+          <div>
+            <dt>帶有分類</dt>
+            <dd>
+              {(counts.category_coverage.with_category ?? 0).toLocaleString('en-US')}
+              <span className="evOf"> / {counts.category_coverage.reference_rows.toLocaleString('en-US')}</span>
+              <span className="evOf">（{pct(counts.category_coverage.share)}）</span>
+            </dd>
+          </div>
+          <div>
+            <dt>這一輪可提名</dt>
+            <dd>{counts.breadth.proposable.toLocaleString('en-US')}</dd>
+          </div>
+          {/* **One row per avoided category, and nothing when none is set.** No 「目前沒有避開」
+              line: D20 holds here too — the surface states, it does not reassure, and an empty
+              list already says it. The `touched` figure is this reader's own, because the endpoint
+              is member-scoped; it is not the table's, and §3.0 is why that is not a limitation to
+              work around. */}
+          {counts.avoid_categories.map((a) => (
+            <div key={a.value}>
+              <dt>{a.value}</dt>
+              <dd>
+                {a.touched.toLocaleString('en-US')}
+                <span className="evOf">（{pct(a.share)}）</span>
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </section>
+  )
+}
+
+/**
+ * One row of 甲's picture — `name · track · value`.
+ *
+ * **`fired` decides the empty track, and `effect` must not** (§3, candidate 16). A padded row and
+ * a real one that measured no difference both read ×1, so drawing the absence off the value would
+ * report a measurement as an absence the moment any contributor stores a 1.000. `fired: false`
+ * draws an empty track and 「—」, because 「上次去過 showing nothing is information」: it says this
+ * place was not last week's.
+ *
+ * **Colour is the ruling's, not a choice made here** (§3's last bullet): below 1 in `hot`, at 1 in
+ * `ink`, the total in its place's face colour. No sixth token.
+ */
+function Bar({
+  label,
+  effect,
+  fired,
+  part,
+  face,
+  value,
+  reason = null,
+  contributor,
+}: {
+  label: string
+  effect: string
+  fired: boolean
+  part: string
+  face?: string
+  /** The total row prints `N／36` rather than the fraction it drew — the same number the 格數
+   *  column carries, from the same `allocation`. */
+  value?: string
+  reason?: string | null
+  contributor?: string
+}) {
+  const { pct, over, at1 } = bar(effect)
+  return (
+    <div
+      className="evBar"
+      data-part={part}
+      data-contributor={contributor}
+      data-fired={fired ? 'yes' : 'no'}
+      /* `hot` below 1, `ink` at 1, the face colour on the total. An un-fired row takes none of
+         them: there is no factor to colour. */
+      data-tone={!fired ? 'none' : face ? 'face' : at1 ? 'ink' : 'hot'}
+      data-face={face}
+    >
+      <span className="evBarName">{label}</span>
+      <span className="evBarTrack">
+        {/* The width IS the payload's factor (WP-6). An un-fired row draws no fill at all rather
+            than a zero-width one, so 「did not run」 and 「×0」 are not the same picture. */}
+        {fired && <span className="evBarFill" style={{ width: pct }} data-over={over ? 'yes' : undefined} />}
+      </span>
+      <span className="evBarValue">
+        {fired ? (value ?? `×${effect}`) : <span className="evNone">—</span>}
+      </span>
+      {reason && <span className="evReason">（{reason}）</span>}
+    </div>
   )
 }
