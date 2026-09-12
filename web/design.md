@@ -407,11 +407,29 @@ never "filled".**
    landing animates.
 2. **A bar's state change** is an opacity and label cross-fade of **120 ms**. Its box does not move,
    resize or slide.
-3. **`prefers-reduced-motion: reduce`** removes the tumble and both transitions; **the end states
-   still apply, instantly.**
+3. **`prefers-reduced-motion: reduce`** removes the tumble, both transitions and rule 4's arrival
+   (no travel, no stagger); **the end states still apply, instantly.**
+4. **Arrival — one per screen, on first paint, once per mount** (`--t-flood` 450 ms `ease-out`,
+   from `translateY(12px)` + `opacity: 0`, staggered 90 ms in reading order). The full rules are
+   `spec-motion-arrival-2026-09-11.md` §1a; the two that are most often got wrong are **never on
+   anything that renders in response to an action** (a refusal that fades in has not refused
+   anything yet — `BF-1`) and **never on 開獎**, whose sequence is `D111`'s and is the only motion
+   that screen has.
 
-**Nothing scroll-triggered, no entrance animation on a block, nothing springy.** Disable shadcn's
-default enter/exit animations where they are not one of the three above.
+**Nothing scroll-triggered, nothing springy.** Disable shadcn's default enter/exit animations where
+they are not one of the four above.
+
+***Amended 2026-09-11, owner 「1」*** (`decision-log.md`; direction 乙, the reference
+`https://www.i-web.com.tw/` and his 「動態感太少」). This paragraph read **「Nothing scroll-triggered,
+no entrance animation on a block, nothing springy.」** and the middle clause is **withdrawn**; rule 4
+is what replaced it. *Kept rather than rewritten, because the ban was right about the thing it was
+aimed at and the measurement is what moved it:* our motion density already matched the reference
+(首頁 13 of 81 elements carry a transition, **16.0%**, against the reference's **15.4%**), so the
+complaint was never a shortage of animation — **every transition we owned was reactive, firing only
+if the member touched something, and nothing on a screen ever arrived.** The reference spells arrival
+as *scroll* because it is 9,499 px tall; our pages are exactly one viewport (900 px at 1440,
+measured), which is why **scroll-triggered stays banned** — here it would be furniture — and why
+*springy* stays banned too (`D109` retracted the bounce and it stays retracted).
 
 ### 質感 — the perceived-quality rules, ruled 2026-08-20 by the evaluator under `D101`'s delegation
 
