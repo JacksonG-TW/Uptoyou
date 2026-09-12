@@ -659,15 +659,42 @@
 .reveal .boardNote { font-size: var(--text-note); opacity: .7; margin: 0 0 10px; }
 /* `opacity` and nothing else, so the arrival costs no layout and every cell is where it will rest
    from the first frame. */
-.reveal .board { animation: boardIn var(--t-flood) ease-out both; }
+ /* `backwards`, for 乙's reason one file over: `both` holds the end keyframe for ever, and a
+    held keyframe is a held compositing layer. This one is opacity-only so it holds no transform
+    and the layer costs nothing measurable — but the two should not disagree about the rule. */
+.reveal .board { animation: boardIn var(--t-flood) ease-out backwards; }
 @keyframes boardIn { from { opacity: 0 } to { opacity: 1 } }
 @media (prefers-reduced-motion: reduce) { .reveal .board { animation: none; } }
 
+/* **The grid takes a paper ground — evaluator-ruled 2026-09-12 after the board gate**
+   (`gate-board-2026-09-12.md`), and the ruling came from a measurement rather than an argument:
+   with a paper panel behind it all three faces read as fills — `(255,135,92)` · `(37,71,232)` ·
+   `(0,168,112)` against `(255,253,247)`. On the flood **the winner's fill IS the ground**, so
+   「the colour there is the shop」 was false for exactly the shop the reader came to find. My edge
+   kept all 36 cells countable; it could not make the winner's colour readable, because the
+   question was the ground and not the edge.
+
+   **`color: var(--color-ink)` is not decoration — it is what makes the cells' own edges work.**
+   At the gated width this region takes `color: inherit`, which is the flood's ink: paper-white on
+   cobalt. A paper panel inheriting that would draw paper-white edges on a paper ground, so the
+   collision would simply move from the fills to the outlines. The panel sets its own ink, the way
+   `.pairs` does, and every `currentColor` inside it resolves against paper.
+
+   **The cost the evaluator accepted and named:** the board stops being part of the flood and
+   becomes an object laid on it. That is print vocabulary rather than a web card — zero radius, an
+   ink rule, paper — and `ALLOC36` and the operator's `.chip` deliberately do NOT follow: one is a
+   *quantity* figure a reader counts runs in, this is a *lookup* table where colour identity is the
+   whole point. The asymmetry is on purpose and is recorded in that gate report. */
 .reveal .boardGrid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 3px;
   width: min(100%, 288px);
+  padding: 10px;
+  box-sizing: border-box;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 1.5px solid var(--color-ink);
 }
 .reveal .boardCell {
   aspect-ratio: 1;
@@ -716,13 +743,21 @@
   font-size: var(--text-note);
 }
 .reveal .boardLegend li { display: flex; align-items: center; gap: 8px; }
-/* The swatch takes the same edge as a cell and for the same reason — on its own flood it would
-   otherwise be a hole. */
+/* **The swatch carries the grid's ground with it, because it is the same lookup.** The ruling
+   named the grid; the legend is the other half of the same table — a colour whose name cannot be
+   read against its own flood is a legend that does not map anything, and the swatch had exactly
+   the collision the grid just lost (measured: the cobalt swatch was cobalt on a cobalt ground). So
+   each swatch sits in its own paper chip with an ink edge, which is the grid's vocabulary at 12 px
+   rather than a second treatment. **Flagged to the evaluator as a consequence of its ruling rather
+   than an extension of it** — the alternative was a legend that reads 「this colour is that shop」
+   while showing no colour. */
 .reveal .boardSwatch {
   width: 12px; height: 12px; flex: 0 0 12px;
-  outline: 1px solid currentColor;
-  outline-offset: -1px;
+  box-sizing: border-box;
+  background: var(--color-paper);
+  border: 1.5px solid var(--color-ink);
 }
+/* The face fill replaces the paper inside the chip; the ink border stays. */
 .reveal .boardSwatch[data-face="hot"]    { background: var(--color-hot); }
 .reveal .boardSwatch[data-face="cobalt"] { background: var(--color-cobalt); }
 .reveal .boardSwatch[data-face="jade"]   { background: var(--color-jade); }
