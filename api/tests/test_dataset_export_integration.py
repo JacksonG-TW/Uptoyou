@@ -88,6 +88,16 @@ async def seed(session, publication_id: int) -> None:
                  "values ('reference', :r, '麵食', 'gemma2:2b', 'v7', :n, now())"),
             {"r": registry, "n": name},
         )
+    # **A place whose registry number is in NO publication — the row that carries the nulls.**
+    # Added 2026-09-12 for H88: `place_display` returns `name`, `name_source` and `base` all `None`
+    # for it, and the export's columns are annotated to allow that. **A type on a boundary is
+    # asserted by a test that passes the None through, or it is not written** — and until this
+    # fixture existed, nothing here ever did: the development database keeps two publications and
+    # falls back to the older one, so 0 of 36,497 rows reach this branch in practice.
+    await session.execute(
+        text("insert into place (origin, registry_no) values ('reference', :r)"),
+        {"r": "A-99999999-00001-9"},
+    )
     # A circle-local place, which must NOT reach the file: its name is a member's own words.
     circle = (await session.execute(
         text("insert into circle (name) values ('dataset fixture') returning id"))).scalar_one()
@@ -174,22 +184,41 @@ async def scenario(test_url: str) -> None:
     rungs = {}
     for row in back:
         rungs[row["name_source"]] = rungs.get(row["name_source"], 0) + 1
-    check("the three name rungs sum to the whole file",
+    check("every row's rung, named or null, sums to the whole file",
           sum(rungs.values()) == len(back), (rungs, len(back)))
     check("and all three rungs are exercised, so the sum is not one number",
-          set(rungs) == {"sign", "brand", "registered"}, rungs)
+          {"sign", "brand", "registered"} <= set(rungs), rungs)
 
     # **Beside the rung sum, never instead of it** (the reviewer's first `should`, 2026-09-12). A
     # row with no name at all still lands in a bucket, so the sum stays 36,497 while a reader gets
     # a place with nothing to call it. The sum proves no row was LOST; this proves no row is EMPTY,
     # and the two questions are different.
     unnamed = [row for row in back if not row["display_name"]]
-    check("every row in the file has a name", not unnamed,
+    check("every row whose registry number is still published has a name",
+          [row["registry_no"] for row in unnamed] == ["A-99999999-00001-9"],
           [(row["registry_no"], row["name_source"]) for row in unnamed[:3]])
     check("and no row claims a rung it does not have",
           all((row["name_source"] is None) == (row["name_base"] is None) for row in back),
           [(row["registry_no"], row["name_source"], row["name_base"]) for row in back
            if (row["name_source"] is None) != (row["name_base"] is None)][:3])
+
+    # **H88: the annotation is asserted by pushing the None through the boundary, not by reading
+    # the signature.** `names: dict[int, str | None]` is a claim about this row and nothing else;
+    # if a future edit makes the export skip it, coerce it to "", or blow up on it, this is what
+    # says so. Three nulls together, and they survive a Parquet round trip as nulls rather than as
+    # empty strings — pyarrow infers a nullable string column from the first non-null value, and an
+    # all-null column would type as null, so this also proves the column kept its type.
+    orphan = [row for row in back if row["registry_no"] == "A-99999999-00001-9"]
+    check("the row with no publication reaches the file rather than being dropped",
+          len(orphan) == 1, len(orphan))
+    if orphan:
+        row = orphan[0]
+        check("and carries display_name, name_source and name_base all null — through Parquet",
+              (row["display_name"], row["name_source"], row["name_base"]) == (None, None, None),
+              (row["display_name"], row["name_source"], row["name_base"]))
+        check("while still carrying its provenance, so a reader can see WHICH publication it is "
+              "absent from",
+              row["place_publication_sha256"] == "c" * 64, row["place_publication_sha256"])
 
     # ---- the name is the APP's name, not a re-derivation ---------------------------------
     from upto.api_common import place_display  # noqa: PLC0415
@@ -202,7 +231,8 @@ async def scenario(test_url: str) -> None:
             text("select id, registry_no from place where origin = 'reference'"))).all())
     app_names = {by_registry[pid]: value["name"] for pid, value in composed.items()}
     file_names = {row["registry_no"]: row["display_name"] for row in back}
-    check("every name in the file is the name the app itself composes", app_names == file_names,
+    check("every name in the file is the name the app itself composes, nulls included",
+          app_names == file_names,
           {k: (app_names.get(k), file_names.get(k)) for k in app_names
            if app_names.get(k) != file_names.get(k)})
     check("the sign rung won where a sign exists (so the ladder really ran)",
