@@ -256,10 +256,14 @@ company. Where a sign exists the name is right. A sign exists for one row in twe
 «this is a noodle shop». So the category is generated. A local model reads the best name the project
 holds and picks one of the thirteen categories. Its accuracy is measured on a frozen set.
 
-**The approach.** The classifier uses RAG (retrieval-augmented generation), in three steps.
-Retrieval: labeled example names are embedded into pgvector, and a vector search finds the five
-already-labelled names most similar to the one being asked. Augmentation: they go into the prompt as
-worked examples. Generation: the model answers with one category. Turned down: another prompt
+**The approach.** RAG, in three steps:
+
+- **Retrieval** — pgvector finds the five most similar already-labelled names.
+- **Augmented** — they go into the prompt as worked examples, with the name to classify.
+- **Generation** — the model answers with one of the thirteen categories.
+
+Labeled example names are embedded into pgvector, and that is the example set. Missing knowledge is
+added as data, leaving the prompt and the weights alone. Turned down: another prompt
 revision; fine-tuning. Classification runs on a local 3B model. The generator is a quantized 3B
 model on the same box as the database, batch-only, off unless a backfill runs. A hosted model as the
 classifier was turned down too. The free hosted tier allows 500 calls a day, so 3,300 places take
