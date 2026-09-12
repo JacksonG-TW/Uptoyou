@@ -114,9 +114,24 @@ deleted there; the development database keeps its `place` rows across publicatio
 them. It closes on the next city pass, or when the classifier's output ships nightly instead of by
 hand.
 
-**The 411 between the instance's 36,376 and its 35,965 is an open measurement.** The instance holds
-fewer `place` rows than its current publication has `reference_place` rows, and nothing here has
-measured why. No cause is stated because none has been taken.
+**The 411 between the instance's 36,376 and its 35,965 was an open measurement until 2026-09-12, and
+it is now answered.** The current publication holds 36,376 rows and **411 of them have no `place`
+row at all**. They split exactly:
+
+| | |
+|---|---|
+| first seen in the **current** publication (2026-09-02), never placed | **409** |
+| in the source since the **first** publication, still never placed | **2** |
+
+**The two are the only rows in the whole publication with no `township_code`**, and neither has a
+`place` row. The product cannot place a row it cannot locate, which is correct behaviour that had
+never been written down.
+
+So both hosts' arithmetic is ordinary: the instance's 35,965 = 36,376 − 411, and the development
+database's 36,497 = 36,376 − 411 + 532. **`place` creation lags the publication and is not a
+function of it** — a row is created when the product needs one, never by the ingest, so a new
+registry number sits in the source until something asks for it. Nothing is wrong here; what was
+missing is that nothing said so.
 
 ---
 
