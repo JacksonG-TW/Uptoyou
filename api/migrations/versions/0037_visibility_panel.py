@@ -29,7 +29,6 @@ rewriting history to match a rule made after it.
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 revision = "0037"
 down_revision = "0036"
