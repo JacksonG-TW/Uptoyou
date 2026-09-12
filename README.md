@@ -79,7 +79,7 @@ rows the roll used and names each one.
 So a member can check the result. Nobody has to take it on trust. A preference is private on the way
 in and visible on the way out. The reveal shows what moved the odds. It never shows who asked for it.
 
-**And privacy is enforced in the database rather than promised by the surface.** Closing a round
+**And privacy is enforced in the database.** Closing a round
 fires a trigger that nulls `proposal.member_id`, in the transaction that makes the result durable —
 a manual close over SQL or a fix-up script would each leave authorship behind, and neither would
 error. A preference write returns 204 and emits **no event at all**, because in a small circle the
@@ -359,7 +359,7 @@ of this measures the fetch / parse / store split, because nothing records it.
   channel itself can be tested.
 - **Every source is proven idempotent, not assumed.** Each one runs through its real command-line
   entry point twice and every column of every table is compared. A no-change day is a recorded
-  outcome rather than an absence.
+  outcome.
 - **68 test files**, in two tempos: host-side with no network and no database, and build-and-drop
   tests that build their own database in the one service holding the owner's credential. Every
   commit also passes six local gates in a pre-commit hook, five of them standard-library only, so a
