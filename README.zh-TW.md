@@ -10,15 +10,7 @@
 
 **試用：[uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
-### 開一局試試
-
-```sh
-docker compose run --rm migrate                          # the schema, once per version
-docker compose up -d --wait                              # the stack
-docker compose exec api python -m upto.issue 1 Kevin     # a device token, printed once
-```
-
-打開 `localhost:8080`，貼上 token，提三家店，擲。
+demo 目前需要邀請連結才能進圈子；想自己跑，見文末的快速開始。
 
 *本頁以英文版為準：兩種語言若有出入，以英文版為準。*
 

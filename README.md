@@ -11,15 +11,7 @@ place won.
 
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
-### Try this round
-
-```sh
-docker compose run --rm migrate                          # the schema, once per version
-docker compose up -d --wait                              # the stack
-docker compose exec api python -m upto.issue 1 Kevin     # a device token, printed once
-```
-
-Open `localhost:8080`, paste the token, propose three places, roll.
+The demo needs an invite link to join a circle; to run it yourself, see Quick start at the end.
 
 *This English page is canonical: where the two languages disagree, this one is right.*
 
