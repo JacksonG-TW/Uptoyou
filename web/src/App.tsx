@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { device, doorHref } from './lib/round'
+import { arrive } from './lib/motion'
 import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
 import { dateline } from './lib/dateline'
 
@@ -73,7 +74,7 @@ export default function App() {
             {' · '}{sheet.edition}
           </p>
           <Select value={township} onValueChange={setTownship}>
-            <SelectTrigger data-part="picker" aria-label="選擇行政區">
+            <SelectTrigger className="arrive" style={arrive(3)} data-part="picker" aria-label="選擇行政區">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -97,8 +98,19 @@ export default function App() {
 
         <div className="hero">
           <div className="heroL">
-            <p className="eyebrow" data-part="badge"><em>★</em>臺北市 12 區 · 全部來自公開登記資料</p>
-            <h1 className="headline" data-part="headline">
+            {/* 乙 §2 — 首頁's four arriving blocks, in the ORDER THE SPEC GIVES: the weather
+                line (0) · the appetite block (1) · the collage (2) · the picker (3). Four blocks,
+                720 ms, done — nothing else on this screen arrives, which is what keeps it inside
+                §1a rule 4's one beat.
+
+                **The appetite block is three siblings sharing one step, not a new wrapper.** The
+                eyebrow, the headline and the body line are separate children of `.heroL` (the
+                weather line is a fourth), so 「one block」 is expressed as one step rather than as a
+                `<div>` — a wrapper would be a DOM change on the one screen whose settled frame is
+                pinned pixel-for-pixel by `A0c` (`YI-1`), and it would buy nothing the shared step
+                does not. */}
+            <p className="eyebrow arrive" style={arrive(1)} data-part="badge"><em>★</em>臺北市 12 區 · 全部來自公開登記資料</p>
+            <h1 className="headline arrive" style={arrive(1)} data-part="headline">
               <span>今天吃什麼</span><span className="lit">讓骰子決定</span>
             </h1>
             {/* **「各自提店」, not 「一人提一家」 — a contradiction on this very screen** (evaluator,
@@ -113,11 +125,11 @@ export default function App() {
 
                 `擲` is left alone: D108's question about that verb is open on this line as on the
                 round's note, and answering it here would be improvising a ruling. */}
-            <p className="say" data-part="bodyline">
+            <p className="say arrive" style={arrive(1)} data-part="bodyline">
               各自提店，權重一次算清，兩顆骰子擲一次就定案。沒有人要先犧牲，也沒有人要當壞人。
             </p>
 
-            <div className="wx" data-part="weather">
+            <div className="wx arrive" style={arrive(0)} data-part="weather">
               {error ? (
                 <p className="wxnow"><span className="c">{error}</span></p>
               ) : (
@@ -154,7 +166,10 @@ export default function App() {
             </div>
           </div>
 
-          <div className="heroR"><Collage /></div>
+          {/* The collage's own 10 s swap and the halo's 5 s pulse start at rest and are
+              untouched — §1a rule 8, and `YI-9` asserts the ambient set is still the same six
+              periods. */}
+          <div className="heroR arrive" style={arrive(2)}><Collage /></div>
         </div>
 
         {/* **The foot — footnote + act as one group, INSIDE the column** (甲's change 1a,

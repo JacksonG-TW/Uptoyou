@@ -255,6 +255,57 @@
      it (`BF-1`). */
 }
 
+/* ═══ 乙 · the arrival ════════════════════════════════════════════════════════════════════════
+   `spec-motion-arrival-2026-09-11.md` §1a. The owner 「動態感太少」 reversed `design.md` §5's
+   「no entrance animation on a block」; the other two thirds of that sentence stand — nothing
+   scroll-triggered, nothing springy.
+
+   **All eight of §1a's rules are here rather than spread across five screens**, so each gate line
+   has one thing to read:
+
+   1. **Once per mount.** A CSS animation runs when its element mounts and a re-render does not
+      restart it. Nothing in the TypeScript schedules this, so there is no state a chip toggle or a
+      proposal can disturb (`YI-2`).
+   2. **Transform and opacity only, zero layout shift** — `translateY(12px)` and `opacity: 0` to
+      the resting state. Every box is where it will rest from the first frame (`YI-4`), which is
+      D91's zero-shift clause applied to a screen it was not written for.
+   3. **`--t-flood` (450 ms), `ease-out`.** No fourth duration token; the set stays three.
+   4. **The 90 ms step, and it is written ONCE in the whole stylesheet** (`YI-10` greps for a
+      seventh loose value). Ruled, not tasted: four blocks finish at 450 + 3 × 90 = 720 ms, which
+      is D111's own 700 ms beat. A group that cannot finish inside one beat has too many blocks,
+      and the fix is fewer blocks rather than a faster step.
+   5. **`backwards`, not `both`, and this is the line that protects `YI-1`.** With `both` the
+      element keeps the end keyframe for ever — which means it keeps a `transform`, and an element
+      holding a transform keeps its own compositing layer, where CJK glyphs antialias differently
+      from the same text in normal flow. 首頁's settled frame is pinned by `A0c` against the
+      owner-approved page, so that is a resting-pixel change and a defect, not a style. With
+      `backwards` the `from` keyframe applies during the delay only and the element returns to its
+      own styles when the animation ends — and the `to` keyframe is written to equal them, so there
+      is nothing to flash.
+   6. **State correctness never waits for it.** Opacity does not intercept clicks, so the first
+      control answers a press in the first frame (`YI-6`); nothing here gates a state.
+   7. **Reduced motion: the end state, instantly, no stagger** (`YI-5`). Information is never what
+      is removed.
+   8. **No loop is added.** This is a one-shot `animation` with no `infinite`; the ambient set is
+      untouched (`YI-9`).
+
+   **Never on anything that renders in response to an action** — errors, refusals, the 409,
+   `tonight-breadth` (`YI-3`). That is not enforceable from a stylesheet, so it is enforced by
+   where `.arrive` is applied, and it is applied to no element that appears because something
+   happened. **A refusal that fades in has not refused anything yet.** */
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+.arrive {
+  animation: arrive var(--t-flood) ease-out backwards;
+  /* The only new number in the stylesheets. */
+  animation-delay: calc(var(--arrive-step, 0) * 90ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive { animation: none; }
+}
+
 /* ═══ §5 質感 · the ACT — this surface's one primary control ═══════════════════════════════════
    Owner-ruled 2026-08-20 (option 乙): the pinned BAR is retired and the act moves inline into each
    composition. One class, three carriers — home, round, reveal — so the three cannot drift into

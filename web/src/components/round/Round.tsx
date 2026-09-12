@@ -5,6 +5,7 @@ import {
 } from '@/lib/round'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { arrive } from '@/lib/motion'
 import {
   CATEGORIES, fetchPreferences, postPreference,
   type Preferences,
@@ -46,6 +47,25 @@ const MENU_SECTIONS = [
     values: CATEGORIES.filter((c) => !HOT.includes(c) && !LIGHT.includes(c)),
   },
 ]
+
+/**
+ * 乙's stagger step per chip row — `spec-motion-arrival-2026-09-11.md` §2.
+ *
+ * **Reading order across the whole menu, capped at six steps.** Past six the stagger outruns §1a
+ * rule 4's one beat, so rows seven and after share the sixth step: the thirteen rows finish at
+ * 450 + 5 × 90 = 900 ms rather than at 450 + 12 × 90 = 1,530, which would be two beats and a
+ * loading spinner wearing a costume.
+ *
+ * **Computed from `MENU_SECTIONS`, not typed**, so adding a category or moving one between
+ * sections cannot leave a hand-kept step list disagreeing with the order on screen — the same
+ * argument the engine's contributor register makes one directory over. The index runs across
+ * sections because a reader reads across them; each section restarting at 0 would make three
+ * groups arrive in parallel and read as three screens.
+ */
+const ARRIVE_CAP = 5
+const CHIP_STEP: Record<string, number> = Object.fromEntries(
+  MENU_SECTIONS.flatMap(({ values }) => values).map((c, i) => [c, Math.min(i, ARRIVE_CAP)]),
+)
 
 /**
  * A4 — the round screen: open, propose, roll.
@@ -372,7 +392,14 @@ export default function Round() {
                   <li key={c}>
                     <button
                       type="button"
-                      className="chip"
+                      /* 乙 §2 — the row arrives at its own place in the menu's reading order.
+                         **On the row, not on the `<li>`**: the row is what a person sees arrive,
+                         and `.chip` is the box whose transform the gate measures. Once per mount,
+                         so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
+                         press in the first frame, because opacity does not intercept clicks
+                         (`YI-6`). */
+                      className="chip arrive"
+                      style={arrive(CHIP_STEP[c] ?? ARRIVE_CAP)}
                       data-part="tonight-chip"
                       data-on={on ? 'yes' : 'no'}
                       aria-pressed={on}
@@ -550,7 +577,10 @@ export default function Round() {
         </ul>
       )}
 
-      <section className="poolBlock" data-part="pool">
+      {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
+          row is a loading spinner wearing a costume (the spec's words). It takes the step after
+          the menu's cap, because it is the last thing on the screen in reading order. */}
+      <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
         <h2 className="roundH">這一輪的名單</h2>
         {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
             (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).

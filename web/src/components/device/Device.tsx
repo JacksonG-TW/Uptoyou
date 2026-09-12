@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { device, doorHref, remember, verify, type Device } from '@/lib/round'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { arrive } from '@/lib/motion'
 
 /**
  * A4 — the device screen. The one place a person types, and the only place they may.
@@ -142,16 +143,24 @@ export default function DeviceScreen() {
           three-way). **Nothing is added that was not already on the screen** — the eyebrow is the
           one new element and it carries one word. The parts are set the way the home sets its own,
           so the two doors read as one building. */}
-      <p className="eyebrow"><em>★</em>入座</p>
+      {/* 乙 §2 — 裝置 has two blocks: the instruction (0), then the act (1). The eyebrow, the
+          title and the lead are the instruction and share step 0, the same way 首頁's appetite
+          block does: one step, no wrapper. */}
+      <p className="eyebrow arrive" style={arrive(0)}><em>★</em>入座</p>
       {/* **Two lines, and the second is the sentence the note used to end with** (§3's copy
           accounting: every clause of the old note survives somewhere). Serif 900 — the display
           face, the same one the home's headline uses. */}
-      <h1 className="deviceTitle">
+      <h1 className="deviceTitle arrive" style={arrive(0)}>
         <span>貼上鑰匙</span><span className="lit">這台裝置就是你的座位</span>
       </h1>
-      <p className="deviceLead">鑰匙由開圈子的人給你。</p>
+      <p className="deviceLead arrive" style={arrive(0)}>鑰匙由開圈子的人給你。</p>
 
-      <form className="deviceForm" onSubmit={(e) => void submit(e)}>
+      {/* **The form arrives; `deviceErr` inside it does not, and it does not need to.** §1a rule
+          5 keeps arrival off anything that answers what just happened — and the error only exists
+          after a submit, by which time this animation finished long ago. So the refusal appears in
+          the frame it becomes true (`YI-3`) without a second rule to remember. Opacity does not
+          intercept clicks either, so both fields take input from the first frame (`YI-6`). */}
+      <form className="deviceForm arrive" style={arrive(1)} onSubmit={(e) => void submit(e)}>
         <label className="deviceField">
           <span>圈子編號</span>
           <Input

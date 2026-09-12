@@ -493,6 +493,38 @@
   color: var(--color-hot-ink);
   transform: rotate(-4deg);
 }
+/* ── 乙 §3 · the sign act lands ───────────────────────────────────────────────────────────────
+   `spec-motion-arrival-2026-09-11.md` §3, owner 「1」. The one gesture a member performs to say
+   *we are going* was a 120 ms cross-fade; it now inks over `--t-flood`.
+
+   **The keyframes never mention `transform`**, so `.sealSigned`'s `rotate(-4deg)` holds unchanged
+   for all 450 ms. That is §3's 「no rotation sweep」 expressed as an absence rather than as a
+   duplicated angle: the -4deg is where the stamp rests, and a keyframe restating it is a second
+   copy of a ruled number waiting to disagree with the first.
+
+   **`backwards`, so the LANDED FRAME IS TODAY'S** (`YI-8`). The animation holds nothing after it
+   ends — the element returns to `.sealSigned`'s own declarations, and the `to` keyframe is written
+   to equal them, so there is no flash and no persisting compositing layer.
+
+   `border-style` cannot tween, and it does not need to: a discrete property flips at the midpoint
+   of a CSS animation, which is exactly 「dashed → solid」. Both halves of the state change are in
+   one animation rather than in a transition, because a transition would also fire on any later
+   restyle of this element and §1a rule 1 is *once*. */
+@keyframes sealLand {
+  from { border-style: dashed; border-color: currentColor; background: transparent; }
+  to   { border-style: solid;  border-color: var(--color-paper); background: var(--color-paper); }
+}
+.reveal .sealLand { animation: sealLand var(--t-flood) ease-out backwards; }
+/* The nickname inks with the ground. **Opacity only and no slide** — `.arrive`'s 12 px would be a
+   sixth of the seal's own 80 px box, so the mark would visibly travel inside the stamp, which is
+   the 「no sweep」 rule in another direction. */
+@keyframes sealInk { from { opacity: 0; } to { opacity: 1; } }
+.reveal .sealLand .sealName { animation: sealInk var(--t-flood) ease-out backwards; }
+@media (prefers-reduced-motion: reduce) {
+  /* The landed state, instantly — `YI-5`, and nothing is removed. */
+  .reveal .sealLand, .reveal .sealLand .sealName { animation: none; }
+}
+
 /* **The nickname is NOT set in the display face, and the spec asked for it — flagged, with the
    measurement.** `UpTo Serif` ships **ten glyphs** (`什今吃天子定決讓骰麼`), because D101 derives
    that face from the copy the stylesheets set in it, and a derivation cannot know a nickname: it is

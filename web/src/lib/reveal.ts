@@ -210,16 +210,33 @@ export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
  * losing signer's screen identical to the winner's rather than a second rendering of the same
  * fact. D68's shape — the loser gets what it lost — applied to a table that already holds it.
  */
-export async function signTrip(d: Device, roundId: number): Promise<Trip> {
+/**
+ * **`created` says whether THIS device's press is what signed it**, and 乙 §3 is why it exists.
+ *
+ * D106 makes 201 and 409 the same success from the member's side — either way the trip is signed
+ * and the screen must show it — so this function returned only the trip and the caller could not
+ * tell the two apart. The sign act's 450 ms landing may only play on 201: on a 409 someone else
+ * signed first, **the trip line is already true and belongs on screen instantly** (§1a rule 5 — a
+ * refusal or a fact that fades in has not happened yet). Without this flag the animation would
+ * play on both, which is the one case §3 names as proving the rule is not decoration.
+ *
+ * It answers the reload too, and that is the third case neither status covers: a trip already in
+ * the payload was signed before this screen existed, so nothing lands. That path never calls this
+ * function, so `created` is simply never set — the default is *do not animate*, which is the safe
+ * direction for a rule about things that must not move.
+ */
+export async function signTrip(
+  d: Device, roundId: number,
+): Promise<{ trip: Trip; created: boolean }> {
   const r = await fetch(`/api/rounds/${roundId}/trip`, {
     method: 'POST',
     headers: { authorization: `Bearer ${d.token}` },
   })
   if (r.status === 201 || r.status === 200) {
     const body = await r.json().catch(() => ({}))
-    return body.trip ?? null
+    return { trip: body.trip ?? null, created: true }
   }
-  if (r.status === 409) return (await fetchReveal(d, roundId)).trip
+  if (r.status === 409) return { trip: (await fetchReveal(d, roundId)).trip, created: false }
   const body = await r.json().catch(() => ({}))
   throw new Error(body.detail || `簽不上（${r.status}）`)
 }

@@ -4,7 +4,7 @@ import Board from './Board'
 import Evidence from './Evidence'
 import Field from './Field'
 import Pairs from './Pairs'
-import { m, useReducedMotion } from '@/lib/motion'
+import { arrive, m, useReducedMotion } from '@/lib/motion'
 import {
   device, evidenceIn, faceOf, fetchRaw, signTrip,
   type Device, type Evidence as EvidenceData, type MemberReveal, type Trip,
@@ -257,6 +257,16 @@ export default function Reveal({ roundId }: { roundId: number }) {
    */
   const [counts, setCounts] = useState<Preferences | null>(null)
   const [signing, setSigning] = useState(false)
+  /**
+   * 乙 §3 — **whether the seal LANDS, which is not the same question as whether it is signed.**
+   *
+   * Set only when this device's press returned 201. A 409 (someone else signed first, D106) and a
+   * trip that arrived in the payload both show the same signed seal with no landing: they are
+   * facts that are already true, and §1a rule 5 keeps motion off anything that answers what just
+   * happened. **Default false**, so every path that is not an act this person performed gets the
+   * still frame without having to remember to ask for it.
+   */
+  const [sealLanded, setSealLanded] = useState(false)
   const reduce = useReducedMotion()
   /** Which row the sweep is lighting, or `null`. A place id, never an index — the row order is the
    *  pool's and an index would silently re-point if it ever changed. */
@@ -575,7 +585,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
     if (!dev || signing) return
     setSigning(true)
     try {
-      setTrip(await signTrip(dev, roundId))
+      const { trip: signed, created } = await signTrip(dev, roundId)
+      setTrip(signed)
+      /* Only a 201 is an act this person just performed — see `sealLanded`. */
+      if (created) setSealLanded(true)
     } catch (e) {
       setError((e as Error).message || '簽不上')
     } finally {
@@ -792,8 +805,22 @@ export default function Reveal({ roundId }: { roundId: number }) {
           {trip ? (
             /* D106 — the trip is named; the proposal it came from never is. The nickname is the
                one the wire carries, and it is the only member identity this screen keeps. */
-            <p className="sealRow" data-part="trip">
-              <span className="seal sealSigned">
+            /* 乙 §3 — **the rite's ending, and the only thing this spec adds to 開獎.** The act a
+               member performs to say *we are going* was a 120 ms opacity cross-fade: the flattest
+               moment in the product was its most meaningful one. Now the seal inks over
+               `--t-flood` — border dashed → solid, ground filling paper — and 「說這一餐去了」
+               follows one stagger step behind it, so the pair reads as cause then consequence
+               rather than as one block appearing.
+
+               **Ink only. No scale, no bounce, no rotation sweep:** the keyframes never mention
+               `transform`, so `.sealSigned`'s own `rotate(-4deg)` holds from the first frame to the
+               last. That angle is where the stamp RESTS, not something it turns into — a stamp that
+               spins on landing is the animation performing an act the hand did not (§質感 rule 2:
+               a stamp inks, it does not shrink).
+
+               **`sealLanded`, never `trip`.** The seal is signed on three paths and lands on one. */
+            <p className="sealRow" data-part="trip" data-landed={sealLanded ? 'yes' : undefined}>
+              <span className={sealLanded ? 'seal sealSigned sealLand' : 'seal sealSigned'}>
                 {/* **Vertical for a name with CJK in it, horizontal for an all-Latin one**
                     (evaluator-ruled 2026-08-20). `vertical-rl` sets CJK top-to-bottom, which is
                     what a seal does; it rotates Latin 90 degrees, and **a rotated word is not a
@@ -810,7 +837,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
                   {trip.nickname}
                 </span>
               </span>
-              <span className="sealSaid">說這一餐去了</span>
+              {/* One stagger step behind the seal — and it borrows `.arrive` rather than
+                  declaring its own delay, so the 90 ms still appears exactly once in the
+                  stylesheets (`YI-10`). Nothing on a 409: the sentence is already true. */}
+              <span
+                className={sealLanded ? 'sealSaid arrive' : 'sealSaid'}
+                style={sealLanded ? arrive(1) : undefined}
+              >說這一餐去了</span>
             </p>
           ) : (
             <button
