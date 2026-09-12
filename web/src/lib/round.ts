@@ -156,8 +156,13 @@ export async function roll(d: Device, roundId: number): Promise<void> {
  *
  *  **It carried A19's `ingredient_data` until 2026-08-30** and no longer does: the ingredient kind
  *  was withdrawn wholesale (`spec-return-choice.md`) and backend dropped the field from all three
- *  wires. A name and an id is the whole row again. */
-export type Pooled = { place_id: number; name: string }
+ *  wires. A name and an id is the whole row again.
+ *
+ *  **`name` is nullable, and here it can go null TWO ways** — `rounds.py:205` sends
+ *  `names.get(body.place_id)`, so it is `null` both when `compose_names` could not compose a name
+ *  (the branch `Candidate` above documents) and when the id is simply absent from that map. The
+ *  second is the cheaper one to reach and neither has a symptom other than a blank row. */
+export type Pooled = { place_id: number; name: string | null }
 
 /** The four event shapes as the server actually publishes them, captured off the wire rather than
  *  read off the router — `round_opened` nests its payload under `round`, `pooled` under `place`,

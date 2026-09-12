@@ -13,7 +13,26 @@
  */
 
 /** `place_id` → the name the API composed (D92's three layers). Keys are strings on the wire. */
-export type Places = Record<string, string>
+/**
+ * The pool's composed names, keyed by place id **as a string** (the cells in `board` are ints —
+ * BD-12 pins that asymmetry, and `String(cell)` is the join).
+ *
+ * **The values are nullable for the same reason `Candidate.name` and `Pooled.name` are**, and this
+ * one was not in the note that started the pair: `api_common.py:515` builds it as
+ * `{key: value["name"] for key, value in display.items()}`, and `value["name"]` is exactly the
+ * field `compose_names` returns `None` for when a reference place's registry number is in no
+ * publication the database still holds. So all three client types that carry a composed name carry
+ * the same hole, from the same line, and typing one of them would be the failure I flagged to
+ * backend an hour earlier — a note naming one of several nulls is how the rest reach a screen.
+ *
+ * Nothing here changes behaviour: React renders `null` as nothing, which is what happens today.
+ * **What a member should see for a place we cannot name is product copy and is still unruled** —
+ * the blank-row question, parked with the orchestrator.
+ *
+ * Worth passing back to backend: `_result_body`'s own signature says `names: dict[int, str]`,
+ * which is the same overclaim this type just lost.
+ */
+export type Places = Record<string, string | null>
 
 /** D106: the trip is named. One per round, and the proposal it beat is still anonymous. */
 export type Trip = { nickname: string; signed_at: string } | null
