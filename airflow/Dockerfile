@@ -11,11 +11,17 @@ FROM apache/airflow:3.0.2
 # exists because H1 forbids a synchronous driver anywhere near this project. Installing 2.0
 # into Airflow's own environment would break Airflow. A venv keeps both true, and it is the
 # arrangement Airflow documents for exactly this case.
+#
+# **`pyarrow` joins them for the dataset export (2026-09-12).** pyarrow 25.0.1, **Apache-2.0**,
+# requires Python >= 3.10 — PyPI, read 2026-09-12. It lives **here and not in the api image**: the
+# wheel is 50.1 MB compressed and the serving image is 287 MB, so it would grow the thing the box
+# pulls and serves from by roughly half, for a library the server never imports. This image is
+# 2.57 GB, where the same library is under 6%.
 COPY --chown=airflow:root api/requirements.txt /opt/upto/requirements.txt
 RUN python -m venv /opt/upto/venv \
     && /opt/upto/venv/bin/pip install --no-cache-dir --upgrade pip \
     && /opt/upto/venv/bin/pip install --no-cache-dir \
-         "sqlalchemy[asyncio]==2.0.43" "asyncpg==0.30.0"
+         "sqlalchemy[asyncio]==2.0.43" "asyncpg==0.30.0" "pyarrow==25.0.1"
 
 ENV UPTO_PYTHON=/opt/upto/venv/bin/python \
     UPTO_SRC=/opt/upto/src \

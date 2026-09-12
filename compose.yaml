@@ -414,6 +414,11 @@ services:
     image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
+      # **`target` is not optional here and this service is why.** `migrate` shares `api`'s image
+      # TAG, and a multi-stage build with no target builds the LAST stage — so without this line
+      # `docker compose build migrate` would tag the pyarrow-carrying test stage as
+      # `upto-api:latest` and the serving image would silently grow by half.
+      target: api
     environment:
       UPTO_BOOTSTRAP: "1"
       UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -459,6 +464,9 @@ services:
       - data
     build:
       context: ./api
+      # The stage carrying pyarrow — the dataset export's test writes a real Parquet and reads it
+      # back, and the serving image must not grow by half for a library it never imports.
+      target: tests
     environment:
       # The owner. Alembic and `create database` need it; nothing served does.
       UPTO_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -489,6 +497,7 @@ services:
     image: ${UPTO_IMAGE_PREFIX:-${COMPOSE_PROJECT_NAME:-upto}-}api:${UPTO_IMAGE_TAG:-latest}
     build:
       context: ./api
+      target: api
     environment:
       # Async driver end to end (H1): a synchronous driver blocks the event loop, and
       # while it is blocked nobody is served — not the other four people in the room,

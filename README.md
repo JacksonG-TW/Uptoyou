@@ -356,7 +356,7 @@ of this measures the fetch / parse / store split, because nothing records it.
 - **Every source is proven idempotent, not assumed.** Each one runs through its real command-line
   entry point twice and every column of every table is compared. A no-change day is a recorded
   outcome.
-- **68 test files**, in two tempos: host-side with no network and no database, and build-and-drop
+- **70 test files**, in two tempos: host-side with no network and no database, and build-and-drop
   tests that build their own database in the one service holding the owner's credential. Every
   commit also passes six local gates in a pre-commit hook, five of them standard-library only, so a
   clone needs no toolchain to commit.
