@@ -42,6 +42,14 @@ APP=$(cd "$HERE/.." && pwd)              # <clone>  — `app/`'s contents ARE th
 LOCK=${DEPLOY_LOCK:-/tmp/upto-pull-deploy.lock}
 say() { echo "$(date -u +%FT%TZ) pull-deploy: $*"; }
 
+# The database's own answer, or a word saying why there is none. **Never empty** — a blank in the
+# deploy log reads as «it printed nothing», which is the state this is here to distinguish from.
+_schema_revision() {
+    found=$(docker compose exec -T db psql -U "${POSTGRES_USER:-upto}" -d "${POSTGRES_DB:-upto}" \
+        -t -A -c 'select version_num from alembic_version' 2>/dev/null | tr -d ' \r\n') || found=""
+    if [ -n "$found" ]; then echo "$found"; else echo "(could not be read)"; fi
+}
+
 # **One at a time.** A build on a small instance can outlast the timer's period; two overlapping
 # runs would fight over the image tags and the containers. `flock` is in util-linux and is on the
 # AMI; if it is ever absent this exits rather than running unguarded.
@@ -91,6 +99,36 @@ fi
 say "moved $before -> $after"
 git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
 
+# **⚠️ THE SCRIPT RUNNING IS THE ONE FROM BEFORE THE PULL — H85, measured 2026-09-11.** The shell
+# read this file at exec time; `git pull` has just replaced it on disk, and nothing re-reads it. So
+# a deploy that changes the deploy's own steps runs the OLD steps against the NEW compose file, and
+# **the script cannot warn about a step it does not yet have**.
+#
+# That is not hypothetical: candidate 14's copy of this file had no `run --rm migrate` step,
+# because on 14 the schema ran inside `up`. It pulled 15+16+17, whose compose puts `migrate` behind
+# the bootstrap profile, so `up` started no migrate, the database stayed one revision back, the new
+# api's startup guard exited 3 on every restart exactly as designed, and the proxy waited on an api
+# that never came up. **Ten minutes of 521 from a correct guard doing its job**, because the thing
+# that should have migrated was a step in a file that had not run yet.
+#
+# **So this refuses rather than deploying half a boot.** `deploy/` changing means the instructions
+# changed, and the instructions that changed are not the ones in memory. The diff is printed so the
+# operator can see what is owed, and the next run — from the new file — proceeds normally.
+#
+# **Rejected: re-exec'ing from the pulled file.** It fixes this case and opens a worse one — a
+# pulled script with a bug takes out the deploy path itself, and D59 leaves this box no other way
+# in. A refusal keeps the box serving what it has and asks for a person; a bad re-exec leaves
+# nothing running and nobody able to reach it.
+if ! git diff --quiet "$before" "$after" -- deploy/; then
+    say "REFUSING: this deploy changes the deploy itself."
+    git --no-pager diff --stat "$before" "$after" -- deploy/ | sed 's/^/    /'
+    say "         The script that just ran is the one from $before — it cannot perform a step it"
+    say "         does not have. Nothing was pulled into the stack and nothing was restarted;"
+    say "         the clone IS now at $after, so run this once by hand and the next tick is normal:"
+    say "             $HERE/pull-deploy.sh --once"
+    exit 5
+fi
+
 # **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the research is in
 # the private repository, `idea & img/research/ghcr-research.md`). It built its own images until then, and on
 # 2026-09-05 that wedged it for twelve hours — `npm ci` and a Vite build on a swapless 2 GB instance
@@ -125,8 +163,14 @@ docker compose pull --quiet
 # exits, and `set -e` means a failed migration stops this deploy here — nothing is recreated, and
 # the box keeps serving the version it has. `alembic upgrade head` is idempotent, so on a deploy
 # that changed no schema this prints its two lines and costs a few seconds.
+# **The revision is said out loud, before and after.** It scrolled out of the log during the
+# 2026-09-11 incident and the one question nobody could answer from the tail was «did the schema
+# move». A deploy log that does not name the revision cannot tell a migration that ran from one
+# that was never started.
 say "applying migrations (once, before the stack moves)"
+say "  schema before: $(_schema_revision)"
 docker compose run --rm migrate
+say "  schema after:  $(_schema_revision)"
 
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
 # as the containers are created, and a container that dies on its healthcheck is discovered by a
