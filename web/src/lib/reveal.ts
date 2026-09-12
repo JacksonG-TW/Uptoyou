@@ -51,6 +51,25 @@ export type MemberReveal = {
    *  from it; a parenthesis appearing here is a defect, and so is this string appearing on a list
    *  row, where the composed name already carries the bracket. */
   winner_qualifier: string | null
+  /**
+   * The 36 outcomes as the server drew them — **`board[die1 − 1][die2 − 1]` is that cell's
+   * `place_id`**, row = the first die, column = the second, both 1…6 from the top left. Candidate
+   * 17 (`e603936`), `spec-board-2026-09-11.md` §2.
+   *
+   * **Nested, not flat, and that is the point of the field.** A flat 36 makes the client compute
+   * `(die1 − 1) * 6 + (die2 − 1)`, and a client that writes the two the other way round gets a
+   * board that renders perfectly and puts the wrong shop under the rolled pair — wrong, plausible,
+   * and invisible unless somebody checks a cell against the winner. Nested, the ruling's own
+   * sentence IS the access expression.
+   *
+   * **The cells are plain ints and `places` is keyed by strings**, so a name is
+   * `places[String(cell)]` (BD-12 pins the asymmetry so a client does not discover it twice).
+   *
+   * **`undefined` is a real state and means draw nothing**: a swept pool has no honest draw, so
+   * the field is absent rather than an empty array (§5). Never a grey grid in its place — an even
+   * grid reads as «everyone had the same chance», which is a false statement (D112).
+   */
+  board?: number[][]
   /* **`ingredient_data` and `my_reasons` left `MEMBER_KEYS` on 2026-08-30**
    *  (`spec-return-choice.md` §1). The first said `declared`/`unknown` per pooled place and the
    *  second carried this reader's own veto sentences; the ingredient kind is withdrawn, so neither

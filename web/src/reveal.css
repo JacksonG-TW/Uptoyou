@@ -603,6 +603,99 @@
    the check failed the commit — the same rule that kept them here now sends them away. The ruling
    they carry, and the measurements behind it, moved with them whole. */
 
+/* ─── the member's 36-cell board (`spec-board-2026-09-11.md`, owner's three 「1」) ──────────────
+   A 6×6 grid, one cell per outcome, in its place's face colour; a legend of colour → name beneath;
+   one authored line above. **No count, no share, no percentage anywhere**, which is the ruling.
+
+   It fades in over `--t-flood` after the answer block and its one cell lights after it — the
+   sequence's own timers set `boarded` and `boardLit`, so nothing here delays anything. */
+/* **The same width rule its two siblings use, and that is why there is no new number here.**
+   `.pairs` and `.commit` are both `min(1200px, 88vw)`; the board was left at the region's full
+   width and at 430 its first column and the note sat flush against the viewport's left edge while
+   the paper panel above them was properly inset — measured, not guessed. */
+.reveal .board {
+  margin-top: 24px;
+  width: min(1200px, 88vw);
+  /* **24px is `.pairs`' own horizontal padding, so the grid's left edge lands on the paper
+     panel's content edge rather than on the viewport.** The region itself has no side gutter at
+     430 — `.pairs` is at x=0 too and buys its inset with this padding, and `.commit` gets away
+     without it by centring its text. A left-aligned grid does not, and measured at 430 the first
+     column and the note sat flush against the screen edge. */
+  padding-inline: 24px;
+  box-sizing: border-box;
+}
+.reveal .boardNote { font-size: var(--text-note); opacity: .7; margin: 0 0 10px; }
+/* `opacity` and nothing else, so the arrival costs no layout and every cell is where it will rest
+   from the first frame. */
+.reveal .board { animation: boardIn var(--t-flood) ease-out both; }
+@keyframes boardIn { from { opacity: 0 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .reveal .board { animation: none; } }
+
+.reveal .boardGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  width: min(100%, 288px);
+}
+.reveal .boardCell {
+  aspect-ratio: 1;
+  /* **Every cell carries a `currentColor` edge, and it is not decoration.** At the gated width
+     this region sits ON the flood (`.pairs`/`.evidence` take `color: inherit` in the wide
+     breakpoint, FL-1), and the flood IS the winning place's own face — so the winner's twelve
+     cells are the colour of the ground behind them. Measured on a jade win: `rgb(0, 168, 112)` on
+     `rgb(0, 168, 112)`, contrast 1.00. Without the edge the winner's run — the one a member is
+     looking for — is the one run that disappears. The same collision is live and unfixed in
+     `ALLOC36` one component over; it is frozen by 甲's spec and reported to the evaluator rather
+     than changed here. */
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}
+.reveal .boardCell[data-face="hot"]    { background: var(--color-hot); }
+.reveal .boardCell[data-face="cobalt"] { background: var(--color-cobalt); }
+.reveal .boardCell[data-face="jade"]   { background: var(--color-jade); }
+.reveal .boardCell[data-face="sun"]    { background: var(--color-sun); }
+/* **A cell whose place is not in the legend is made loud rather than blank** (BD-11): that is a
+   payload bug, and a blank tile reads as a styling one. Diagonal hatching in the flood's own ink,
+   so it cannot be mistaken for a fifth face. */
+.reveal .boardCell[data-unknown="yes"] {
+  background: repeating-linear-gradient(45deg,
+    currentColor 0 2px, transparent 2px 5px);
+  outline-color: currentColor;
+}
+/* **The lit cell lights by OUTLINE and its fill is untouched** (BD-4) — a recoloured cell would
+   read as «that cell's shop changed». It has to be unmistakably different from the 1px edge every
+   cell already wears, so it is 3px, solid, and sits OUTSIDE the cell with an offset: at a glance
+   it is a ring around one square rather than a slightly darker square. */
+.reveal .boardCell[data-lit="yes"] {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+  /* Above its neighbours, or the next cell's own edge clips the ring's inner side. */
+  position: relative;
+  z-index: 1;
+}
+
+.reveal .boardLegend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: var(--text-note);
+}
+.reveal .boardLegend li { display: flex; align-items: center; gap: 8px; }
+/* The swatch takes the same edge as a cell and for the same reason — on its own flood it would
+   otherwise be a hole. */
+.reveal .boardSwatch {
+  width: 12px; height: 12px; flex: 0 0 12px;
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+}
+.reveal .boardSwatch[data-face="hot"]    { background: var(--color-hot); }
+.reveal .boardSwatch[data-face="cobalt"] { background: var(--color-cobalt); }
+.reveal .boardSwatch[data-face="jade"]   { background: var(--color-jade); }
+.reveal .boardSwatch[data-face="sun"]    { background: var(--color-sun); }
+
 /* ── the operator's evidence (D105, §4b) ────────────────────────────────────
    Appends below the answer region. Nothing above it moves when it is present. */
 
@@ -638,6 +731,18 @@
   flex: 0 0 auto;
 }
 .reveal .allocCell { border: 1.5px solid var(--color-ink); }
+/* **The winning face's cells are the colour of the ground behind them, so every cell carries a
+   `currentColor` edge** — evaluator-ruled 2026-09-12 after the 甲 gate (`gate-jia-bars-2026-09-12.md`),
+   reproduced independently on its own round: the grid's ground is `rgb(0, 168, 112)` on a jade win
+   and 14 of 36 cells are `rgb(0, 168, 112)`. **It is not jade-specific — the winner's face IS the
+   flood's face, so the run that disappears is always the winner's**, which is the one a reader is
+   looking for. 1440 only: at 900 and 430 the grid keeps a paper ground and nothing collides.
+
+   §3 of the 甲 spec freezes ALLOC36 「exactly as it is」, and the evaluator's ruling is that what
+   that froze is the figure's **data and geometry** — 6×6, ≥36 px cells, the round's real
+   allocation, no 「示意」 caveat — and never a licence to keep a run nobody can see. None of those
+   move here: `outline` takes no layout at all, so the cells are the same size and the same 36. */
+.reveal .allocCell { outline: 1.5px solid currentColor; outline-offset: -1.5px; }
 /* Option C — the run boundary. The same 2 px ink edge the collage and the fields already use, so
    no new colour and no contrast measurement. It marks where one place's run ENDS and the next
    begins, which is the reading the colour cycle destroys above four places. */

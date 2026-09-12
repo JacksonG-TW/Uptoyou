@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Die, { SEQUENCE_MS } from './Die'
+import Board from './Board'
 import Evidence from './Evidence'
 import Field from './Field'
 import Pairs from './Pairs'
@@ -108,6 +109,22 @@ const HOLD_MS = 1000
  */
 const FLOOD_AFTER_STAGED_MS = 900
 const ANSWER_AFTER_STAGED_MS = 1400
+/**
+ * ④ and ⑤ — the member's board, `spec-board-2026-09-11.md` §3.
+ *
+ * **Measured from `staged` like the two above, because this screen has one clock.** The file's own
+ * rule: the offsets are from `staged` and nothing hangs off `landed`. Two more offsets in the same
+ * family cost nothing to read; two timers chained off `answered` would be a second sequence whose
+ * relationship to the first nobody could state.
+ *
+ * **The arithmetic, so neither number is a taste:** the answer rises at 1400 over its own 600 ms,
+ * so the board begins at **2000** — as the answer finishes, never during it (D91: the animation
+ * must not assert the result before the result exists). The board fades over `--t-flood` (450 ms),
+ * so the cell lights at **2450**, after the board rather than with it — «a cell lighting while the
+ * name is still arriving is the screen answering twice» (§3).
+ */
+const BOARD_AFTER_STAGED_MS = 2000
+const LIT_AFTER_STAGED_MS = 2450
 
 /** **How long a total absence of animation frames means the sequence is not coming.** Not a guess
  *  at how long the dice take — that number is what `RV-19` forbids. Two seconds of *silence* is far
@@ -269,6 +286,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
    *  like `stage >= 'flooded'` on a string union is the kind of ordering nobody can see is wrong. */
   const [flooded, setFlooded] = useState(false)
   const [answered, setAnswered] = useState(false)
+  /** ④ the board is present, ⑤ its one cell is outlined. Separate booleans for the same reason
+   *  `flooded` and `answered` are: each gives the evaluator an attribute to read rather than a
+   *  paint to infer, and reduced motion sets both at once instead of zeroing two delays. */
+  const [boarded, setBoarded] = useState(false)
+  const [boardLit, setBoardLit] = useState(false)
   /** Why the sweep did not run, when it did not. Published on the element for the same reason
    *  `landedBy` is: an absent effect and a broken effect look identical in a recording. */
   /** **`too-many-rows` is gone with the equal-dwell rule it belonged to.** The slot machine's
@@ -502,7 +524,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
     // **Reduced motion applies all three at once, instantly** (evaluator's ruling, 2026-08-26):
     // there is no tumble to separate them from and no sequence to read, so the end state is the
     // whole animation — §5 rule 3's 「the end states still apply」.
-    if (landedBy === 'reduced') { setStaged(true); setFlooded(true); setAnswered(true); return }
+    // The board and its lit cell are part of the end state, so reduced motion gets both — §3:
+    // 「nothing is removed». BD-9 measures exactly that.
+    if (landedBy === 'reduced') {
+      setStaged(true); setFlooded(true); setAnswered(true)
+      setBoarded(true); setBoardLit(true)
+      return
+    }
     // **The beat runs from composed stillness, so it is `HOLD_MS` on the screen and not
     // `HOLD_MS` plus whatever the instrument cost.** Clamped at zero: if confirming took longer
     // than the whole beat the answer is *stage now*, never *stage in the past*.
@@ -521,6 +549,27 @@ export default function Reveal({ roundId }: { roundId: number }) {
     const b = window.setTimeout(() => setAnswered(true), ANSWER_AFTER_STAGED_MS)
     return () => { window.clearTimeout(a); window.clearTimeout(b) }
   }, [staged, answered])
+
+  /**
+   * ④ and ⑤ — the board, then its one cell. **Its own effect, and that is a correction rather
+   * than a style: both of its offsets are LATER than `answered`.**
+   *
+   * Putting them in the effect above cost the board entirely, measured on the built page: that
+   * effect lists `answered` in its deps and returns early once it is true, so `answered` flipping
+   * at 1400 re-ran it, the cleanup cleared every timer it had set, and the 2000 ms one never
+   * fired. `stage` read `answered` and `.under` held only the pairs and the commitment — a
+   * component that was correct, wired, type-checked and simply not there.
+   *
+   * So the guard is `boardLit` — the LAST thing this effect sets — and the deps are `staged` and
+   * that. It runs once per staging and stops itself. Same clock as ② and ③ (offsets from
+   * `staged`), same cleanup discipline: a second roll cannot leave the first one's timers alive.
+   */
+  useEffect(() => {
+    if (!staged || boardLit) return
+    const c = window.setTimeout(() => setBoarded(true), BOARD_AFTER_STAGED_MS)
+    const d = window.setTimeout(() => setBoardLit(true), LIT_AFTER_STAGED_MS)
+    return () => { window.clearTimeout(c); window.clearTimeout(d) }
+  }, [staged, boardLit])
 
   const sign = useCallback(async () => {
     if (!dev || signing) return
@@ -827,6 +876,18 @@ export default function Reveal({ roundId }: { roundId: number }) {
           the same argument that keeps the revealed seed until the landing. */}
       <div className="under">
       {answered && data && <Pairs rolls={data.rolls ?? []} />}
+      {/* **The board sits with the pairs, and that is where it belongs rather than a free
+          choice.** `.under` is the receipt for the result the left column has just announced —
+          the pairs list says which two dice counted, and the board is the table those two dice
+          index. Reading them in that order is the ruling's own sentence: find your row, find your
+          column, read the colour.
+
+          **`boarded`, not `answered`** (§3): it enters after the answer block, and its cell
+          lights after it in turn. A swept pool and a short board both render nothing here, which
+          is `Board`'s own guard — never a grey grid. */}
+      {boarded && data && (
+        <Board board={data.board} places={data.places} dice={data.dice} lit={boardLit} />
+      )}
 
       {/* ── D108 · the commitment, and the seed that opens it ──────────────────────────────
           **The hash is shown throughout; the seed only once the dice have landed.** The commitment
