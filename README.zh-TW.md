@@ -325,6 +325,8 @@ curl -s localhost:8080/health
 
 **兩個指令。** schema 那一步離開了整套 stack 的開機流程，好讓多個行程不會搶它。migrate 可以重複跑：對一個已經是最新的資料庫跑，它什麼都不會做。
 
+**全新 clone 開起來是空的，然後它自己會長出來。** 第一次參考名單匯入跑完之前沒有任何店家：排程在半夜抓，或是[手動跑](docs/operations.md)。**而店家要等分類回填跑完才會有分類**，那一步需要一台有顯示卡的機器。那是 clone 唯一不會自己抓的東西：沒有顯示卡就會有全部的店家、沒有分類，那是一個可以用的產品，只是有一欄是空的。
+
 `localhost:8080` 是這個 app；API 和資料庫只在 compose 網路裡面連得到。氣象匯入需要一把免費的中央氣象署開放資料金鑰（opendata.cwa.gov.tw），在 init 時讀一次進 Fernet 加密的 Airflow Connection，另外五個開放資料檔案不需要任何憑證。新的排程任務會以**暫停**狀態出現。
 
 手動跑匯入、跑分類回填、跑測試、用血緣工具：[docs/operations.md](docs/operations.md)。

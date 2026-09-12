@@ -433,6 +433,13 @@ curl -s localhost:8080/health
 **Two commands.** The schema step left the stack's boot, so that several instances cannot race it.
 The migrate step is idempotent — run it on a current database and it does nothing.
 
+**A fresh clone comes up empty, and then fills itself.** There are no places until the first
+reference ingest runs — the scheduled job fetches them overnight, or
+[run it by hand](docs/operations.md). **And places carry no category until the classifier backfill
+runs**, which needs a machine with a graphics card. That is the one thing a clone does not fetch for
+itself: without a card you get every place and no categories, which is a working product with one
+column empty.
+
 `localhost:8080` is the app; the API and the database are reachable only over the compose network.
 The weather ingest needs a free CWA Open Data key (opendata.cwa.gov.tw), read once at init into a
 Fernet-encrypted Airflow Connection, and the five open-data files need no credential. New scheduled
