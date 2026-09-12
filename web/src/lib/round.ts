@@ -60,12 +60,33 @@ export async function verify(d: Device): Promise<void> {
   throw new Error(body.detail || `連不上（${r.status}）`)
 }
 
+/**
+ * One typeahead hit. **Both `name` and `name_source` are nullable, and they go null together** —
+ * candidate 19 (`e275dae`), `api_common.compose_names`.
+ *
+ * The branch: a reference place whose registry number is in **no publication the database still
+ * holds** — one that left the source before anything pruned it — has no `base` to compose a name
+ * from, so the API returns `name: null` and, since that fix, `name_source: null` rather than
+ * claiming a `registered` rung it does not have. Unreachable on either host today (dev keeps two
+ * publications and falls back to the older one; the instance deleted the 532 rows that left), and
+ * found by the reviewer reading the branch rather than by running it.
+ *
+ * **`name_source` is typed here and rendered nowhere**, checked across `app/web/src` — the API
+ * composes the name and the format IS the provenance (D92), so no screen states the rung. So
+ * «render the absent case as no rung label» is already true and this half is the type alone.
+ *
+ * **`name` is a different matter and it is NOT fixed here**: it renders as `.hitName`, so a null
+ * one is a blank row in the typeahead. Making the type honest changes no behaviour — React renders
+ * null as nothing, which is what happens today — but what a member should see for a place we
+ * cannot name is product copy, not a type. Sent to the evaluator and the orchestrator as its own
+ * line rather than decided in a types commit.
+ */
 export type Candidate = {
   kind: string
   place_id: number | null
   registry_no: string | null
-  name: string
-  name_source: string
+  name: string | null
+  name_source: string | null
   district: string | null
 }
 
