@@ -179,6 +179,18 @@ async def scenario(test_url: str) -> None:
     check("and all three rungs are exercised, so the sum is not one number",
           set(rungs) == {"sign", "brand", "registered"}, rungs)
 
+    # **Beside the rung sum, never instead of it** (the reviewer's first `should`, 2026-09-12). A
+    # row with no name at all still lands in a bucket, so the sum stays 36,497 while a reader gets
+    # a place with nothing to call it. The sum proves no row was LOST; this proves no row is EMPTY,
+    # and the two questions are different.
+    unnamed = [row for row in back if not row["display_name"]]
+    check("every row in the file has a name", not unnamed,
+          [(row["registry_no"], row["name_source"]) for row in unnamed[:3]])
+    check("and no row claims a rung it does not have",
+          all((row["name_source"] is None) == (row["name_base"] is None) for row in back),
+          [(row["registry_no"], row["name_source"], row["name_base"]) for row in back
+           if (row["name_source"] is None) != (row["name_base"] is None)][:3])
+
     # ---- the name is the APP's name, not a re-derivation ---------------------------------
     from upto.api_common import place_display  # noqa: PLC0415
 

@@ -144,7 +144,15 @@ async def compose_names(session, rows) -> dict[str, dict]:
                                "base": row["sign"], "qualifier": None}
         else:
             base = row.get("brand") or row.get("registered")
-            source = "brand" if row.get("brand") else "registered"
+            # **No base, no rung.** `registered` used to be claimed unconditionally here, so a place
+            # whose registry number is in NO publication the database still holds — one that left
+            # the source before anything pruned it — came back with `name` null and
+            # `name_source = "registered"`, asserting a rung it does not have. Reachable on a host
+            # holding a single publication that has not deleted its departed rows; not reproducible
+            # on either host today (dev keeps two publications and falls back to the older one; the
+            # instance deleted the 532 that left). Found by the reviewer on 2026-09-12 by reading
+            # the branch rather than by running it.
+            source = ("brand" if row.get("brand") else "registered") if base else None
             # **A16 keeps `base` and `qualifier` beside `name`, rather than recovering them later.**
             # `name` is what every list shows and is unchanged; the headline shortens `base` alone
             # and carries `qualifier` in its own field. Both are held here because this is the one

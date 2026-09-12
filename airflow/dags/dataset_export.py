@@ -36,6 +36,7 @@ DAG present and skipping.
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -59,15 +60,25 @@ UPTO_SRC = os.environ.get("UPTO_SRC", "/opt/upto/src")
 
 
 def _destination() -> tuple[str, str]:
-    bucket = (os.environ.get("UPTO_BACKUP_S3_BUCKET") or "").strip()
-    if not bucket:
+    """`(bucket, prefix)` or a skip — **read from `upto.dataset.export`, not re-derived here.**
+
+    This function and `object_names` below used to hold their own copies of the rule, which meant
+    the tested copy and the running copy were two different pieces of code that happened to agree
+    (the reviewer's second `should`, 2026-09-12). The module is importable with the standard library
+    alone, so reading it here costs Airflow's interpreter nothing — it does not pull in SQLAlchemy or
+    pyarrow.
+    """
+    sys.path.insert(0, UPTO_SRC)
+    from upto.dataset.export import destination  # noqa: PLC0415
+
+    found = destination()
+    if found is None:
         raise AirflowSkipException(
             "UPTO_BACKUP_S3_BUCKET is empty — no destination is configured, so nothing was "
             "exported and nothing was uploaded. This is the designed state for a fresh clone "
             "and for CI (A10's shape), not a failure."
         )
-    prefix = (os.environ.get("UPTO_DATASET_S3_PREFIX") or "dataset").strip().strip("/")
-    return bucket, prefix
+    return found
 
 
 def _database_url() -> str:
@@ -145,22 +156,24 @@ def upto_dataset_export():
                 aws_secret_access_key=connection.password,
                 region_name=(connection.extra_dejson or {}).get("region_name", "ap-northeast-1"),
             )
-            stem = "{}/publication={}".format(prefix, publication)
-            client.upload_file(parquet, bucket, "{}/places.parquet".format(stem))
-            client.upload_file(dictionary, bucket, "{}/dictionary.md".format(stem))
+            # The object names come from the module too, for the same reason as the destination.
+            from upto.dataset.export import object_names  # noqa: PLC0415
+
+            parquet_key, dictionary_key = object_names(prefix, publication)
+            client.upload_file(parquet, bucket, parquet_key)
+            client.upload_file(dictionary, bucket, dictionary_key)
             size = os.path.getsize(parquet)
             print(
-                "dataset: uploaded s3://{}/{}/places.parquet — {} rows, {:.1f} MB".format(
-                    bucket, stem, rows, size / 1024 / 1024
+                "dataset: uploaded s3://{}/{} — {} rows, {:.1f} MB".format(
+                    bucket, parquet_key, rows, size / 1024 / 1024
                 )
             )
             return {"publication": publication, "rows": rows, "bytes": size}
         finally:
-            for name in ("places.parquet", "dictionary.md"):
-                path = os.path.join(workdir, name)
-                if os.path.exists(path):
-                    os.unlink(path)
-            os.rmdir(workdir)
+            # `rmtree(ignore_errors=True)`: the point of this block is that nothing is left behind
+            # on the unhappy path, and `os.rmdir` fails on a directory the export half-filled —
+            # turning a cleanup into a second failure that hides the first.
+            shutil.rmtree(workdir, ignore_errors=True)
 
     export_and_upload()
 
