@@ -1278,6 +1278,26 @@
      larger type or invented content. */
   .reveal .under { margin-top: calc(72 * var(--k)); max-width: calc(100% - 460 * var(--k)); }
   .reveal .pairs { width: 100%; background: none; color: inherit; padding: 0; }
+  /* **The board is sized against its COLUMN here, the same override `.pairs` takes one line up,
+     and its absence was a defect I shipped.** The base rule is `min(1200px, 88vw)` — a
+     viewport-sized rule, correct in the narrow layout where `.under` is the viewport (measured 378
+     at 430 and 792 at 900, both clean). At 1440 `.under` is a **760 px** column at x 340, and
+     88vw is 1,267, so the section's box ran 340 → 1540 and the page scrolled 100 px sideways into
+     empty paper.
+
+     **What made it hard to see, and the method that found it:** the grid inside is only 288 px and
+     sits at x 364, so what overflowed was the transparent section around it — it looked like blank
+     paper, not like content. I blamed `.halftone`, which is genuinely 1,613 px wide and genuinely
+     sticks out, and is genuinely NOT what extends the scroll box. **The widest element and the
+     element that extends the scroll box are two different questions**, and only one instrument
+     answers the second: hide one thing at a time and read `document.scrollWidth`. Measured —
+     nothing hidden 1540 · `.halftone` hidden **1540, unchanged** · the board hidden **1440, gone**
+     (the evaluator's test, reproduced here before this fix was written).
+
+     The inline padding goes with it for the same reason `.pairs` drops its own: at this width the
+     region has no side gutter to clear, and 24 px here would set the grid's left edge 24 px inside
+     the panel above it instead of flush with it. */
+  .reveal .board { width: 100%; padding-inline: 0; }
   .reveal .pairs .pairsH { color: inherit; opacity: .6; }
   .reveal .pairRow { border-top-color: color-mix(in oklab, currentColor 26%, transparent); }
   .reveal .pairRow[data-counts="yes"] {
