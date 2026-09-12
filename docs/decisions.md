@@ -335,7 +335,7 @@ stream from a quiet one. The comment line carries no timing a member could read.
 Ten of them until 2026-08-30. **便利商店** was added because convenience stores were the largest
 single miss on the frozen set — a measured loss, not a hunch. **台菜** and **素食** followed from
 looking at what 其他 was hiding. 台菜 is the explicit words only: 小館 is a suffix, not a cuisine,
-and was ruled out after measuring 211 of them against 47 熱炒/快炒.
+and was excluded after measuring 211 of them against 47 熱炒/快炒.
 
 **An answer outside the list is refused, never repaired.** Coercing a near miss — 拉麵 into 麵食 —
 turns a wrong answer into a plausible one and deletes the only step in the process that can fail. A
