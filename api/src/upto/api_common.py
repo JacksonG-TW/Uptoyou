@@ -283,7 +283,14 @@ def _result_body(
     dice: tuple[int, int] | None,
     winning_place_id: int,
     weights: dict[int, object],
-    names: dict[int, str],
+    # **`str | None`, and the `None` is two lines from where it is created** (frontend's catch,
+    # 2026-09-12). The caller passes `value["name"]` from `place_display`, and `compose_names`
+    # returns `None` there for a place in no publication this database still holds — so the
+    # annotation said `str` about a value the function beside it can null. Nothing downstream does
+    # string work on it and the member payload carries it straight out, so this was never a runtime
+    # fault; it was a description a future reader would have trusted. Same shape as the branch that
+    # claimed a rung it did not have, one function over.
+    names: dict[int, str | None],
     allocation: dict[int, int],
     cells: tuple[tuple[int, ...], ...],
     winner_headline: str | None = None,
