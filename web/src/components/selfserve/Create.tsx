@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { createCircle, fetchMembers, reissueJoinLink, type Created, type Members } from '@/lib/selfserve'
+import { createCircle, type Created } from '@/lib/selfserve'
 import { remember } from '@/lib/round'
-import CopyRow from './CopyRow'
+import InvitePanel from './InvitePanel'
 import SecretOnce from './SecretOnce'
-import { KEY_NOTICE, LINK_LIFE, NO_ACCOUNT } from './copy'
+import { KEY_NOTICE, NO_ACCOUNT } from './copy'
 
 /**
  * §2 — creating a circle. **Three steps, and the order is the design**
@@ -37,27 +37,6 @@ export default function Create() {
    *  mutated — the person is looking at a link, and it changing under them is the one moment they
    *  need to be sure which one they now hold. */
   const [link, setLink] = useState('')
-  /** §2c's seat list. `null` until it has been read once — **not an empty list**, because an empty
-   *  list is a claim (「nobody is here」) and a missing one is not, and at this moment the creator
-   *  is definitely in it (D112). */
-  const [seats, setSeats] = useState<Members | null>(null)
-
-  const readSeats = useCallback(async (c: Created) => {
-    try {
-      setSeats(await fetchMembers({ token: c.key, circle: c.circleId }))
-    } catch {
-      /* **A seat list that fails to load renders nothing rather than an error.** The act of this
-         screen is the join link; the list is who is here so far. A refusal banner over a working
-         invite would make a person think the link was broken. */
-      setSeats(null)
-    }
-  }, [])
-
-  /* Read on arrival at §2c and again after a re-issue — `SS-7` asserts the count did NOT move
-     across that call, so the screen has to actually re-read rather than assume. */
-  useEffect(() => {
-    if (step === 'circle' && made) void readSeats(made)
-  }, [step, made, readSeats])
 
   const create = async () => {
     if (busy) return
@@ -75,23 +54,6 @@ export default function Create() {
     } catch (e) {
       /* §1's refused state: the server's sentence, immediately, below the control, **with no
          arrival** — 乙 §1a rule 5, a refusal that fades in has not refused anything yet. */
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const reissue = async () => {
-    if (busy || !made) return
-    setBusy(true)
-    setError('')
-    try {
-      setLink(await reissueJoinLink({ token: made.key, circle: made.circleId }))
-      /* **Re-read rather than assume.** §5 says re-issuing ejects nobody and `SS-7` checks the
-         count is unchanged — a screen that skipped this would be asserting the rule instead of
-         showing it, and would keep showing a stale list if the rule ever broke. */
-      void readSeats(made)
-    } catch (e) {
       setError((e as Error).message)
     } finally {
       setBusy(false)
@@ -171,64 +133,14 @@ export default function Create() {
           <p className="eyebrow"><em>★</em>{circleName.trim()}</p>
           <h1 className="ssTitle"><span>找人進來</span></h1>
 
-          <CopyRow part="join-link" label="邀請連結" value={link} />
-          <p className="ssLead">把這條連結貼給朋友，誰點誰就有座位。</p>
-          {/* **Under the link, above the re-issue control** — the life of the link stated where the
-              link is, and the fix the next thing the eye reaches. The control below is literally
-              what the sentence's second half describes. */}
-          <p className="ssNote" data-part="link-life">{LINK_LIFE}</p>
-
-          {/* §5 — **one control, never two.** There is no standalone revoke: revoking alone leaves
-              a circle nobody can join, and that is a state a worried person reaches by accident —
-              they press the frightening button to shut a stranger out and their real friend's link
-              dies with it. Whatever they press must leave them a link to share, so the action is
-              「換一條新的連結」 and the consequence is stated beside it.
-
-              **It ejects nobody and the copy does not imply that it does.** A sentence reading like
-              removal gets pressed for the wrong reason, and then the stranger is still there. */}
-          <button
-            type="button"
-            className="ssMinor"
-            data-part="reissue"
-            onClick={() => void reissue()}
-            disabled={busy}
-          >
-            換一條新的連結
-          </button>
-          <p className="ssNote">舊的連結就不能用了，已經進來的人不受影響。</p>
-
-          {/* §2c's seat list. **Every row comes from the server and none of it from this
-              component's own state** — `fetchMembers`, not the nickname typed on 2a. When the spec
-              asked for this list no endpoint could supply it, and the tempting fix was to render
-              the creator's row from what they had just typed: it would have looked right, never
-              updated, and made `SS-8` unmeasurable **while appearing to pass**. Raising the gap
-              instead is what produced `GET /circles/{id}/members`, so the reason is recorded here
-              rather than the workaround being in the code.
-
-              **`cap` comes from the payload, never from the markup** — it is
-              `issue.SEAT_CAP`, it has moved once already, and a client that writes 10 here will one
-              day disagree with the server about D110.
-
-              **No client-side cap anywhere** (§7): this counts, it does not gate. Nothing here
-              greys out, warns near ten, or predicts the 409 — a client that guesses the rule will
-              eventually guess it wrong and refuse a legal join.
-
-              **Duplicates render as the server has them** (§7, `SS-8`): no marker, no 「(2)」, no
-              disambiguation. Two 小明 are two rows that read the same, which is what the server
-              holds and what the owner ruled legal. The React key is the index for exactly that
-              reason — the nickname is not unique and must not be treated as an identity. */}
-          {seats && (
-            <div className="ssSeats" data-part="seat-list">
-              <p className="copyLabel">
-                這個圈子裡的人 <span className="ssCount" data-part="seat-count">{seats.seats}/{seats.cap}</span>
-              </p>
-              <ul>
-                {seats.members.map((m, i) => (
-                  <li key={i} data-part="seat-row">{m.nickname}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* **Step 3 is one component, shared with the durable `/circle` route** (`SS-13`).
+              The link is passed in because the `201` already handed it over — this flow must not
+              ask for one, since asking mints a new ticket and revokes the one just shown. */}
+          <InvitePanel
+            device={{ token: made.key, circle: made.circleId }}
+            link={link}
+            onLink={setLink}
+          />
 
           <a className="act" data-part="into-circle" href="/round">進去看看</a>
         </>

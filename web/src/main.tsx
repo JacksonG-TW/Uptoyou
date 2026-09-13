@@ -4,9 +4,11 @@ import { LazyMotion, domAnimation } from './lib/motion'
 import './index.css'
 import App from './App.tsx'
 import Reveal from './components/reveal/Reveal.tsx'
+import Circle from './components/selfserve/Circle.tsx'
 import Create from './components/selfserve/Create.tsx'
 import Join from './components/selfserve/Join.tsx'
 import { readJoinFragment } from './lib/selfserve.ts'
+import { device } from './lib/round.ts'
 import { NavBar } from './components/Switcher.tsx' // demo scaffolding — see the component
 import DeviceScreen from './components/device/Device.tsx'
 import Round from './components/round/Round.tsx'
@@ -67,6 +69,21 @@ function route() {
   const path = window.location.pathname.replace(/\/+$/, '')
   if (path === '/device') return <DeviceScreen />
   if (path === '/create') return <Create />
+  /**
+   * `/circle` — `SS-13`'s durable home for the invite screen.
+   *
+   * **The credential comes from `localStorage`, not from the URL**, exactly as `/round` and
+   * `/reveal` already take it. Nothing is in the path and nothing in the query; the rule that the
+   * only secrets on this surface travel in a fragment holds here by this screen having none.
+   *
+   * **No key, no screen** — it falls through to the home like a `/reveal` with no usable round and a
+   * `/join` whose fragment did not parse. Somebody with no key has nothing to invite anyone to, and
+   * `home()` rewrites the bar so the address stops describing a screen nobody is on.
+   */
+  if (path === '/circle') {
+    const held = device()
+    return held ? <Circle device={held} /> : home()
+  }
   /**
    * A24 §4 — `/join#c=<circle_id>&t=<ticket>`.
    *

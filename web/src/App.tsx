@@ -240,8 +240,32 @@ export default function App() {
             build rather than a new baseline. The second control lands inside the existing
             `.act-row`, which already styles an inline-block row, so the box the gate measures is
             the one that was there. */}
+        {/* **The filled control follows the state, and the quiet ones are the rest**
+            (evaluator-ruled 2026-09-13, on the SS-13 fix). A stranger's act is to create; **a keyed
+            member's act is not 開一個圈子, it is 這一餐** — so the primary is whichever of the two
+            that person came to do, and the others keep `.actMinor`'s INK-FILL. That is also what
+            buys the room for a third control without flattening the hierarchy: three equal filled
+            blocks would read as no hierarchy at all.
+
+            **The third door is `/circle` and it exists because of `SS-13`**: the invite link, the
+            seat list and the re-issue control could be reached from nowhere once the create flow
+            was left, and with the ruled hour that means 「your link expired and you cannot make
+            another」. It shows only for a member who holds a key, because it is the one door that
+            needs one — and `/circle` itself falls through to the home without one, so the two
+            agree.
+
+            **Both non-primary doors stay when a key is held.** A person can be in a work circle and
+            a family one; hiding 開一個圈子 from someone with a key would say 「you get one circle」,
+            which is not true. */}
         <div className="act-row homeAct">
-          <a className="act" data-part="create-circle" href="/create">開一個圈子</a>
+          <a
+            className={hasDevice ? 'act actMinor' : 'act'}
+            data-part="create-circle"
+            href="/create"
+          >開一個圈子</a>
+          {hasDevice && (
+            <a className="act actMinor" data-part="circle-invite" href="/circle">找人進來</a>
+          )}
           {/* **The label carries its own meaning, so there is no line under the pair**
               (evaluator-ruled 2026-09-13). The first build had a 「which is which」 sentence
               beneath, which cost `.homeFoot` 33 px and pushed the approved composition up 16 px —
@@ -252,7 +276,11 @@ export default function App() {
               **`這一餐` is left alone when a key is held**: it already names where the press goes,
               and 「有連結？」 would be asking a question the holder has answered. The prefix is for
               the state where the door is otherwise unexplained. */}
-          <a className="act actMinor" data-part="enter" href={doorHref()}>
+          <a
+            className={hasDevice ? 'act' : 'act actMinor'}
+            data-part="enter"
+            href={doorHref()}
+          >
             {hasDevice ? '這一餐' : '有連結？貼上鑰匙'}
           </a>
         </div>
