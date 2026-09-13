@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from .db import dispose_all, session_factory
 from .read.weather import ForecastJoinBroken, TownshipUnknown, reading_for
+from .circles import router as circles_router
 from .live import router as live_router
 from .schema_guard import check_or_exit
 from .stream import listener_status, listening
@@ -50,6 +51,10 @@ app = FastAPI(
 app.include_router(rounds_router)
 app.include_router(live_router)
 app.include_router(preferences_router)
+# A24 — the self-serve door: create a circle, join by the shared link, replace that link, read the
+# seats. The only router here that answers two of its routes with NO credential, which is the
+# feature: a stranger on the live site can make a circle.
+app.include_router(circles_router)
 
 
 #: Which of N instances answered. `HOSTNAME` is the container id under compose and the pod name

@@ -87,6 +87,113 @@ def invite_link(circle_id: int, token: str) -> str:
 SEAT_CAP = 10
 
 
+class SeatRefused(Exception):
+    """A seat was not grown, and `reason` says which rule stopped it.
+
+    **One exception rather than four, because both callers need the same four answers in different
+    shapes** — the CLI prints a sentence and exits 1, the endpoint returns a status code with a
+    member-facing `detail`. `reason` is the machine's half and `message` the operator's; the
+    member-facing wording lives in the router, because what a member may read is D112's question
+    and not this file's.
+    """
+
+    def __init__(self, reason: str, message: str):
+        super().__init__(message)
+        self.reason = reason
+        self.message = message
+
+
+async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | None = None,
+                    operator: bool = False) -> tuple[int, int, str]:
+    """`(member_id, principal_id, token)` — mint a principal, a device secret and a seat.
+
+    **Extracted 2026-09-13 for A24, and the extraction is the point.** Until then this logic lived
+    inside the CLI, and `SEAT_CAP`'s own comment said what would happen next: «D74's invite flow
+    does not exist yet … when it lands, the member-facing refusal belongs there and must read from
+    this constant rather than restating the number». A second door that re-implemented the count
+    would be D110 enforced in two places, which is a boundary that drifts — and the one that drifts
+    is the one nobody runs this week.
+
+    **It does not commit and it does not dispose.** The caller owns the transaction: the CLI commits
+    one seat, and `POST /circles` commits a circle, a seat and a ticket together or none of them.
+
+    **The token is returned, never printed or logged.** Only its hash is stored; the plaintext
+    exists in the caller's response and nowhere else (D74).
+    """
+    token = secrets.token_urlsafe(32)
+    digest = sha256(token.encode("utf-8")).hexdigest()
+
+    circle_name = (
+        await session.execute(text("select name from circle where id = :c"), {"c": circle_id})
+    ).scalar_one_or_none()
+    if circle_name is None:
+        raise SeatRefused("no-circle", f"no circle with id {circle_id} — nothing was written")
+
+    # **Counted before anything is minted**, so a refusal writes nothing at all — no principal, no
+    # device_secret, no token. Unchanged from the CLI's own arrangement and for its reason.
+    seats = (
+        await session.execute(
+            text("select count(*) from member where circle_id = :c"), {"c": circle_id}
+        )
+    ).scalar_one()
+    if seats >= SEAT_CAP:
+        raise SeatRefused(
+            "full",
+            f"circle {circle_id} ({circle_name}) already holds {seats} seats and the supported "
+            f"shape is {SEAT_CAP} — nothing was written. D110: ten people, three proposals each. "
+            "A circle already over the cap keeps its seats; this refuses the next one.",
+        )
+
+    if principal_id is None:
+        principal_id = (
+            await session.execute(text("insert into principal default values returning id"))
+        ).scalar_one()
+    else:
+        known = (
+            await session.execute(
+                text("select id from principal where id = :p"), {"p": principal_id}
+            )
+        ).scalar_one_or_none()
+        if known is None:
+            raise SeatRefused(
+                "no-principal",
+                f"no principal with id {principal_id} — nothing was written; omit --principal to "
+                "mint a new one",
+            )
+
+    # **D105: the role is written here and nowhere else.** It rides the secret rather than the
+    # person, so it can never arrive as a request parameter and it is revocable on its own.
+    await session.execute(
+        text(
+            "insert into device_secret (principal_id, secret_sha256, operator) "
+            "values (:p, :h, :operator)"
+        ),
+        {"p": principal_id, "h": digest, "operator": operator},
+    )
+    try:
+        # **A savepoint, because this call does not own the transaction any more.** An
+        # `IntegrityError` poisons the session it happens in; inside `begin_nested` it poisons the
+        # savepoint instead, so `POST /circles` can answer 409 rather than dying on the rollback.
+        async with session.begin_nested():
+            member_id = (
+                await session.execute(
+                    text(
+                        "insert into member (principal_id, circle_id, nickname) "
+                        "values (:p, :c, :n) returning id"
+                    ),
+                    {"p": principal_id, "c": circle_id, "n": nickname},
+                )
+            ).scalar_one()
+    except IntegrityError:
+        # UNIQUE (principal_id, circle_id): the principal already holds a seat here.
+        raise SeatRefused(
+            "seat-taken",
+            f"principal {principal_id} already holds a seat in circle {circle_id} — nothing "
+            "was written",
+        ) from None
+    return member_id, principal_id, token
+
+
 async def issue(circle_id: int, nickname: str, principal_id: int | None,
                 operator: bool = False) -> int:
     token = secrets.token_urlsafe(32)
