@@ -180,6 +180,61 @@ async def scenario(test_url: str) -> None:
         check("and the circle still reads ten seats against a cap of ten",
               still.json()["seats"] == 10 and still.json()["cap"] == 10)
 
+        # ---- the cap under a RACE, which is what actually bounds a leaked ticket ---------------
+        #
+        # **The reviewer's find, 2026-09-13.** Counting seats and then inserting one is
+        # check-then-act. Without a lock on the circle row, two callers at nine seats both count
+        # nine, both pass, and both insert — **eleven seats in a circle D110 rules at ten.**
+        # `uq_member_one_seat_per_circle` does not help: it is per principal, and the join path
+        # mints a fresh one every time.
+        #
+        # **Driven at `grow_seat` with two real transactions, NOT with two HTTP requests** — and
+        # that is the second finding here. The first version of this check fired two concurrent
+        # POSTs and passed **with the lock removed**, because nothing forced the two reads to land
+        # before either write: a check that cannot observe the effect it is controlling for (H92).
+        # Two sessions that both read, then both write, is the race itself rather than a hope of it.
+        from upto.issue import SeatRefused as _Refused  # noqa: PLC0415
+        from upto.issue import grow_seat as _grow  # noqa: PLC0415
+
+        raced = (await client.post(BASE + "/circles",
+                                   json={"name": "賽跑", "nickname": "主辦"})).json()
+        race_circle, race_ticket = raced["circle_id"], ticket_of(raced["join_link"])
+        for n in range(2, 10):
+            await client.post(f"{BASE}/circles/{race_circle}/join",
+                              json={"ticket": race_ticket, "nickname": f"第{n}"})
+
+        # **One engine per racer, and this line is the whole reason the check works.** Measured
+        # 2026-09-13: with both tasks on one engine, task 2 did not read until **37 ms after task 1
+        # had committed** — the connection pool serialised them, so the two never overlapped and
+        # the check passed with the lock removed. With an engine each they read 0 and 0 within a
+        # millisecond of each other, which is the race. *A concurrency test on a shared pool is
+        # testing the pool.*
+        racers = [async_sessionmaker(create_async_engine(test_url), expire_on_commit=False)
+                  for _ in range(2)]
+
+        async def one_seat(maker, label):
+            async with maker() as own:
+                try:
+                    await _grow(own, race_circle, label)
+                    await own.commit()
+                    return "seated"
+                except _Refused as refused:
+                    await own.rollback()
+                    return refused.reason
+
+        outcome = sorted(await asyncio.gather(one_seat(racers[0], "同時1"),
+                                              one_seat(racers[1], "同時2")))
+        check("two transactions racing for seat ten: one seat, one refusal",
+              outcome == ["full", "seated"], str(outcome))
+
+        async with Session() as probe:
+            held = (
+                await probe.execute(text("select count(*) from member where circle_id = :c"),
+                                    {"c": race_circle})
+            ).scalar_one()
+        check("and the circle holds exactly ten — the cap survives a race, not just a queue",
+              held == 10, f"it holds {held}")
+
         # ---- blank input: a 422 the person can act on, never a 500 -----------------------------
         #
         # **Both of these were 500s until 2026-09-13, found by attacking this file's own subject

@@ -123,8 +123,22 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
     token = secrets.token_urlsafe(32)
     digest = sha256(token.encode("utf-8")).hexdigest()
 
+    # **`FOR UPDATE`, and it is the whole of what makes the cap below true.** The reviewer's find,
+    # 2026-09-13: counting seats and then inserting one is check-then-act with nothing serialising
+    # it. Two friends tapping the same shared link at the moment a circle holds nine seats both
+    # count nine, both pass, and both insert — **eleven seats in a circle D110 rules at ten.**
+    # `uq_member_one_seat_per_circle` does not help: it is per principal, and the join path mints a
+    # fresh principal every time.
+    #
+    # **The asymmetry was the tell.** The join ticket's own race is backed by a partial unique index
+    # (revision 0044); this one was backed by nothing, in the rule that is the entire bound on what
+    # a leaked ticket can do. Locking the circle row serialises seat growth per circle and contends
+    # with nothing — the contended case is ten people tapping one link at once, and they are
+    # serialised for the length of three inserts.
     circle_name = (
-        await session.execute(text("select name from circle where id = :c"), {"c": circle_id})
+        await session.execute(
+            text("select name from circle where id = :c for update"), {"c": circle_id}
+        )
     ).scalar_one_or_none()
     if circle_name is None:
         raise SeatRefused("no-circle", f"no circle with id {circle_id} — nothing was written")
@@ -144,11 +158,7 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
             "A circle already over the cap keeps its seats; this refuses the next one.",
         )
 
-    if principal_id is None:
-        principal_id = (
-            await session.execute(text("insert into principal default values returning id"))
-        ).scalar_one()
-    else:
+    if principal_id is not None:
         known = (
             await session.execute(
                 text("select id from principal where id = :p"), {"p": principal_id}
@@ -161,29 +171,42 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
                 "mint a new one",
             )
 
-    # **D105: the role is written here and nowhere else.** It rides the secret rather than the
-    # person, so it can never arrive as a request parameter and it is revocable on its own.
-    await session.execute(
-        text(
-            "insert into device_secret (principal_id, secret_sha256, operator) "
-            "values (:p, :h, :operator)"
-        ),
-        {"p": principal_id, "h": digest, "operator": operator},
-    )
     try:
-        # **A savepoint, because this call does not own the transaction any more.** An
-        # `IntegrityError` poisons the session it happens in; inside `begin_nested` it poisons the
-        # savepoint instead, so `POST /circles` can answer 409 rather than dying on the rollback.
+        # **The savepoint covers all THREE writes, and until 2026-09-13 it covered one.** The
+        # reviewer's first `should`: `principal` and `device_secret` were inserted before
+        # `begin_nested`, so «nothing was written» was true only because every caller happened to
+        # abort the whole transaction. The sentence invited the one caller shape that breaks it —
+        # continue after a refusal and commit, and the database keeps an orphan principal and a live
+        # device secret for a seat that does not exist. **The claim is now the function's own rather
+        # than a property of who calls it.**
         async with session.begin_nested():
+            local_principal = principal_id
+            if local_principal is None:
+                local_principal = (
+                    await session.execute(
+                        text("insert into principal default values returning id")
+                    )
+                ).scalar_one()
+            # **D105: the role is written here and nowhere else.** It rides the secret rather than
+            # the person, so it can never arrive as a request parameter and it is revocable on its
+            # own — revoking an operator device leaves the seat intact.
+            await session.execute(
+                text(
+                    "insert into device_secret (principal_id, secret_sha256, operator) "
+                    "values (:p, :h, :operator)"
+                ),
+                {"p": local_principal, "h": digest, "operator": operator},
+            )
             member_id = (
                 await session.execute(
                     text(
                         "insert into member (principal_id, circle_id, nickname) "
                         "values (:p, :c, :n) returning id"
                     ),
-                    {"p": principal_id, "c": circle_id, "n": nickname},
+                    {"p": local_principal, "c": circle_id, "n": nickname},
                 )
             ).scalar_one()
+        principal_id = local_principal
     except IntegrityError as broken:
         # **Which constraint broke is read, never assumed — and this branch reported a lie for an
         # afternoon.** It used to say «seat-taken» for every `IntegrityError`, so a whitespace-only

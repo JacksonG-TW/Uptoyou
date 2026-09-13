@@ -130,6 +130,12 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
     async with session_factory()() as session:
         # **The ceiling is checked before anything is written**, the same arrangement `grow_seat`
         # uses for the cap: a refusal leaves no circle, no principal, no seat and no ticket.
+        # **The same check-then-act shape as the seat cap, and it is LEFT that way deliberately**
+        # (the reviewer's call, 2026-09-13, and I agree). Overshooting a flood ceiling by a handful
+        # of circles costs nothing; a lock here would serialise **every creation on the box** — the
+        # one request path that is meant to be reachable by a stranger. The seat cap got a lock
+        # because eleven seats breaks a ruling a leaked ticket is bounded by; 203 circles on a day
+        # capped at 200 breaks nothing.
         made_today = (
             await session.execute(
                 text("select count(*) from circle "
