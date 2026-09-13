@@ -11,7 +11,7 @@ place won.
 
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
-The demo needs an invite link to join a circle; to run it yourself, see Quick start at the end.
+Open it, create your own circle, share the link with friends. To run it yourself, see Quick start at the end.
 
 *This English page is canonical: where the two languages disagree, this one is right.*
 
@@ -144,7 +144,7 @@ own role.*
 | Layer | What runs |
 |---|---|
 | **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN and no runtime fetch. Two subset fonts ship with the bundle. |
-| **API** | Python, FastAPI, SQLAlchemy 2.0, async end to end, 43 hand-written Alembic migrations. |
+| **API** | Python, FastAPI, SQLAlchemy 2.0, async end to end, 44 hand-written Alembic migrations. |
 | **Database** | PostgreSQL 17. Six login roles, one per boundary: the API, the ingests, the nightly erasure, the backup, the lineage tool, and the owner. Only the one-shot migration container ever holds the owner role. |
 | **Vector** | pgvector, in that same database. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. Its metadata is a second database in the same PostgreSQL. |
@@ -356,7 +356,7 @@ of this measures the fetch / parse / store split, because nothing records it.
 - **Every source is proven idempotent, not assumed.** Each one runs through its real command-line
   entry point twice and every column of every table is compared. A no-change day is a recorded
   outcome.
-- **70 test files**, in two tempos: host-side with no network and no database, and build-and-drop
+- **71 test files**, in two tempos: host-side with no network and no database, and build-and-drop
   tests that build their own database in the one service holding the owner's credential. Every
   commit also passes six local gates in a pre-commit hook, five of them standard-library only, so a
   clone needs no toolchain to commit.
