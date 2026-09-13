@@ -56,11 +56,16 @@ async function refusal(r: Response, fallback: string): Promise<Error> {
 /** Ruling ②: a stranger creates a circle and gets one link to paste into the group chat. 429 is
  *  the proxy's daily ceiling on **creation** — never on joining, because five friends at one table
  *  share one address and a per-IP join cap would refuse the fourth friend at dinner. */
-export async function createCircle(name: string): Promise<Created> {
+export async function createCircle(name: string, nickname: string): Promise<Created> {
   const r = await fetch('/api/circles', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name }),
+    /* **`nickname` is required and A24's written shape does not say so.** The ticket documents
+       `POST /circles {name}`; the live endpoint answers 422 with
+       `{"loc": ["body","nickname"], "msg": "Field required"}`. Found by driving the real endpoint
+       rather than by trusting the shape — the creator gets a seat and a seat has a nickname, so
+       the field is right and only its description was short. Sent to backend. */
+    body: JSON.stringify({ name, nickname }),
   })
   if (r.status !== 201) throw await refusal(r, '開不了圈子')
   const body = await r.json()
@@ -109,6 +114,37 @@ export async function reissueJoinLink(d: Device): Promise<string> {
   if (r.status !== 201) throw await refusal(r, '換不了連結')
   const body = await r.json()
   return body.join_link
+}
+
+/**
+ * §2c's seat list — `GET /circles/{id}/members` → `{members: [{nickname}], seats, cap}`.
+ *
+ * Built by backend on 2026-09-13 after I raised that the spec asked for a seat list no endpoint
+ * could supply. Three things about its shape are decisions rather than conveniences:
+ *
+ * - **`{nickname}` and nothing else.** No `member_id` — §3.0 and H3: an identifier a screen never
+ *   needs is a correlation somebody else might. The same shape `rolls[]` already sets.
+ * - **Any member of the circle may read it, not the operator alone**, because everyone at the table
+ *   can see who is at the table. It still takes a credential: a circle's membership is not public
+ *   and a bare id must not enumerate one.
+ * - **Duplicates come back exactly as the server holds them** and **the order is join order**, so
+ *   the creator is first and the list is stable across a re-issue — which is what `SS-7` compares
+ *   against and what makes `SS-8` measurable at all.
+ *
+ * **`cap` is read from the payload and never written in the markup.** It is `issue.SEAT_CAP`, it
+ * has moved once already, and a client that hard-codes ten is a client that will one day disagree
+ * with the server about D110.
+ */
+export type Members = { members: { nickname: string }[]; seats: number; cap: number }
+
+export async function fetchMembers(d: Device): Promise<Members> {
+  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members`, {
+    headers: { authorization: `Bearer ${d.token}` },
+    cache: 'no-store',
+  })
+  if (!r.ok) throw await refusal(r, '看不到座位')
+  const body = await r.json()
+  return { members: body.members ?? [], seats: body.seats, cap: body.cap }
 }
 
 /**

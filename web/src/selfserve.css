@@ -1,0 +1,133 @@
+/* A24 — the self-serve screens: `/create` and `/join`.
+   `spec-self-serve-2026-09-13.md`. Scoped under `.selfserve`, per the global-namespace rule the
+   other screen stylesheets follow.
+
+   **The column is the home's, like 裝置's** (丙, `spec-device-typeset.md` §1): the first screens a
+   stranger meets must not read as different buildings, and `/create` is now one of them — for a
+   person arriving with no key it is the *first* screen, so it has more claim on that column than
+   any other. */
+.selfserve {
+  width: var(--col);
+  margin: 0 auto;
+  padding-block: calc(var(--bar-h) + 24px) 32px;
+}
+@media (min-width: 900px) {
+  .selfserve {
+    min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+    padding-block: calc(var(--bar-h) + 24px) 60px;
+  }
+}
+
+/* **NOT in the display face, and that is a decision with a cost, flagged to the evaluator.**
+   `.deviceTitle` one file over sets `UpTo Serif`, and these screens are its siblings — so the
+   consistent choice would be the serif. But `tools/subset_fonts.py` derives the display charset
+   from every rule that sets that family, so putting it here would add 「取個名字」「就可以開始」
+   「圈子開好了」「找人進來」「有人邀你」「一起吃飯」「你進來了」 to a face that ships **31 glyphs**
+   — a font rebuild, which means new binaries in `app/web/public/fonts/` and new manifest hashes,
+   inside a candidate window. That is a bigger change than a screen and not one to make quietly, so
+   the titles take the body face at display weight and the face is the evaluator's to rule. */
+.ssTitle {
+  display: flex; flex-direction: column;
+  font-size: var(--text-display);
+  font-weight: 900;
+  letter-spacing: .01em;
+  line-height: 1.08;
+  margin: 0 0 12px;
+}
+.ssTitle .lit { color: var(--color-hot-ink); }
+
+.ssLead { font-size: var(--text-lead); color: var(--color-ink); line-height: 1.7; margin: 0 0 24px; }
+.ssNote { font-size: var(--text-note); color: var(--color-muted); line-height: 1.7; margin: 6px 0 0; }
+
+.ssForm { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+.ssField { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.ssLabel { font-size: var(--text-note); font-weight: 700; }
+
+/* **The secondary door is not a second primary.** §1 makes create primary and paste secondary, and
+   the grammar for that is already ruled: `.act` is the filled ink block (§5 質感 rule 1), so the
+   secondary one drops the fill and keeps the border — the same move `.act:disabled` makes, for the
+   same reason a filled control that is not the main act misreads as one. */
+.actMinor { background: none; color: var(--color-ink); font-weight: 700; }
+.twoDoors { font-size: var(--text-note); color: var(--color-muted); margin: 10px 0 0; }
+
+/* ─── a secret, rendered so a person can keep it (§2b, §2c) ─────────────────────────────────── */
+.copyRow { margin: 0 0 18px; }
+.copyLabel { font-size: var(--text-note); font-weight: 700; margin: 0 0 6px; }
+
+/* **`user-select: all` is the guarantee half of §2b**, not a nicety: `navigator.clipboard` is
+   undefined on an insecure origin and in some embedded browsers, and without a selectable value the
+   copy button would be the only path to a secret never shown again.
+
+   `break-all` because a key and a join link are both long and neither breaks at a space; a secret
+   that overflows its box is a secret partly not on screen. `tabular-nums` so a key's characters sit
+   in a column while somebody reads it back. */
+.copyValue {
+  user-select: all;
+  -webkit-user-select: all;
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  margin: 0 0 8px;
+  padding: 12px;
+  border: 1.5px solid var(--color-ink);
+  background: var(--color-paper);
+}
+.copyBtn {
+  font: inherit; font-size: var(--text-note); font-weight: 700;
+  border: 1.5px solid var(--color-ink); border-radius: 0;
+  background: none; color: var(--color-ink);
+  padding: 8px 18px; cursor: pointer;
+}
+.copyBtn:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+/* §2b — the notice sits ABOVE the continue control (`SS-3` asserts the order), so the margin is
+   what separates it from the act rather than a rule or a box. */
+.secretNotice {
+  font-size: var(--text-note);
+  color: var(--color-ink);
+  line-height: 1.7;
+  margin: 18px 0 18px;
+  max-width: 34em;
+}
+.secretOnce { display: flex; flex-direction: column; align-items: flex-start; }
+
+/* §5's re-issue — a minor control, because it is not the act of this screen and a filled block
+   beside the real act would read as a second primary. */
+.ssMinor {
+  font: inherit; font-size: var(--text-note); font-weight: 700;
+  border: 1.5px solid var(--color-ink); border-radius: 0;
+  background: none; color: var(--color-ink);
+  padding: 8px 18px; margin-top: 24px; cursor: pointer;
+}
+.ssMinor:disabled { color: var(--color-muted); border-color: var(--color-muted); cursor: default; }
+.ssMinor:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+/* **The refusal renders where the control is, immediately, with no arrival** — 乙 §1a rule 5, and
+   `SS-6`. It carries no `.arrive` and nothing here animates: a refusal that fades in has not
+   refused anything yet. */
+.ssErr { color: var(--color-hot-ink); font-size: var(--text-note); line-height: 1.7; margin: 18px 0 0; }
+
+/* §2c's seat list — who is here so far. **A count, never a gate** (§7): `seats/cap` both come from
+   the payload, nothing greys out near the cap, and nothing predicts the 409. */
+/* Room under the list: the last row's rule ran straight into the act below it. */
+.ssSeats { margin-top: 28px; margin-bottom: 28px; }
+.ssSeats ul { list-style: none; margin: 0; padding: 0; }
+/* **Duplicates render identically and that is the ruling** (§7, `SS-8`): no marker, no 「(2)」. Two
+   friends both called 小明 are two rows that read the same, because that is what the server holds. */
+.ssSeats li {
+  font-size: var(--text-body);
+  padding: 10px 0;
+  border-bottom: 1.5px solid var(--color-ink);
+}
+.ssCount { font-weight: 400; color: var(--color-muted); font-variant-numeric: tabular-nums; }
+
+/* **The controls must not stretch, and this is a flex-container side effect rather than a style
+   choice.** `.selfserve` becomes a flex column at ≥900, whose default `align-items: stretch` beats
+   `.act`'s own `display: inline-block` on the cross axis — so the primary act rendered 1,200 px
+   wide, the width of the column, which reads as a banner rather than a control. Measured at 1440
+   before this rule. The blocks above them (the link box, the seat list) DO want the column's full
+   width, so the fix is on the controls rather than on the container's `align-items`. */
+.selfserve .act,
+.selfserve .ssMinor,
+.selfserve .copyBtn { align-self: flex-start; }

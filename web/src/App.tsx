@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/select'
 import { device, doorHref } from './lib/round'
 import { arrive } from './lib/motion'
+import { TWO_DOORS } from './components/selfserve/copy'
 import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
 import { dateline } from './lib/dateline'
 
@@ -225,11 +226,28 @@ export default function App() {
             `doorHref()` reads `localStorage` only, so it is safe during render and the markup is
             right on the first paint rather than after an effect. The box must not move — the act's
             fidelity at 1440 and 2560 is gated (G10) and `.act` already styles an inline-block. */}
+        {/* **A24 §1 — two doors, and they are not equals.** A stranger's path is to create; an
+            invited person's path is to paste. So 「開一個圈子」 is the primary control and the
+            existing door becomes the secondary one, with one line under them saying which is
+            which.
+
+            **Both stay when a key is already held**, and that is a ruling rather than an
+            oversight: a person can be in a work circle and a family one, so hiding 「開一個圈子」
+            for someone holding a key would say 「you get one circle」, which is not true.
+
+            **Nothing else on 首頁 moves.** `A0c` gates the resting composition against the
+            owner-approved page — the weather, the collage, the masthead, the count and D110's
+            shape line are untouched, and a diff showing any of them moving is a defect in this
+            build rather than a new baseline. The second control lands inside the existing
+            `.act-row`, which already styles an inline-block row, so the box the gate measures is
+            the one that was there. */}
         <div className="act-row homeAct">
-          <a className="act" data-part="enter" href={doorHref()}>
+          <a className="act" data-part="create-circle" href="/create">開一個圈子</a>
+          <a className="act actMinor" data-part="enter" href={doorHref()}>
             {hasDevice ? '這一餐' : '貼上鑰匙'}
           </a>
         </div>
+        <p className="twoDoors" data-part="two-doors">{TWO_DOORS}</p>
         </div>
 
         {/* **甲・日報's colophon** (`spec-home-dateline.md` §2) — the foot names where every fact
