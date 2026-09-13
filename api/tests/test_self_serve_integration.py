@@ -266,6 +266,74 @@ async def scenario(test_url: str) -> None:
                       refused.reason == "blank-nickname", f"reason was {refused.reason!r}")
             await probe.rollback()
 
+        # ---- the one-hour life, owner-ruled 2026-09-13 ------------------------------------------
+        #
+        # **The clock is moved, not waited for.** A test that slept an hour would not be run, and
+        # one that only checked «expires_at is not null» would pass on a ticket that never expires.
+        # So the row's own timestamps are shifted and the REAL join path is driven across the
+        # boundary — the enforcement is what is asserted, not the column.
+        timed = (await client.post(BASE + "/circles",
+                                   json={"name": "一頓飯", "nickname": "主人"})).json()
+        timed_circle, timed_ticket = timed["circle_id"], ticket_of(timed["join_link"])
+
+        async with Session() as probe:
+            span = (
+                await probe.execute(
+                    text("select extract(epoch from (expires_at - created_at)) "
+                         "from join_ticket where circle_id = :c and revoked_at is null"),
+                    {"c": timed_circle},
+                )
+            ).scalar_one()
+        check("minting sets the life to one hour from the row's own created_at",
+              abs(float(span) - 3600) < 1, f"{span} seconds")
+
+        async def shift(minutes):
+            """Move this ticket's whole row back, so `now()` lands `minutes` after it was made."""
+            async with Session() as probe:
+                await probe.execute(
+                    text("update join_ticket set created_at = now() - make_interval(mins => :m), "
+                         "expires_at = now() - make_interval(mins => :m) + interval '1 hour' "
+                         "where circle_id = :c and revoked_at is null"),
+                    {"m": minutes, "c": timed_circle},
+                )
+                await probe.commit()
+
+        await shift(59)
+        early = await client.post(f"{BASE}/circles/{timed_circle}/join",
+                                  json={"ticket": timed_ticket, "nickname": "準時"})
+        check("a tap at +59 minutes still joins", early.status_code == 201,
+              f"got {early.status_code}: {early.text[:120]}")
+
+        await shift(61)
+        late = await client.post(f"{BASE}/circles/{timed_circle}/join",
+                                 json={"ticket": timed_ticket, "nickname": "太晚"})
+        check("a tap at +61 minutes is refused with 410", late.status_code == 410,
+              f"got {late.status_code}: {late.text[:120]}")
+        check("and the expired sentence is its OWN, not the replaced-link one",
+              "一小時" in late.text and late.text != dead.text, late.text[:120])
+
+        # **Re-issue is the creator's fix for a late friend** — the whole reason it landed before
+        # expiry did, and the reason the ruling costs a person nothing they cannot undo.
+        renewed = await client.post(f"{BASE}/circles/{timed_circle}/join-ticket",
+                                    headers={"Authorization": "Bearer " + timed["key"]})
+        check("the creator can re-issue after the hour runs out", renewed.status_code == 201)
+        second_chance = await client.post(
+            f"{BASE}/circles/{timed_circle}/join",
+            json={"ticket": ticket_of(renewed.json()["join_link"]), "nickname": "終於"})
+        check("and the late friend joins on the new link", second_chance.status_code == 201,
+              f"got {second_chance.status_code}: {second_chance.text[:120]}")
+
+        async with Session() as probe:
+            fresh_span = (
+                await probe.execute(
+                    text("select extract(epoch from (expires_at - created_at)) "
+                         "from join_ticket where circle_id = :c and revoked_at is null"),
+                    {"c": timed_circle},
+                )
+            ).scalar_one()
+        check("a re-issued ticket gets its own full hour, not the remainder of the old one",
+              abs(float(fresh_span) - 3600) < 1, f"{fresh_span} seconds")
+
         # ---- a ticket is for ONE circle ---------------------------------------------------------
         other = (await client.post(BASE + "/circles",
                                    json={"name": "宿舍", "nickname": "阿凱"})).json()

@@ -59,6 +59,17 @@ def join_link(circle_id: int, ticket: str) -> str:
     return "{}/join#c={}&t={}".format(origin, circle_id, ticket)
 
 
+#: **One hour, owner-ruled 2026-09-13** — 「約一頓飯使用…哪需要那麼長時間，占用不必要的資源」,
+#: overriding A24's recommendation of no expiry. The argument that won is not the one I argued
+#: against: it is that a link outliving the meal it was made for holds resources for nothing, which
+#: is a different question from whether a leaked ticket is dangerous. **Recorded as an interval in
+#: one place** so the ticket, the refusal and the test read the same number.
+#:
+#: **The cost of the ruling, stated rather than argued again:** a friend tapping the link two hours
+#: later is refused, and the fix is the creator re-issuing — which is why re-issue landed first.
+TICKET_LIFETIME = "1 hour"
+
+
 async def _mint_ticket(session, circle_id: int) -> str:
     """Revoke whatever is live for this circle, insert a new one, return the plaintext.
 
@@ -77,8 +88,11 @@ async def _mint_ticket(session, circle_id: int) -> str:
              "where circle_id = :c and revoked_at is null"),
         {"c": circle_id},
     )
+    # `now()` twice rather than `created_at + interval` in a second statement: the two columns are
+    # written by one row, so they cannot disagree about when this ticket began.
     await session.execute(
-        text("insert into join_ticket (circle_id, token_sha256) values (:c, :h)"),
+        text("insert into join_ticket (circle_id, token_sha256, expires_at) "
+             "values (:c, :h, now() + interval '{}')".format(TICKET_LIFETIME)),
         {"c": circle_id, "h": sha256(token.encode("utf-8")).hexdigest()},
     )
     return token
@@ -187,10 +201,14 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
     """
     digest = sha256(body.ticket.encode("utf-8")).hexdigest()
     async with session_factory()() as session:
+        # **`expired` is computed by the database, in the same statement.** It used to be a second
+        # round trip comparing the returned timestamp against `now()`, which asked the same server
+        # the same question twice and left a window between the two answers.
         row = (
             await session.execute(
-                text("select circle_id, revoked_at, expires_at from join_ticket "
-                     "where token_sha256 = :h"),
+                text("select circle_id, revoked_at, "
+                     "(expires_at is not null and expires_at <= now()) as expired "
+                     "from join_ticket where token_sha256 = :h"),
                 {"h": digest},
             )
         ).one_or_none()
@@ -200,17 +218,14 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
             raise HTTPException(status_code=404, detail="這個連結沒有用，跟朋友要一次。")
         if row.revoked_at is not None:
             raise HTTPException(status_code=410, detail="這個連結換過了，跟建立的人要新的。")
-        if row.expires_at is not None:
-            # **Nothing writes `expires_at` today and the column is honoured anyway.** The owner
-            # has not ruled expiry; if he rules for it, the enforcement is already here and the
-            # ruling is a write. If he rules against, this branch is unreachable and costs a read.
-            expired = (
-                await session.execute(
-                    text("select :e <= now()"), {"e": row.expires_at}
-                )
-            ).scalar_one()
-            if expired:
-                raise HTTPException(status_code=410, detail="這個連結過期了，跟建立的人要新的。")
+        if row.expired:
+            # **A different sentence from the revoked one, because the remedy is the same and the
+            # reason is not.** A person whose link was replaced knows somebody did something; a
+            # person whose link ran out needs to know the link has a life at all, or the next one
+            # will sit in the group chat overnight too.
+            raise HTTPException(
+                status_code=410, detail="這個連結只能用一小時，過期了。跟建立的人要新的。"
+            )
 
         try:
             member_id, _, key = await grow_seat(session, circle_id, body.nickname)
