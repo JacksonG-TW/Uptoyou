@@ -264,6 +264,45 @@ async def reissue_ticket(circle_id: int, request: Request) -> dict:
     return {"join_link": join_link(circle_id, ticket)}
 
 
+@router.get("/{circle_id}/join-ticket")
+async def ticket_status(circle_id: int, request: Request) -> dict:
+    """Is this circle's link still live, and until when — **without the link, and without holding it.**
+
+    *The evaluator's ruling, 2026-09-13, correcting my own first answer. I built
+    `…/join-ticket/check {ticket}` believing the creator's device would still hold the string.
+    **The creator does not have the ticket** — it was shown once and is stored only as a hash,
+    which is precisely why they are on a durable screen looking for it. A screen that must supply
+    the ticket in order to ask about the ticket cannot be used by the person who lost it.*
+
+    **It returns no link and it never will.** `join_ticket` holds `token_sha256` and nothing else,
+    so returning one would mean storing the plaintext — trading away the property that makes a
+    database read, or the nightly dump in S3, useless to whoever gets one (D74). The screen shows
+    **no link box and the re-issue control**, which is an honest hole rather than a remembered link
+    that quietly died an hour ago.
+
+    **Keyed on the creator's own credential**, which is the only thing they still have.
+    """
+    async with session_factory()() as session:
+        _, is_operator = await resolve_credential(session, request, circle_id)
+        if not is_operator:
+            raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
+        row = (
+            await session.execute(
+                text("select expires_at, (expires_at is not null and expires_at <= now()) "
+                     "as expired from join_ticket "
+                     "where circle_id = :c and revoked_at is null"),
+                {"c": circle_id},
+            )
+        ).one_or_none()
+
+    # **«No live ticket» and «a live ticket that has run out» are different answers**, and the
+    # screen's next sentence differs: one is «press re-issue», the other is «press re-issue, and
+    # this is why the link you sent stopped working». Collapsing them loses the reason.
+    if row is None:
+        return {"active": False, "expired": False, "expires_at": None}
+    return {"active": not row.expired, "expired": bool(row.expired), "expires_at": row.expires_at}
+
+
 class TicketCheck(_Trimmed):
     ticket: str = Field(min_length=1, max_length=200)
 

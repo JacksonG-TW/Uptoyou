@@ -334,6 +334,40 @@ async def scenario(test_url: str) -> None:
         check("a re-issued ticket gets its own full hour, not the remainder of the old one",
               abs(float(fresh_span) - 3600) < 1, f"{fresh_span} seconds")
 
+        # ---- the creator's own screen: is the link live, without holding it ----------------------
+        #
+        # **The evaluator's correction of my first answer.** `…/check {ticket}` needs the ticket,
+        # and **the creator does not have it** — it was shown once and is stored as a hash, which
+        # is precisely why they are on a durable screen looking for it. A screen that must supply
+        # the ticket to ask about the ticket cannot be used by the person who lost it.
+        owner_view = await client.get(f"{BASE}/circles/{timed_circle}/join-ticket",
+                                      headers={"Authorization": "Bearer " + timed["key"]})
+        check("the creator can ask whether the link is live, holding nothing but their key",
+              owner_view.status_code == 200 and owner_view.json()["active"] is True,
+              owner_view.text[:140])
+        check("and it carries NO link — the plaintext is not stored and never will be (D74)",
+              "join_link" not in owner_view.text and "#c=" not in owner_view.text,
+              owner_view.text[:140])
+
+        stranger_view = await client.get(f"{BASE}/circles/{timed_circle}/join-ticket",
+                                         headers={"Authorization": "Bearer " + joiner_key})
+        check("an ordinary member cannot read the link's status",
+              stranger_view.status_code in (401, 403), f"got {stranger_view.status_code}")
+
+        # **«No live ticket» and «one that ran out» are different answers**, because the screen's
+        # next sentence differs: «press re-issue» versus «press re-issue, and this is why the link
+        # you sent stopped working».
+        async with Session() as probe:
+            await probe.execute(
+                text("update join_ticket set expires_at = now() - interval '1 minute' "
+                     "where circle_id = :c and revoked_at is null"), {"c": timed_circle})
+            await probe.commit()
+        run_out = await client.get(f"{BASE}/circles/{timed_circle}/join-ticket",
+                                   headers={"Authorization": "Bearer " + timed["key"]})
+        check("a link past its hour reads expired rather than merely inactive",
+              run_out.json()["expired"] is True and run_out.json()["active"] is False,
+              run_out.text[:140])
+
         # ---- is the link this device holds still good? -------------------------------------------
         #
         # **No endpoint can return a link, and that is the design working rather than a gap.** Only
