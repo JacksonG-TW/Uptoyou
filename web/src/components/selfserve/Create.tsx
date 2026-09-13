@@ -197,16 +197,15 @@ export default function Create() {
           </button>
           <p className="ssNote">舊的連結就不能用了，已經進來的人不受影響。</p>
 
-          {/* **§2c's seat list is NOT here, and the hole is deliberate.** It needs a read of the
-              circle's seats and **no such endpoint exists** — A24's three return
-              `{circle_id, member_id, key, join_link}`, `{member_id, key}` and `{join_link}`, and
-              the only nicknames any payload carries today are round-scoped (`rolls[]`,
-              `trip.nickname`). The two things I could have done alone are both worse than the
-              hole: render the creator's row from the nickname they just typed — which looks right,
-              never updates, and makes `SS-8` unmeasurable while appearing to pass — or drop it
-              silently. Raised with backend; it slots in here and needs no other change. */}
+          {/* §2c's seat list. **Every row comes from the server and none of it from this
+              component's own state** — `fetchMembers`, not the nickname typed on 2a. When the spec
+              asked for this list no endpoint could supply it, and the tempting fix was to render
+              the creator's row from what they had just typed: it would have looked right, never
+              updated, and made `SS-8` unmeasurable **while appearing to pass**. Raising the gap
+              instead is what produced `GET /circles/{id}/members`, so the reason is recorded here
+              rather than the workaround being in the code.
 
-          {/* §2c's seat list. **`cap` comes from the payload, never from the markup** — it is
+              **`cap` comes from the payload, never from the markup** — it is
               `issue.SEAT_CAP`, it has moved once already, and a client that writes 10 here will one
               day disagree with the server about D110.
 
