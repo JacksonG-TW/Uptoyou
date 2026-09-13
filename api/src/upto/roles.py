@@ -62,6 +62,10 @@ API_WRITE = (
     "weight_contribution",
     "round_forecast_baseline",
     "trip",
+    # A24 (revision 0044) — one shared join ticket per circle, hash only. UPDATE is here for
+    # `revoked_at`: re-issue revokes and mints in one transaction, so the role that inserts the new
+    # row is the one that must close the old one.
+    "join_ticket",
 )
 
 # **`place` is INSERT-and-SELECT for the API and D115's first table said SELECT** — corrected on
@@ -103,6 +107,9 @@ INGEST_WRITE = REFERENCE_TABLES + ("ingest_run", "place", "example_embedding")
 # asserted against the map's own totals by the coverage test.
 INGEST_DENIED = (
     "circle",
+    # A24. A join ticket names no person, but it is the door to a circle — and the pipeline's line
+    # is not «may not read people», it is «may not touch anything on the member side of §3.0».
+    "join_ticket",
     "principal",
     "member",
     "member_roll",
