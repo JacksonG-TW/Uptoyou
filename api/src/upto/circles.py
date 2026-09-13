@@ -264,6 +264,58 @@ async def reissue_ticket(circle_id: int, request: Request) -> dict:
     return {"join_link": join_link(circle_id, ticket)}
 
 
+class TicketCheck(_Trimmed):
+    ticket: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/{circle_id}/join-ticket/check")
+async def check_ticket(circle_id: int, body: TicketCheck, request: Request) -> dict:
+    """Is the link this device already holds still good, and until when?
+
+    *Frontend asked for `GET /join-ticket` returning the current link, 2026-09-13. **No endpoint
+    can return a link**, and the reason is the design's own: only `token_sha256` is stored, so the
+    server cannot reconstruct a ticket it has never held in plaintext (D74). That property is what
+    makes a database read — or the nightly dump sitting in S3 — useless to somebody who gets one.
+    Storing the plaintext to make a durable screen possible would trade it away for a convenience.*
+
+    **So the link stays on the creator's device and this answers the question the device cannot.**
+    That closes the exact hole frontend named in their own rejected option: a remembered link shown
+    on a screen whose whole job is the link, quietly dead for an hour, looking live. The device
+    holds the string; the server holds the truth about it.
+
+    **A POST for a read, and the reason is the whole point.** The ticket is a seat-granting secret,
+    so it may not travel in a query string — that reaches the proxy's access log, this API's own
+    logs and the next request's `Referer`, which is the same rule that put it in the URL fragment
+    (A20). A body is the only place it can go. **The method is wrong about intent and right about
+    exposure, and exposure wins.**
+
+    **Operator credential only.** It tells you whether a seat-granting secret is live; that is the
+    creator's question and nobody else's.
+    """
+    async with session_factory()() as session:
+        _, is_operator = await resolve_credential(session, request, circle_id)
+        if not is_operator:
+            raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
+        row = (
+            await session.execute(
+                text("select circle_id, revoked_at, expires_at, "
+                     "(expires_at is not null and expires_at <= now()) as expired "
+                     "from join_ticket where token_sha256 = :h"),
+                {"h": sha256(body.ticket.encode("utf-8")).hexdigest()},
+            )
+        ).one_or_none()
+
+    # **Four states and they are not the same sentence.** A screen that collapses them shows a dead
+    # link as live, which is the failure this endpoint exists to prevent.
+    if row is None or row.circle_id != circle_id:
+        return {"status": "unknown", "expires_at": None}
+    if row.revoked_at is not None:
+        return {"status": "revoked", "expires_at": None}
+    if row.expired:
+        return {"status": "expired", "expires_at": row.expires_at}
+    return {"status": "live", "expires_at": row.expires_at}
+
+
 @router.get("/{circle_id}/members")
 async def circle_members(circle_id: int, request: Request) -> dict:
     """Who is at the table — nicknames, in the order they joined, and nothing else.

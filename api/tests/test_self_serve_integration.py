@@ -334,6 +334,52 @@ async def scenario(test_url: str) -> None:
         check("a re-issued ticket gets its own full hour, not the remainder of the old one",
               abs(float(fresh_span) - 3600) < 1, f"{fresh_span} seconds")
 
+        # ---- is the link this device holds still good? -------------------------------------------
+        #
+        # **No endpoint can return a link, and that is the design working rather than a gap.** Only
+        # `token_sha256` is stored, so the server cannot reconstruct a ticket it never held in
+        # plaintext — which is what makes a database read, or the nightly dump in S3, useless to
+        # whoever gets one. The device keeps the string; the server answers the question about it.
+        async def status_of(tok, key, circle=None):
+            answer = await client.post(
+                f"{BASE}/circles/{circle or timed_circle}/join-ticket/check",
+                json={"ticket": tok}, headers={"Authorization": "Bearer " + key})
+            return answer.status_code, answer.json()
+
+        checked = (await client.post(BASE + "/circles",
+                                     json={"name": "查連結", "nickname": "主人"})).json()
+        look_circle, look_key = checked["circle_id"], checked["key"]
+        look_ticket = ticket_of(checked["join_link"])
+
+        code, seen = await status_of(look_ticket, look_key, look_circle)
+        check("a live ticket reads live and says when it ends",
+              code == 200 and seen["status"] == "live" and seen["expires_at"], str(seen))
+
+        # **Looking does not mint and does not revoke** — the failure frontend named: a creator
+        # opening a durable screen to see the link they already shared would, by looking, kill it.
+        again_code, again = await status_of(look_ticket, look_key, look_circle)
+        check("looking twice changes nothing — reading a ticket never mints or revokes",
+              again == seen, f"{seen} then {again}")
+
+        replaced = await client.post(f"{BASE}/circles/{look_circle}/join-ticket",
+                                     headers={"Authorization": "Bearer " + look_key})
+        _, after_reissue = await status_of(look_ticket, look_key, look_circle)
+        check("after a re-issue the OLD link reads revoked, not live",
+              after_reissue["status"] == "revoked", str(after_reissue))
+        _, new_status = await status_of(ticket_of(replaced.json()["join_link"]),
+                                        look_key, look_circle)
+        check("and the new one reads live", new_status["status"] == "live", str(new_status))
+
+        _, nonsense = await status_of("nonsense", look_key, look_circle)
+        check("a ticket nobody issued reads unknown rather than erroring",
+              nonsense["status"] == "unknown", str(nonsense))
+
+        not_mine = await client.post(
+            f"{BASE}/circles/{look_circle}/join-ticket/check",
+            json={"ticket": look_ticket}, headers={"Authorization": "Bearer " + joiner_key})
+        check("an ordinary member cannot ask whether a seat-granting secret is live",
+              not_mine.status_code in (401, 403), f"got {not_mine.status_code}")
+
         # ---- a ticket is for ONE circle ---------------------------------------------------------
         other = (await client.post(BASE + "/circles",
                                    json={"name": "宿舍", "nickname": "阿凱"})).json()
