@@ -4,7 +4,7 @@ import { createCircle, fetchMembers, reissueJoinLink, type Created, type Members
 import { remember } from '@/lib/round'
 import CopyRow from './CopyRow'
 import SecretOnce from './SecretOnce'
-import { KEY_NOTICE, NO_ACCOUNT } from './copy'
+import { KEY_NOTICE, LINK_LIFE, NO_ACCOUNT } from './copy'
 
 /**
  * §2 — creating a circle. **Three steps, and the order is the design**
@@ -173,6 +173,10 @@ export default function Create() {
 
           <CopyRow part="join-link" label="邀請連結" value={link} />
           <p className="ssLead">把這條連結貼給朋友，誰點誰就有座位。</p>
+          {/* **Under the link, above the re-issue control** — the life of the link stated where the
+              link is, and the fix the next thing the eye reaches. The control below is literally
+              what the sentence's second half describes. */}
+          <p className="ssNote" data-part="link-life">{LINK_LIFE}</p>
 
           {/* §5 — **one control, never two.** There is no standalone revoke: revoking alone leaves
               a circle nobody can join, and that is a state a worried person reaches by accident —

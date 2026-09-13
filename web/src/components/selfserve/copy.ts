@@ -43,6 +43,24 @@
  */
 export const KEY_NOTICE = '這把鑰匙只出現這一次，我們沒有留著。離開這一頁就不見了。'
 
+/**
+ * §2c — the join link's life, on the creator's screen. **Backend's words, font-checked before they
+ * reached me** (2026-09-13; they drafted three and checked all three against
+ * `noto-sub-variable.woff2`'s own cmap — verified independently here, 23 characters, none absent).
+ *
+ * **It is here because the creator is the only person who can prevent the failure.** The owner
+ * ruled the ticket lives one hour (「最多 1 小時就過期」); without this line the common case is a
+ * link posted at lunch and tapped at three, and the first anyone learns of it is a friend saying
+ * the link is broken.
+ *
+ * **Both halves are doing work.** 「做好」 — the hour runs from when the link was **made**, not from
+ * when it was posted or opened, and a reader who assumes 「an hour from when I sent it」 gets the
+ * wrong answer on exactly that failure. 「再有一小時」 — a fresh full hour, not the remainder, which
+ * is the other thing people guess wrong. Cause and remedy in one sentence, and the control directly
+ * below it does what the second half says.
+ */
+export const LINK_LIFE = '連結做好一小時就過期，換一條新的就再有一小時。'
+
 /** §2a — the one line on the naming screen. States the absence that matters to a stranger deciding
  *  whether to start: there is nothing to sign up for. */
 export const NO_ACCOUNT = '不用帳號，也不用 email。'
