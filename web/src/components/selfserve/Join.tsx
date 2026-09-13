@@ -44,8 +44,13 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
       setStep('key')
     } catch (e) {
       /* **The server's own sentence, immediately, with no arrival** (`SS-6`): 409 the circle is
-         full, 410 the ticket was replaced, 404 no such ticket, 429 the daily ceiling. The words are
-         backend's, in `server_copy.py`, and reach here as the response's `detail`.
+         full, 410 the ticket is no longer usable, 404 no such ticket, 429 the daily ceiling. The
+         words are backend's and reach here as the response's `detail`.
+
+         **410 covers two facts since the owner ruled expiry** (2026-09-13, 「最多 1 小時就過期」):
+         re-issued, or older than an hour. This screen does not distinguish them and must not try —
+         it renders what the server said. The creator's fix for a friend who was late is the
+         re-issue control that already exists.
 
          **No client-side seat cap anywhere** (§7): D110's cap is the server's and arrives as that
          409. A screen that counted seats and greyed out joining at ten would one day predict the
@@ -60,13 +65,18 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
     <main className="selfserve" data-screen="join" data-step={step}>
       {step === 'name' && (
         <>
-          {/* **§4.1 asks the screen to NAME the circle, and it cannot: no payload carries a
-              circle's name.** The name exists server-side in `issue.py` alone; A24's three
-              endpoints return ids and secrets, and the only human-readable circle text any client
-              ever receives is round-scoped. Rendering the id would be naming a number at somebody
-              who was handed a link by a friend, and inventing a name would be worse. So the screen
-              says what it can stand behind — that this link seats you — and the circle's name slots
-              in here when a payload carries one. Raised with backend beside the seat-list gap. */}
+          {/* **The screen does NOT name the circle, and that is settled rather than pending.**
+              §4.1 originally asked it to. I reported that no payload carries a circle's name — it
+              exists server-side in `issue.py` alone — and **the evaluator withdrew the requirement
+              on a better reason than mine** (2026-09-13): resolving a ticket to a name would make a
+              small oracle, so **a leaked ticket would yield the circle's name without joining**.
+              The name is user-typed and authenticates nothing, and this screen already says what
+              will happen.
+
+              **So this is not a hole waiting for an endpoint.** My first note here said the name
+              「slots in when a payload carries one」, which would have invited exactly the endpoint
+              the withdrawal exists to prevent — and whoever built it would have met my half of the
+              reasoning and not the evaluator's. */}
           <p className="eyebrow"><em>★</em>入座</p>
           <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
           <p className="ssLead">用這條連結進來，你會有自己的座位。</p>

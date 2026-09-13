@@ -35,9 +35,16 @@ export type Joined = {
  *
  * `round.ts`'s `verify` and `preferences.ts`'s `said` answer **401 and 404 in the surface's own
  * words** because those are about the credential the person just pasted, and keep the API's
- * sentence for everything else. A24's refusals — 409 the circle is full, 410 the ticket was
- * replaced, 429 the daily ceiling — are not about a credential at all: they are states of the
+ * sentence for everything else. A24's refusals — 409 the circle is full, 410 the ticket is no
+ * longer usable, 429 the daily ceiling — are not about a credential at all: they are states of the
  * circle and the ticket, so they keep the server's sentence.
+ *
+ * **410 has TWO reasons since the owner ruled expiry on 2026-09-13** (「最多 1 小時就過期」): the
+ * ticket was re-issued, or it is simply older than an hour. **Rendering `detail` is what makes that
+ * cost nothing here** — the two cases are different sentences from the server and the same code
+ * path in this file. A client that had mapped 410 to its own 「這個連結換過了」 would now be
+ * telling a person their link was replaced when it had merely gone stale, which is a wrong
+ * explanation of a correct refusal.
  *
  * **And backend owns those sentences deliberately: they live in `tools/server_copy.py`.** The font
  * gate derives its charset from that file, so a sentence invented in a client module can ship as
