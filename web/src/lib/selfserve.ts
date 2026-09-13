@@ -60,11 +60,13 @@ export async function createCircle(name: string, nickname: string): Promise<Crea
   const r = await fetch('/api/circles', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    /* **`nickname` is required and A24's written shape does not say so.** The ticket documents
-       `POST /circles {name}`; the live endpoint answers 422 with
-       `{"loc": ["body","nickname"], "msg": "Field required"}`. Found by driving the real endpoint
-       rather than by trusting the shape — the creator gets a seat and a seat has a nickname, so
-       the field is right and only its description was short. Sent to backend. */
+    /* **Both fields are required**, and the second one is here because the endpoint was driven
+       rather than read. A24 documented `{name}` alone until 2026-09-13; the live endpoint answered
+       422 `{"loc": ["body","nickname"], "msg": "Field required"}`, so a client built from the page
+       would have failed at runtime. The code was right and its description was not — the creator
+       gets a seat and a seat has a nickname. **The ticket now says `{name, nickname}`** (backend,
+       `96873f8`), so this note records why the field is trusted, not a discrepancy to go looking
+       for: there is none left. */
     body: JSON.stringify({ name, nickname }),
   })
   if (r.status !== 201) throw await refusal(r, '開不了圈子')
