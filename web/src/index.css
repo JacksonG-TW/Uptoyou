@@ -373,6 +373,24 @@
 
 .act:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
 
+/* **The secondary door — INK-FILL, `design.md`'s quiet-command recipe** (evaluator-ruled
+   2026-09-13 on the self-serve gate). §1 asks for a primary and a secondary; my first build drew
+   **two identical filled blocks** and leaned a line of explanatory copy on the difference, which
+   the evaluator measured — both at `rgb(255,135,92) / solid`. **Weight carries the hierarchy, and
+   the line was doing the control's job.** So the secondary keeps `.act`'s box and drops its ground:
+   bordered text at rest, hover filling bg → ink and text → paper over `--t-press`, which is the
+   same move the press makes and the same recipe `[data-part=picker]` already takes.
+
+   **It lives HERE, beside `.act`, and that is the fix rather than a tidy-up.** It was in
+   `selfserve.css`, which `index.css` imports at the top — so `.act`'s own `background` further down
+   this file won on order at equal specificity and `.actMinor` never applied at all. A rule that
+   silently loses is worse than a missing one: it reads as a decision that was made. */
+.actMinor { background: none; color: var(--color-ink); }
+@media (hover: hover) {
+  .actMinor:hover { background: var(--color-ink); color: var(--color-paper); }
+}
+.actMinor:active { background: var(--color-ink); color: var(--color-paper); }
+
 /* A disabled act is never filled (§4) **and never sits on a shadow**: the shadow is the promise
    that the block can be pressed into the page, so leaving it under a dead control is the same lie
    the filled ground was. */

@@ -43,10 +43,6 @@
  */
 export const KEY_NOTICE = '這把鑰匙只出現這一次，我們沒有留著。離開這一頁就不見了。'
 
-/** §1 — the line under 首頁's two doors, saying which is which. Mine to write (§6: a label, not a
- *  consequence). It names both paths in the order the controls sit in. */
-export const TWO_DOORS = '自己開一個，或用別人給你的鑰匙進來。'
-
 /** §2a — the one line on the naming screen. States the absence that matters to a stranger deciding
  *  whether to start: there is nothing to sign up for. */
 export const NO_ACCOUNT = '不用帳號，也不用 email。'

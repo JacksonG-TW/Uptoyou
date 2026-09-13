@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/select'
 import { device, doorHref } from './lib/round'
 import { arrive } from './lib/motion'
-import { TWO_DOORS } from './components/selfserve/copy'
 import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
 import { dateline } from './lib/dateline'
 
@@ -243,11 +242,20 @@ export default function App() {
             the one that was there. */}
         <div className="act-row homeAct">
           <a className="act" data-part="create-circle" href="/create">開一個圈子</a>
+          {/* **The label carries its own meaning, so there is no line under the pair**
+              (evaluator-ruled 2026-09-13). The first build had a 「which is which」 sentence
+              beneath, which cost `.homeFoot` 33 px and pushed the approved composition up 16 px —
+              and it existed only because the two controls were drawn identically. With the
+              hierarchy in the weight and the answer in the label, the sentence has nothing left to
+              say and the composition returns to the approved one.
+
+              **`這一餐` is left alone when a key is held**: it already names where the press goes,
+              and 「有連結？」 would be asking a question the holder has answered. The prefix is for
+              the state where the door is otherwise unexplained. */}
           <a className="act actMinor" data-part="enter" href={doorHref()}>
-            {hasDevice ? '這一餐' : '貼上鑰匙'}
+            {hasDevice ? '這一餐' : '有連結？貼上鑰匙'}
           </a>
         </div>
-        <p className="twoDoors" data-part="two-doors">{TWO_DOORS}</p>
         </div>
 
         {/* **甲・日報's colophon** (`spec-home-dateline.md` §2) — the foot names where every fact

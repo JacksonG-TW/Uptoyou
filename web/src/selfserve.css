@@ -43,13 +43,6 @@
 .ssField { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 .ssLabel { font-size: var(--text-note); font-weight: 700; }
 
-/* **The secondary door is not a second primary.** §1 makes create primary and paste secondary, and
-   the grammar for that is already ruled: `.act` is the filled ink block (§5 質感 rule 1), so the
-   secondary one drops the fill and keeps the border — the same move `.act:disabled` makes, for the
-   same reason a filled control that is not the main act misreads as one. */
-.actMinor { background: none; color: var(--color-ink); font-weight: 700; }
-.twoDoors { font-size: var(--text-note); color: var(--color-muted); margin: 10px 0 0; }
-
 /* ─── a secret, rendered so a person can keep it (§2b, §2c) ─────────────────────────────────── */
 .copyRow { margin: 0 0 18px; }
 .copyLabel { font-size: var(--text-note); font-weight: 700; margin: 0 0 6px; }
