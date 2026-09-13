@@ -180,6 +180,37 @@ async def scenario(test_url: str) -> None:
         check("and the circle still reads ten seats against a cap of ten",
               still.json()["seats"] == 10 and still.json()["cap"] == 10)
 
+        # ---- blank input: a 422 the person can act on, never a 500 -----------------------------
+        #
+        # **Both of these were 500s until 2026-09-13, found by attacking this file's own subject
+        # rather than by a gate.** `min_length=1` counts spaces, so three spaces passed Pydantic and
+        # reached the database's own check constraint. The constraint was right and the answer was
+        # wrong twice: a 500 says «we broke», and the person who typed spaces learns nothing.
+        for field, payload in (("name", {"name": "   ", "nickname": "小美"}),
+                               ("nickname", {"name": "宿舍", "nickname": "   "})):
+            blank = await client.post(BASE + "/circles", json=payload)
+            check(f"a {field} of only spaces is refused as the caller's mistake, not a 500",
+                  blank.status_code == 422, f"got {blank.status_code}: {blank.text[:120]}")
+
+        # **And the reason a blank nickname gave was a LIE, which is the worse half.** `grow_seat`
+        # caught every `IntegrityError` and reported «seat-taken», so a blank nickname came back as
+        # «that principal already holds a seat» — a sentence with no relation to what happened.
+        # H88's shape in code: a claim in the grammar of a diagnosis, from something that did not
+        # diagnose. The constraint name is read now, so this asserts the branch exists at all.
+        from upto.issue import SeatRefused, grow_seat  # noqa: PLC0415
+
+        async with Session() as probe:
+            circle_for_blank = (
+                await probe.execute(text("insert into circle (name) values ('空白') returning id"))
+            ).scalar_one()
+            try:
+                await grow_seat(probe, circle_for_blank, "   ")
+                check("a blank nickname reaches grow_seat and is refused", False, "it was allowed")
+            except SeatRefused as refused:
+                check("grow_seat names the constraint that actually broke, not the one it assumed",
+                      refused.reason == "blank-nickname", f"reason was {refused.reason!r}")
+            await probe.rollback()
+
         # ---- a ticket is for ONE circle ---------------------------------------------------------
         other = (await client.post(BASE + "/circles",
                                    json={"name": "宿舍", "nickname": "阿凱"})).json()

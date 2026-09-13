@@ -29,7 +29,7 @@ from hashlib import sha256
 import secrets
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
@@ -84,12 +84,33 @@ async def _mint_ticket(session, circle_id: int) -> str:
     return token
 
 
-class CreateCircle(BaseModel):
+class _Trimmed(BaseModel):
+    """**Strip first, then require something left — because `min_length` counts spaces.**
+
+    Measured 2026-09-13 against the running stack: a name of three spaces passed Pydantic, reached
+    `ck_circle_name_not_blank` and came back **500 Internal Server Error**. The database was right
+    and the answer was wrong twice over — a 500 says «we broke», and the person who typed spaces
+    would have no idea what to change. The constraints stay: this is the second line, not a
+    replacement for them.
+    """
+
+    @field_validator("*", mode="after")
+    @classmethod
+    def _strip(cls, value):
+        if not isinstance(value, str):
+            return value
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("這裡不能只有空白。")
+        return stripped
+
+
+class CreateCircle(_Trimmed):
     name: str = Field(min_length=1, max_length=80)
     nickname: str = Field(min_length=1, max_length=40)
 
 
-class JoinCircle(BaseModel):
+class JoinCircle(_Trimmed):
     ticket: str = Field(min_length=1, max_length=200)
     nickname: str = Field(min_length=1, max_length=40)
 
@@ -119,7 +140,7 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
         if made_today >= DAILY_CIRCLE_CEILING:
             raise HTTPException(status_code=429, detail="今天開的圈子太多了，明天再來。")
 
-        name = body.name.strip()
+        name = body.name
         circle_id = (
             await session.execute(
                 text("insert into circle (name) values (:n) returning id"), {"n": name}
@@ -127,7 +148,7 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
         ).scalar_one()
         try:
             member_id, _, key = await grow_seat(
-                session, circle_id, body.nickname.strip(), operator=True
+                session, circle_id, body.nickname, operator=True
             )
         except SeatRefused as refused:
             # A brand-new circle cannot be full and cannot be missing, so anything here is a bug
@@ -158,7 +179,7 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
     guessing, so telling a holder that their link was *replaced* rather than that it never existed
     costs nothing and is the only message they can act on.
     """
-    digest = sha256(body.ticket.strip().encode("utf-8")).hexdigest()
+    digest = sha256(body.ticket.encode("utf-8")).hexdigest()
     async with session_factory()() as session:
         row = (
             await session.execute(
@@ -186,7 +207,7 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
                 raise HTTPException(status_code=410, detail="這個連結過期了，跟建立的人要新的。")
 
         try:
-            member_id, _, key = await grow_seat(session, circle_id, body.nickname.strip())
+            member_id, _, key = await grow_seat(session, circle_id, body.nickname)
         except SeatRefused as refused:
             if refused.reason == "full":
                 raise HTTPException(

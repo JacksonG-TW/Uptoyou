@@ -184,13 +184,29 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
                     {"p": principal_id, "c": circle_id, "n": nickname},
                 )
             ).scalar_one()
-    except IntegrityError:
-        # UNIQUE (principal_id, circle_id): the principal already holds a seat here.
-        raise SeatRefused(
-            "seat-taken",
-            f"principal {principal_id} already holds a seat in circle {circle_id} — nothing "
-            "was written",
-        ) from None
+    except IntegrityError as broken:
+        # **Which constraint broke is read, never assumed — and this branch reported a lie for an
+        # afternoon.** It used to say «seat-taken» for every `IntegrityError`, so a whitespace-only
+        # nickname (which trips `ck_member_nickname_not_blank`) came back as «that principal already
+        # holds a seat», a sentence with no relation to what happened. An `except` that names one
+        # cause and catches every cause is H88's shape in code: a claim in the grammar of a
+        # diagnosis, produced by something that did not diagnose.
+        name = getattr(getattr(broken, "orig", None), "constraint_name", "") or str(broken.orig)
+        if "uq_member_one_seat_per_circle" in name:
+            raise SeatRefused(
+                "seat-taken",
+                f"principal {principal_id} already holds a seat in circle {circle_id} — nothing "
+                "was written",
+            ) from None
+        if "ck_member_nickname_not_blank" in name:
+            raise SeatRefused(
+                "blank-nickname",
+                "a nickname of only spaces is not a nickname — nothing was written",
+            ) from None
+        # Anything else is a bug rather than a caller's mistake, and it keeps its own message:
+        # a fourth reason invented here would be the same failure one constraint over.
+        raise SeatRefused("integrity", "the seat was refused by the database: {}".format(
+            str(broken.orig).strip())) from None
     return member_id, principal_id, token
 
 
