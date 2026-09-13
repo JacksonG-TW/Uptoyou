@@ -107,12 +107,14 @@ export default function InvitePanel({
 
   return (
     <>
-      {/* **No link box when there is no link to show, rather than an empty one.** There is no GET
-          that returns the current ticket — the only route that yields one MINTS one and revokes the
-          current one, so a screen that fetched a link on arrival would kill the link the creator
-          had already shared, by the act of looking at it. Raised with backend; until it lands this
-          screen offers the remedy without pretending to show the thing. A remembered link would be
-          worse: it would quietly be an hour dead on the one screen whose job is the link. */}
+      {/* **A link box only when a link is genuinely in hand**, which is the create flow (the `201`
+          carried it) and after a re-issue. **On `/circle` it is permanently absent and that is the
+          design, not a shortfall** — `join_ticket` stores only `token_sha256`, so no endpoint can
+          return a link and none ever will; `GET …/join-ticket` answers the link's *status*. The
+          only route that yields a link MINTS one and revokes the current one, so fetching on
+          arrival would kill the link the creator had already shared by the act of looking at it.
+          A remembered link would be worse again: quietly an hour dead, on the one screen whose
+          whole job is the link. */}
       {link && (
         <>
           <CopyRow part="join-link" label="邀請連結" value={link} />

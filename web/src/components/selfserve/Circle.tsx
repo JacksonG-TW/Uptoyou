@@ -27,17 +27,25 @@ import type { Device } from '@/lib/round'
  */
 export default function Circle({ device }: { device: Device }) {
   /**
-   * **Empty until backend can answer 「what is the current link?」.**
+   * **Empty on arrival, and PERMANENTLY so — this is not a hole waiting for an endpoint.**
    *
-   * The only route that yields a join link is `POST …/join-ticket`, which **mints one and revokes
-   * the current one** — so fetching a link on arrival would destroy the link the creator had
-   * already shared, by the act of opening the screen to look at it. That is §5's 「a worried person
-   * presses the frightening button and their friend's link dies with it」, reached with nobody
-   * pressing anything.
+   * `join_ticket` stores `token_sha256` and nothing else: **the server has never held the plaintext
+   * after the response that printed it**, exactly as with a device key. So no endpoint can return a
+   * link, and the one I asked backend for would have required storing the plaintext — trading away
+   * the property that makes a database read, or the nightly dump in the bucket, useless to whoever
+   * gets one. `GET …/join-ticket` exists now and answers **`{active, expired, expires_at}`** — the
+   * status of the link, never the link.
    *
-   * So this screen starts with no link and the panel shows none. **Pressing re-issue is what fills
-   * it**, which is honest: that button really does hand you a link that works. When
-   * `GET …/join-ticket` lands it is read here and passed down, and nothing else changes.
+   * The hazard that started this is real and is why nothing is fetched on arrival: the only route
+   * that yields a link is `POST …/join-ticket`, which **mints one and revokes the current one**, so
+   * a screen that fetched a link on arrival would destroy the link the creator had already shared
+   * **by the act of opening the screen to look at it** — §5's 「a worried person presses the
+   * frightening button and their friend's link dies with it」, with nobody pressing anything.
+   *
+   * **So the only thing that fills this is re-issue**, and that is honest rather than a shortfall:
+   * a creator on this screen is here because they no longer have the link, and the button really
+   * does hand them one that works. The status read tells them whether the one they sent is still
+   * alive — which is the question they actually arrived with.
    */
   const [link, setLink] = useState('')
 
