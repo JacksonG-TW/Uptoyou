@@ -43,8 +43,14 @@ router = APIRouter(prefix="/circles", tags=["circles"])
 #: **A server-side daily ceiling, beside the proxy's per-address one and not instead of it.** The
 #: proxy rule is the cheap one and it is not a rule this API can prove — a request that never
 #: reaches nginx (a direct origin hit, a future second front door) is not covered by it. This is the
-#: floor under that. It counts circles created since Taipei's midnight, which is D25's stated
-#: exception to D83's UTC rule applied for the same reason: a «day» a person can check is theirs.
+#: floor under that.
+#:
+#: **It counts circles created since Taipei's midnight, and whether it MAY is not ruled yet.** The
+#: reviewer's note, 2026-09-13: D25's exception to D83's UTC rule was argued from a **member-facing
+#: month**, and whether an operational cap inherits that argument is exactly what the owner has not
+#: decided. **The code's day is Taipei until he rules**; it is one clause either way, and going to
+#: him with the sweep. *Stating it as «D25's exception applied» — which this comment did — asserted
+#: a ruling that does not exist.*
 DAILY_CIRCLE_CEILING = int(os.environ.get("UPTO_DAILY_CIRCLE_CEILING", "200"))
 
 
@@ -322,11 +328,16 @@ async def check_ticket(circle_id: int, body: TicketCheck, request: Request) -> d
     on a screen whose whole job is the link, quietly dead for an hour, looking live. The device
     holds the string; the server holds the truth about it.
 
-    **A POST for a read, and the reason is the whole point.** The ticket is a seat-granting secret,
-    so it may not travel in a query string — that reaches the proxy's access log, this API's own
-    logs and the next request's `Referer`, which is the same rule that put it in the URL fragment
-    (A20). A body is the only place it can go. **The method is wrong about intent and right about
-    exposure, and exposure wins.**
+    **A POST for a read, and the exposure now has a file path rather than a principle.** The ticket
+    is a seat-granting secret, so it may not travel in a query string — that reaches the proxy's
+    access log, this API's own logs and the next request's `Referer`, the same rule that put it in
+    the URL fragment (A20). **And since candidate 20 the proxy's `access_log` records the VISITOR'S
+    REAL ADDRESS for every request but `/health`**, in the container's json-file driver, 10 MB × 3,
+    on the box (measured by the reviewer, 2026-09-13). A `GET …/check?ticket=` would write a
+    seat-granting secret **next to the IP of the person who sent it**, and keep three rotations of
+    it. A body is the only place it can go. **The method is wrong about intent and right about
+    exposure, and exposure wins** — if anybody ever «tidies» this to a GET, this paragraph is the
+    argument.
 
     **Operator credential only.** It tells you whether a seat-granting secret is live; that is the
     creator's question and nobody else's.
