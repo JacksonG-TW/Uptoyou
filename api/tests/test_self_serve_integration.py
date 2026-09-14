@@ -92,6 +92,22 @@ async def scenario(test_url: str) -> None:
         check("the ticket is stored as a hash and never as itself (D74)",
               len(stored) == 1 and ticket not in stored and len(stored[0]) == 64)
 
+        # **D83's second exception, at a fixed clock** (owner 「台北」, 2026-09-14). The ceiling's
+        # day starts at Taipei's midnight, which is 16:00 UTC the day before. Evaluated at instants,
+        # never at now(), so the test means the same thing whatever hour it runs.
+        from upto import circles as circles_module  # noqa: PLC0415
+        async with Session() as session:
+            for instant, expected in (
+                ("2026-09-14 15:59:59+00", "2026-09-13 16:00:00+00"),  # 23:59:59 Taipei, 14th
+                ("2026-09-14 16:00:00+00", "2026-09-14 16:00:00+00"),  # 00:00:00 Taipei, 15th
+                ("2026-09-14 00:30:00+00", "2026-09-13 16:00:00+00"),  # 08:30 Taipei — UTC's new day
+            ):
+                start = (await session.execute(text(
+                    "select (" + circles_module.TAIPEI_DAY_START.format(now="cast(cast(:t as text) as timestamptz)")
+                    + ") = cast(cast(:e as text) as timestamptz)"), {"t": instant, "e": expected})).scalar_one()
+                check("the ceiling's day at {} UTC starts at {} UTC (Taipei midnight, D83)".format(
+                    instant, expected), start is True, start)
+
         # ---- join: a second seat, and a third with the SAME nickname --------------------------
         joined = await client.post(f"{BASE}/circles/{circle}/join",
                                    json={"ticket": ticket, "nickname": "小明"})

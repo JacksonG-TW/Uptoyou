@@ -45,13 +45,17 @@ router = APIRouter(prefix="/circles", tags=["circles"])
 #: reaches nginx (a direct origin hit, a future second front door) is not covered by it. This is the
 #: floor under that.
 #:
-#: **It counts circles created since Taipei's midnight, and whether it MAY is not ruled yet.** The
-#: reviewer's note, 2026-09-13: D25's exception to D83's UTC rule was argued from a **member-facing
-#: month**, and whether an operational cap inherits that argument is exactly what the owner has not
-#: decided. **The code's day is Taipei until he rules**; it is one clause either way, and going to
-#: him with the sweep. *Stating it as «D25's exception applied» — which this comment did — asserted
-#: a ruling that does not exist.*
+#: **It counts circles created since Taipei's midnight — D83's second exception, ruled 2026-09-14**
+#: (owner 「台北」; D83's «Two exceptions» paragraph). The ceiling is a number a member reads as
+#: 「今天」, and a UTC day turns over at 08:00 Taipei, which would make that word false for eight hours
+#: of every day. Every cron and the stack's clock stay UTC. `test_self_serve_integration` evaluates
+#: the boundary at fixed instants either side of 16:00 UTC, where this day turns.
 DAILY_CIRCLE_CEILING = int(os.environ.get("UPTO_DAILY_CIRCLE_CEILING", "200"))
+
+#: The start of «today» in Taipei, as a timestamptz, for an instant `{now}`. One spelling for the
+#: query below and for the test that pins it at fixed instants — a boundary written twice is a
+#: boundary that drifts.
+TAIPEI_DAY_START = "date_trunc('day', {now} at time zone 'Asia/Taipei') at time zone 'Asia/Taipei'"
 
 
 def join_link(circle_id: int, ticket: str) -> str:
@@ -158,9 +162,8 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
         # capped at 200 breaks nothing.
         made_today = (
             await session.execute(
-                text("select count(*) from circle "
-                     "where created_at >= date_trunc('day', now() at time zone 'Asia/Taipei')"
-                     " at time zone 'Asia/Taipei'")
+                text("select count(*) from circle where created_at >= "
+                     + TAIPEI_DAY_START.format(now="now()"))
             )
         ).scalar_one()
         if made_today >= DAILY_CIRCLE_CEILING:
