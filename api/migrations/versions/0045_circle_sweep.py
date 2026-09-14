@@ -17,7 +17,7 @@ right», «The sweep's mechanism re-ruled», «Which circles the sweep may touch
 - **Which of those:** a circle that never had a signed trip and that nothing has touched for thirty
   days — including one that rolled and never signed, because signing is optional and most circles
   people actually use never sign.
-- **The mechanism:** one owner-owned `SECURITY DEFINER` function that deletes bottom-up in an order
+- **The mechanism:** one `SECURITY DEFINER` function that deletes bottom-up in an order
   written in its body, and the sweep's role (`upto_erasure`) holds EXECUTE on it and **no table
   grant at all**. *Rejected:* `ON DELETE CASCADE` from `circle` with DELETE on `circle` alone, which
   was ruled first and re-ruled when it was measured: inside a cascade PostgreSQL checks each
@@ -36,12 +36,24 @@ SELECT on `circle`. So `circle_sweep_candidates()` holds the selection rule, and
 re-checks the same rule under a row lock before deleting anything — the rule lives once, and a
 caller holding the credential can delete only what the rule would delete anyway.
 
-**The owner is a superuser, and that is bounded rather than ignored.** A definer function runs as
-its owner. Three things keep that narrow: every name in the bodies is schema-qualified and the
-`search_path` is pinned to `pg_catalog, pg_temp`; no service role and not `PUBLIC` holds CREATE on
-schema `public` (measured 2026-09-14), so nothing can be planted for a lookup to find; the bodies
-are static SQL over a bigint and a boolean, with no dynamic statement anywhere. EXECUTE is revoked
-from `PUBLIC` — PostgreSQL grants it to everyone by default — and granted to one role.
+**The functions are owned by `upto_sweeper`, a NOLOGIN role that holds nothing but what they do**
+(owner, 2026-09-14, on the reviewer's pre-read). A definer function runs as its owner, and the
+table owner `upto` is a superuser, so an owner-owned body would make any future slip in it
+superuser-grade. `upto_sweeper` cannot log in, has no password and appears in no `.env`; it holds
+SELECT and DELETE on the twelve tables the sweep empties and SELECT on `trip`, which the selection
+rule reads and never deletes. Beside it: every name in the bodies is schema-qualified, the
+`search_path` is pinned to `pg_catalog, pg_temp`, no service role and not `PUBLIC` holds CREATE on
+schema `public` (measured 2026-09-14), and the bodies are static SQL. EXECUTE is revoked from
+`PUBLIC` — PostgreSQL grants it to everyone by default — and granted to `upto_erasure` alone.
+
+**The role is not in `roles.SERVICE_ROLES` or `roles.grants()`, and must not be.** Revision 0032
+imports both at run time, so a fresh database would reach 0032's grants before this revision
+creates the role. The list below is written literally for the same reason H59 gives: a migration
+applies the list of its own day. `roles.SWEEPER_GRANTS` states the same list for
+`test_role_grants`, which asserts the two agree with the database.
+
+**The downgrade leaves the role in place**, revoked of every grant this revision issued. A role is
+cluster-wide and another database may still hold it; `roles.ensure()` never drops a role either.
 """
 
 from alembic import op
@@ -63,6 +75,24 @@ LOCK_TIMEOUT = "500ms"
 # server raises 55P03 for the lock timeout) are READ by `upto.sweep.SKIPPED_SQLSTATES`, their one
 # home; `test_circle_sweep_integration` asserts the body raises exactly those.
 
+SWEEPER = "upto_sweeper"
+
+#: What the functions' owner may do, and nothing else. DELETE where the sweep deletes; SELECT on
+#: `trip` alone because the selection rule reads it. Written literally (H59) and mirrored by
+#: `roles.SWEEPER_GRANTS`, which the grant test compares with the database.
+SWEEPER_DELETES = (
+    "weight_contribution", "round_forecast_baseline", "member_roll", "proposal", "preference",
+    "round", "device_secret", "member", "principal", "join_ticket", "place", "circle",
+)
+SWEEPER_READS_ONLY = ("trip",)
+#: **UPDATE on the `id` column alone, and only because a row lock needs it** — measured on 17.11:
+#: `select … for update` is refused with SELECT+DELETE, and succeeds with a column-level
+#: `update (id)`, which in turn refuses an UPDATE of any other column. `id` because rewriting it is
+#: the least that grant can do: circle, round and member ids are referenced by NO ACTION keys, so
+#: the database refuses rewriting a referenced one, and nothing references proposal.id. The body
+#: never issues an UPDATE; these are the four tables it locks.
+SWEEPER_LOCKS = ("circle", "round", "member", "proposal")
+
 CANDIDATES = "public.circle_sweep_candidates()"
 SWEEP = "public.sweep_circle(bigint, boolean)"
 
@@ -82,9 +112,11 @@ def _erasure_role() -> str:
     return module.ERASURE
 
 
-# **«Touched» is the latest write anything in the circle made**: the circle itself, a seat, a
-# round opening or closing, a proposal, a tap on the dice, a preference, a link minted or replaced.
-# `greatest` ignores nulls, so a circle with no rounds is judged on what it does have.
+# **«Touched» is the latest of these writes in the circle**: the circle itself, a seat joining, a
+# round opening or closing, a proposal, a tap on the dice, a preference, a place the circle named
+# itself (D28's circle-local), a link minted or replaced. **Not a device secret**: one is minted with
+# a seat, which `joined_at` already counts, and a secret belongs to a principal who may sit in other
+# circles. `greatest` ignores nulls, so a circle with no rounds is judged on what it does have.
 CANDIDATES_SQL = """
 create function public.circle_sweep_candidates()
 returns table (circle_id bigint, last_touch timestamptz)
@@ -107,6 +139,7 @@ as $body$
                    (select max(mr.rolled_at) from public.member_roll mr where mr.circle_id = c.id),
                    (select max(pr.recorded_at) from public.preference pr
                       join public.member m on m.id = pr.member_id where m.circle_id = c.id),
+                   (select max(pl.created_at) from public.place pl where pl.circle_id = c.id),
                    (select max(greatest(j.created_at, j.revoked_at))
                       from public.join_ticket j where j.circle_id = c.id)
                ) as last_touch
@@ -323,10 +356,27 @@ def upgrade() -> None:
         "circle",
         sa.Column("self_serve", sa.Boolean, nullable=False, server_default=sa.false()),
     )
+    # Idempotent, and `nologin` re-asserted on every run: the role is cluster-wide, so it may
+    # already exist from another database, and a role this revision relies on being unable to log
+    # in must be unable to log in whatever state it was found in.
+    op.execute(sa.text(
+        "do $role$ begin "
+        "if not exists (select 1 from pg_roles where rolname = '{0}') then "
+        'create role "{0}" nologin; '
+        "end if; end $role$".format(SWEEPER)))
+    op.execute(sa.text('alter role "{}" nologin'.format(SWEEPER)))
+    for table in SWEEPER_DELETES:
+        op.execute(sa.text('grant select, delete on public."{}" to "{}"'.format(table, SWEEPER)))
+    for table in SWEEPER_READS_ONLY:
+        op.execute(sa.text('grant select on public."{}" to "{}"'.format(table, SWEEPER)))
+    for table in SWEEPER_LOCKS:
+        op.execute(sa.text('grant update (id) on public."{}" to "{}"'.format(table, SWEEPER)))
+
     op.execute(sa.text(CANDIDATES_SQL))
     op.execute(sa.text(SWEEP_SQL))
     erasure = _erasure_role()
     for signature in (CANDIDATES, SWEEP):
+        op.execute(sa.text('alter function {} owner to "{}"'.format(signature, SWEEPER)))
         op.execute(sa.text("revoke all on function {} from public".format(signature)))
         op.execute(sa.text('grant execute on function {} to "{}"'.format(signature, erasure)))
 
@@ -334,4 +384,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(sa.text("drop function {}".format(SWEEP)))
     op.execute(sa.text("drop function {}".format(CANDIDATES)))
+    for table in SWEEPER_DELETES + SWEEPER_READS_ONLY:
+        op.execute(sa.text('revoke all on public."{}" from "{}"'.format(table, SWEEPER)))
     op.drop_column("circle", "self_serve")

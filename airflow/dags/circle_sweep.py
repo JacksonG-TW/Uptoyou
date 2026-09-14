@@ -22,7 +22,7 @@ from __future__ import annotations
 import os
 import sys
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from airflow.hooks.base import BaseHook
 from airflow.sdk import dag, task
@@ -33,11 +33,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert
 
-# A15 / D115 as amended: this job runs as `upto_erasure` — SELECT and DELETE on `preference`,
-# SELECT on `weight_contribution` so it can leave a version some round pinned alone (D24), and
-# nothing else in the database. Owner-ruled against running it as `upto_api`: a scheduled
-# deletion holds exactly the capability it needs. It is NOT `upto_ingest` — that role may not
-# touch `preference` at all, which is the point of the split.
+# This job connects as `upto_erasure` through the erasure Connection, and for THIS job that role's
+# whole reach is EXECUTE on `circle_sweep_candidates()` and `sweep_circle(bigint, boolean)` —
+# `roles.FUNCTION_GRANTS` (revision 0045). It holds no grant on `circle` or on anything the sweep
+# deletes; the functions run as `upto_sweeper`, their NOLOGIN owner. (The same role's table grants
+# for preference erasure and weather retention are those jobs', and this one uses none of them.)
 POSTGRES_CONNECTION = "upto_erasure_postgres"
 
 
@@ -65,8 +65,12 @@ def _database_url() -> str:
         # raises, and it is silently absent when the `telegram_alerts` Connection is not
         # there, which is the designed state for a stack nobody is watching.
         "on_failure_callback": send_failure_alert,
-        "retries": 2,
-        "retry_delay": timedelta(minutes=10),
+        # **No retries, unlike the erasure DAG** (the reviewer's note on the first read). A circle
+        # that fails here fails for a reason a retry does not change — a pin reaching in from
+        # another circle — and a busy circle is already a skip inside the run. Two retries ten
+        # minutes apart would also put the last attempt at 22:20 UTC, on top of the dump this job
+        # is scheduled to precede. The next night is the retry.
+        "retries": 0,
         "depends_on_past": False,
     },
     tags=["privacy", "a24", "circle", "sweep"],

@@ -87,8 +87,8 @@ async def make_circle(con, name, *, self_serve=True, round_=True, pin=True, trip
         "values ($1, $2, now() - $3::interval)", ids["circle"], "{:064d}".format(ids["circle"]), OLD)
     if round_:
         ids["place"] = await con.fetchval(
-            "insert into place (origin, circle_id, name) values ('circle-local', $1, 'x') "
-            "returning id", ids["circle"])
+            "insert into place (origin, circle_id, name, created_at) "
+            "values ('circle-local', $1, 'x', now() - $2::interval) returning id", ids["circle"], OLD)
         ids["round"] = await con.fetchval(
             "insert into round (circle_id, target_hour, target_hour_typed, status, opened_at, "
             "closed_at) values ($1, now() - $2::interval, false, 'closed', now() - $2::interval, "
@@ -187,6 +187,7 @@ async def scenario(url: str) -> None:
         "a proposal": "update proposal set proposed_at = now() where member_id = $member",
         "a roll": "update member_roll set rolled_at = now() where member_id = $member",
         "a preference": "update preference set recorded_at = now() where id = $pref",
+        "a place named": "update place set created_at = now() where circle_id = $circle",
         "a link minted": "update join_ticket set created_at = now() where circle_id = $circle",
         "a link replaced": "update join_ticket set revoked_at = now() where circle_id = $circle",
     }
@@ -263,6 +264,24 @@ async def scenario(url: str) -> None:
           state == "23503", state)
     check("and the call deleted nothing at all", all((await rows_left(con, victim)).values()))
 
+    # --- 5a. upto.sweep reads a real SQLSTATE: a circle touched after the listing is SKIPPED ----
+    #
+    # The listing is pointed at a circle the function will refuse (an operator's), which is exactly
+    # what a friend joining between the listing and the call produces. The job must count it as
+    # skipped and exit 0 — and it can only do that if it reads 55000 off the error, because a None
+    # read would land in «failed» and exit 1 (the reviewer's note: the 23503 case below passes
+    # either way, so it cannot prove the read).
+    os.environ["UPTO_DATABASE_URL"] = url.replace("postgresql://", "postgresql+asyncpg://")
+    listing = sweep.CANDIDATES
+    sweep.CANDIDATES = "select id as circle_id, created_at as last_touch from circle where id = {}".format(
+        cli["circle"])
+    try:
+        code = await sweep.run()
+    finally:
+        sweep.CANDIDATES = listing
+    check("upto.sweep counts a refused (touched) circle as skipped and exits 0 — the SQLSTATE is read",
+          code == 0 and all((await rows_left(con, cli)).values()), code)
+
     # --- 5. upto.sweep over the lot: a failure exits 1 and the rest still go ------------------
     await con.execute("update circle set self_serve = false where id <> $1", victim["circle"])
     for_job = await make_circle(con, "for the job")
@@ -296,8 +315,8 @@ async def scenario(url: str) -> None:
     # (a) an insert in flight before the sweep: the sweep times out on the round lock and refuses.
     flight = await make_circle(con, "a member mid-proposal")
     place = await con.fetchval(
-        "insert into place (origin, circle_id, name) values ('circle-local', $1, 'y') returning id",
-        flight["circle"])
+        "insert into place (origin, circle_id, name, created_at) "
+        "values ('circle-local', $1, 'y', now() - $2::interval) returning id", flight["circle"], OLD)
     member_tx = other.transaction()
     await member_tx.start()
     await other.execute(
@@ -377,10 +396,20 @@ async def with_temporary_database() -> int:
         column = await con.fetchval(
             "select count(*) from information_schema.columns "
             "where table_name = 'circle' and column_name = 'self_serve'")
+        residual = await con.fetchval(
+            "select count(*) from information_schema.role_table_grants where grantee = $1",
+            roles.SWEEPER)
+        residual_columns = await con.fetchval(
+            "select count(*) from information_schema.role_column_grants where grantee = $1",
+            roles.SWEEPER)
         await con.close()
         check("downgrade to 0044 drops both functions and self_serve",
               down.returncode == 0 and functions == 0 and column == 0,
               (down.returncode, functions, column, down.stderr[-300:]))
+        # `roles.ensure()` creates the role and grants nothing, so a boot after this cannot bring
+        # the grants back; what matters is that the downgrade itself left none (the reviewer's pin).
+        check("and leaves upto_sweeper holding no table or column privilege in this database",
+              residual == 0 and residual_columns == 0, (residual, residual_columns))
         up = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv", env=environment,
                             capture_output=True, text=True)
         check("and upgrade head applies again", up.returncode == 0, up.stderr[-300:])

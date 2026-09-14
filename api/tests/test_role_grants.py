@@ -223,6 +223,59 @@ async def scenario(test_url: str) -> None:
               "either an earlier schema or pg_temp first)",
               definers and all("search_path=pg_catalog, pg_temp" in config.split(";")
                                for _, config in definers), definers)
+        # **The owner of the two functions holds exactly SWEEPER_GRANTS and cannot log in.** Both
+        # directions over every table in public: a grant the list names and the database lacks
+        # breaks the sweep; a grant the database holds and the list does not is the ceiling moving.
+        owners = sorted({row[0] for row in (await connection.execute(text(
+            "select pg_get_userbyid(p.proowner) from pg_proc p "
+            "join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef"
+        ))).all()})
+        check("both definer functions are owned by upto_sweeper, not by the superuser owner",
+              owners == [role_map.SWEEPER], owners)
+        can_login = (await connection.execute(
+            text("select rolcanlogin or rolsuper from pg_roles where rolname = :r"),
+            {"r": role_map.SWEEPER})).scalar_one()
+        check("upto_sweeper cannot log in and is not a superuser", can_login is False, can_login)
+        every_table = (await connection.execute(text(
+            "select tablename from pg_tables where schemaname = 'public' order by 1"))).scalars().all()
+        drift = []
+        for table in every_table:
+            for privilege in ("select", "insert", "update", "delete", "truncate"):
+                expected = privilege in role_map.SWEEPER_GRANTS.get(table, ())
+                if await granted(connection, role_map.SWEEPER, table, privilege) != expected:
+                    drift.append((table, privilege, "expected" if expected else "unexpected"))
+        check("upto_sweeper holds exactly SWEEPER_GRANTS on every table in public — no more, no less",
+              not drift, drift[:6])
+        # Table-level UPDATE is checked above as absent everywhere; the column grants are the lock's.
+        column_drift = []
+        for table in every_table:
+            columns = (await connection.execute(text(
+                "select column_name from information_schema.columns "
+                "where table_schema = 'public' and table_name = :t"), {"t": table})).scalars().all()
+            for column in columns:
+                expected = column in role_map.SWEEPER_COLUMN_UPDATES.get(table, ())
+                holds = (await connection.execute(
+                    text("select has_column_privilege(:r, :t, :c, 'update')"),
+                    {"r": role_map.SWEEPER, "t": "public." + table, "c": column})).scalar_one()
+                if holds != expected:
+                    column_drift.append((table, column, "expected" if expected else "unexpected"))
+        check("and UPDATE only on `id` of the four tables it locks (SWEEPER_COLUMN_UPDATES)",
+              not column_drift, column_drift[:6])
+        check("and it is in no service-role map (0032 would grant to it before 0045 creates it)",
+              role_map.SWEEPER not in role_map.SERVICE_ROLES and role_map.SWEEPER not in role_map.grants())
+
+        # **The bound a definer function's pinned search_path leans on, asserted rather than
+        # claimed** (the reviewer's should on the first read). Planting an object for a definer to
+        # find needs CREATE on a schema the body can see; nobody but the owner may hold it.
+        creators = []
+        for who in sorted(set(role_map.SERVICE_ROLES) | {role_map.BACKUP, role_map.SWEEPER, "public"}):
+            holds = (await connection.execute(
+                text("select has_schema_privilege(:r, 'public', 'create')"), {"r": who})).scalar_one()
+            if holds:
+                creators.append(who)
+        check("no service role, not upto_backup, not upto_sweeper and not PUBLIC may CREATE in "
+              "schema public", not creators, creators)
+
         check("upto_erasure still cannot touch `circle` directly — its reach is the function",
               not await granted(connection, role_map.ERASURE, "circle", "delete")
               and not await granted(connection, role_map.ERASURE, "circle", "select"))
