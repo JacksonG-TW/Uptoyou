@@ -223,14 +223,14 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
         if row is None or row.circle_id != circle_id:
             raise HTTPException(status_code=404, detail="這個連結沒有用，跟朋友要一次。")
         if row.revoked_at is not None:
-            raise HTTPException(status_code=410, detail="這個連結換過了，跟建立的人要新的。")
+            raise HTTPException(status_code=410, detail="這個連結換過了，跟開圈子的人要新的。")
         if row.expired:
             # **A different sentence from the revoked one, because the remedy is the same and the
             # reason is not.** A person whose link was replaced knows somebody did something; a
             # person whose link ran out needs to know the link has a life at all, or the next one
             # will sit in the group chat overnight too.
             raise HTTPException(
-                status_code=410, detail="這個連結只能用一小時，過期了。跟建立的人要新的。"
+                status_code=410, detail="這個連結只能用一小時，過期了。跟開圈子的人要新的。"
             )
 
         try:
