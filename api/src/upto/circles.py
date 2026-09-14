@@ -167,9 +167,14 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
             raise HTTPException(status_code=429, detail="今天開的圈子太多了，明天再來。")
 
         name = body.name
+        # **`self_serve = true` is what makes this circle sweepable, and nothing else sets it**
+        # (revision 0045; owner 2026-09-14, «which circles the sweep may touch»). A circle an
+        # operator makes stays false and is never swept, so the nightly job cannot reach the
+        # owner's own circles or a fixture however long they sit untouched.
         circle_id = (
             await session.execute(
-                text("insert into circle (name) values (:n) returning id"), {"n": name}
+                text("insert into circle (name, self_serve) values (:n, true) returning id"),
+                {"n": name},
             )
         ).scalar_one()
         try:

@@ -52,6 +52,15 @@ async def granted(connection, role, table, privilege):
     ).scalar_one()
 
 
+async def executable(connection, role, function):
+    return (
+        await connection.execute(
+            text("select has_function_privilege(:r, :f, 'execute')"),
+            {"r": role, "f": function},
+        )
+    ).scalar_one()
+
+
 async def ungranted_tables(connection):
     """Every table in `public` that no service role can touch at all.
 
@@ -181,6 +190,42 @@ async def scenario(test_url: str) -> None:
               role_map.BACKUP not in role_map.SERVICE_ROLES, role_map.SERVICE_ROLES)
         check("and it is in no grants map either — its reach is a cluster role, not a table list",
               role_map.BACKUP not in role_map.grants())
+
+        # --- revision 0045: the sweep is two definer functions and one role may call them -----
+        #
+        # **`PUBLIC` is asked by name, and it is the check that matters most.** A function is
+        # executable by everyone unless revoked; a definer function left that way would let the
+        # API's credential, or any login at all, delete circles.
+        everyone = sorted(set(role_map.SERVICE_ROLES) | {role_map.BACKUP, "public"})
+        for holder, functions in role_map.FUNCTION_GRANTS.items():
+            for function in functions:
+                check("{} may execute {}".format(holder, function),
+                      await executable(connection, holder, function))
+                for other in everyone:
+                    if other == holder:
+                        continue
+                    check("{} may NOT execute {}".format(other, function),
+                          not await executable(connection, other, function))
+        definers = (
+            await connection.execute(
+                text("select p.oid::regprocedure::text, coalesce(array_to_string(p.proconfig, ';'), '') "
+                     "from pg_proc p join pg_namespace n on n.oid = p.pronamespace "
+                     "where n.nspname = 'public' and p.prosecdef order by 1")
+            )
+        ).all()
+        # `regprocedure` prints no space after a comma; the map is written for a reader, so both
+        # sides are compared without spaces rather than asking the map to look like catalog output.
+        named = sorted(f.replace("public.", "").replace(" ", "")
+                       for fs in role_map.FUNCTION_GRANTS.values() for f in fs)
+        check("the only SECURITY DEFINER functions in public are the ones FUNCTION_GRANTS names",
+              sorted(signature.replace(" ", "") for signature, _ in definers) == named, definers)
+        check("each pins search_path to pg_catalog, then pg_temp LAST (a definer hijack needs "
+              "either an earlier schema or pg_temp first)",
+              definers and all("search_path=pg_catalog, pg_temp" in config.split(";")
+                               for _, config in definers), definers)
+        check("upto_erasure still cannot touch `circle` directly — its reach is the function",
+              not await granted(connection, role_map.ERASURE, "circle", "delete")
+              and not await granted(connection, role_map.ERASURE, "circle", "select"))
 
         # --- coverage: no table is unreachable by every role -------------------------------
         orphans = await ungranted_tables(connection)

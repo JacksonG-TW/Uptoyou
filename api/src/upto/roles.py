@@ -186,6 +186,21 @@ ERASURE_GRANTS = {
 }
 
 
+# **A24 item 4 (revision 0045) — the sweep's reach is two functions and not one table.** Owner-ruled
+# 2026-09-14: `upto_erasure` holds EXECUTE on the two `SECURITY DEFINER` functions and nothing else
+# is added to its table map. The functions re-check the selection rule under a row lock, so the
+# credential can delete only what the rule would; PostgreSQL grants EXECUTE to `PUBLIC` by default,
+# and 0045 revokes it in the same revision that creates them. `test_role_grants` asserts this map
+# against the database in both directions: this role holds it, no other role and not `PUBLIC` does,
+# and these are the only definer functions in `public`.
+FUNCTION_GRANTS = {
+    ERASURE: (
+        "public.circle_sweep_candidates()",
+        "public.sweep_circle(bigint, boolean)",
+    ),
+}
+
+
 def grants() -> dict:
     """`{role: {table: (privilege, ...)}}` — what the migration issues and the test checks."""
     api = {t: WRITE for t in API_WRITE}
