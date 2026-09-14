@@ -108,6 +108,17 @@ async def scenario(test_url: str) -> None:
                 check("the ceiling's day at {} UTC starts at {} UTC (Taipei midnight, D83)".format(
                     instant, expected), start is True, start)
 
+        # **The one flag that makes a circle sweepable, set by this door and no other** (revision
+        # 0045; owner 2026-09-14). If it stayed false the nightly sweep would never take a stranger's
+        # abandoned circle; `test_circle_sweep_integration` pins the false half for operator circles.
+        async with Session() as session:
+            self_serve = (
+                await session.execute(text("select self_serve from circle where id = :c"),
+                                      {"c": circle})
+            ).scalar_one()
+        check("a circle made through the self-serve door is marked self_serve (the sweep's mark)",
+              self_serve is True, self_serve)
+
         # ---- join: a second seat, and a third with the SAME nickname --------------------------
         joined = await client.post(f"{BASE}/circles/{circle}/join",
                                    json={"ticket": ticket, "nickname": "小明"})

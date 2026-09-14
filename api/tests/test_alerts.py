@@ -242,12 +242,13 @@ class EveryDagIsWired(unittest.TestCase):
         dags = os.path.join(here, "..", "..", "airflow", "dags")
         files = [name for name in sorted(os.listdir(dags))
                  if name.endswith(".py") and not name.startswith("_")]
-        # 9 since 2026-09-12: `dataset_export.py` joined (the nightly Parquet). It was 8 from
+        # 10 since 2026-09-14: `circle_sweep.py` joined (A24 item 4, the nightly sweep of abandoned
+        # self-serve circles). 9 from 2026-09-12: `dataset_export.py` (the nightly Parquet). 8 from
         # 2026-08-30 (`db_backup.py`, A22's dump) and 7 from 2026-08-28 (`weather_retention.py`,
         # D42's window). **The number is here so that adding a DAG cannot happen quietly** — a new
         # file that forgets the callback would otherwise be caught only by the loop below, and a
         # new file that has the callback still deserves a reader's attention.
-        self.assertEqual(len(files), 9, files)
+        self.assertEqual(len(files), 10, files)
         for name in files:
             source = open(os.path.join(dags, name), encoding="utf-8").read()
             # **The import is read from the AST, not matched as a string.** The first version of this

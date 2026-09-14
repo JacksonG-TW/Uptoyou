@@ -186,6 +186,45 @@ ERASURE_GRANTS = {
 }
 
 
+# **A24 item 4 (revision 0045) — the sweep's reach is two functions and not one table.** Owner-ruled
+# 2026-09-14: `upto_erasure` holds EXECUTE on the two `SECURITY DEFINER` functions and nothing else
+# is added to its table map. The functions re-check the selection rule under a row lock, so the
+# credential can delete only what the rule would; PostgreSQL grants EXECUTE to `PUBLIC` by default,
+# and 0045 revokes it in the same revision that creates them. `test_role_grants` asserts this map
+# against the database in both directions: this role holds it, no other role and not `PUBLIC` does,
+# and these are the only definer functions in `public`.
+FUNCTION_GRANTS = {
+    ERASURE: (
+        "public.circle_sweep_candidates()",
+        "public.sweep_circle(bigint, boolean)",
+    ),
+}
+
+
+# **`upto_sweeper` — the owner of those two functions, and a role nobody logs in as** (owner,
+# 2026-09-14). NOLOGIN, no password, in no `.env`. A definer function runs as its owner, and the
+# table owner is a superuser, so the functions are owned by a role that can do exactly what they do
+# and nothing else. **Deliberately outside `SERVICE_ROLES` and `grants()`**: revision 0032 imports
+# both at run time and would grant to this role on a fresh database before 0045 creates it (the
+# same kind of reason H61 keeps `upto_backup` out). Revision 0045 issues this list literally (H59);
+# `test_role_grants` asserts the database holds exactly it.
+SWEEPER = "upto_sweeper"
+SWEEPER_GRANTS = {
+    **{table: ("select", "delete") for table in (
+        "weight_contribution", "round_forecast_baseline", "member_roll", "preference",
+        "device_secret", "principal", "join_ticket", "place",
+    )},
+    **{table: ("select", "delete") for table in ("circle", "round", "member", "proposal")},
+    # The selection rule reads it («never a signed trip») and the sweep never deletes one.
+    "trip": ("select",),
+}
+
+#: **Column-level UPDATE on `id` of the four tables the sweep row-locks, and only for the lock** —
+#: `select … for update` needs UPDATE on at least one column (measured on 17.11), and `id` is the
+#: column whose rewrite the schema most constrains (0045's comment). No table-level UPDATE anywhere.
+SWEEPER_COLUMN_UPDATES = {table: ("id",) for table in ("circle", "round", "member", "proposal")}
+
+
 def grants() -> dict:
     """`{role: {table: (privilege, ...)}}` — what the migration issues and the test checks."""
     api = {t: WRITE for t in API_WRITE}
@@ -247,7 +286,7 @@ _PASSWORD_VARS = {
 
 
 def ensure() -> int:
-    """Create or re-password the five login roles. Run as the owner, before the grants.
+    """Create or re-password the five login roles, and create the NOLOGIN sweep owner. Run as the owner.
 
     **asyncpg, not psycopg2, and not because it is tidier.** H1 rules the synchronous driver out of
     this codebase entirely, and the api image carries only `asyncpg` — the first version of this
@@ -305,6 +344,18 @@ def ensure() -> int:
                         else "created",
                     )
                 )
+            # **The sweep functions' owner, created here too and NOLOGIN every time** (revision
+            # 0045). `pg_dump` carries no roles, so a restore onto a fresh cluster reaches
+            # `ALTER FUNCTION … OWNER TO upto_sweeper` and, if the role is absent, fails that line
+            # and leaves the functions owned by the restoring superuser — silently wider than ruled.
+            # `migrate` runs this on every boot, so the role exists before anyone restores. 0045
+            # creates it as well, for a database migrated without this entry point.
+            exists = await connection.fetchval("select 1 from pg_roles where rolname = $1", SWEEPER)
+            if not exists:
+                await connection.execute('create role "{}" nologin'.format(SWEEPER))
+            await connection.execute('alter role "{}" nologin'.format(SWEEPER))
+            print("roles: {} {} (NOLOGIN, owns the sweep functions)".format(
+                SWEEPER, "already existed" if exists else "created"))
             return 0
         finally:
             await connection.close()
