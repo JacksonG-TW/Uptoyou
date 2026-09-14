@@ -140,6 +140,7 @@ export default function Create() {
             device={{ token: made.key, circle: made.circleId }}
             link={link}
             onLink={setLink}
+            creator
           />
 
           <a className="act" data-part="into-circle" href="/round">進去看看</a>

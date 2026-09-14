@@ -64,3 +64,35 @@ export const LINK_LIFE = '連結做好一小時就過期，換一條新的就再
 /** §2a — the one line on the naming screen. States the absence that matters to a stranger deciding
  *  whether to start: there is nothing to sign up for. */
 export const NO_ACCOUNT = '不用帳號，也不用 email。'
+
+/**
+ * `/circle` for a seat that is **not** the creator's — the line that stands where the re-issue
+ * control would (evaluator-ruled 2026-09-13, `gate-selfserve-2026-09-13.md` Addendum 4, on the
+ * owner's ruling that re-issue is the creator's seat only, `91d146b`).
+ *
+ * **It replaces a button that failed every time for this reader.** Measured on 8080 before it: a
+ * member saw 換一條新的連結 enabled, pressed it, and got a 403 that landed under the seat list,
+ * 250 px from the button — the rule learned by breaking it, and the remedy never stated. This line
+ * gives both before anything is pressed, in the product's own word for the creator, 開圈子的人.
+ *
+ * Every character checked against `charset-sub.txt` before it was written here; none absent.
+ */
+export const MEMBER_INVITE = '要邀人進來，跟開圈子的人要連結。'
+
+/**
+ * The creator's `/circle` — **is the link they sent still alive** (owner 「顯示」 2026-09-13; the
+ * evaluator's words and format, `gate-selfserve-2026-09-13.md` Addendum 5).
+ *
+ * **The time is the browser's clock**, `expires_at` formatted with no `timeZone` option, so the
+ * reader's own zone applies — display, not a D83 exception. `h23` because 上午/下午 would be a
+ * second thing to read on a line whose whole job is one time. A link lives at most an hour, so
+ * HH:MM with no date is never ambiguous.
+ *
+ * **The expired line says why a friend's tap failed and does not say what to do** — the button
+ * directly under it does that by being there (D20).
+ *
+ * Every character checked against `charset-sub.txt` before it was written; none absent.
+ */
+const HHMM = new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+export const linkLive = (at: Date) => `現在的連結可以用到${HHMM.format(at)}。`
+export const LINK_EXPIRED = '上一條連結過期了，朋友點了會進不來。'

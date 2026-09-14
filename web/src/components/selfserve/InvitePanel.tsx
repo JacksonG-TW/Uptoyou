@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
-import { fetchMembers, reissueJoinLink, type Members } from '@/lib/selfserve'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { fetchMembers, readInviteRole, reissueJoinLink, type InviteRole, type Members } from '@/lib/selfserve'
 import type { Device } from '@/lib/round'
 import CopyRow from './CopyRow'
-import { LINK_LIFE } from './copy'
+import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
 
 /**
  * The package's **step 3** — the invite screen: the link, the seat list, re-issue. **Never the
@@ -50,6 +50,7 @@ export default function InvitePanel({
   device,
   link,
   onLink,
+  creator = false,
 }: {
   device: Device
   /** The current join link, or `''` when this screen cannot read one — see `Circle`. Passed in
@@ -58,10 +59,67 @@ export default function InvitePanel({
   link: string
   /** Called with a fresh link after a re-issue, so whichever screen owns it stays in step. */
   onLink: (next: string) => void
+  /** `true` only from the create flow, which renders solely for the person who just made the
+   *  circle — so it skips the role read and draws the control at once, exactly as before
+   *  (Addendum 4, point 4: the create flow is unchanged). `/circle` leaves it `false` and asks. */
+  creator?: boolean
 }) {
   const [seats, setSeats] = useState<Members | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  /* **`null` until the read answers, and the slot draws nothing while it is `null`** (Addendum 4,
+     point 3). Drawing the control first and removing it on a 403 would flash a button at exactly
+     the reader it was ruled away from. */
+  const [role, setRole] = useState<InviteRole | null>(creator ? { role: 'creator', status: null } : null)
+
+  /* **One read decides the role and, for the creator, carries the link's status** (Addendum 5). It
+     runs on mount, on the person looking again, and after a successful re-issue — never on a timer.
+     **The create flow never reads**: it renders only for the person who just made the circle, and
+     it has no status line.
+
+     **An in-flight guard, because one return fires two events.** Coming back to a tab raises
+     `visibilitychange` and then `focus`; without the guard that is two `GET`s for one look, and
+     SS-19 counts exactly one. The previous answer stays on screen while a re-read is out, so the
+     slot never blanks on focus. */
+  const mounted = useRef(true)
+  const reading = useRef(false)
+  const again = useRef(false)
+  /* `fresh` is for the re-issue: its answer must reflect the NEW ticket, so a read already out
+     (started before the re-issue) is followed by one more rather than trusted. A focus return
+     never passes it, which is what keeps one look at one request. */
+  const readRole = useCallback(async (fresh = false) => {
+    if (creator) return
+    if (reading.current) { if (fresh) again.current = true; return }
+    reading.current = true
+    try {
+      do {
+        again.current = false
+        const next = await readInviteRole(device)
+        if (mounted.current && !again.current) setRole(next)
+      } while (again.current && mounted.current)
+    } finally {
+      reading.current = false
+    }
+  }, [creator, device])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
+
+  /* **The line must not lie while the creator looks at it.** One `setTimeout` at `expires_at − now`
+     flips `live` to `expired` locally, with no request; there is no interval (the ruling against
+     polling stands). **Every re-read sets a new `role` object, so this effect's cleanup clears the
+     old timeout on each re-read**, and on unmount. The delay is at most an hour, far inside
+     `setTimeout`'s 24.8-day ceiling. */
+  useEffect(() => {
+    if (role?.role !== 'creator' || !role.status?.active || !role.status.expiresAt) return
+    const at = role.status.expiresAt
+    const id = window.setTimeout(() => {
+      setRole({ role: 'creator', status: { active: false, expired: true, expiresAt: at } })
+    }, Math.max(0, at.getTime() - Date.now()))
+    return () => window.clearTimeout(id)
+  }, [role])
 
   const readSeats = useCallback(async () => {
     try {
@@ -75,18 +133,19 @@ export default function InvitePanel({
 
   useEffect(() => {
     void readSeats()
+    void readRole()
     /* `focus` and `visibilitychange` both, because they catch different returns: `focus` is another
        window coming forward, `visibilitychange` is a tab or a phone screen coming back. Either is
        the person looking again, which is the moment the ruling puts the read on. The guard keeps a
        hidden tab from reading when `focus` fires without the page being visible. */
-    const look = () => { if (!document.hidden) void readSeats() }
+    const look = () => { if (!document.hidden) { void readSeats(); void readRole() } }
     window.addEventListener('focus', look)
     document.addEventListener('visibilitychange', look)
     return () => {
       window.removeEventListener('focus', look)
       document.removeEventListener('visibilitychange', look)
     }
-  }, [readSeats])
+  }, [readSeats, readRole])
 
   const reissue = async () => {
     if (busy) return
@@ -98,6 +157,8 @@ export default function InvitePanel({
          count is unchanged — a screen that skipped this would assert the rule instead of showing
          it, and would keep a stale list if the rule ever broke. */
       void readSeats()
+      /* A re-issue gives a new `expires_at`, so the status line is re-read with the seats. */
+      void readRole(true)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -135,10 +196,31 @@ export default function InvitePanel({
           removal gets pressed for the wrong reason, and then the stranger is still there. Since the
           ruled hour it is also **the fix for a friend who tapped late**, which will be the common
           case — another reason the wording is an action rather than a removal. */}
-      <button type="button" className="ssMinor" data-part="reissue" onClick={() => void reissue()} disabled={busy}>
-        換一條新的連結
-      </button>
-      <p className="ssNote">舊的連結就不能用了，已經進來的人不受影響。</p>
+      {/* **A seat that is not the creator's sees one line instead** (Addendum 4, on the owner's
+          `91d146b`: re-issue is the creator's seat only). The control used to render for everyone
+          and refuse most of them 250 px away; this states the rule and the remedy before anything
+          is pressed. `unknown` keeps the control — the server's 403 is the backstop. */}
+      {/* **The creator's status line, directly above the control it explains** (Addendum 5). No
+          line when there is no ticket (a circle made with `upto.issue`), for a member, for an
+          unknown answer, or before the read has answered. Ink, never the hot colour, in both
+          states — nothing is wrong with what the creator did. */}
+      {role?.role === 'creator' && role.status?.active && role.status.expiresAt && (
+        <p className="ssStatus" data-part="link-status" data-state="live">{linkLive(role.status.expiresAt)}</p>
+      )}
+      {role?.role === 'creator' && role.status?.expired && (
+        <p className="ssStatus" data-part="link-status" data-state="expired">{LINK_EXPIRED}</p>
+      )}
+      {role?.role === 'member' && (
+        <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
+      )}
+      {(role?.role === 'creator' || role?.role === 'unknown') && (
+        <>
+          <button type="button" className="ssMinor" data-part="reissue" onClick={() => void reissue()} disabled={busy}>
+            換一條新的連結
+          </button>
+          <p className="ssNote">舊的連結就不能用了，已經進來的人不受影響。</p>
+        </>
+      )}
 
       {/* The seat list. **Every row comes from the server and none from any screen's own state** —
           when the spec asked for this list no endpoint could supply it, and the tempting fix was to

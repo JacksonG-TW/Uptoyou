@@ -126,6 +126,61 @@ export async function reissueJoinLink(d: Device): Promise<string> {
 }
 
 /**
+ * **Whose seat is this, and — for the creator — is the link they sent still alive.** One read,
+ * `GET /circles/{id}/join-ticket` (`59f55c6`), which **mints nothing and revokes nothing**, so
+ * asking costs the shared link nothing.
+ *
+ * Evaluator-ruled 2026-09-13 (Addendum 4): `200` → the creator's re-issue control; `403` → the
+ * member line; **anything else, or no answer, → the control as today**, because the server's own
+ * 403 on `POST` stays the backstop. The fallback leans toward showing the control on purpose: a
+ * creator who cannot find re-issue has a link that dies in an hour and no way to make another, and
+ * a member who sees the control in that rare case is refused in words, which is today's behaviour.
+ *
+ * **The `200` body is the link's status, and the owner ruled it shown** (「顯示」, 2026-09-13): the
+ * creator's `/circle` states whether the link they sent is live and until when. Same read, no
+ * second request. **`status` is present only on `creator`** — a member's `403` carries no status,
+ * and its `detail` is deliberately not rendered: the member line says the same thing before
+ * anything is pressed.
+ *
+ * **Three states, not two, and backend kept them apart on purpose** (`circles.py`): no live ticket
+ * (`active` and `expired` both false, `expires_at` null) is not the same as a ticket that ran out.
+ */
+export type LinkStatus = { active: boolean; expired: boolean; expiresAt: Date | null }
+
+export type InviteRole =
+  | { role: 'creator'; status: LinkStatus | null }
+  | { role: 'member' }
+  | { role: 'unknown' }
+
+export async function readInviteRole(d: Device): Promise<InviteRole> {
+  let r: Response
+  try {
+    r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
+      headers: { authorization: `Bearer ${d.token}` },
+      cache: 'no-store',
+    })
+  } catch {
+    return { role: 'unknown' }
+  }
+  if (r.status === 403) return { role: 'member' }
+  if (r.status !== 200) return { role: 'unknown' }
+  /* **A 200 whose body will not parse is still the creator.** The role is the status code's answer;
+     the status line is extra, so a malformed body loses the line and keeps the control. */
+  const body = await r.json().catch(() => null) as
+    { active?: boolean; expired?: boolean; expires_at?: string | null } | null
+  if (!body) return { role: 'creator', status: null }
+  const at = body.expires_at ? new Date(body.expires_at) : null
+  return {
+    role: 'creator',
+    status: {
+      active: !!body.active,
+      expired: !!body.expired,
+      expiresAt: at && !Number.isNaN(at.getTime()) ? at : null,
+    },
+  }
+}
+
+/**
  * §2c's seat list — `GET /circles/{id}/members` → `{members: [{nickname}], seats, cap}`.
  *
  * Built by backend on 2026-09-13 after I raised that the spec asked for a seat list no endpoint

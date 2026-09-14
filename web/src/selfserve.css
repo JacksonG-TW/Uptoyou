@@ -93,6 +93,11 @@
   background: none; color: var(--color-ink);
   padding: 8px 18px; margin-top: 24px; cursor: pointer;
 }
+/* The creator's link status (Addendum 5) — **ink, not muted**: it is the answer the creator came for,
+   while the note under the button is a consequence. It takes the 24px the button used to open with,
+   and the button closes to 12px behind it so the line and its act read as one group. */
+.ssStatus { font-size: var(--text-note); font-weight: 400; color: var(--color-ink); line-height: 1.7; margin: 24px 0 0; }
+.ssStatus + .ssMinor { margin-top: 12px; }
 .ssMinor:disabled { color: var(--color-muted); border-color: var(--color-muted); cursor: default; }
 .ssMinor:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
 
