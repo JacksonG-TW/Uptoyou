@@ -27,7 +27,9 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 
-from upto.schema_guard import SchemaMismatch, _is_unreadable, decide, head_revision  # noqa: E402
+from upto.schema_guard import (  # noqa: E402
+    SchemaMismatch, _is_refused_credential, _is_unreadable, decide, head_revision,
+)
 
 
 def chain(directory: Path, revisions: list[str]) -> None:
@@ -141,6 +143,24 @@ class AskingAndBeingRefusedIsNotPassing(unittest.TestCase):
         """The one that must keep warning and serving, or every cold boot is a deploy failure."""
         self.assertFalse(_is_unreadable(self._wrapped("ConnectionDoesNotExistError")))
         self.assertFalse(_is_unreadable(OSError("connection refused")))
+
+    def test_a_refused_password_is_its_own_class_and_NOT_unreadable(self):
+        """Candidate 22's should: a wrong password or a missing role exits 4, never 3, never serves."""
+        refused = self._wrapped("InvalidPasswordError")
+        self.assertTrue(_is_refused_credential(refused))
+        self.assertFalse(_is_unreadable(refused))
+        self.assertTrue(_is_refused_credential(self._wrapped("InvalidAuthorizationSpecificationError")))
+
+    def test_a_refused_password_is_found_on_context_as_well_as_cause(self):
+        """The connect path can carry the driver's error on `__context__` only."""
+        inner = type("InvalidPasswordError", (Exception,), {})("password authentication failed")
+        outer = RuntimeError("connect failed")
+        outer.__context__ = inner
+        self.assertTrue(_is_refused_credential(outer))
+
+    def test_a_transport_failure_is_not_a_refused_credential_either(self):
+        self.assertFalse(_is_refused_credential(self._wrapped("ConnectionDoesNotExistError")))
+        self.assertFalse(_is_refused_credential(OSError("connection refused")))
 
     def test_the_walk_terminates_on_a_cycle(self):
         """A chain that points at itself must not hang the boot it was added to protect."""

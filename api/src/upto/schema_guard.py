@@ -150,6 +150,23 @@ async def check_or_exit(session_factory_) -> None:
         # **A transport failure is different in kind and keeps the old behaviour.** A database that
         # cannot be reached at all is `db`'s healthcheck to report, not this guard's, and turning a
         # slow start into a refusal would make every cold boot a deploy failure.
+        # **Refused at the door: the role's password is wrong, or the role does not exist**
+        # (the reviewer's should on candidate 22, 2026-09-14, from CI run 34824356992). That run
+        # never created the roles, every connection as `upto_api` was refused, and this branch
+        # logged «could not be checked — serving anyway» while `/health` said the database was
+        # unreachable, which was false. A process that cannot log in reads nothing, so no wrong
+        # schema can be served; but it is a configuration fault a restart will never fix, and it
+        # gets **its own exit code, 4**, because its fix is not exit 3's: not `migrate`'s schema,
+        # but a password in `.env` and the role in the database disagreeing.
+        if _is_refused_credential(failure):
+            _log.error(
+                "schema: the database refused the server's role %s (%s) — refusing to serve. Its "
+                "password in app/.env (UPTO_API_DB_PASSWORD) and the role in the database disagree, "
+                "or the role does not exist. `docker compose run --rm migrate` creates the roles and "
+                "sets their passwords from .env.",
+                _role_of(session_factory_), type(_innermost(failure)).__name__,
+            )
+            os._exit(4)  # noqa: SLF001 — its own code: the fix differs from exit 3's
         if _is_unreadable(failure):
             _log.error(
                 "schema: alembic_version could not be READ (%s) — refusing to serve. The guard "
@@ -159,6 +176,46 @@ async def check_or_exit(session_factory_) -> None:
             )
             os._exit(3)  # noqa: SLF001 — same contract as the mismatch above
         _log.warning("schema: could not be checked (%s) — serving anyway", failure)
+
+
+def _chain(failure: BaseException):
+    """The exception and everything behind it, by `__cause__` and then `__context__`.
+
+    **Both links, because the two paths differ** (the reviewer's note): a failed query is wrapped by
+    SQLAlchemy with `raise … from`, which sets `__cause__`; a failed *connect* can surface with the
+    driver's error only on `__context__`. Bounded, so a cycle cannot hang a startup.
+    """
+    seen, current = 0, failure
+    while current is not None and seen < 10:
+        yield current
+        current, seen = (current.__cause__ or current.__context__), seen + 1
+
+
+def _innermost(failure: BaseException) -> BaseException:
+    last = failure
+    for last in _chain(failure):
+        pass
+    return last
+
+
+def _is_refused_credential(failure: BaseException) -> bool:
+    """Did the database refuse the role itself — a wrong password, or a role that does not exist?
+
+    asyncpg raises **InvalidPasswordError** (a subclass of InvalidAuthorizationSpecificationError)
+    for both, because PostgreSQL answers «password authentication failed» for a missing role too, on
+    purpose, so a client cannot probe which role names exist. Matched by name, like `_is_unreadable`,
+    so this module stays importable with the standard library alone.
+    """
+    return any(type(link).__name__ in ("InvalidPasswordError", "InvalidAuthorizationSpecificationError")
+               for link in _chain(failure))
+
+
+def _role_of(session_factory_) -> str:
+    """The role name the server connects as, for the log line — never the password."""
+    try:
+        return session_factory_().kw["bind"].url.username or "(unknown)"
+    except Exception:  # noqa: BLE001 — a log line must not become a second failure
+        return "(unknown)"
 
 
 def _is_unreadable(failure: BaseException) -> bool:
@@ -173,9 +230,5 @@ def _is_unreadable(failure: BaseException) -> bool:
     in the product until 2026-09-11) and **UndefinedTable** (there is no `alembic_version` at all,
     which is a database nothing has ever migrated, not a database that is merely unreachable).
     """
-    seen, current = 0, failure
-    while current is not None and seen < 10:
-        if type(current).__name__ in ("InsufficientPrivilegeError", "UndefinedTableError"):
-            return True
-        current, seen = current.__cause__, seen + 1
-    return False
+    return any(type(link).__name__ in ("InsufficientPrivilegeError", "UndefinedTableError")
+               for link in _chain(failure))

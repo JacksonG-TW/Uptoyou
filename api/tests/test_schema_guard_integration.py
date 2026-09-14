@@ -174,6 +174,30 @@ async def main() -> int:
               code2 == 3, (code2, log2[-400:]))
         await run_sql(test_url, 'grant select on "alembic_version" to "upto_api"', True)
 
+        # --- refused at the door: a wrong password, and a role that does not exist ---------------
+        #
+        # **Candidate 22's should, and only a real connect proves it** — the connect path chains the
+        # driver's error differently from a failed query, so a host-side fixture cannot stand in.
+        # CI run 34824356992 was the second case: no role had been created, every connection was
+        # refused, and the old guard logged «serving anyway».
+        scheme, _, rest = api_url.partition("://")
+        creds, _, hostpart = rest.rpartition("@")
+        user = creds.split(":", 1)[0]
+        for label, url in (
+            ("a wrong password for the server's role",
+             "{}://{}:not-the-password@{}".format(scheme, user, hostpart)),
+            ("a role that does not exist",
+             "{}://upto_no_such_role:whatever@{}".format(scheme, hostpart)),
+        ):
+            code4, log4 = wait_for_exit(start_api(url))
+            check("{} stops the API with exit 4 — not 3, and not serving".format(label),
+                  code4 == 4, (code4, log4[-400:]))
+            check("  and the log names the refusal and the variable to fix, never a migration",
+                  "refused the server's role" in log4 and "UPTO_API_DB_PASSWORD" in log4
+                  and "could not be READ" not in log4, log4[-400:])
+            check("  and never prints the password it was given",
+                  "not-the-password" not in log4 and "whatever" not in log4, log4[-400:])
+
         # --- and the boring direction, without which every assertion above is free ------------
         serving = start_api(api_url)
         try:
