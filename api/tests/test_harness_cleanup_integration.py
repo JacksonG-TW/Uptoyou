@@ -77,6 +77,7 @@ async def scenario(test_url: str) -> None:
         for key in ("harness", "real"):
             principal = (await session.execute(
                 text("insert into principal default values returning id"))).scalar_one()
+            ids[key + "_principal"] = principal
             ids[key + "_member"] = (await session.execute(
                 text("insert into member (circle_id, principal_id, nickname) "
                      "values (:c, :p, 'A') returning id"),
@@ -120,6 +121,15 @@ async def scenario(test_url: str) -> None:
                 {"r": ids[key + "_round"], "p": ids[key + "_place"],
                  "m": ids[key + "_member"], "pref": ids[key + "_pref"]},
             )
+        # **A person seated in both circles** — the real circle's principal also holds a seat in the
+        # harness circle, with one device secret (it is per principal, not per circle). Deleting
+        # the harness circle must not take that secret: it is the person's key to the real one.
+        await session.execute(
+            text("insert into device_secret (principal_id, secret_sha256) values (:p, :h)"),
+            {"p": ids["real_principal"], "h": "e" * 64})
+        await session.execute(
+            text("insert into member (circle_id, principal_id, nickname) values (:c, :p, 'B')"),
+            {"c": ids["harness"], "p": ids["real_principal"]})
         await session.commit()
 
     # The tool reads its own environment variable, so point it at the temporary database.
@@ -160,6 +170,12 @@ async def scenario(test_url: str) -> None:
                 text("select count(*) from {} where {} = :v".format(table, column)),
                 {"v": kept})).scalar_one()
             check("  and it is the right one", survivor == 1, (table, survivor))
+
+        kept_secret = (await session.execute(
+            text("select count(*) from device_secret where principal_id = :p"),
+            {"p": ids["real_principal"]})).scalar_one()
+        check("a person seated in both circles keeps the device secret that opens the real one",
+              kept_secret == 1, kept_secret)
 
     await engine.dispose()
     print("\nA22/ladder: the cleanup deletes a harness circle whole — through two RESTRICT edges "
