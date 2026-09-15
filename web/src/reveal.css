@@ -354,6 +354,12 @@
   padding-block: .05em;
   letter-spacing: .01em;
   margin: 0;
+  /* **Balanced, so a long name never leaves one character alone on its second line** (the
+     evaluator's A-2, 2026-09-15). In the operator's narrower column at 1440 the headline broke
+     「一八六牛肉 / 麵」: a lone CJK character reads as a separate word, and it is the headline of the
+     screen. `balance` evens the lines out without changing the size, the column or the reserved
+     two-line box, so `R-D9`'s floor and `RV-5` are untouched. A browser without it breaks as before. */
+  text-wrap: balance;
   /* deliberately uncapped in member state — see the note above */
 }
 
