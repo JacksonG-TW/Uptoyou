@@ -36,7 +36,7 @@ range it moved through, then checks the alert channel and prints `alert channel:
 present`.
 
 **Exit codes:** 0 nothing to do or deployed · 3 no `flock` · 4 the clone is dirty or not on a
-branch · 5 `deploy/` changed in the pull, run once by hand (H85) · **6 the stack is UP but
+branch · 5 `deploy/` changed in the pull — the refusal prints the new file's steps to run by hand with the tag set (H85; a plain `--once` would find no change, H83) · **6 the stack is UP but
 `telegram_alerts` is absent** — A10 sends nothing until both `UPTO_TELEGRAM_BOT_TOKEN` and
 `UPTO_TELEGRAM_CHAT_ID` are set in `.env` and `airflow-init` is recreated; re-check with
 `deploy/pull-deploy.sh --check-alert-channel` (H100 — the box was silent for the whole launch

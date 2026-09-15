@@ -56,8 +56,9 @@ alert_channel_check() {
         say "alert channel: telegram_alerts present (checked by id only)"
         return 0
     fi
-    say "ALERT CHANNEL: absent — no telegram_alerts Connection, so A10 sends nothing and a red task"
-    say "  is reported to nobody. Set BOTH UPTO_TELEGRAM_BOT_TOKEN and UPTO_TELEGRAM_CHAT_ID in"
+    say "ALERT CHANNEL: absent — no telegram_alerts Connection (or the scheduler could not be asked),"
+    say "  so A10 sends nothing and a red task is reported to nobody. Presence, not delivery: a"
+    say "  Connection with a wrong token passes. Set BOTH UPTO_TELEGRAM_BOT_TOKEN and UPTO_TELEGRAM_CHAT_ID in"
     say "  app/.env, then: docker compose up airflow-init --force-recreate --no-deps"
     say "  and re-check: $HERE/pull-deploy.sh --check-alert-channel   (H100)"
     return 6
@@ -152,8 +153,11 @@ if ! git diff --quiet "$before" "$after" -- deploy/; then
     git --no-pager diff --stat "$before" "$after" -- deploy/ | sed 's/^/    /'
     say "         The script that just ran is the one from $before — it cannot perform a step it"
     say "         does not have. Nothing was pulled into the stack and nothing was restarted;"
-    say "         the clone IS now at $after, so run this once by hand and the next tick is normal:"
-    say "             $HERE/pull-deploy.sh --once"
+    say "         the clone IS now at $after, and a plain --once would find no change and do nothing"
+    say "         (H83). Run the new file's steps by hand, with the tag set, then the next tick is normal:"
+    say "             cd $APP && export UPTO_IMAGE_TAG=$after \\"
+    say "               && docker compose pull --quiet && docker compose run --rm migrate \\"
+    say "               && docker compose up -d --wait && $HERE/pull-deploy.sh --check-alert-channel"
     exit 5
 fi
 
