@@ -1,13 +1,13 @@
 {
   "charsets": {
     "display": {
-      "covered_by_source_face": 31,
+      "covered_by_source_face": 49,
       "dropped": "",
       "dropped_absent_from_source_face": 0,
       "dropped_means": "the source face has no glyph for these characters, so no subset of it can carry them — not characters the subsetter lost",
       "file": "charset-display.txt",
-      "requested": 31,
-      "sha256": "346da47e7ab5a12445d57371bd04991ae13cfc096c37517ecb08010bb4e64f7c",
+      "requested": 49,
+      "sha256": "904b5bbd51d8bfe31c6b3574082adce372145f719683d4c3746d0f02faec8245",
       "source": "NotoSerifTC.ttf"
     },
     "sub": {
@@ -34,11 +34,11 @@
       "why": "OFL 1.1 — a subset is a derivative work and the notice travels with it (D66, amended 2026-08-18)"
     },
     "noto-display-var.woff2": {
-      "bytes": 14928,
-      "characters_in_the_built_face": 31,
+      "bytes": 21664,
+      "characters_in_the_built_face": 49,
       "charset": "display",
       "font_weight_declaration": "font-weight: 200 900",
-      "sha256": "4d0f6db0b3c35411908cd6060ce8804b3515b50a5012b28c9f2376f23223e0f4",
+      "sha256": "c760d5784c446eb5a3a2f10d9d74a3011b1a23ee92ee1bdacc31081841cbfa1d",
       "source": "NotoSerifTC.ttf",
       "wght": "variable 200-900"
     },

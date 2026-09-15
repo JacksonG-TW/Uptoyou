@@ -18,14 +18,17 @@
   }
 }
 
-/* **NOT in the display face, and that is a decision with a cost, flagged to the evaluator.**
-   `.deviceTitle` one file over sets `UpTo Serif`, and these screens are its siblings — so the
-   consistent choice would be the serif. But `tools/subset_fonts.py` derives the display charset
-   from every rule that sets that family, so putting it here would add 「取個名字」「就可以開始」
-   「圈子開好了」「找人進來」「有人邀你」「一起吃飯」「你進來了」 to a face that ships **31 glyphs**
-   — a font rebuild, which means new binaries in `app/web/public/fonts/` and new manifest hashes,
-   inside a candidate window. That is a bigger change than a screen and not one to make quietly, so
-   the titles take the body face at display weight and the face is the evaluator's to rule. */
+/* **In the display face, like `.deviceTitle` one file over** — these screens are its siblings, and
+   a stranger's first screen should not be set in a plainer face than the one after it. This was
+   the body face until 2026-09-15 and named as debt in `gate-selfserve-2026-09-13.md`: putting the
+   family here adds the titles' characters to the display charset, which is a font rebuild, and it
+   was held out of candidate 21's window for that reason. Rebuilt with `subset_fonts.py --build`
+   in the same commit.
+
+   **The family sits on `.ssTitle` alone, in a rule of its own**, for the reason `round.css` gives
+   for `.deviceTitle`: `subset_fonts.py` takes every class in a selector that sets the family, so
+   `.selfserve .ssTitle` would hand it the whole screen's copy. */
+.ssTitle { font-family: "UpTo Serif", "Noto Serif TC", serif; }
 .ssTitle {
   display: flex; flex-direction: column;
   font-size: var(--text-display);
