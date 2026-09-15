@@ -164,7 +164,7 @@ own role.*
 | **Database** | PostgreSQL 17. Seven login roles, one per boundary: the API, the ingests, the nightly erasure, the backup, the lineage tool, the value checks, and the owner. Only the one-shot migration container ever holds the owner role. |
 | **Vector** | pgvector, in that same database. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. Its metadata is a second database in the same PostgreSQL. |
-| **Models** | Ollama on a home box's 8 GB card, reached through a relay. `gemma2:2b` generates, `snowflake-arctic-embed2` retrieves. |
+| **Models** | Ollama on a home box's 8 GB card, used in batches from the development machine; the production host runs no model. `gemma2:2b` generates, `snowflake-arctic-embed2` retrieves. |
 | **Deployment** | One EC2 instance in Tokyo behind Cloudflare in Full (strict). It pulls images from a public registry and builds nothing. |
 
 ## Data Source and Data Model

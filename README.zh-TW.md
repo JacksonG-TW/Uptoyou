@@ -141,7 +141,7 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 | **資料庫** | PostgreSQL 17。七個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份、數值檢查、擁有者。擁有者只有那個一次性的 migration container 拿得到。 |
 | **向量** | pgvector，在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |
-| **模型** | Ollama 跑在家裡那台機器的 8 GB 顯示卡上，透過一個中繼連過去。`gemma2:2b` 生成，`snowflake-arctic-embed2` 檢索。 |
+| **模型** | Ollama 跑在家裡那台機器的 8 GB 顯示卡上，由開發機分批使用；正式主機不跑模型。`gemma2:2b` 生成，`snowflake-arctic-embed2` 檢索。 |
 | **部署** | 東京一台 EC2，前面是 Full (strict) 模式的 Cloudflare。它從公開 registry 拉 image，自己不 build。 |
 
 ## 資料來源與資料模型
