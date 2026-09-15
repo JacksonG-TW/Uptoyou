@@ -122,7 +122,7 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 |---|---|
 | **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy image 裡 build。沒有 CDN，執行時不抓任何東西。兩套子集字型跟著 bundle 一起打包。 |
 | **API** | Python、FastAPI、SQLAlchemy 2.0，全程 async。45 個手寫的 Alembic migration。 |
-| **資料庫** | PostgreSQL 17。六個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份、擁有者。擁有者只有那個一次性的 migration container 拿得到。 |
+| **資料庫** | PostgreSQL 17。七個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份、數值檢查、擁有者。擁有者只有那個一次性的 migration container 拿得到。 |
 | **向量** | pgvector，在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |
 | **模型** | Ollama 跑在家裡那台機器的 8 GB 顯示卡上，透過一個中繼連過去。`gemma2:2b` 生成，`snowflake-arctic-embed2` 檢索。 |
@@ -268,7 +268,7 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 - **對模型的連線會重試，重試次數會印出來。** 這條路徑上，一個冷的模型看起來是*掛掉*，看不出是慢：第一個請求失敗，十二秒後重試，半秒就回。一條不穩的連線在紀錄裡是一個數字，而不是一個很慢的晚上。
 - **排程任務失敗會送一則訊息。** 訊息帶 log 在 container 裡的路徑，永遠沒有 URL。全新 clone 預設關掉通知。另外有一個故意會失敗的任務，用來測這個通道本身。
 - **每個來源都被證明是冪等的，不是假設的。** 每一個都走它真正的命令列入口跑兩次，每一張表的每一個欄位都比對。沒有變化的一天是一個被記錄下來的結果。
-- **72 個測試檔案**，兩種節奏：host-side 不需要網路也不需要資料庫；build-and-drop 自己建資料庫，跑在唯一握有擁有者憑證的那個服務裡。每一次 commit 還要通過 pre-commit hook 裡的六道本地檢查，其中五道只需要標準函式庫，所以一個 clone 不需要任何工具鏈就能 commit。
+- **74 個測試檔案**，兩種節奏：host-side 不需要網路也不需要資料庫；build-and-drop 自己建資料庫，跑在唯一握有擁有者憑證的那個服務裡。每一次 commit 還要通過 pre-commit hook 裡的六道本地檢查，其中五道只需要標準函式庫，所以一個 clone 不需要任何工具鏈就能 commit。
 
 ### 其他六個決定
 

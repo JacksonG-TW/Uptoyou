@@ -65,6 +65,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # A9's shape check, shared with `place_reference_ingest.py`. It defines no DAG of its own, so
 # nothing is registered twice.
 from _publication_check import make_check_task
+from _value_check import make_value_check_task
 from _alerts import send_failure_alert
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
@@ -197,7 +198,9 @@ def _make(name: str, module: str, source: str, cron: str, dag_tags: list[str],
         # whole report. A red one means the source changed the shape of its file or its row count
         # collapsed, and the rows it stored are already stored — red means "come and read the log",
         # the same reading as the disagreement above.
-        make_check_task(db_source)(run())
+        checked = make_check_task(db_source)(run())
+        # A28: the value check follows the A9 check and runs after a skipped one too (NONE_FAILED).
+        checked >> make_value_check_task(db_source)()
 
     _ingest_dag()
 

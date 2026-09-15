@@ -80,6 +80,19 @@ airflow connections add upto_erasure_postgres \
     --conn-login upto_erasure \
     --conn-password "${UPTO_ERASURE_DB_PASSWORD}"
 
+# **A28's value checks read as `upto_check` — SELECT on exactly the tables the checks read and
+# INSERT on `metric_history`, nothing else** (owner-ruled 2026-09-15 over reading as `upto_ingest`,
+# which holds every write on those tables). The password is `UPTO_CHECK_DB_PASSWORD`; the grants
+# are revision 0046 and `upto/roles.py`, asserted by `tests/test_role_grants.py`.
+airflow connections delete upto_check_postgres >/dev/null 2>&1 || true
+airflow connections add upto_check_postgres \
+    --conn-type postgres \
+    --conn-host db \
+    --conn-port 5432 \
+    --conn-schema "${POSTGRES_DB}" \
+    --conn-login upto_check \
+    --conn-password "${UPTO_CHECK_DB_PASSWORD}"
+
 # **A22's backup role — read everything, change nothing.** `pg_read_all_data` and no write grant
 # anywhere (revision 0038). It is NOT the owner: the nightly `pg_dump` runs inside the long-lived
 # scheduler, and D115 says only a job that exits may hold the owner. Created unconditionally, the

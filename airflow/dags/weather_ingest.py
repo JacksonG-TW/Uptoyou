@@ -43,6 +43,7 @@ from airflow.sdk import dag, task
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert
+from _value_check import make_value_check_task
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
 # person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
@@ -144,8 +145,10 @@ def upto_weather_ingest():
 
     # Independent on purpose: a forecast failure must not stop the observation, which is the
     # one with a strict hourly cadence and the one D36's read path prefers.
-    observation()
-    forecast()
+    # A28: the value check follows each dataset's ingest (the weather pair has no A9 check —
+    # its publications carry no row-count promise; the check holds them to freshness and coverage).
+    make_value_check_task(OBSERVATION_DATASET, task_id="value_check_observation")(observation())
+    make_value_check_task(FORECAST_DATASET, task_id="value_check_forecast")(forecast())
 
 
 upto_weather_ingest()

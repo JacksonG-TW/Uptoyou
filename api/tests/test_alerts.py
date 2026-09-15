@@ -248,7 +248,8 @@ class EveryDagIsWired(unittest.TestCase):
         # D42's window). **The number is here so that adding a DAG cannot happen quietly** — a new
         # file that forgets the callback would otherwise be caught only by the loop below, and a
         # new file that has the callback still deserves a reader's attention.
-        self.assertEqual(len(files), 10, files)
+        # 11 since A28 (2026-09-15): `source_freshness.py`, the nightly hours-since-last-run sweep.
+        self.assertEqual(len(files), 11, files)
         for name in files:
             source = open(os.path.join(dags, name), encoding="utf-8").read()
             # **The import is read from the AST, not matched as a string.** The first version of this

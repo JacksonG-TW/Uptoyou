@@ -173,6 +173,29 @@ async def scenario(test_url: str) -> None:
         # readable and unwritable. `preference` is the right table to ask about: it is the most
         # sensitive thing here, the backup must contain it, and the role must not be able to
         # change one word of it.
+        # **A28's check role: SELECT on exactly CHECK_READ, INSERT (+ SELECT) on metric_history, no
+        # other write anywhere** (owner-ruled 2026-09-15 over reading as `upto_ingest`).
+        check("upto_check may insert into metric_history",
+              await granted(connection, role_map.CHECK, "metric_history", "insert"))
+        for table in role_map.CHECK_READ:
+            check("upto_check reads `{}`".format(table),
+                  await granted(connection, role_map.CHECK, table, "select"))
+        every_table = (await connection.execute(
+            text("select tablename from pg_tables where schemaname = 'public' order by tablename"))).scalars().all()
+        writes = []
+        for table in every_table:
+            for privilege in ("update", "delete"):
+                if await granted(connection, role_map.CHECK, table, privilege):
+                    writes.append((table, privilege))
+            if table not in role_map.CHECK_WRITE and await granted(connection, role_map.CHECK, table, "insert"):
+                writes.append((table, "insert"))
+        check("and holds no UPDATE or DELETE on any table, and INSERT on metric_history alone",
+              not writes, writes[:6])
+        for table in ("member", "preference", "place", "reference_place", "circle", "round"):
+            check("upto_check cannot read `{}`".format(table),
+                  not await granted(connection, role_map.CHECK, table, "select"))
+        check("upto_check is a service role in the map, like the other four that log in",
+              role_map.CHECK in role_map.SERVICE_ROLES and role_map.CHECK in role_map.grants())
         check("upto_backup may read `preference` — a backup that skips it is not a backup",
               await granted(connection, role_map.BACKUP, "preference", "select"))
         for table in ("preference", "weight_contribution", "place", "round"):
@@ -309,11 +332,11 @@ async def scenario(test_url: str) -> None:
         print("\n{} failing: {}".format(len(FAILURES), ", ".join(FAILURES)))
         raise SystemExit(1)
     print(
-        "\nA15/A22: the five roles hold exactly their boundary — the pipeline cannot see a "
+        "\nA15/A22/A28: the six roles hold exactly their boundary — the pipeline cannot see a "
         "person, the lineage tool cannot reach past its declaration, the erasure job can delete a "
-        "preference and read nothing about anyone, the backup role reads every table and writes "
-        "none and is deliberately outside the coverage check (H61), and a table added without "
-        "grants goes red"
+        "preference and read nothing about anyone, the check role reads its tables and writes "
+        "metric_history alone, the backup role reads every table and writes none and is deliberately "
+        "outside the coverage check (H61), and a table added without grants goes red"
     )
 
 

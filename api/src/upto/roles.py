@@ -30,6 +30,9 @@ API = "upto_api"
 INGEST = "upto_ingest"
 LINEAGE = "upto_lineage"
 ERASURE = "upto_erasure"
+# A28 question 1 — the value checks read as this role and write `metric_history` alone
+# (owner-ruled 2026-09-15, «A28's checks read through a new read-only check role»).
+CHECK = "upto_check"
 
 # **A22 — the nightly `pg_dump`, and it is deliberately NOT in `SERVICE_ROLES` below.** This role
 # holds the predefined `pg_read_all_data` and no table grant of its own, so it is granted by
@@ -41,7 +44,7 @@ BACKUP = "upto_backup"
 
 #: Every login role this file grants to **table by table**. `upto` is deliberately absent: it owns
 #: the tables. `upto_backup` is absent for a different reason — see H61 and the note above.
-SERVICE_ROLES = (API, INGEST, LINEAGE, ERASURE)
+SERVICE_ROLES = (API, INGEST, LINEAGE, ERASURE, CHECK)
 
 WRITE = ("select", "insert", "update", "delete")
 READ = ("select",)
@@ -208,6 +211,25 @@ FUNCTION_GRANTS = {
 # both at run time and would grant to this role on a fresh database before 0045 creates it (the
 # same kind of reason H61 keeps `upto_backup` out). Revision 0045 issues this list literally (H59);
 # `test_role_grants` asserts the database holds exactly it.
+# **A28's check role: SELECT on exactly what the value checks read, INSERT on the table they write.**
+# `upto.checks` runs the statements; this list is what they touch, and `test_role_grants` asserts
+# the database agrees in both directions. `metric_history` is the one table it may write, and it
+# may read it too — a check that compares tonight with last night reads its own rows, and no other
+# role holds SELECT on that table yet (the human surface of A28's question 4 is a later ruling).
+CHECK_READ = (
+    "ingest_run",
+    "forecast_publication",
+    "observation_publication",
+    "place_publication",
+    "brand_publication",
+    "storefront_publication",
+    "business_status_publication",
+    "business_tax_publication",
+    "forecast_reading",
+    "observation_reading",
+)
+CHECK_WRITE = ("metric_history",)
+
 SWEEPER = "upto_sweeper"
 SWEEPER_GRANTS = {
     **{table: ("select", "delete") for table in (
@@ -240,7 +262,9 @@ def grants() -> dict:
     from .lineage.queries import READABLE_TABLES  # noqa: PLC0415 — avoids an import cycle at module load
 
     lineage = {t: READ for t in sorted(READABLE_TABLES)}
-    out = {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS)}
+    check = {t: READ for t in CHECK_READ}
+    check.update({t: APPEND for t in CHECK_WRITE})
+    out = {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS), CHECK: check}
 
     # Revision 0043 — the startup guard reads `alembic_version` as the server's own role. Folded in
     # from `ALEMBIC_GRANTS` rather than typed into `api` above, so the grant has one home and the
@@ -279,6 +303,7 @@ _PASSWORD_VARS = {
     INGEST: "UPTO_INGEST_DB_PASSWORD",
     LINEAGE: "UPTO_LINEAGE_DB_PASSWORD",
     ERASURE: "UPTO_ERASURE_DB_PASSWORD",
+    CHECK: "UPTO_CHECK_DB_PASSWORD",
     # A22. Created here with the other four because `ensure()` is the one place a role is created;
     # what it may *do* is revision 0038's business and is one line, not a map.
     BACKUP: "UPTO_BACKUP_DB_PASSWORD",
@@ -286,7 +311,7 @@ _PASSWORD_VARS = {
 
 
 def ensure() -> int:
-    """Create or re-password the five login roles, and create the NOLOGIN sweep owner. Run as the owner.
+    """Create or re-password the six login roles, and create the NOLOGIN sweep owner. Run as the owner.
 
     **asyncpg, not psycopg2, and not because it is tidier.** H1 rules the synchronous driver out of
     this codebase entirely, and the api image carries only `asyncpg` — the first version of this

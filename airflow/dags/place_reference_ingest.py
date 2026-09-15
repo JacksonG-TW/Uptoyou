@@ -65,6 +65,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # registered twice. The key it wants is the ledger's `source`, which is `SOURCE` below and never
 # a display label.
 from _publication_check import make_check_task
+from _value_check import make_value_check_task
 from _alerts import send_failure_alert
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
@@ -232,6 +233,8 @@ def upto_place_reference_ingest():
     check = make_check_task(SOURCE)(verdict)
     stored = publication_stored(verdict)
     check >> stored
+    # A28: the value check follows the A9 check and runs after a skipped one too (NONE_FAILED).
+    check >> make_value_check_task(SOURCE)()
 
 
 upto_place_reference_ingest()
