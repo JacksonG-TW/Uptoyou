@@ -408,6 +408,26 @@ of this measures the fetch / parse / store split, because nothing records it.
 | 09-08 | Images from a registry | Seven image names collapsed to three. Images are built here and pushed to a public registry, tagged with the extract's commit. The box pulls that tag and builds nothing. | pull 9 s; memory 479 → 664 MB during the deploy, never dipping |
 | 09-11 | More than one instance | The event bus moved into the database, so two API processes can serve one circle. The schema step left the boot, so instances cannot race one migration. Each process's listening connection is supervised and reported. | a listener killed from the database side: 503 in 0.18 s, reconnected in 1.23 s |
 
+## How it was built
+
+One developer directs seven Claude Code sessions; each session has one job. The tooling behind them (the commit hooks, the project skills, the planning documents) lives in the private development repository; this public extract carries the product alone.
+
+| Session | Its one job | What it may change |
+|---|---|---|
+| Coordinator | Turns every open question into one recommendation, its cost and the option it rejects, for the developer to decide; keeps the decisions and the plan | the planning documents |
+| Backend | The API, the database, Airflow, the tools | `api/`, `airflow/`, `db/`, `compose.yaml`, `evaluation/` |
+| Frontend | The screens and the proxy | `web/`, `proxy/` |
+| Code reader | Reads every backend change before it ships, without seeing how it was written | its own reports |
+| Page tester | Measures the served page and the API before a change ships, as each kind of visitor | its own reports |
+| GPU box | Runs the models and the long batches on a home graphics card | its own machine |
+| Research | Reads how others solve a problem, from dated sources | its own notes |
+
+- **Questions reach the developer through one session,** always as a recommendation, what it costs, and what was rejected.
+- **Backend changes are read twice.** A backend change ships only after the code reader's report and the page tester's measurement; a screen change after the page tester's. The code reader found a race that let an eleventh seat into a ten-seat circle; the fix is a row lock, and `api/tests/test_self_serve_integration.py` races two joins on separate connections to prove it.
+- **File ownership.** Each session commits only the paths it owns, named one by one.
+- **Checks before commit.** Six checks run before every commit, among them a secret scan, a lint, and a check that every character on a screen exists in the font the site actually loads.
+- **Project skills** record what only needs learning once: running an evaluation round on the GPU box, and a design rubric for every screen.
+
 ## Limits and future work
 
 Taipei only: twelve districts, one city's open data, addresses normalised at the ingest boundary
