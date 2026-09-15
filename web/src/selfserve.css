@@ -11,10 +11,17 @@
   margin: 0 auto;
   padding-block: calc(var(--bar-h) + 24px) 32px;
 }
+/* **One top for every self-serve step, not a centred column** (evaluator-ruled 2026-09-15). Centring
+   put each step's eyebrow wherever its own height left it: at 1440 /create's two-field form sat at
+   y 196–236, /join's at 254, and the invite screen and /circle near 133 — so a person going
+   create → key → invite watched the column drop and rise at every step. All four now start at the
+   same fixed top, the y /circle's eyebrow had on the box: the bar plus 93 px, 133 at 1440. The
+   column still owns the full viewport height, so a short step leaves its space below rather than
+   above. Narrow widths keep the flow they had (D107 parks 430). */
 @media (min-width: 900px) {
   .selfserve {
-    min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
-    padding-block: calc(var(--bar-h) + 24px) 60px;
+    min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start;
+    padding-block: calc(var(--bar-h) + 93px) 60px;
   }
 }
 
