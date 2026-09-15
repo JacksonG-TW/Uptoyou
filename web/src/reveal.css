@@ -1330,3 +1330,56 @@
    flood — muted measured 2.82 on hot and 1.00 on cobalt, which is the finding that produced the
    rule and is worth keeping even though the element has left: **muted is a paper colour, and
    anything that lands on a flood takes `currentColor`.** */
+
+/* ═══ i — the settled pair belongs to the answer column (evaluator-ruled 2026-09-15) ═══════════
+   Measured on the box at 1440 before this block: the landed pair sat at x 92 in the top-left corner
+   for BOTH readers — away from a member's centred column, 12 px left of an operator's headline at
+   x 104, and over one of the ground's tilted dice. The ruling has three parts, and each is below.
+
+   **Why the operator's pair read 12 px left of its own `left`.** The die is a 3-D cube: the front
+   face sits `translateZ(die / 2)` in front of a `perspective: 900px`, so at k = 1 it draws at
+   900 / 750 = 1.2× its box — 30 px past each side — and the landed scale of .42 carries 12.6 px of
+   that overhang to the left of the group's box. **The perspective scales with the stage here**, so
+   the overhang is exactly 30 × --k at every width and one `12.6 × --k` corrects it everywhere; at
+   k = 1 (the gated 1440) the perspective is the same 900 px it always was, so the tumble does not
+   change. The overhang is symmetric, which is why centring needs no correction at all. */
+@media (min-width: 1100px) {
+  .reveal .die { perspective: calc(900 * var(--k)); }
+
+  /* Operator: the pair's drawn left edge on the headline's left edge. */
+  .reveal:has(.evNum) .group { left: calc(var(--stage-pad) + 12.6 * var(--k)); }
+
+  /* Member: the pair centred in the column. The group's untransformed box is two dice and their gap;
+     it lands at scale .42 about its top-left corner, so half its drawn width is .21 of that box. The
+     tumble stays centred with no change here — `Reveal.tsx` reads the group's own used `left` and
+     derives the rolling offset from it. */
+  .reveal:not(:has(.evNum)) .group {
+    left: calc(50% - (2 * var(--die) + 56 * var(--k)) * .21);
+  }
+
+  /* **The decider moves under the pair**, because a centred pair now occupies the place it used to
+     be centred in (top 118, inside the pair's 96–222). It sits 18 below the pair's drawn bottom; the
+     column below starts 28 under the decider's line instead of 48 under the pair, so the headline
+     comes down by 20 and no more. While the dice tumble it keeps exactly the position it had —
+     118 + 322 = 440 — so the rolling composition is untouched. */
+  .reveal:not(:has(.evNum)) .decider { top: calc(96 * var(--k) + var(--die) * .42 + 18 * var(--k)); }
+  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider,
+  .reveal:not(:has(.evNum))[data-stage="staged"] .decider,
+  .reveal:not(:has(.evNum))[data-stage="flooded"] .decider {
+    transform: translateX(-50%) translateY(calc(440 * var(--k) - (96 * var(--k) + var(--die) * .42 + 18 * var(--k))));
+  }
+  .reveal:not(:has(.evNum)) .stage {
+    padding-top: calc(96 * var(--k) + var(--die) * .42 + 68 * var(--k));
+  }
+}
+
+/* **No ground die behind the settled pair.** The ground's cubes are placed in stage percentages and
+   one of them lies under the corner the operator's pair lands in. Moving that cube would move it
+   for every width and both readers; instead the pair's own box is painted the flood's colour, with
+   a spread wide enough to cover the 30-unit overhang, so whatever the ground draws there stops at
+   the pair's edge. Same colour as the page, so it draws no panel and no line. `--flood` exists only
+   once the flood has arrived, which is also when the ground's cubes first appear. */
+.reveal[data-face] .group {
+  background: var(--flood);
+  box-shadow: 0 0 0 calc(40 * var(--k)) var(--flood);
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Die, { SEQUENCE_MS } from './Die'
 import Board from './Board'
 import Evidence from './Evidence'
@@ -147,8 +147,10 @@ const WATCHDOG_MS = 2000
  * dice gap cannot silently un-centre it. `RV-23` measures exactly that, ±2 px.
  *
  * y is 0: the group tumbles at the CSS `top` the composition gives it, no longer 114 px below it.
+ *
+ * **There is no fallback any more** (2026-09-15): the group is not drawn until it has been measured
+ * — see `rollX` below.
  */
-const ROLLING_FALLBACK_X = 288
 
 /** The gutter between the answer block and the places list in the staged column, **in stage units,
  *  not pixels** (§0c amendment E). One number, used by the measurement below and by `.under`'s
@@ -314,8 +316,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const group = useRef<HTMLDivElement | null>(null)
   const list = useRef<HTMLDivElement | null>(null)
   const answerBox = useRef<HTMLDivElement | null>(null)
-  /** Where the tumbling group has to be so it is centred on the viewport — see `STAGED` above. */
-  const [rollX, setRollX] = useState(ROLLING_FALLBACK_X)
+  /** Where the tumbling group has to be so it is centred on the viewport — see `STAGED` above.
+   *  **`null` until measured, and the group is not drawn while it is `null`** (2026-09-15). The old
+   *  fallback, 288, was the right answer only for a group resting at x 104, and the spring then
+   *  carried the dice from that guess to the measured value — invisible at 1440 while the two
+   *  agreed, and a visible sideways slide at the start of the tumble the moment the member's pair
+   *  was centred (evaluator's ruling i) and the resting `left` moved. */
+  const [rollX, setRollX] = useState<number | null>(null)
 
   /** **The dice landing is observed, not predicted.** `animationend` from the cube's own `tumble`
    *  is the moment the tumble is over; a `setTimeout` matching the CSS duration is a second clock
@@ -478,7 +485,8 @@ export default function Reveal({ roundId }: { roundId: number }) {
    * A `ResizeObserver` rather than a one-shot read, because the list arrives with the payload and
    * grows again when the sweep's rows render.
    */
-  useEffect(() => {
+  /* A layout effect, so the first measured offset is in place before the dice are painted. */
+  useLayoutEffect(() => {
     const measure = () => {
       const r = root.current
       if (!r) return
@@ -679,9 +687,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
         ref={group}
         className="group"
         data-part="dice-group"
-        animate={reduce ? { x: 0, y: 0, scale: 1 } : staged ? STAGED : { x: rollX, y: 0, scale: 1 }}
+        style={rollX === null && !reduce ? { visibility: 'hidden' } : undefined}
+        animate={reduce ? { x: 0, y: 0, scale: 1 } : staged ? STAGED : { x: rollX ?? 0, y: 0, scale: 1 }}
+        /* **The spring is for the retreat only.** Before `staged` the group's x changes only when it
+           is measured (on arrival, on resize), and that is a correction to be applied, not a move to
+           be watched — so it lands in one frame. */
         transition={
-          reduce
+          reduce || !staged
             ? { duration: 0 }
             : { type: 'spring', stiffness: 140, damping: 22, mass: 1.1 }
         }
