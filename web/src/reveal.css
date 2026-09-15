@@ -1404,3 +1404,28 @@
   background: var(--flood);
   box-shadow: 0 0 0 calc(24 * var(--k)) var(--flood);
 }
+
+/* ═══ A-3 — the flood reaches the bottom of the page, not the bottom of the reveal's box ═══════
+   The evaluator's A-3 (2026-09-15) named the coverage footer as low-contrast over a rule and a
+   ground die. The cause was one level down: the operator's places list is absolutely positioned,
+   so it adds nothing to `.reveal`'s height, and at 1440 the flood ended at y 1083 while the list ran
+   to 1221. Everything past that line — the last row's bars and the whole 帶有分類 / 這一輪可提名
+   footer — sat on the body's paper while still writing in the flood's `on-*` colour: dark on jade
+   happened to read, and on a cobalt win it is light text on paper. Giving the page itself the
+   flood's ground while a flooded reveal is on it makes every pixel below the box the same colour
+   as the box, whichever reader and however long the list. Selected by `:has()` for the same reason
+   `switcher.css` gives: the body is not inside `.reveal`. Same .45s as the flood. */
+body:has(.reveal) { transition: background-color var(--t-flood) ease-out; }
+body:has(.reveal[data-face="hot"])    { background-color: var(--color-flood-hot); }
+body:has(.reveal[data-face="cobalt"]) { background-color: var(--color-flood-cobalt); }
+body:has(.reveal[data-face="jade"])   { background-color: var(--color-flood-jade); }
+body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun); }
+
+/* **The footer's labels were `--color-muted`, a paper colour** — the rule A19's note just above
+   records («anything that lands on a flood takes `currentColor`»), missed here because on jade the
+   labels were merely faint and on paper they were fine. On the flood they take the flood's text
+   colour at the decider's step, like the table's own headers. */
+.reveal[data-face] .evCounts dt { color: inherit; opacity: .72; }
+/* And its rule: ink measured 2.83 against the cobalt flood (switcher.css's table), so on a flood it
+   is drawn in the face's own text colour, as the table's row rules already are. */
+.reveal[data-face] .evCounts { border-top-color: currentColor; }
