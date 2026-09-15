@@ -546,7 +546,12 @@
 /* **The fork is data-driven and the reason is legibility, not preference.** `vertical-rl` sets CJK
    top-to-bottom — what a seal does — and rotates Latin 90 degrees, where a rotated word reads as a
    label on its side rather than as a stamped mark. */
-.reveal .sealName[data-set="vertical"] { writing-mode: vertical-rl; }
+/* **1.25 in the vertical setting, not the 1.05 above** (2026-09-15). In `vertical-rl` the line-height
+   is the COLUMN's width, and 22 × 1.05 = 23 px is narrower than the glyphs: `--clipped` measured the
+   box at 23 against 27 px of content, so the seal's `overflow: hidden` was trimming 4 px off the
+   sides of every CJK nickname at every width. 22 × 1.25 = 27.5 holds the glyph; two columns (55 px)
+   still fit the 64 px the other state reserved. */
+.reveal .sealName[data-set="vertical"] { writing-mode: vertical-rl; line-height: 1.25; }
 .reveal .sealName[data-set="horizontal"] {
   writing-mode: horizontal-tb;
   /* Smaller, because a Latin name is wider per character than the CJK the 80px seal was sized for
