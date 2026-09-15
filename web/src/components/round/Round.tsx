@@ -691,7 +691,7 @@ export default function Round() {
           and half of one cannot be. */}
       {commit && (
         <p className="commit" data-part="seed-commit">
-          這一輪的結果在開局時就固定了 · {commit}
+          這一輪的結果在開局時就固定了{' '}<span className="commitHash">· {commit}</span>
         </p>
       )}
 

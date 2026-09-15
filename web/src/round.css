@@ -297,6 +297,13 @@
   margin-top: 24px; font-size: var(--text-note); color: var(--color-muted);
   font-variant-numeric: tabular-nums; word-break: break-all;
 }
+/* **The hash wraps as one piece, so its last characters never sit alone on a line** (the evaluator's
+   B-4, 2026-09-15). The sentence plus a 64-character hash runs a few characters past the 720 px
+   column, and `break-all` let the browser break anywhere — measured with a wide hash, a 72 px tail
+   at 1440 and an 8 px one at 1100. `text-wrap: pretty` only moved that to 16 px. As an inline block
+   the separator and hash drop to their own line whenever they fit on one, and still break inside
+   when a column is narrower than the hash, because an inline block is never wider than its line. */
+.round .commitHash { display: inline-block; max-width: 100%; }
 
 
 /* ═══ the depth vocabulary · LIFT ═══════════════════════════════════════════════════════════
