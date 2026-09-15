@@ -3,7 +3,7 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "Up to You — the stack as it is served",
-    "subtitle": "One cloud host running docker compose, one home machine for the model, and Cloudflare in front.",
+    "subtitle": "One cloud host running docker compose, Cloudflare in front; the model runs at home in batches, never from the host.",
     "output": "architecture.html",
     "quality_profile": "showcase",
     "legend": {
@@ -63,14 +63,6 @@
       "col": 2
     },
     {
-      "id": "relay",
-      "type": "messagebus",
-      "label": "tunnel relay",
-      "sublabel": "user-level, host side",
-      "row": 2,
-      "col": 2
-    },
-    {
       "id": "db",
       "type": "database",
       "label": "PostgreSQL",
@@ -91,9 +83,17 @@
       "id": "gpu",
       "type": "external",
       "label": "Ollama",
-      "sublabel": "the home machine",
+      "sublabel": "the model, at home",
       "brand": "ollama",
       "row": 2,
+      "col": 4
+    },
+    {
+      "id": "devbox",
+      "type": "external",
+      "label": "Development machine",
+      "sublabel": "batch runs",
+      "row": 1,
       "col": 4
     }
   ],
@@ -121,7 +121,6 @@
         "proxy",
         "api",
         "airflow",
-        "relay",
         "db",
         "s3"
       ],
@@ -140,8 +139,7 @@
       "label": "Containers",
       "wraps": [
         "api",
-        "airflow",
-        "relay"
+        "airflow"
       ],
       "pad": 16
     },
@@ -166,6 +164,14 @@
       "label": "Home",
       "wraps": [
         "gpu"
+      ],
+      "pad": 16
+    },
+    {
+      "kind": "region",
+      "label": "Development",
+      "wraps": [
+        "devbox"
       ],
       "pad": 16
     }
@@ -197,13 +203,9 @@
       "to": "s3"
     },
     {
-      "from": "airflow",
-      "to": "relay"
-    },
-    {
-      "from": "relay",
+      "from": "devbox",
       "to": "gpu",
-      "label": "ssh tunnel"
+      "variant": "dashed"
     }
   ],
   "cards": [
@@ -219,7 +221,7 @@
       "dot": "emerald",
       "title": "Roles, not one superuser",
       "items": [
-        "Six logins, one per boundary — and the owner is held only by the one-shot migration container",
+        "Seven logins, one per boundary — and the owner is held only by the one-shot migration container",
         "The backup role can read everything and write nothing"
       ]
     },
@@ -227,7 +229,7 @@
       "dot": "amber",
       "title": "Off the host",
       "items": [
-        "The model runs at home and is reached through a user-level tunnel, not a container",
+        "The model runs in batches on a home card; the production host runs no model",
         "Backups keep thirty nightly dumps, swept only after a successful upload"
       ]
     }
