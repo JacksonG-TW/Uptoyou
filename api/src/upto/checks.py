@@ -118,6 +118,9 @@ def publication_statements(source: str) -> dict[str, str]:
         "hours_since_last_stored": (
             "select extract(epoch from (now() - max(detected_at))) / 3600.0 from {}".format(table)
         ),
+        # Not a metric: the newest publication's id, written into every metric row of this run so a
+        # reader can join a night's numbers to the publication they describe.
+        "publication_id": "select max(id) from {}".format(table),
     }
     if source in ROW_STEP_SOURCES:
         out["rows"] = "select {} from {} order by id desc limit 1".format(rows_column, table)

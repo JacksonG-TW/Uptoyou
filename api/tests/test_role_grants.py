@@ -177,11 +177,19 @@ async def scenario(test_url: str) -> None:
         # other write anywhere** (owner-ruled 2026-09-15 over reading as `upto_ingest`).
         check("upto_check may insert into metric_history",
               await granted(connection, role_map.CHECK, "metric_history", "insert"))
-        for table in role_map.CHECK_READ:
-            check("upto_check reads `{}`".format(table),
-                  await granted(connection, role_map.CHECK, table, "select"))
+        check("and may NOT read it — write-only for the role (the reviewer's read of 81ab313)",
+              not await granted(connection, role_map.CHECK, "metric_history", "select"))
+        check("  so metric_history is the owner's alone and OWNER_ONLY says so",
+              "metric_history" in role_map.OWNER_ONLY)
         every_table = (await connection.execute(
             text("select tablename from pg_tables where schemaname = 'public' order by tablename"))).scalars().all()
+        select_drift = []
+        for table in every_table:
+            expected = table in role_map.CHECK_READ
+            if await granted(connection, role_map.CHECK, table, "select") != expected:
+                select_drift.append((table, "expected" if expected else "unexpected"))
+        check("upto_check holds SELECT on exactly CHECK_READ over every table in public — no more, no less",
+              not select_drift, select_drift[:6])
         writes = []
         for table in every_table:
             for privilege in ("update", "delete"):

@@ -15,8 +15,8 @@ through a new read-only check role»):
 3. **A row step on a nightly source is a finding; a small one is not** (the tax registry).
 4. **The nightly freshness task names the source that did not run** (60 h without a run of any
    outcome for a nightly source) and no other.
-5. **The role can write `metric_history` and is refused every other write, and every read outside
-   its list** — asserted by doing, with the SQLSTATE read back (42501).
+5. **The role can write `metric_history`, cannot read it, and is refused every other write and
+   every read outside its list** — asserted by doing, with the SQLSTATE read back (42501).
 
 Nothing here needs Airflow: the statements and the rules are `upto.checks`; the task wrapper is a
 few lines of hook calls proved by `airflow tasks test` on the stack.
@@ -216,12 +216,17 @@ async def scenario(owner_url: str, check_url: str) -> None:
             insert = insert.replace(":" + name, "${}".format(i))
         params = checks.insert_params(metrics[0], t)
         await role.execute(insert, *[params[k] for k in ("source", "metric", "observed_at", "publication_id", "value", "threshold", "verdict", "detail")])
-        stored = await role.fetchval("select count(*) from metric_history")
-        check("the check role inserts into metric_history and reads it back", stored == 1, stored)
+        owner = await asyncpg.connect(owner_url)
+        try:
+            stored = await owner.fetchval("select count(*) from metric_history")
+        finally:
+            await owner.close()
+        check("the check role inserts into metric_history (read back as the owner)", stored == 1, stored)
 
         refusals = {
             "insert into ingest_run": role.execute(
                 "insert into ingest_run (source, started_at, finished_at, outcome) values ('x', now(), now(), 'failed')"),
+            "select from metric_history": role.fetch("select * from metric_history"),
             "update metric_history": role.execute("update metric_history set verdict = 'ok'"),
             "delete from metric_history": role.execute("delete from metric_history"),
             "insert into forecast_publication": role.execute(

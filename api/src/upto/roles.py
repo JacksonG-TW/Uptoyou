@@ -137,7 +137,9 @@ INGEST_DENIED = (
 # checked — serving anyway», and **D115's «a failed migration stops the API» was not true on any
 # path a member's request ever took.** The integration test passed throughout because it ran the
 # guard as the owner. A table nobody may read is a table a guard cannot guard.
-OWNER_ONLY = ()
+# **`metric_history` is readable by the owner alone until A28's human surface is ruled** — the
+# check role writes it and may not read it (above), so the coverage test must not expect a reader.
+OWNER_ONLY = ("metric_history",)
 
 # **What a non-owner role may do to Alembic's bookkeeping: `upto_api` reads it, and that is all.**
 # SELECT, one role, one table (revision 0043). Alembic writes the row as the owner, from `migrate`,
@@ -211,11 +213,12 @@ FUNCTION_GRANTS = {
 # both at run time and would grant to this role on a fresh database before 0045 creates it (the
 # same kind of reason H61 keeps `upto_backup` out). Revision 0045 issues this list literally (H59);
 # `test_role_grants` asserts the database holds exactly it.
-# **A28's check role: SELECT on exactly what the value checks read, INSERT on the table they write.**
-# `upto.checks` runs the statements; this list is what they touch, and `test_role_grants` asserts
-# the database agrees in both directions. `metric_history` is the one table it may write, and it
-# may read it too — a check that compares tonight with last night reads its own rows, and no other
-# role holds SELECT on that table yet (the human surface of A28's question 4 is a later ruling).
+# **A28's check role: SELECT on exactly what the value checks read, INSERT on the table they write —
+# and no SELECT on that table.** `upto.checks` runs the statements; this list is what they touch,
+# and `test_role_grants` asserts the database agrees in both directions. `metric_history` is
+# write-only for the role: no statement reads it, the insert returns nothing, and a check that one
+# day compares tonight with last night would be a widening — the owner's axis then, not now
+# (reviewer's read of 81ab313, 2026-09-15). Nobody reads the table yet; it sits in `OWNER_ONLY`.
 CHECK_READ = (
     "ingest_run",
     "forecast_publication",
@@ -263,7 +266,7 @@ def grants() -> dict:
 
     lineage = {t: READ for t in sorted(READABLE_TABLES)}
     check = {t: READ for t in CHECK_READ}
-    check.update({t: APPEND for t in CHECK_WRITE})
+    check.update({t: ("insert",) for t in CHECK_WRITE})
     out = {API: api, INGEST: ingest, LINEAGE: lineage, ERASURE: dict(ERASURE_GRANTS), CHECK: check}
 
     # Revision 0043 — the startup guard reads `alembic_version` as the server's own role. Folded in

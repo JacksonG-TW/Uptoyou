@@ -9,18 +9,20 @@ option» and «A28's checks read through a new read-only check role, not `upto_i
 **The table.** One row per metric per check run: which source, which metric, the value the
 statement returned, the line it was held against, the verdict (`ok` · `alert` · `recorded` — the
 last for a value that carries no line, such as a count A10 already alerted on), and a sentence.
-≈ 224 rows a night at 169 bytes each with the index, ≈ 14 MB a year, measured on a scratch table
+≈ 315 rows a night (the weather pair records six metrics an hour) at 169 bytes each with the index,
+≈ 19 MB a year, measured on a scratch table
 2026-09-15 (`idea & img/research/human-facing-governance-research.md` §1.3). It is owned by the
-owner like every table; the check role may insert and read it and nobody else may read it yet.
+owner like every table; the check role may insert into it and may NOT read it (no statement
+reads it, the insert returns nothing); nobody reads it yet — it is `roles.OWNER_ONLY`'s one entry.
 
 **The role.** `upto_check` is a LOGIN role created by `upto.roles.ensure()` from
 `UPTO_CHECK_DB_PASSWORD` — the entrypoint runs `ensure()` before `alembic upgrade`, so on an
 existing database the role exists when this revision grants to it, and on a fresh database
 revision 0032 has already granted it SELECT on every table in `roles.CHECK_READ` that existed then.
 This revision issues the whole list again (GRANT is idempotent) so the two paths end in the same
-state, and adds the one table 0032 could not know: `metric_history`, with the sequence its
-`bigserial` needs. **SELECT on exactly `CHECK_READ`, INSERT + SELECT on `metric_history`, no
-UPDATE or DELETE anywhere** — `tests/test_role_grants.py` asserts it in both directions, and
+state, and adds the one table 0032 could not know: `metric_history`, with USAGE on the sequence
+its `bigserial` needs (USAGE alone: `nextval` is all an insert calls). **SELECT on exactly
+`CHECK_READ`, INSERT on `metric_history` and nothing else there, no UPDATE or DELETE anywhere** — `tests/test_role_grants.py` asserts it in both directions, and
 `tests/test_value_check_integration.py` proves the refusals as the role itself.
 
 **Why the role is in `SERVICE_ROLES` and the sweeper is not.** The sweeper (0045) is NOLOGIN and
@@ -91,7 +93,7 @@ def upgrade() -> None:
         ).scalar_one_or_none() is None:
             continue
         op.execute(sa.text('grant {} on "{}" to "{}"'.format(", ".join(privileges), table, role)))
-    op.execute(sa.text('grant usage, select on sequence "metric_history_id_seq" to "{}"'.format(role)))
+    op.execute(sa.text('grant usage on sequence "metric_history_id_seq" to "{}"'.format(role)))
 
 
 def downgrade() -> None:

@@ -61,10 +61,10 @@ def _insert_sql() -> str:
     return re.sub(r":([a-z_]+)", r"%(\1)s", checks.INSERT_METRIC)
 
 
-def _record(hook, metrics, observed_at: datetime) -> None:
+def _record(hook, metrics, observed_at: datetime, publication_id=None) -> None:
     sql = _insert_sql()
     for metric in metrics:
-        hook.run(sql, parameters=checks.insert_params(metric, observed_at))
+        hook.run(sql, parameters=checks.insert_params(metric, observed_at, publication_id))
 
 
 def make_value_check_task(source: str, task_id: str = "value_check"):
@@ -82,8 +82,9 @@ def make_value_check_task(source: str, task_id: str = "value_check"):
         hook = PostgresHook(postgres_conn_id=POSTGRES_CONNECTION)
         observed_at = datetime.now(timezone.utc)
         values = _read_values(hook, source)
+        publication_id = values.pop("publication_id", None)
         metrics, findings = checks.evaluate(source, values)
-        _record(hook, metrics, observed_at)
+        _record(hook, metrics, observed_at, None if publication_id is None else int(publication_id))
         for metric in metrics:
             print("{} {} = {} [{}]{}".format(
                 metric.source, metric.metric, "—" if metric.value is None else "{:.3f}".format(metric.value),
