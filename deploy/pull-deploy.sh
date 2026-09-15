@@ -42,6 +42,27 @@ APP=$(cd "$HERE/.." && pwd)              # <clone>  — `app/`'s contents ARE th
 LOCK=${DEPLOY_LOCK:-/tmp/upto-pull-deploy.lock}
 say() { echo "$(date -u +%FT%TZ) pull-deploy: $*"; }
 
+# **H100 — the alert channel is checked after every deploy, and its absence is a failed deploy.**
+# `init.sh` creates `telegram_alerts` only when both `.env` names are set, and says nothing when
+# they are not — right on a dev clone and in CI, wrong on the box, where it was silent for the whole
+# launch. The check asks for the Connection by id through a hook that prints only the id (H99 —
+# never the CLI's list, get or export forms, which print values); a missing id raises inside the
+# container and the exec exits non-zero. Runs after `up --wait` on a deploy tick, and by hand as
+# `pull-deploy.sh --check-alert-channel` (the same code, so a `.env` edit can be re-checked).
+alert_channel_check() {
+    if docker compose exec -T airflow-scheduler python -c \
+        "from airflow.hooks.base import BaseHook as B; print(B.get_connection('telegram_alerts').conn_id)" \
+        >/dev/null 2>&1; then
+        say "alert channel: telegram_alerts present (checked by id only)"
+        return 0
+    fi
+    say "ALERT CHANNEL: absent — no telegram_alerts Connection, so A10 sends nothing and a red task"
+    say "  is reported to nobody. Set BOTH UPTO_TELEGRAM_BOT_TOKEN and UPTO_TELEGRAM_CHAT_ID in"
+    say "  app/.env, then: docker compose up airflow-init --force-recreate --no-deps"
+    say "  and re-check: $HERE/pull-deploy.sh --check-alert-channel   (H100)"
+    return 6
+}
+
 # The database's own answer, or a word saying why there is none. **Never empty** — a blank in the
 # deploy log reads as «it printed nothing», which is the state this is here to distinguish from.
 _schema_revision() {
@@ -53,6 +74,13 @@ _schema_revision() {
 # **One at a time.** A build on a small instance can outlast the timer's period; two overlapping
 # runs would fight over the image tags and the containers. `flock` is in util-linux and is on the
 # AMI; if it is ever absent this exits rather than running unguarded.
+# The hand-run form: only the check, no pull, no build, no lock (it reads, it does not deploy).
+if [ "${1:-}" = "--check-alert-channel" ]; then
+    cd "$APP"
+    alert_channel_check
+    exit $?
+fi
+
 if command -v flock >/dev/null 2>&1; then
     exec 9>"$LOCK"
     flock -n 9 || { say "another run holds $LOCK — skipping this tick"; exit 0; }
@@ -179,6 +207,8 @@ say "  schema after:  $(_schema_revision)"
 say "starting"
 if docker compose up -d --wait; then
     say "UP at $after"
+    # The stack is serving; a missing alert channel is still a failed deploy (H100, exit 6).
+    alert_channel_check || exit $?
 else
     status=$?
     say "FAILED to come up at $after (exit $status)"

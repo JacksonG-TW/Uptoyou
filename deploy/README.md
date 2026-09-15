@@ -32,7 +32,16 @@ curl -s localhost/health                     # {"status":"ok","database":"reacha
 ```
 
 A tick that found nothing prints one line and exits 0. A tick that deployed prints the commit
-range it moved through.
+range it moved through, then checks the alert channel and prints `alert channel: telegram_alerts
+present`.
+
+**Exit codes:** 0 nothing to do or deployed · 3 no `flock` · 4 the clone is dirty or not on a
+branch · 5 `deploy/` changed in the pull, run once by hand (H85) · **6 the stack is UP but
+`telegram_alerts` is absent** — A10 sends nothing until both `UPTO_TELEGRAM_BOT_TOKEN` and
+`UPTO_TELEGRAM_CHAT_ID` are set in `.env` and `airflow-init` is recreated; re-check with
+`deploy/pull-deploy.sh --check-alert-channel` (H100 — the box was silent for the whole launch
+because an empty chat id is legal everywhere else). The check asks for the Connection by id through
+a hook and never prints a value (H99).
 
 ## The three things it gets right, and the one somebody will "fix"
 
