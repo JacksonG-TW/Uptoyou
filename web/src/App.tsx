@@ -274,14 +274,19 @@ export default function App() {
               say and the composition returns to the approved one.
 
               **`這一餐` is left alone when a key is held**: it already names where the press goes,
-              and 「有連結？」 would be asking a question the holder has answered. The prefix is for
-              the state where the door is otherwise unexplained. */}
+              and a question would be asking something the holder has answered. The question is for
+              the state where the door is otherwise unexplained.
+
+              **「已經有鑰匙？」, not 「有連結？貼上鑰匙」** (evaluator-ruled 2026-09-15, its B-5). A friend
+              with a join link never uses this door — the link opens /join by itself — so naming the
+              link sent the wrong reader here and mixed two things in one label. The door is for
+              someone who already holds a key. */}
           <a
             className={hasDevice ? 'act' : 'act actMinor'}
             data-part="enter"
             href={doorHref()}
           >
-            {hasDevice ? '這一餐' : '有連結？貼上鑰匙'}
+            {hasDevice ? '這一餐' : '已經有鑰匙？'}
           </a>
         </div>
         </div>
