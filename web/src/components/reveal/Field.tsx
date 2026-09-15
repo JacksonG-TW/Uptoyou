@@ -49,12 +49,19 @@ const DRIFT = [
  * every load reads as a glitch, and this one is a record of a result.
  */
 const GROUND = [
-  { x: -6, y: -20, s: 19, r: -8,  rx: -22, ry: 28 },
-  { x: 82, y: -12, s: 17, r: 11,  rx: 18,  ry: -30 },
-  { x: 48, y: 62,  s: 11, r: -14, rx: -26, ry: 22 },
-  { x: -4, y: 66,  s: 14, r: 5,   rx: 16,  ry: 34 },
-  { x: 86, y: 54,  s: 15, r: -4,  rx: -20, ry: -24 },
-  { x: 66, y: 84,  s: 9,  r: 16,  rx: 24,  ry: 18 },
+  /* **Moved 2026-09-15, evaluator-ruled on candidate 23's gate.** The ruled page's positions put
+     cubes under the top bar, the places list, the operator's evidence column and the settled pair,
+     so once those took the flood as their ground (d4664f4, 457e443) each cube was cut in a straight
+     line, and one sat under the operator's pair. Every cube now lies in space clear of all of them
+     for both readers at 1440 × 900: the two outer strips, the gap above the headline between the
+     two pair positions, and the gap left of the member's list. Angles unchanged; sizes smaller,
+     because those gaps are. */
+  { x: -4,   y: 30, s: 7, r: -8,  rx: -22, ry: 28 },
+  { x: 98,   y: 12, s: 5, r: 11,  rx: 18,  ry: -30 },
+  { x: 31,   y: 10, s: 4, r: -14, rx: -26, ry: 22 },
+  { x: -3,   y: 72, s: 8, r: 5,   rx: 16,  ry: 34 },
+  { x: 97,   y: 60, s: 5, r: -4,  rx: -20, ry: -24 },
+  { x: 29.5, y: 52, s: 5, r: 16,  rx: 24,  ry: 18 },
 ] as const
 
 /** The face opposite each value — a real die's pairs sum to seven. Used to REFUSE a side, never to
