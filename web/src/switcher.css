@@ -186,6 +186,17 @@
 .navbar:has(~ .reveal[data-face="jade"])   { color: var(--color-on-jade); }
 .navbar:has(~ .reveal[data-face="sun"])    { color: var(--color-on-sun); }
 
+/* **The bar takes the flood's own colour as its ground — not paper, and not nothing** (2026-09-15,
+   frontend's /reveal pass). Transparent let the ground's tilted dice run straight through 裝置 and
+   這一餐 at 1440, and let a scrolled headline slide under the links. Paper would be the sticker the
+   ruling above rejects. The flood's own colour is the one ground that is invisible as a shape — the
+   bar still reads as words on the page, with no panel and no rule under it — while hiding whatever
+   passes behind. It fades in on the same .45s as everything else in this block. */
+.navbar:has(~ .reveal[data-face="hot"])    { background: var(--color-flood-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) { background: var(--color-flood-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   { background: var(--color-flood-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    { background: var(--color-flood-sun); }
+
 /* **The bar's children carry their own paper ground and their own ink, so zeroing the bar is not
    enough** — `switcher.css` sets `background: var(--color-paper)` and `color: var(--color-ink)` on
    `.backLink`, and `color: var(--color-ink)` on every `.switcher a`. Without this block RC-11

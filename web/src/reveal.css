@@ -1383,3 +1383,13 @@
   background: var(--flood);
   box-shadow: 0 0 0 calc(40 * var(--k)) var(--flood);
 }
+
+/* **The places list gets the flood as its ground** (2026-09-15, frontend's /reveal pass, for both
+   readers). The ground's cubes sit under the text layer, and their 3 px outlines and pips ran
+   through the rows — 18號麵線, the 起點 bars and the coverage lines — at 1440. Same reasoning as the
+   dice group above: the flood's own colour hides what passes behind and draws nothing of its own.
+   The spread keeps a cube's edge from sitting flush against a row's first character. */
+.reveal[data-face] .right {
+  background: var(--flood);
+  box-shadow: 0 0 0 calc(24 * var(--k)) var(--flood);
+}
