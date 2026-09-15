@@ -11,20 +11,20 @@
       "source": "NotoSerifTC.ttf"
     },
     "sub": {
-      "covered_by_source_face": 3737,
-      "dropped": "̛̃̈กขดทนมยลวัาแไ่้์㵘䋚䴺乐仧侧内処凪刹勲叄噽夿嬷専崊廰徳忈曟楼楽汢汣湾灇焿畐秓粋糆舗莲蔵蘫蛳貮逹鄕鐡镹霳靓顺鱿鳯麺건그𥺧𦹔",
-      "dropped_absent_from_source_face": 84,
+      "covered_by_source_face": 3721,
+      "dropped": "̛̃̈กขดทนบมยรลวหอัาืเแไ่้์㵘䋚䴺乐仧侧内処凪刹勲叄噽夿嬷専崊廰徳忈昼曟楼楽汢汣湾灇焿畐秓粋糆舗莲蔵蘫蛳貮逹鄕鐡镹霳靓顺鱿鳯麺건그𥺧𦹔",
+      "dropped_absent_from_source_face": 78,
       "dropped_means": "the source face has no glyph for these characters, so no subset of it can carry them — not characters the subsetter lost",
       "file": "charset-sub.txt",
-      "requested": 3821,
-      "sha256": "4e97041a1cf165cdc14b86965926bab5b364c1f35a52f631b1c3384c7fdb00fa",
+      "requested": 3799,
+      "sha256": "9f5babdd1ec9d70d543895de70ba5b093b828a2ee8d63d6e10f43ed5c26d5657",
       "source": "NotoSansTC.ttf"
     }
   },
   "derived_from": {
     "brand_publication_id": "1",
-    "place_content_sha256": "1edba79988318fbda710a9b3a3c9a6b2e110a0210bec748ae65f886a862084f3",
-    "place_publication_id": "1",
+    "place_content_sha256": "dbe5cd5aa7a5697985040fed68b6361503332edd112c2768a95ed59ff24068b0",
+    "place_publication_id": "30",
     "storefront_publication_id": "1"
   },
   "files": {
@@ -43,16 +43,16 @@
       "wght": "variable 200-900"
     },
     "noto-sub-variable.woff2": {
-      "bytes": 1138716,
-      "characters_in_the_built_face": 3737,
+      "bytes": 1133696,
+      "characters_in_the_built_face": 3721,
       "charset": "sub",
       "font_weight_declaration": "font-weight: 100 900",
-      "sha256": "f633846b95990c5db006ab089b3e3bbf4fe4a26a6c57e1a1d659050f45428ac1",
+      "sha256": "c525dfa280cec691c350e634c56b64c4c612c50bb47094f4067f938398ceb116",
       "source": "NotoSansTC.ttf",
       "wght": "variable 100-900"
     }
   },
-  "generated_at": "2026-08-28T14:57:18+00:00",
+  "generated_at": "2026-09-15T13:13:08+00:00",
   "sources": {
     "NotoSansTC.ttf": {
       "path": "/home/jackson/.fonts/NotoSansTC.ttf",
