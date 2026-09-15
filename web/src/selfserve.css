@@ -42,9 +42,25 @@
 .ssLead { font-size: var(--text-lead); color: var(--color-ink); line-height: 1.7; margin: 0 0 24px; }
 .ssNote { font-size: var(--text-note); color: var(--color-muted); line-height: 1.7; margin: 6px 0 0; }
 
-.ssForm { display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
-.ssField { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.ssLabel { font-size: var(--text-note); font-weight: 700; }
+/* **The form takes /device's recipe** (2026-09-15, polish inside the ruled direction; the evaluator's
+   stranger walk, A-1). It was shadcn's `Input` at its default — 32 px tall and grey — stretched
+   1,200 px across the column at 1440, which read unfinished beside /device's 60 px fields one
+   screen over. Two fields and one act is /device's shape exactly, so it gets /device's sizes
+   (`round.css`: 60 px, 20 px text, 2 px ink) and a column capped near 480 px. The link box and the
+   seat list keep the full column: they hold a URL and a list, not something typed. */
+.ssForm { display: flex; flex-direction: column; gap: 20px; align-items: flex-start; margin-top: 8px; max-width: 480px; }
+.ssField { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.ssLabel { font-size: 16px; font-weight: 700; letter-spacing: .02em; }
+.selfserve input {
+  height: 60px;
+  padding: 0 14px;
+  border: 2px solid var(--color-ink);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 20px;
+}
+.selfserve input::placeholder { color: var(--color-muted); }
+.selfserve input:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
 
 /* ─── a secret, rendered so a person can keep it (§2b, §2c) ─────────────────────────────────── */
 .copyRow { margin: 0 0 18px; }
