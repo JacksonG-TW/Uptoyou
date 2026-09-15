@@ -28,15 +28,31 @@ Open it, create your own circle, share the link with friends. To run it yourself
 
 ## Feature Demo
 
-![A round from start to finish: propose, roll, reveal](docs/reveal-walk.webp)
+One meal, from an empty circle to the dice, in six steps. Each clip is silent and short.
 
-What you can do:
+**1. Create a circle.** No account: open the site, name the circle, pick your nickname, and it exists. Your key is shown once and not stored (blacked out here).
 
-- **Home** shows the circle, and tonight's round if one is open.
-- **Device** takes a token once. The browser then remembers the circle.
-- **Tonight (這一餐)** lists the categories to avoid tonight, laid out as a menu with section marks.
-- **Round** is where members propose places, then roll.
-- **Reveal** shows the winner's odds after the dice stop, itemised factor by factor.
+![Creating a circle from the home screen](docs/demo/1-create.webp)
+
+**2. Share the invite link.** One link seats anyone who opens it, up to ten seats; it lasts an hour, and a new one replaces it (blacked out here).
+
+![The invite link to share with friends](docs/demo/2-invite-link.webp)
+
+**3. A friend joins.** They open the shared link, pick a nickname, and get a seat.
+
+![A friend opens the link and takes a seat](docs/demo/3-friend-joins.webp)
+
+**4. Say what not to eat this time.** Each member marks the kinds of food to avoid for this meal.
+
+![Marking the kinds of food to avoid tonight](docs/demo/4-preferences.webp)
+
+**5. Propose, then roll.** Everyone proposes up to three places; one roll of two dice settles it.
+
+![Proposing places and rolling the dice](docs/demo/5-propose-roll.webp)
+
+**6. See the result.** The dice land on the winner. Every member sees the same winner, the dice and the whole pool; the weights behind the odds are on the operator's view.
+
+![The dice land on the winner](docs/demo/6-reveal.webp)
 
 ## What problem is this project solving?
 
