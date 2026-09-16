@@ -208,7 +208,7 @@ Without that distinction, a broken source looks healthy for a week.
 
 ![The schema at a glance](docs/diagrams/schema-glance.png)
 
-*Thirteen tables of thirty-two, no columns shown. Every arrow out of `weight_contribution` links one
+*Thirteen tables of thirty-four, no columns shown. Every arrow out of `weight_contribution` links one
 weight to exactly one source row.*
 
 ### Core Tables
