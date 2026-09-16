@@ -273,21 +273,15 @@ export default function App() {
               hierarchy in the weight and the answer in the label, the sentence has nothing left to
               say and the composition returns to the approved one.
 
-              **`這一餐` is left alone when a key is held**: it already names where the press goes,
-              and a question would be asking something the holder has answered. The question is for
-              the state where the door is otherwise unexplained.
-
-              **「已經有鑰匙？」, not 「有連結？貼上鑰匙」** (evaluator-ruled 2026-09-15, its B-5). A friend
-              with a join link never uses this door — the link opens /join by itself — so naming the
-              link sent the wrong reader here and mixed two things in one label. The door is for
-              someone who already holds a key. */}
-          <a
-            className={hasDevice ? 'act' : 'act actMinor'}
-            data-part="enter"
-            href={doorHref()}
-          >
-            {hasDevice ? '這一餐' : '已經有鑰匙？'}
-          </a>
+              **Since 2026-09-16 this door renders only for a device that holds a key** (owner-ruled,
+              «the key leaves the member surface»; the evaluator's spec §2). 「已經有鑰匙？」 is gone
+              with the key screens: a stranger has one door, 開一個圈子, and a seated member has
+              three — 開一個圈子 · 找人進來 · 這一餐. 這一餐 stays because it is a seated member's way
+              back in, not a place to paste a key. **`/device` still works when typed** and is linked
+              from no member screen (spec §3). */}
+          {hasDevice && (
+            <a className="act" data-part="enter" href={doorHref()}>這一餐</a>
+          )}
         </div>
         </div>
 
