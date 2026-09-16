@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { joinCircle } from '@/lib/selfserve'
 import { remember } from '@/lib/round'
-import SecretOnce from './SecretOnce'
-import { KEY_NOTICE } from './copy'
 
 /**
  * §4 — joining by the shared link, `/join#c=<circle_id>&t=<ticket>`.
@@ -14,22 +12,25 @@ import { KEY_NOTICE } from './copy'
  * effect. So this component never touches `window.location`, and there is no render in which the
  * ticket is still in the URL (`SS-9`).
  *
- * **Two steps, one component, no route between them** — the same reasoning as `Create`: a refresh
- * after the `201` loses a key the server cannot print again, and there is no recovery path until
- * tier 2 identity lands.
+ * **One step since 2026-09-16** (owner-ruled, «the key leaves the member surface», e0ff214; the
+ * evaluator's `spec-key-off-the-member-surface-2026-09-16.md` §4). The screen after 加入 showed this
+ * seat's own key, printed once, exactly as the creator's did — and it is gone for the same reason:
+ * the key and the join link look alike, they get pasted into different places, and **a person who
+ * pastes their own key into the group chat has given away their seat**, which nothing can undo. The
+ * seat is stored on the `201` and the friend lands on 這一餐. No member screen shows a key anywhere,
+ * which is the whole ruling and what `SK-3` proves.
+ *
+ * **A24's localStorage guarantee is unchanged**: the secret is written to this device and to nothing
+ * else, and it is never rendered.
  *
  * **Nothing is created until the person names themself** (§4.1). A tap on a link is not consent to
  * join under a blank name, so `POST /join` is not sent on arrival — it waits for a nickname and an
  * explicit control.
  */
-type Step = 'name' | 'key'
-
 export default function Join({ circle, ticket }: { circle: string; ticket: string }) {
-  const [step, setStep] = useState<Step>('name')
   const [nickname, setNickname] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [key, setKey] = useState('')
 
   const join = async () => {
     if (busy) return
@@ -37,11 +38,11 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
     setError('')
     try {
       const j = await joinCircle(circle, ticket, nickname.trim())
-      /* Seated before the screen moves, exactly as `Create` does — a person who closes the tab on
-         the key screen still has a working seat. */
+      /* Seated before the screen moves, exactly as `Create` does. **A full navigation rather than a
+         step**, because the seat this person now holds belongs to 這一餐 and there is no longer a
+         screen of our own between the two. */
       remember({ token: j.key, circle })
-      setKey(j.key)
-      setStep('key')
+      window.location.href = '/round'
     } catch (e) {
       /* **The server's own sentence, immediately, with no arrival** (`SS-6`): 409 the circle is
          full, 410 the ticket is no longer usable, 404 no such ticket, 429 the daily ceiling. The
@@ -62,9 +63,8 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
   }
 
   return (
-    <main className="selfserve" data-screen="join" data-step={step}>
-      {step === 'name' && (
-        <>
+    <main className="selfserve" data-screen="join" data-step="name">
+      <>
           {/* **The screen does NOT name the circle, and that is settled rather than pending.**
               §4.1 originally asked it to. I reported that no payload carries a circle's name — it
               exists server-side in `issue.py` alone — and **the evaluator withdrew the requirement
@@ -102,26 +102,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               加入
             </button>
           </form>
-        </>
-      )}
-
-      {step === 'key' && (
-        /* §4.2 — **the identical §2b treatment**, which is why it is the same component rather than
-           a second one that looks like it. The trap is the same trap one step removed: this key is
-           this person's seat, and it is printed once. */
-        <>
-          <p className="eyebrow"><em>★</em>入座</p>
-          <h1 className="ssTitle"><span>你進來了</span></h1>
-          <SecretOnce
-            part="joiner-key"
-            label="你的鑰匙"
-            secret={key}
-            notice={KEY_NOTICE}
-            continueLabel="繼續"
-            onContinue={() => { window.location.href = '/round' }}
-          />
-        </>
-      )}
+      </>
 
       {error && <p className="ssErr" data-part="selfserve-error">{error}</p>}
     </main>
