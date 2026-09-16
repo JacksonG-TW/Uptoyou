@@ -411,22 +411,23 @@ of this measures the fetch / parse / store split, because nothing records it.
 
 ### 6. Reliability
 
-- **An API process refuses to serve a schema it was not written against.** It reads the migration
-  revision at startup. If the database is behind, ahead, or never migrated, it logs both revisions
-  and exits. So a deploy fails at the wrong container, before any member's request.
-- **The model link is retried, and the retry count is printed.** A cold model on that path looks
-  *down*. The first request fails, and the retry twelve seconds later answers in half a second. The
-  printed count makes a flaky link visible as a number.
-- **A failed scheduled task sends one message.** It carries the log's path inside the container and
-  never a URL. Alerting is off in a fresh clone by design. A dedicated job fails on purpose, so the
-  channel itself can be tested.
-- **Every source is proven idempotent, not assumed.** Each one runs through its real command-line
-  entry point twice and every column of every table is compared. A no-change day is a recorded
-  outcome.
-- **74 test files**, in two tempos: host-side with no network and no database, and build-and-drop
-  tests that build their own database in the one service holding the owner's credential. Every
-  commit also passes six local gates in a pre-commit hook, five of them standard-library only, so a
-  clone needs no toolchain to commit.
+**Reliability here does not mean «it will not break». It means that when it breaks, the error shows
+up in the right place.** Three ways to break, three places:
+
+- **A wrong deploy → the error stops at the deploy, not at a member.** An API process reads the
+  migration revision at startup; if the database is behind, ahead, or never migrated, it logs both
+  revisions and exits. The thing that fails is that container, not somebody's request.
+- **A slow dependency → one number, instead of one slow evening.** The model is not held in the
+  card's memory, so the first request of the day waits ten-odd seconds while it loads — and from the
+  calling side, «loading» and «the machine is down» look identical. So the retry count is printed:
+  first request fails, the retry twelve seconds later answers in half a second, and those three
+  numbers say «cold start», not «flaky all night».
+- **The alert channel itself → tested by a job that fails on purpose.** A failed scheduled task
+  sends one message carrying the log's path inside the container and never a URL (alerting is off
+  in a fresh clone by design). «No alert» and «alerting is broken» look the same from the outside,
+  and waiting does not tell them apart.
+
+Idempotence is decision 4's, and the test counts are in «Six more decisions» below.
 
 ### Six more decisions
 
@@ -442,6 +443,11 @@ of this measures the fetch / parse / store split, because nothing records it.
   a name. The same box's CPU takes 12–19 s.
 - **The nightly backup is drilled, not assumed.** A 19.7 MB dump finishes in 3.7 s and restores into
   a fresh database in 9.4 s, with the row counts equal.
+
+- **The suite is 74 test files in two tempos**, and every commit passes six local gates. Host-side
+  tests need no network and no database; build-and-drop tests build their own database inside the one
+  service that holds the owner's credential. Five of the six gates are standard-library only, so a
+  clone needs no toolchain to commit.
 
 [The long version](docs/decisions.md) has each of these in full.
 
