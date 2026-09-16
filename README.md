@@ -456,6 +456,24 @@ up in the right place.** Three ways to break, three places:
 
 Idempotence is decision 4's, and the test counts are in «Six more decisions» below.
 
+### 7. A tool for AI agents: lineage over MCP
+
+**The difficulty.** «Where did this number come from» is a question a person can answer by opening
+the database. An agent cannot: it needs an entrance with a declared shape, not a SQL string.
+
+**The approach.** An MCP server over stdio, one JSON object per line. Six of its seven tools answer:
+where a forecast reading was published, where a station observation came from, which rows each
+factor of a given roll read, what one ingest attempt did, a source's history, and one publication's
+detail. The JSON-RPC is hand-written rather than taken from an SDK, and the cost of that is stated in
+the module's own header. It connects as its own database role, holding SELECT on twelve tables and
+nothing else.
+
+**The result.** A reading traces back to its publication, its content hash and the run that stored
+it. **And the seventh tool, `explain_place_loss`, exists only to refuse**: why a place lost runs
+through the private weight channel, which carries a member and a reason its owner was promised
+nobody would see. So it does not answer — but it is listed with the others, **so that the boundary
+is discoverable rather than silently absent**.
+
 ### Six more decisions
 
 - **Vector search is a Postgres extension.** The example set is 537 rows across three embedders — not
