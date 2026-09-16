@@ -29,7 +29,7 @@
 
 一餐飯，從空的圈子到擲骰，六個步驟。每段影片都很短，沒有聲音。
 
-**1. 開一個圈子。** 不用帳號：打開網站、取圈子的名字、填你的暱稱，圈子就開好了。鑰匙只出現這一次，我們不留著（影片裡遮起來了）。
+**1. 開一個圈子。** 不用帳號：打開網站、取圈子的名字、填你的暱稱，圈子就開好了。座位記在這台瀏覽器裡，沒有 email，也沒有密碼。
 
 ![從首頁開一個圈子](docs/demo/1-create.webp)
 
@@ -137,7 +137,7 @@ API 共用同一個 PostgreSQL，各自用自己的角色連線。*
 | 層 | 跑什麼 |
 |---|---|
 | **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy image 裡 build。沒有 CDN，執行時不抓任何東西。兩套子集字型跟著 bundle 一起打包。 |
-| **API** | Python、FastAPI、SQLAlchemy 2.0，全程 async。45 個手寫的 Alembic migration。 |
+| **API** | Python、FastAPI、SQLAlchemy 2.0，全程 async。46 個手寫的 Alembic migration。 |
 | **資料庫** | PostgreSQL 17。七個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份、數值檢查、擁有者。擁有者只有那個一次性的 migration container 拿得到。 |
 | **向量** | pgvector，在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |

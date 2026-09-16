@@ -30,7 +30,7 @@ Open it, create your own circle, share the link with friends. To run it yourself
 
 One meal, from an empty circle to the dice, in six steps. Each clip is silent and short.
 
-**1. Create a circle.** No account: open the site, name the circle, pick your nickname, and it exists. Your key is shown once and not stored (blacked out here).
+**1. Create a circle.** No account: open the site, name the circle, pick your nickname, and it exists. The seat lives in this browser, with no email and no password.
 
 ![Creating a circle from the home screen](docs/demo/1-create.webp)
 
