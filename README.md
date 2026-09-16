@@ -414,11 +414,15 @@ Nothing was instrumented and no column added:
 | 商業登記 status | 25.03 s | 2.09 s | 7 |
 | 營業稅籍 registry | 12.95 s | 3.58 s | 7 |
 
-**The no-change day is 3.6× cheaper than a store on the largest source**, and 12× cheaper on the
-registry roster. That is what the claim-before-parse short-circuit saves. **Orchestration costs a
-flat 1.2 s a task**, whether the source takes half a second or twenty-five. **The scheduler is not
-the bottleneck.** Queue latency is 0.05 s at p50 and 4.2 s at its worst across all 361 tasks. None
-of this measures the fetch / parse / store split, because nothing records it.
+**How much a no-change day saves depends on the source**: 3.6× on the largest one, 12× on the
+restaurant roster. That saving is what claiming the row before parsing the file buys.
+
+**Airflow's own overhead is flat — about 1.2 s a task**, whether the source's own work takes half a
+second or twenty-five. And it is not backed up: across all 361 tasks, the wait between «scheduled»
+and «running» was 0.05 s for half of them and 4.2 s at its worst.
+
+**What these numbers cannot say is how the time splits between fetching, parsing and storing**,
+because nothing records those separately. Answering that needs timing added at each step first.
 
 ### 5. Observability
 
