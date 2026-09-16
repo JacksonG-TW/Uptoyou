@@ -504,6 +504,51 @@ export default function Round() {
         )}
       </section>
 
+      {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. It sits
+          directly under the pool it acts on: *these are the places · roll them*.
+
+          **It moved above 這一輪的人 and the seed line on 2026-09-16** (the evaluator's amendment to
+          `spec-round-two-columns-2026-09-16.md`, closing RA-5). Those two are status — who has
+          looked, and the commitment that fixes the result — and status reads after the act. With six
+          places pooled they had pushed 擲骰's top to 1071, past the fold the two-column ruling exists
+          to keep it above.
+
+          **The disabled state survives here and only here.** §4's rule that a disabled control is
+          never filled still applies pre-pool: with fewer than two places there is nothing to roll,
+          and a filled control would invite a press that does nothing. The old bar expressed this
+          as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
+          dashed box as an offender, so it is a bordered paper block instead. */}
+      <div className="act-row">
+        <button
+          type="button"
+          className="act"
+          data-part="roll"
+          disabled={roundId === null || pool.length < 2 || busy}
+          onClick={() => {
+            if (!dev || roundId === null) return
+            setBusy(true)
+            // No navigation here on purpose — the `closed` event moves every device at once.
+            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
+               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
+               gets — and the screen must show one. **The 409's text is suppressed rather than made
+               identical to the event's:** the detail is the API's string and lives under
+               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
+               the same string would put one sentence under two owners. That is the drift this
+               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
+               here keeps one owner per string.
+
+               **Suppressed only when the event actually arrived for THIS round.** The event is
+               published before the 409 returns, but if it ever did not arrive the person would be
+               left with a refusal and no reason, so the fallback is the API's own sentence. */
+            void roll(dev, roundId).catch((e: Error) => {
+              setRollError({ round: roundId, message: e.message })
+              setBusy(false)
+            })
+          }}
+        >
+          擲骰
+        </button>
+
       {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
           **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
           one rather than adding one. That is the evaluator's `RL-4`/`RL-5` requirement and it is
@@ -562,45 +607,6 @@ export default function Round() {
         </p>
       )}
 
-      {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. It sits
-          at the end of the pool it acts on, so the reading order is *these are the places · this
-          is the commitment · roll it*, which is the order a person actually needs them in.
-
-          **The disabled state survives here and only here.** §4's rule that a disabled control is
-          never filled still applies pre-pool: with fewer than two places there is nothing to roll,
-          and a filled control would invite a press that does nothing. The old bar expressed this
-          as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
-          dashed box as an offender, so it is a bordered paper block instead. */}
-      <div className="act-row">
-        <button
-          type="button"
-          className="act"
-          data-part="roll"
-          disabled={roundId === null || pool.length < 2 || busy}
-          onClick={() => {
-            if (!dev || roundId === null) return
-            setBusy(true)
-            // No navigation here on purpose — the `closed` event moves every device at once.
-            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
-               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
-               gets — and the screen must show one. **The 409's text is suppressed rather than made
-               identical to the event's:** the detail is the API's string and lives under
-               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
-               the same string would put one sentence under two owners. That is the drift this
-               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
-               here keeps one owner per string.
-
-               **Suppressed only when the event actually arrived for THIS round.** The event is
-               published before the 409 returns, but if it ever did not arrive the person would be
-               left with a refusal and no reason, so the fallback is the API's own sentence. */
-            void roll(dev, roundId).catch((e: Error) => {
-              setRollError({ round: roundId, message: e.message })
-              setBusy(false)
-            })
-          }}
-        >
-          擲骰
-        </button>
       </div>
       </div>
 

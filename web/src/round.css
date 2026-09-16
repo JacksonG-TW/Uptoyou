@@ -543,6 +543,9 @@
      155 px. Stated once here rather than by nudging each block above it. */
   .roundRight { margin-top: 155px; }
   .roundRight .tonightBlock { margin-top: 0; }
+  /* **擲骰 sits 32 px under the pool block**, and 這一輪的人 and the seed line follow it (the
+     evaluator's 2026-09-16 amendment, RA-5): the act reads before the status. */
+  .roundLeft .act-row { margin-top: 32px; }
   /* One column of chips, each the column's full 360 (RA-6). `columns: 2` is the printed-menu rule
      for a 720 column; in a 360 one it would put four characters and a number in 156 px. */
   .round .menu { columns: 1; }
