@@ -3,8 +3,7 @@ import { Input } from '@/components/ui/input'
 import { createCircle, type Created } from '@/lib/selfserve'
 import { remember } from '@/lib/round'
 import InvitePanel from './InvitePanel'
-import SecretOnce from './SecretOnce'
-import { KEY_NOTICE, NO_ACCOUNT } from './copy'
+import { NO_ACCOUNT } from './copy'
 
 /**
  * §2 — creating a circle. **Three steps, and the order is the design**
@@ -16,15 +15,20 @@ import { KEY_NOTICE, NO_ACCOUNT } from './copy'
  * until tier 2 identity lands, so that key is gone and the seat with it. Steps in state cannot be
  * refreshed away by a tap on 返回 or a stray reload of an address that changed.
  *
- * **§3 — the load-bearing rule this file exists to enforce: the key and the join link are NEVER on
- * one screen.** The key **is them**; the link **makes someone else a member**; they look alike and
- * get pasted into different places, and **the first person who pastes their own key into the group
- * chat has given away their seat** — which a re-issue cannot undo, because re-issuing a ticket does
- * not un-give a key. So `step === 'key'` renders the key and no link, `step === 'circle'` renders
- * the link and no key. **A union-typed step rather than two booleans**: two booleans have a state
- * where both are true, and that state is the failure `SS-2` exists to catch.
+ * **§3's rule — the key and the join link are NEVER on one screen — is now kept by there being no
+ * key screen at all** (owner-ruled 2026-09-16, «the key leaves the member surface»; the evaluator's
+ * `spec-key-off-the-member-surface-2026-09-16.md` §1). The danger it was written for is unchanged:
+ * the key **is them**, the link **makes someone else a member**, they look alike, and the first
+ * person to paste their own key into the group chat has given away their seat, which a re-issue
+ * cannot undo. Showing the key was what created the chance to paste it; the creator never needs to
+ * read it, because the device stores it.
+ *
+ * **The `201`'s secret is still written to this device the moment it arrives**, exactly as before —
+ * A24's guarantee is untouched: the key is in `localStorage` and nowhere else, and no screen in this
+ * flow renders it. What went is the step that showed it, and `SS-2`'s 「the key screen carries no
+ * ticket」 becomes 「no member screen carries a key」.
  */
-type Step = 'name' | 'key' | 'circle'
+type Step = 'name' | 'circle'
 
 export default function Create() {
   const [step, setStep] = useState<Step>('name')
@@ -44,13 +48,15 @@ export default function Create() {
     setError('')
     try {
       const c = await createCircle(circleName.trim(), nickname.trim())
-      /* **Seated before the screen moves.** The key is written to this device the moment it
-         arrives, so a person who closes the tab on the key screen still has a working seat — the
-         thing they lose is the ability to seat a SECOND device, which is what the notice says. */
+      /* **Seated before the screen moves**, and since the key step went this is the only place the
+         secret is handled at all: a person who closes the tab still has a working seat on this
+         device, and no second device can be seated. */
       remember({ token: c.key, circle: c.circleId })
       setMade(c)
       setLink(c.joinLink)
-      setStep('key')
+      /* Straight to the invite step: the link is already in hand from the `201`, and the key it also
+         carried is on the device rather than on the screen. */
+      setStep('circle')
     } catch (e) {
       /* §1's refused state: the server's sentence, immediately, below the control, **with no
          arrival** — 乙 §1a rule 5, a refusal that fades in has not refused anything yet. */
@@ -107,23 +113,6 @@ export default function Create() {
               建立
             </button>
           </form>
-        </>
-      )}
-
-      {step === 'key' && made && (
-        /* §2b. **No join link is rendered anywhere in this branch** — that is half of `SS-2`, and
-           it is why `made.joinLink` is not read here even though it is in hand. */
-        <>
-          <p className="eyebrow"><em>★</em>{made.circleId}</p>
-          <h1 className="ssTitle"><span>圈子開好了</span></h1>
-          <SecretOnce
-            part="creator-key"
-            label="你的鑰匙"
-            secret={made.key}
-            notice={KEY_NOTICE}
-            continueLabel="繼續"
-            onContinue={() => setStep('circle')}
-          />
         </>
       )}
 
