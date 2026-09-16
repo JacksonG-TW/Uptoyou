@@ -56,6 +56,10 @@ erDiagram
         bigint business_status_publication_id FK "nullable"
         bigint business_tax_publication_id FK "nullable"
     }
+    join_ticket {
+        bigint id PK
+        bigint circle_id FK
+    }
     member {
         bigint id PK
         bigint principal_id FK
@@ -66,6 +70,9 @@ erDiagram
         bigint round_id FK
         bigint circle_id FK
         bigint member_id FK
+    }
+    metric_history {
+        bigint id PK
     }
     observation_publication {
         bigint id PK
@@ -170,6 +177,7 @@ erDiagram
     ingest_run }o--|| storefront_publication : "storefront_publication_id"
     ingest_run }o--|| business_status_publication : "business_status_publication_id"
     ingest_run }o--|| business_tax_publication : "business_tax_publication_id"
+    join_ticket }o--|| circle : "circle_id"
     member }o--|| principal : "principal_id"
     member }o--|| circle : "circle_id"
     member_roll }o--|| round : "round_id"

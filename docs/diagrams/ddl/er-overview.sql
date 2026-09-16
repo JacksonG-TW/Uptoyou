@@ -82,6 +82,12 @@ CREATE TABLE ingest_run (
     FOREIGN KEY (observation_publication_id) REFERENCES observation_publication(id),
     FOREIGN KEY (place_publication_id) REFERENCES place_publication(id)
 );
+CREATE TABLE join_ticket (
+    id bigint NOT NULL,
+    circle_id bigint NOT NULL,
+    PRIMARY KEY (id),
+    FOREIGN KEY (circle_id) REFERENCES circle(id)
+);
 CREATE TABLE member (
     id bigint NOT NULL,
     principal_id bigint NOT NULL,
@@ -98,6 +104,10 @@ CREATE TABLE member_roll (
     PRIMARY KEY (id),
     FOREIGN KEY (circle_id, member_id) REFERENCES member(circle_id, id),
     FOREIGN KEY (circle_id, round_id) REFERENCES round(circle_id, id)
+);
+CREATE TABLE metric_history (
+    id bigint NOT NULL,
+    PRIMARY KEY (id)
 );
 CREATE TABLE observation_publication (
     id bigint NOT NULL,

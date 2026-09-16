@@ -80,8 +80,8 @@ CLUSTERS = (
     ),
     (
         "product",
-        ("circle", "principal", "member", "device_secret", "place", "round", "proposal",
-         "weight_contribution", "member_roll", "preference", "trip",
+        ("circle", "principal", "member", "device_secret", "join_ticket", "place", "round",
+         "proposal", "weight_contribution", "member_roll", "preference", "trip",
          "round_forecast_baseline"),
         # weight_contribution pins each contextual factor to the exact reading it was
         # computed from — a composite FK into the weather cluster.
@@ -89,7 +89,7 @@ CLUSTERS = (
     ),
     (
         "ledger",
-        ("ingest_run", "example_embedding"),
+        ("ingest_run", "example_embedding", "metric_history"),
         # ingest_run's seven nullable publication columns, at most one of them set.
         ("forecast_publication", "observation_publication", "place_publication",
          "brand_publication", "storefront_publication", "business_status_publication",
@@ -129,6 +129,8 @@ STORY = {
     "principal": ("created_at",),
     "member": ("nickname", "joined_at"),
     "device_secret": ("secret_sha256", "created_at"),
+    # A24: the shared link a stranger taps to grow a seat (revision 0044).
+    "join_ticket": ("token_sha256", "created_at", "revoked_at", "expires_at"),
     "place": ("origin", "name", "registry_no", "category", "category_model",
               "category_input"),
     "round": ("target_hour", "status", "die1", "die2", "closed_at"),
@@ -155,6 +157,8 @@ STORY = {
     "ingest_run": ("source", "started_at", "outcome", "rows_written", "invoked_by"),
     "example_embedding": ("name", "label", "labeled_by", "layer", "embed_model",
                           "source", "source_digest", "embedding"),
+    # A28 question 1: one row per value check per metric (revision 0046).
+    "metric_history": ("source", "metric", "observed_at", "value", "threshold", "verdict"),
 }
 
 TITLES = {

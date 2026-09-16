@@ -35,6 +35,16 @@ CREATE TABLE example_embedding (
     source text NOT NULL,
     PRIMARY KEY (id)
 );
+CREATE TABLE metric_history (
+    id bigint NOT NULL,
+    source text NOT NULL,
+    metric text NOT NULL,
+    observed_at timestamp with time zone DEFAULT now() NOT NULL,
+    value double precision,
+    threshold double precision,
+    verdict text NOT NULL,
+    PRIMARY KEY (id)
+);
 CREATE TABLE forecast_publication (
     id bigint NOT NULL,
     dataset_id text NOT NULL,

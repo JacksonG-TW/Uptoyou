@@ -25,6 +25,15 @@ erDiagram
         vector_1024 embedding
         text source
     }
+    metric_history {
+        bigint id PK
+        text source
+        text metric
+        timestamptz observed_at "default CURRENT_TIMESTAMP()"
+        double value "nullable"
+        double threshold "nullable"
+        text verdict
+    }
     forecast_publication {
         bigint id PK
         text dataset_id

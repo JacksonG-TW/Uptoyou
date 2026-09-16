@@ -21,6 +21,14 @@ erDiagram
         char_64 secret_sha256
         timestamptz created_at "default CURRENT_TIMESTAMP()"
     }
+    join_ticket {
+        bigint id PK
+        bigint circle_id FK
+        char_64 token_sha256
+        timestamptz created_at "default CURRENT_TIMESTAMP()"
+        timestamptz revoked_at "nullable"
+        timestamptz expires_at "nullable"
+    }
     place {
         bigint id PK
         text origin
@@ -122,6 +130,7 @@ erDiagram
     member }o--|| principal : "principal_id"
     member }o--|| circle : "circle_id"
     device_secret }o--|| principal : "principal_id"
+    join_ticket }o--|| circle : "circle_id"
     place }o--|| circle : "circle_id"
     round }o--|| circle : "circle_id"
     round }o--|| place : "winning_place_id"

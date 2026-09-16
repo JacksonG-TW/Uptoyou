@@ -29,6 +29,16 @@ CREATE TABLE device_secret (
     PRIMARY KEY (id),
     FOREIGN KEY (principal_id) REFERENCES principal(id)
 );
+CREATE TABLE join_ticket (
+    id bigint NOT NULL,
+    circle_id bigint NOT NULL,
+    token_sha256 character(64) NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    expires_at timestamp with time zone,
+    PRIMARY KEY (id),
+    FOREIGN KEY (circle_id) REFERENCES circle(id)
+);
 CREATE TABLE place (
     id bigint NOT NULL,
     origin text NOT NULL,
