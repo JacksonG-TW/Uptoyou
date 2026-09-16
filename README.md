@@ -199,6 +199,11 @@ connects as its own role.*
 
 ### Data Sources
 
+**Nine scheduled jobs, and the order is part of the design.** The five daily sources are staggered
+twenty minutes apart so that two of them never compete for a small machine's memory; the two
+deletion jobs run *before* the backup, so a dump never carries a row the product has already
+forgotten.
+
 | Schedule (UTC) | Taipei | Source |
 |---|---|---|
 | hourly | hourly | CWA township forecast `F-D0047-061` + station observations `O-A0001-001` |
@@ -209,7 +214,7 @@ connects as its own role.*
 | `20 20 * * *` | 04:20 | 財政部 全國營業(稅籍)登記, tax name + industry code |
 | `0 21 * * *` | 05:00 | deletes every per-meal preference row that no roll linked to |
 | `40 21 * * *` | 05:40 | deletes weather readings older than ninety days that no roll linked to |
-| `20 22 * * *` | 06:20 | `pg_dump` to S3 after both deletions, thirty kept |
+| `20 22 * * *` | 06:20 | `pg_dump` to S3 after both deletions; the last thirty are kept |
 
 [The long version](docs/decisions.md) lists what each source stores and the thirteen categories. It
 says how an answer outside them is refused, and how the frozen evaluation set was drawn.
@@ -472,7 +477,7 @@ clone needs no toolchain to commit.
 
 ## How it was built
 
-One developer directs seven Claude Code sessions; each session has one job. The tooling behind them (the commit hooks, the project skills, the planning documents) lives in the private development repository; this public extract carries the product alone.
+**The thing that makes seven sessions work is not the split — it is that nobody checks their own work.** One developer directs seven Claude Code sessions; each has one job. The tooling behind them (the commit hooks, the project skills, the planning documents) lives in the private development repository; this public extract carries the product alone.
 
 | Session | Its one job | What it may change |
 |---|---|---|
