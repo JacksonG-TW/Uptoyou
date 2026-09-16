@@ -776,12 +776,18 @@ export default function Reveal({ roundId }: { roundId: number }) {
             `ink`, the body face's regular weight. It does not animate and it is present from the
             first painted frame of the landed state — a fact that arrives late reads as an apology.
 
+            **The words changed on 2026-09-16** (evaluator-ruled): 「三十六格已按權重分配」 named the
+            mechanism — 格 and 權重 are the operator's vocabulary — where a member needs the fact, so
+            it reads 「每一家的機會不一樣」. Seven characters, the same class, the same place, the same
+            first painted frame. **Not nothing:** D91 forbids the surface implying the roll was plain
+            chance, and dice plus a winner with no line at all is exactly that implication.
+
             **It is inert until `[OPEN-1]` is ruled**: plain text, no handler, no link styling, no
             tooltip, no icon. Inert is the reversible option — a door added later changes nothing
             already built, whereas a door removed later leaves a dead region people have learned to
             press. It claims that the allocation happened and that weight drove it. It does not
             claim the reader can check that, and it must not be dressed to imply so. */}
-        <p className="sentence" data-part="sentence">三十六格已按權重分配</p>
+        <p className="sentence" data-part="sentence">每一家的機會不一樣</p>
 
         {/* **The act, inline and inside `.answer` — owner-ruled 2026-08-20, option 乙.** The pinned
             BAR is retired; the act belongs to the composition it acts on. It sits under the winner
