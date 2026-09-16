@@ -113,6 +113,12 @@ export default function App() {
             <h1 className="headline arrive" style={arrive(1)} data-part="headline">
               <span>今天吃什麼</span><span className="lit">讓骰子決定</span>
             </h1>
+            {/* **「權重」 became 「機會」 on 2026-09-16** (evaluator-ruled, carrying the owner's
+                vocabulary ruling 02f75e4 to the home page, as backend already did to its own
+                string). One word: 權重 is what the machine computes, 機會 is what a person has.
+                「兩顆骰子擲一次就定案」 is deliberately left alone in this pass — the dice belong to the
+                D116 package the evaluator is drawing, and that clause moves with whatever is ruled
+                there. */}
             {/* **「各自提店」, not 「一人提一家」 — a contradiction on this very screen** (evaluator,
                 from the 2026-08-20 re-gate shots at 1440 and 2560). The lead said one place each
                 while the shape line 40 px below it says 每人最多提 3 家店. Same screen, two rules.
@@ -126,7 +132,7 @@ export default function App() {
                 `擲` is left alone: D108's question about that verb is open on this line as on the
                 round's note, and answering it here would be improvising a ruling. */}
             <p className="say arrive" style={arrive(1)} data-part="bodyline">
-              各自提店，權重一次算清，兩顆骰子擲一次就定案。沒有人要先犧牲，也沒有人要當壞人。
+              各自提店，機會一次算清，兩顆骰子擲一次就定案。沒有人要先犧牲，也沒有人要當壞人。
             </p>
 
             <div className="wx arrive" style={arrive(0)} data-part="weather">
