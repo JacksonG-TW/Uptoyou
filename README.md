@@ -488,6 +488,14 @@ ratings, no reviews and no scraped pages anywhere in the pipeline. Sized for one
 live room state per process. A portfolio project, developed in a private repository and extracted
 here after every merge, so the commit messages carry the reasoning behind each change.
 
+- **«Did you actually go?» is a transaction, not a self-report.** The honest source for a visit is a
+  membership scan or a checkout, and Taiwan has established vendors of each kind — restaurant CRM and
+  loyalty (Ocard), restaurant POS (iCHEF), reservations and waitlists (inline). **None is used here
+  and none has been approached**; the note records that the road was looked at, not walked. Two
+  things stand in front of it, and only one is technical: data of this kind moves under a commercial
+  agreement, and Taiwan's PDPA makes purpose limitation the real question — a partner collected those
+  records to run its own business, not so a third party could seed a dining app. Until then the
+  product asks the group instead, which is cheaper and weaker.
 - **素食 stops being a category and becomes an attribute** a place carries (素食麵館 = 麵食 + 有素).
   «I cannot eat here» is a hard requirement, so a discount does not fit it. The set returns to
   twelve.
