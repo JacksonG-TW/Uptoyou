@@ -19,12 +19,12 @@ Open it, create your own circle, share the link with friends. To run it yourself
 
 | | |
 |---|---|
-| **The idea** | A few friends want one meal, and nobody wants to be the one who chose. The app chooses, then shows its work. |
-| **How it decides** | Weighted dice, not a ranking. Every factor multiplies a place's odds. The reveal names each factor beside the number it contributed. |
-| **Data** | Seven published government sources, six scheduled ingests. 35,965 Taipei places, 25,031 of them with a generated category. |
-| **Engineering** | Content-addressed ingest with an idempotent run log. A three-step name derivation. A retrieval-augmented classifier scored on a frozen set. |
-| **Measured** | Four local models on one frozen set: 72.0 · 71.0 · 70.5 · 65.5. A no-change ingest takes 1.6 s; a store takes 15.0 s. The whole city classified in 10.5 h. |
-| **Why this stack** | One compose file. One database does both relational and vector work. Every service runs on a small cloud instance. |
+| **The idea** | A few friends want one meal, nobody wants to be the one who chose, so the app chooses and shows its work |
+| **How it decides** | Weighted dice, not a ranking: every factor multiplies a place's odds, and the reveal names each factor beside the number it contributed |
+| **Data scale** | Seven government sources, six scheduled ingests, `35,965` Taipei places (`25,031` categorised), a `224 MB` database |
+| **Technical focus** | content-addressed ingest with an idempotent run log, a three-step name derivation, a retrieval-augmented classifier scored on a frozen set |
+| **Measured** | Four local models on one frozen set: `72.0` · `71.0` · `70.5` · `65.5`; a no-change ingest `1.6 s` against `15.0 s` to store; the whole city classified in `10.5 h` |
+| **Tech stack** | FastAPI / PostgreSQL + pgvector / Airflow / React 19 + Vite + Tailwind / nginx / Docker Compose / AWS EC2 / Cloudflare / Ollama |
 
 ## Feature Demo
 
@@ -153,9 +153,10 @@ version](docs/decisions.md) has the working for the last four.
 
 ![Architecture: the stack as it is served](docs/diagrams/architecture.png)
 
-*One host, one compose file. Cloudflare terminates TLS at the edge, and the origin answers with its
-own certificate. The four Airflow services and the API share one PostgreSQL. Each connects as its
-own role.*
+*One host, one compose file, and one database doing both the relational and the vector work, so
+every service fits on a small cloud instance. Cloudflare terminates TLS at the edge, and the origin
+answers with its own certificate. The four Airflow services and the API share one PostgreSQL. Each
+connects as its own role.*
 
 | Layer | What runs |
 |---|---|
