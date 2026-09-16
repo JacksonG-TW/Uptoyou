@@ -158,8 +158,8 @@
 
 | 層 | 跑什麼 |
 |---|---|
-| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy image 裡 build。沒有 CDN，執行時不抓任何東西。兩套子集字型跟著 bundle 一起打包。 |
-| **API** | Python、FastAPI、SQLAlchemy 2.0，全程 async。47 個手寫的 Alembic migration。 |
+| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy image 裡 build。沒有 CDN，執行時不抓任何東西。兩套字型只留頁面用得到的字，跟著 bundle 一起送。 |
+| **API** | Python、FastAPI、SQLAlchemy，全程 async。47 個手寫的 Alembic migration（trigger、權限、CHECK 條件自動產生不出來）。 |
 | **資料庫** | PostgreSQL 17。七個登入角色，一個邊界一個：API、匯入、血緣工具、每晚的抹除、備份、數值檢查、擁有者。擁有者只有那個一次性的 migration container 拿得到。 |
 | **向量** | pgvector，在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |
