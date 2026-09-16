@@ -66,6 +66,31 @@ group follows the loudest voice, or spends twenty minutes not choosing.
 The usual software answer is a ranking. That only moves the argument. Now the group argues about
 whether the ranking is right, and whoever picks from it still owns the choice.
 
+### 3. It is a recommender, and the last step is the one that differs
+
+Under the surface this is the shape every recommendation system has:
+
+| Step | Here |
+|---|---|
+| **Sources** | Seven government sources on their own schedules, landing in one database — the hard part is making them agree, joined on 統編 and 登錄字號, never on fuzzy string similarity |
+| **Features** | At the moment of the roll, per place and per round: its generated category, whether anybody at the table avoids that category, the rain probability in that township at the meal's hour, whether last night's signed trip went there |
+| **Scoring** | Each feature returns a coefficient, the coefficients multiply, and the product is the place's weight |
+| **Selection** | Weights become integer shares of the 36 outcomes, and a seed committed before the first proposal picks one |
+
+**Two things are deliberately not what an ad or a shop recommender does.**
+
+**The scoring is written, not learned.** A trained scorer needs a ground truth — what people actually
+chose — and this product has none: no circle here has a member who is not a test identity. A model
+fitted on nothing cannot be validated, and an unvalidated model is worse than a rule that states its
+reason. So the three constants are policy: ×0.5 for the place the group went to last time, 1/N for a
+category one person avoids, ×0.8 for a wet hour.
+
+**The last step samples instead of taking the top.** A recommender scores and then returns the best
+few. This scores and then draws. A place with more weight holds more of the 36 outcomes and is
+likelier, never certain — so what the reveal shows is a **selection probability, not a
+recommendation score**. That is the whole difference between «the system thinks this is best» and
+«under tonight's conditions, this one had the best chance».
+
 ## Why weighted dice?
 
 Dice are fair by construction: nobody picked, so nobody has to defend the pick.
