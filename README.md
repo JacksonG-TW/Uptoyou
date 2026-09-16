@@ -68,15 +68,15 @@ whether the ranking is right, and whoever picks from it still owns the choice.
 
 ## Why weighted dice?
 
-Dice are fair by construction. Nobody picked, so nobody has to defend the pick. That settles the
-social problem.
+Dice are fair by construction: nobody picked, so nobody has to defend the pick.
 
-Plain dice ignore everything the group knows. So the dice are weighted. Each place gets a share of
-the thirty-six outcomes, and the factors move that share. A category somebody avoids is a
-**discount, not a veto**. The size of the discount depends on how many people are at the table. With
-N at the table, one objection costs a place 1/N of its odds. At N = 5 the place loses a fifth and
-stays reachable. At N = 1 the objection is a veto, because a round of one person is that person's
-decision.
+Plain dice ignore everything the group knows, so the dice are weighted. Two dice have 36 outcomes,
+each place holds some of them, and what people care about changes how many it holds.
+
+A category somebody avoids is a **discount, not a veto**, and the discount is proportional to the
+table: with N at the table, one objection costs a place 1/N of its odds. With 5 at the table it loses a
+fifth and stays reachable. At N = 1 the objection is a veto — a round of one person was that
+person's decision anyway.
 
 ![The reveal: the winner, and every factor that moved its odds](docs/reveal-panel.png)
 
