@@ -226,7 +226,7 @@ forgotten.
 | `40 21 * * *` | 05:40 | deletes weather readings older than ninety days that no roll linked to |
 | `20 22 * * *` | 06:20 | `pg_dump` to S3 after both deletions; the last thirty are kept |
 
-[The long version](docs/decisions.md) lists what each source stores and the thirteen categories. It
+[The full working](docs/decisions.md) lists what each source stores and the thirteen categories. It
 says how an answer outside them is refused, and how the frozen evaluation set was drawn.
 
 ### Data Size
@@ -456,15 +456,16 @@ Idempotence is decision 4's, and the test counts are in «Six more decisions» b
 
 ### Six more decisions
 
-- **Vector search is a Postgres extension.** The example set is 537 rows across three embedders. A
-  second service would be one more stateful thing to run, back up and monitor.
-- **The evaluation set is frozen, stratified, and its authorship is stated.** It caught a prompt that
-  read better and scored worse.
-- **Substring search stays a sequential scan.** A trigram index — one that cuts every string into
-  three-character pieces and indexes those — changed the plan for 0 of 31 realistic queries. The real
-  cost was a sub-query re-run once per candidate row, 35,533 times per keystroke.
+- **Vector search is a Postgres extension.** The example set is 537 rows across three embedders — not
+  worth a second service to run, back up and monitor.
+- **The evaluation set is drawn once, in proportion to the categories, and says who labelled it.** It
+  caught a prompt that read better and scored worse.
+- **Name search has no index; it scans.** A text index was tried — one that cuts every name into
+  three-character pieces and indexes those — and across 31 real queries the database **never once used
+  it**. The slow part was elsewhere: to compose each display name, a sub-query ran once per candidate
+  row, 35,533 times per keystroke. Measure first, then decide whether to index.
 - **The small instance was too small for its own nightly work.** 49 MB free under one ingest became
-  398 MB in the worst case. The stack went 1,131 → 1,009 MiB at rest.
+  398 MB in the worst case. With nobody using it, the whole stack went from 1,131 MiB to 1,009 MiB.
 - **The cloud serves; the home box computes.** An 8 GB card takes a retrieval-shaped batch at 0.92 s
   a name. The same box's CPU takes 12–19 s.
 - **The nightly backup is drilled, not assumed.** A 19.7 MB dump finishes in 3.7 s and restores into
@@ -475,7 +476,7 @@ tests need no network and no database; build-and-drop tests build their own data
 service that holds the owner's credential. Five of the six gates are standard-library only, so a
 clone needs no toolchain to commit.
 
-[The long version](docs/decisions.md) has each of these in full.
+[The full working](docs/decisions.md) has the derivation behind each: how the 31 queries were compared, which two of the three GPU measurements measured the wrong thing, and every step of the memory week.
 
 ## Development Journey
 
