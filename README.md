@@ -172,20 +172,20 @@ this work need doing at all, and does it need doing here?
 | An ingest day with no new file | 15.0 s | **1.6 s** | the run log, 8 days, 7 sources |
 | Embedding one name for the example set | 0.481 s | **0.045 s** | 100 names, twice, 09-04 |
 | Classifying one name | 12–19 s on the CPU | **1.27 → 0.92 s** on an 8 GB card | one district, 1,318 rows |
-| The registry roster ingest's peak memory | 172 MB | **77 MB** | a 2 GB instance, 09-05 |
-| The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB instance, 09-07 |
+| The registry roster ingest's peak memory | 172 MB | **77 MB** | a 2 GB EC2, 09-05 |
+| The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB EC2, 09-07 |
 | A long classification pass | 1.7× slower first-to-last | **level** | 36,014 rows in 10.5 h, 09-03 |
 
 The two memory rows — the roster ingest's peak and the serving stack at rest — were measured on a
-2 GB instance, and being short of room is exactly what forced both fixes. [The long
-version](docs/decisions.md) has the working for classification, the roster, the stack at rest and the
+2 GB EC2, and being short of room is exactly what forced both fixes. [The full
+working](docs/decisions.md) has the working for classification, the roster, the stack at rest and the
 long pass.
 
 ## System Architecture
 
 ![Architecture: the stack as it is served](docs/diagrams/architecture.png)
 
-**The whole thing runs on one small cloud instance, because no part of it asks for more.** One
+**The whole thing runs on one small EC2, because no part of it asks for more.** One
 compose file, one host, and one PostgreSQL doing both the relational queries and the vector search
 (pgvector), so nothing extra has to be run and backed up for the vectors.
 
@@ -210,7 +210,7 @@ PostgreSQL, each as its own role, each holding only what its own job needs.
 ### Data Sources
 
 **Nine scheduled jobs, and the order is part of the design.** The five daily sources are staggered
-twenty minutes apart so that two of them never compete for a small machine's memory; the two
+twenty minutes apart so that two of them never compete for the EC2's memory; the two
 deletion jobs run *before* the backup, so a dump never carries a row the product has already
 forgotten.
 
@@ -469,7 +469,7 @@ Idempotence is decision 4's, and the test counts are in «Six more decisions» b
   three-character pieces and indexes those — and across 31 real queries the database **never once used
   it**. The slow part was elsewhere: to compose each display name, a sub-query ran once per candidate
   row, 35,533 times per keystroke. Measure first, then decide whether to index.
-- **The small instance was too small for its own nightly work.** 49 MB free under one ingest became
+- **The EC2 was too small for its own nightly work.** 49 MB free under one ingest became
   398 MB in the worst case. With nobody using it, the whole stack went from 1,131 MiB to 1,009 MiB.
 - **The cloud serves; the home box computes.** An 8 GB card takes a retrieval-shaped batch at 0.92 s
   a name. The same box's CPU takes 12–19 s.
@@ -493,7 +493,7 @@ clone needs no toolchain to commit.
 | 08-29 to 08-31 | The screens frozen | The return-choice screen. An eleventh, then a twelfth and thirteenth category. The nightly S3 backup with a restore drill. | drill: 19.7 MB dumped in 3.7 s, restored in 9.4 s, counts identical |
 | 08-30 to 09-02 | The classifier ladder | A 7B model was admitted once the comparison ran on the machine the pipeline actually calls. Prompts v6 and v7. The test set relabelled twice. The whole city re-decided. The per-model unload that removed a slowdown. | four models on one set: 72.0 · 71.0 · 70.5 · 65.5; 36,014 rows in 10.5 h with five level curves; the catch-all 其他 category down 38% |
 | 09-04 | The design round | The tonight screen as a menu with section marks, and one slim bar on every inner screen. The reveal's chrome reduced. Connection and rate limits on the proxy. A 25 s heartbeat on the live stream. | a stream silent for 130 s: cut through the proxy, open direct; with the heartbeat, open and delivering |
-| 09-04 to 09-07 | Launch on EC2 | One small instance in Tokyo boots the public extract and passes one ingest cycle the same day. The box wedged twice on memory. The roster ingest now streams the file; it no longer holds it whole. TLS terminated in the existing nginx with an Origin CA certificate. Cloudflare live in Full (strict). | 49 MB available under one ingest → 398 MB worst case after. The roster 172 → 77 MB. The stack 1,131 → 1,009 MiB at rest. A health check that cost 7.4 s of CPU every 20 s, gone |
+| 09-04 to 09-07 | Launch on EC2 | One 2 GB EC2 in Tokyo boots the public extract and passes one ingest cycle the same day. The box wedged twice on memory. The roster ingest now streams the file; it no longer holds it whole. TLS terminated in the existing nginx with an Origin CA certificate. Cloudflare live in Full (strict). | 49 MB available under one ingest → 398 MB worst case after. The roster 172 → 77 MB. The stack 1,131 → 1,009 MiB at rest. A health check that cost 7.4 s of CPU every 20 s, gone |
 | 09-08 | Images from a registry | Seven image names collapsed to three. Images are built here and pushed to a public registry, tagged with the extract's commit. The box pulls that tag and builds nothing. | pull 9 s; memory 479 → 664 MB during the deploy, never dipping |
 | 09-11 | More than one instance | The event bus moved into the database, so two API processes can serve one circle. The schema step left the boot, so instances cannot race one migration. Each process's listening connection is supervised and reported. | a listener killed from the database side: 503 in 0.18 s, reconnected in 1.23 s |
 
