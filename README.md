@@ -302,6 +302,21 @@ the scheduled pass uses:
 Three models sit inside two points of each other, and one of them costs three times as much per row.
 The scheduled pass kept `gemma2:2b`. The hosted model read 60.5% on the first set only.
 
+*The embedder was screened the same way* — kNN-1 on `testset_v3`, leave-one-out, the neighbour's own
+label taken as the answer:
+
+| embedder | kNN-1 accuracy |
+|---|---|
+| `snowflake-arctic-embed2`, bare | **55.0%** |
+| `snowflake-arctic-embed2`, with its own `query:` prefix | 53.5% |
+| `e5`, with `query:` | 51.5% |
+| `0.6b`, with an instruction | 51.5% |
+
+Nothing beat the incumbent, and the incumbent was best **bare**: the card's own prefix costs 1.5
+points. `qwen3-embedding:4b` could not be screened at all — it returns 2560 dimensions against a
+`vector(1024)` column, and the column was not widened for a candidate that had not won anything. The
+neighbour count was screened on the same set and settled at five.
+
 ### 3. What the official industry codes can decide
 
 **The difficulty.** The tax registry carries an industry code per registration. A coffee chain's 245
