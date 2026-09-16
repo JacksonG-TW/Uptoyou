@@ -271,10 +271,13 @@ Labeled example names are embedded into pgvector, and that is the example set. M
 added as data, leaving the prompt and the weights alone. Turned down: another prompt revision;
 fine-tuning.
 
-**Why the model is local.** The generator is a quantized 3B model on the same box as the database,
-batch-only, off unless a backfill runs. The free hosted tier allows 500 calls a day, so 3,300 places
-take seven days; the local model does them in one night. A hosted model as the classifier was turned
-down, and its score is kept as the line the local models are measured against.
+**Why the model is local.** The scheduled pass runs `gemma2:2b` for the answer and
+`snowflake-arctic-embed2` for the neighbours, both on the same box as the database, batch-only, off
+unless a backfill runs. Three reasons not to call a hosted API instead: the free tier allows 500
+calls a day, so 3,300 places take seven days against one night locally; the names never leave the
+machine that holds them; and classification is a nightly batch, so latency buys nothing. A hosted
+model is kept as a baseline — it read 60.5% on the first frozen set, which is not comparable to the
+table above, because the set changed.
 
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
