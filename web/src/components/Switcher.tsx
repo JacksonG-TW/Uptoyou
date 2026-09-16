@@ -55,9 +55,12 @@ function lastRound(): string | null {
 type Stop = { href: string; label: string }
 
 function stops(): Stop[] {
+  /* **裝置 left this list on 2026-09-16** (the orchestrator's ruling inside the owner's «the key
+     leaves the member surface»; the evaluator's SK-5). A switcher entry is on every screen, so it
+     was the most linked thing on the surface — and the page it opens now exists for the operator
+     alone, reached by typing the path. The route is untouched and still renders. */
   const list: Stop[] = [
     { href: '/', label: '首頁' },
-    { href: '/device', label: '裝置' },
     { href: '/round', label: '這一餐' },
   ]
   const round = lastRound()
