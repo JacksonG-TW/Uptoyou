@@ -316,11 +316,17 @@ fine-tuning.
 
 **Why the model is local.** The scheduled pass runs `gemma2:2b` for the answer and
 `snowflake-arctic-embed2` for the neighbours, both on the same box as the database, batch-only, off
-unless a backfill runs. Three reasons not to call a hosted API instead: the free tier allows 500
-calls a day, so 3,300 places take seven days against one night locally; the names never leave the
-machine that holds them; and classification is a nightly batch, so latency buys nothing. A hosted
-model is kept as a baseline — it read 60.5% on the first frozen set, which is not comparable to the
-table above, because the set changed.
+unless a backfill runs. **Three reasons not to call a hosted API instead, and they are three different
+costs.**
+
+- **Quota** — `gemini-3.5-flash-lite`'s free tier allows 500 calls a day, so 3,300 places take seven
+  days; the same work runs overnight on this machine.
+- **Data** — the names never leave the machine that holds them.
+- **Latency** — classification is a batch that runs at night with nobody waiting for it, so a faster
+  answer buys nothing.
+
+It is kept as a baseline: it read 60.5% on the first frozen set, which is not comparable to the table
+above — the set changed, and nineteen rows were relabelled in between.
 
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
