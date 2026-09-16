@@ -195,12 +195,19 @@ generated category, and the 36,376 rows of the reference list this instance load
 
 ![The ETL pipeline: seven sources into one store with a run log](docs/diagrams/etl-flow.png)
 
-**A fetched file is identified by the hash of its bytes, not by a timestamp.** A timestamp can
-change while the data stays the same, and stay the same while the data changes. The reference ingest
-hashes a 17 MB zip and claims it with `insert … on conflict do nothing returning id`. The database
-decides whether the content is new. Only then does anything decompress the 99 MB CSV inside. Every
-attempt writes a row to the run log. «No change» and «failed» are recorded as different outcomes.
-Without that distinction, a broken source looks healthy for a week.
+**A fetched file is identified by the hash of its bytes, not by a timestamp** — content addressing,
+the way a commit is named in git. A timestamp can change while the data stays the same, and stay the
+same while the data changes. The reference ingest hashes a 17 MB zip and claims that hash with
+`insert … on conflict do nothing returning id`: an id comes back and the 99 MB CSV inside is
+decompressed, or nothing comes back and the run stops there.
+
+**This is not an upsert.** An upsert writes either way, and it has to parse the file before it knows
+what to write. Here the conflict *is* the answer — the content is unchanged, so the parse is skipped
+entirely: 1.6 s on a no-change day against 15.0 s to store. And the claim is one statement, so two
+runs starting together cannot both decide the file is new; a `select` first would let both through.
+
+Every attempt writes a row to the run log, so «no change» and «failed» are two recorded outcomes
+rather than two absences. Without that distinction, a broken source looks healthy for a week.
 
 ### The Schema at a Glance
 
