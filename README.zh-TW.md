@@ -152,8 +152,11 @@
 
 ![Architecture — the stack as it is served](docs/diagrams/architecture.png)
 
-*一台主機、一個 compose 檔，一個資料庫同時做關聯式和向量的工作，所以每個服務都放得進一台小雲端機器。Cloudflare 在邊緣終止 TLS，來源端用自己的憑證回應。四個 Airflow 服務和
-API 共用同一個 PostgreSQL，各自用自己的角色連線。*
+**整套東西跑在一台小雲端機器上，因為沒有一個元件要求更多。** 一個 compose 檔、一台主機，一個 PostgreSQL 同時做關聯式查詢和向量檢索（pgvector），所以不必為了向量再養一個服務。
+
+**加密兩段都做：** Cloudflare 在邊緣終止 TLS，我們這台也帶自己的憑證，所以 Cloudflare 到我們之間那一段仍然是加密的。
+
+**共用資料庫，但不共用權限：** 四個 Airflow 服務和 API 連的是同一個 PostgreSQL，每個用自己的角色，拿到的權限只夠做自己那件事。
 
 | 層 | 跑什麼 |
 |---|---|

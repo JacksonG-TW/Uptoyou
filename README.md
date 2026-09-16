@@ -186,10 +186,15 @@ long pass.
 
 ![Architecture: the stack as it is served](docs/diagrams/architecture.png)
 
-*One host, one compose file, and one database doing both the relational and the vector work, so
-every service fits on a small cloud instance. Cloudflare terminates TLS at the edge, and the origin
-answers with its own certificate. The four Airflow services and the API share one PostgreSQL. Each
-connects as its own role.*
+**The whole thing runs on one small cloud instance, because no part of it asks for more.** One
+compose file, one host, and one PostgreSQL doing both the relational queries and the vector search
+(pgvector), so nothing extra has to be run and backed up for the vectors.
+
+**Encryption on both legs:** Cloudflare terminates TLS at the edge, and this machine carries its own
+certificate, so the leg from Cloudflare to here is encrypted too.
+
+**One database, separate privileges:** the four Airflow services and the API connect to the same
+PostgreSQL, each as its own role, each holding only what its own job needs.
 
 | Layer | What runs |
 |---|---|
