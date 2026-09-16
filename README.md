@@ -189,9 +189,6 @@ long pass.
 compose file, one host, and one PostgreSQL doing both the relational queries and the vector search
 (pgvector), so nothing extra has to be run and backed up for the vectors.
 
-**Encryption on both legs:** Cloudflare terminates TLS at the edge, and this machine carries its own
-certificate, so the leg from Cloudflare to here is encrypted too.
-
 **One database, separate privileges:** the four Airflow services and the API connect to the same
 PostgreSQL, each as its own role, each holding only what its own job needs.
 
