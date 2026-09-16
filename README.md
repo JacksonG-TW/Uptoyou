@@ -232,10 +232,9 @@ Most of the work is in building the list of places to choose from.
 
 ### 1. Names: cleaning, parsing, and the real difficulty
 
-**The difficulty.** A registered name names a legal entity. The government's restaurant list knows
-安心食品服務股份有限公司. The people deciding where to eat know 摩斯漢堡. Those are the same company.
-Only the second name is one anybody would recognise. 40.2% of registered names are legal-entity
-strings that name no shop at all.
+**The difficulty.** The government's restaurant list says 安心食品服務股份有限公司. You know it as
+摩斯漢堡. Same company, two names, and only one of them means anything to a person choosing dinner.
+40.2% of registered names are legal-entity strings that name no shop at all.
 
 **The approach.** A display name is resolved down a ladder: the sign an inspector recorded, then the
 brand, then the registered name. Three sources are joined by registry number, with fixed precedence
