@@ -569,7 +569,7 @@ async def closed_body(
     return body
 
 
-def for_credential(body: dict, evidence: bool) -> dict:
+def for_credential(body: dict, *, evidence: bool) -> dict:
     """The whole payload to a credential that carries the evidence flag, or the member's subset.
 
     **Keyed on `evidence`, not on `operator`, since 0047** (owner 「拆」, 2026-09-16): the invite

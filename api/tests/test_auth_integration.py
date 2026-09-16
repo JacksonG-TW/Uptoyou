@@ -140,6 +140,66 @@ async def scenario(test_url: str) -> None:
     )
 
 
+async def backfill_case(environment: dict, test_url: str) -> None:
+    """0047's backfill and its refusing downgrade, on a database walked back one revision.
+
+    **The backfill is the migration's whole safety and the rest of this file cannot see it**: every
+    other case runs on a database built by `upgrade head`, where the `update` passes over zero rows
+    and the column's default does the work. So this walks back to 0046, writes the two shapes that
+    existed before the split, and comes forward: an operator's credential must keep the evidence
+    table, a plain one must not get it. Then it proves the downgrade refuses while a credential
+    holds a mixed pair — down-then-up re-runs the backfill, and a privilege that returns during a
+    rollback is the defect the split exists to remove (the reviewer's finding, 2026-09-16).
+    """
+    def alembic(*argv):
+        return subprocess.run(["alembic", *argv], cwd="/srv", env=environment,
+                              capture_output=True, text=True)
+
+    engine = create_async_engine(test_url)
+    async with engine.begin() as connection:
+        await connection.execute(text("delete from device_secret"))
+    assert alembic("downgrade", "0046").returncode == 0, "could not walk back to 0046"
+    async with engine.begin() as connection:
+        columns = (await connection.execute(text(
+            "select column_name from information_schema.columns "
+            "where table_name = 'device_secret'"))).scalars().all()
+        assert "evidence" not in columns, columns
+        principal = (await connection.execute(
+            text("insert into principal default values returning id"))).scalar_one()
+        for name, is_op in (("pre-op", True), ("pre-plain", False)):
+            await connection.execute(
+                text("insert into device_secret (principal_id, secret_sha256, operator) "
+                     "values (:p, :h, :o)"),
+                {"p": principal, "h": sha256(name.encode()).hexdigest(), "o": is_op},
+            )
+    assert alembic("upgrade", "head").returncode == 0, "could not come forward to head"
+    async with engine.connect() as connection:
+        rows = dict(
+            (row.secret_sha256, (row.operator, row.evidence))
+            for row in (await connection.execute(
+                text("select secret_sha256, operator, evidence from device_secret"))).all()
+        )
+    assert rows[sha256(b"pre-op").hexdigest()] == (True, True), rows
+    assert rows[sha256(b"pre-plain").hexdigest()] == (False, False), rows
+
+    # A mixed credential — the shape the split exists to create — and the refusing downgrade.
+    async with engine.begin() as connection:
+        await connection.execute(
+            text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                 "values ((select id from principal limit 1), :h, true, false)"),
+            {"h": sha256(b"invite-only").hexdigest()},
+        )
+    refused = alembic("downgrade", "0046")
+    assert refused.returncode != 0, "the downgrade did not refuse a mixed credential"
+    assert "invite" in refused.stderr and "update device_secret set evidence = operator" in refused.stderr, \
+        refused.stderr[-400:]
+    async with engine.begin() as connection:
+        await connection.execute(text("update device_secret set evidence = operator"))
+    assert alembic("downgrade", "0046").returncode == 0, "the downgrade refused an agreeing database"
+    assert alembic("upgrade", "head").returncode == 0, "could not return to head"
+    await engine.dispose()
+
+
 async def with_temporary_database() -> int:
     admin_url, test_url = urls()
     admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
@@ -165,6 +225,7 @@ async def with_temporary_database() -> int:
                     "the second `alembic upgrade head` ran a migration:\n" + noise
                 )
         await scenario(test_url)
+        await backfill_case(environment, test_url)
     finally:
         admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
         async with admin.connect() as connection:

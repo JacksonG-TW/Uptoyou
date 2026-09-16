@@ -26,9 +26,23 @@ bites only the *next* credential issued: `upto.issue --operator` no longer impli
 takes `--evidence` too), and `POST /circles` mints the creator `operator=True, evidence=False`,
 which is the ruling.
 
-**Downgrade** drops the column. It cannot restore the distinction — a credential issued afterwards
-with one flag and not the other becomes, on downgrade, whatever its `operator` column says. That is
-stated rather than worked around: a flag that never existed cannot be remembered.
+**The downgrade REFUSES while any credential holds one flag and not the other**, and that is the
+reviewer's finding (2026-09-16) answered the way this codebase answers the rest of them: fail
+closed. Dropping the column destroys the distinction, and the next `upgrade head` re-runs the
+backfill — so down-then-up is a **widening**: every self-serve creator's credential would come back
+carrying the evidence table, and an audit-only credential would lose it. A privilege that returns
+by itself during a ten-minute rollback is exactly the defect the owner's 「拆」 ruling exists to
+remove, and a runbook sentence is read by somebody who is already in trouble.
+
+**The rollback is not blocked, it is made deliberate.** The refusal names how many rows disagree and
+the one statement that resolves them — decide what those credentials should be, write it, then roll
+back:
+
+    update device_secret set evidence = operator;   -- every mixed credential keeps its INVITE flag's
+                                                    -- answer; re-issue the ones that should differ
+
+A database where no credential holds a mixed pair (every row before this migration, and any stack
+that has issued none since) downgrades with no ceremony at all.
 """
 
 from __future__ import annotations
@@ -56,4 +70,17 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    mixed = op.get_bind().execute(
+        sa.text("select count(*) from device_secret where operator <> evidence")
+    ).scalar_one()
+    if mixed:
+        raise RuntimeError(
+            "{} device secret(s) hold the invite power and the evidence table differently, and "
+            "dropping `evidence` would destroy that distinction — the next `upgrade head` re-runs "
+            "`evidence = operator`, so those credentials would come back with the WRONG powers (a "
+            "self-serve creator carrying the evidence table again, owner-ruled 2026-09-16 「拆」). "
+            "Decide what they should be and write it first, then downgrade:\n"
+            "    update device_secret set evidence = operator;\n"
+            "and re-issue whichever credential should have differed.".format(mixed)
+        )
     op.drop_column("device_secret", "evidence")

@@ -340,8 +340,15 @@ async def issue(circle_id: int, nickname: str, principal_id: int | None,
     print(f"circle: {circle_name}")
     # Said explicitly, because the two devices are indistinguishable afterwards from the outside and
     # the difference is what the holder can see.
-    print("role: operator — this device's reveal carries the evidence table (D105)"
-          if operator else "role: member")
+    # **Both flags, named, since revision 0047** (owner 「拆」, 2026-09-16). The line used to say
+    # «operator» and mean two powers; now it says which of the two this device actually holds,
+    # because the person reading it has no other way to tell one credential from another.
+    powers = []
+    if operator:
+        powers.append("invite (may mint and read the circle's join link)")
+    if evidence:
+        powers.append("evidence (its reveal carries the table, D105)")
+    print("role: member" if not powers else "role: " + " + ".join(powers))
     return 0
 
 
