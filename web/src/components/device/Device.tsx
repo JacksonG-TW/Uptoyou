@@ -153,7 +153,7 @@ export default function DeviceScreen() {
       <h1 className="deviceTitle arrive" style={arrive(0)}>
         <span>貼上鑰匙</span><span className="lit">這台裝置就是你的座位</span>
       </h1>
-      <p className="deviceLead arrive" style={arrive(0)}>鑰匙由開圈子的人給你。</p>
+      <p className="deviceLead arrive" style={arrive(0)}>這一頁給手上已經有鑰匙的人。</p>
 
       {/* **The form arrives; `deviceErr` inside it does not, and it does not need to.** §1a rule
           5 keeps arrival off anything that answers what just happened — and the error only exists
