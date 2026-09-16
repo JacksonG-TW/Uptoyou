@@ -188,10 +188,9 @@ says how an answer outside them is refused, and how the frozen evaluation set wa
 
 ### Data Size
 
-The launch instance holds 35,965 places, 25,031 of them with a generated category, and 36,376
-rows of the reference list it loaded. The
-development database's current publication carries the same 36,376 rows. The three count different things on two hosts — [the long version](docs/decisions.md)
-reconciles them.
+The production database is **224 MB** on disk. It holds 35,965 places, 25,031 of them with a
+generated category, and the 36,376 rows of the reference list this instance loaded. Size measured
+on the production instance, 09-16; row counts, 09-11.
 
 ### ETL Flow
 
@@ -216,7 +215,7 @@ weight to exactly one source row.*
 | Table | Rows | What it holds |
 |---|---|---|
 | `place` | 35,965 | a place a circle can choose |
-| `reference_place` | 36,376 | one row of the government reference list; the count is the publication this instance loaded (the development database's current publication is the same file, and the name-ladder table measures it) |
+| `reference_place` | 36,376 | one row of the government reference list, as published; the count is the publication this instance loaded, and the name-ladder table measures that same publication |
 | `storefront_name` | 1,686 | the sign an inspector recorded |
 | `brand_registration` | 288 | company ↔ brand pairs |
 | `business_tax_row` | 72,801 | tax-registry name and industry code |
