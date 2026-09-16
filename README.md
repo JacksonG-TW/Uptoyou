@@ -439,8 +439,9 @@ Idempotence is decision 4's, and the test counts are in «Six more decisions» b
   second service would be one more stateful thing to run, back up and monitor.
 - **The evaluation set is frozen, stratified, and its authorship is stated.** It caught a prompt that
   read better and scored worse.
-- **Substring search stays a sequential scan.** A trigram index changed the plan for 0 of 31
-  realistic queries. The real cost was a lateral executed 35,533 times per keystroke.
+- **Substring search stays a sequential scan.** A trigram index — one that cuts every string into
+  three-character pieces and indexes those — changed the plan for 0 of 31 realistic queries. The real
+  cost was a sub-query re-run once per candidate row, 35,533 times per keystroke.
 - **The small instance was too small for its own nightly work.** 49 MB free under one ingest became
   398 MB in the worst case. The stack went 1,131 → 1,009 MiB at rest.
 - **The cloud serves; the home box computes.** An 8 GB card takes a retrieval-shaped batch at 0.92 s
@@ -448,10 +449,10 @@ Idempotence is decision 4's, and the test counts are in «Six more decisions» b
 - **The nightly backup is drilled, not assumed.** A 19.7 MB dump finishes in 3.7 s and restores into
   a fresh database in 9.4 s, with the row counts equal.
 
-- **The suite is 74 test files in two tempos**, and every commit passes six local gates. Host-side
-  tests need no network and no database; build-and-drop tests build their own database inside the one
-  service that holds the owner's credential. Five of the six gates are standard-library only, so a
-  clone needs no toolchain to commit.
+**The suite is 74 test files in two tempos**, and every commit passes six local gates. Host-side
+tests need no network and no database; build-and-drop tests build their own database inside the one
+service that holds the owner's credential. Five of the six gates are standard-library only, so a
+clone needs no toolchain to commit.
 
 [The long version](docs/decisions.md) has each of these in full.
 
