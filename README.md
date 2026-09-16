@@ -254,7 +254,7 @@ brand table renames 57% of the companies it covers. How far the ladder reaches, 
 | registered (what is left) | 31,010 | 85.2% | 32.9% |
 
 The ladder reaches 14.8% of the city. 33.1% of all rows still display a string that names a
-company. Where a sign exists the name is right. A sign exists for one row in twenty-seven.
+company. Where a sign exists the name is right.
 
 ### 2. Categories: RAG
 
@@ -269,12 +269,13 @@ holds and picks one of the thirteen categories. Its accuracy is measured on a fr
 - **Generation** — the model answers with one of the thirteen categories.
 
 Labeled example names are embedded into pgvector, and that is the example set. Missing knowledge is
-added as data, leaving the prompt and the weights alone. Turned down: another prompt
-revision; fine-tuning. Classification runs on a local 3B model. The generator is a quantized 3B
-model on the same box as the database, batch-only, off unless a backfill runs. A hosted model as the
-classifier was turned down too. The free hosted tier allows 500 calls a day, so 3,300 places take
-seven days. The local model does them in one night. The hosted model's score is kept, as the line
-the local models are measured against.
+added as data, leaving the prompt and the weights alone. Turned down: another prompt revision;
+fine-tuning.
+
+**Why the model is local.** The generator is a quantized 3B model on the same box as the database,
+batch-only, off unless a backfill runs. The free hosted tier allows 500 calls a day, so 3,300 places
+take seven days; the local model does them in one night. A hosted model as the classifier was turned
+down, and its score is kept as the line the local models are measured against.
 
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
@@ -324,8 +325,8 @@ cadence.
 
 **The result.** Every source is idempotent on identical bytes. That was proven by running each one
 through its real command-line entry point twice and comparing every column of every table. On the
-reference source the no-change path takes 1.6 s and a store takes 15.0 s. Per-source figures are in
-the table below, and they spread much wider than that one pair.
+reference source the no-change path takes 1.6 s and a store takes 15.0 s. Per source, a no-change day runs 0.31–3.58 s and a store
+0.31–25.03 s.
 
 *Measured on the schedule itself*, 8 days, 332 run-log rows against 361 Airflow task instances.
 Nothing was instrumented and no column added:
@@ -349,7 +350,7 @@ of this measures the fetch / parse / store split, because nothing records it.
 ### 5. Observability
 
 - **The stream's heartbeat is a comment line every 25 s.** The proxy in front of it cuts a silence
-  longer than 130 s. The heartbeat carries no timing a member could read.
+  longer than 130 s.
 - **Each API process holds one listening connection to the database** and fans events out from it.
   So more than one instance can serve one circle. If that connection dies, the process says so.
   `/health` answers 503 with `stream_listener` and the time it went down, and the process keeps
@@ -387,8 +388,8 @@ of this measures the fetch / parse / store split, because nothing records it.
   398 MB in the worst case. The stack went 1,131 → 1,009 MiB at rest.
 - **The cloud serves; the home box computes.** An 8 GB card takes a retrieval-shaped batch at 0.92 s
   a name. The same box's CPU takes 12–19 s.
-- **The live stream sends a heartbeat.** Through the proxy, a stream silent for 130 s was cut, and a
-  real event afterwards delivered nothing.
+- **The nightly backup is drilled, not assumed.** A 19.7 MB dump finishes in 3.7 s and restores into
+  a fresh database in 9.4 s, with the row counts equal.
 
 [The long version](docs/decisions.md) has each of these in full.
 
