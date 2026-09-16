@@ -176,8 +176,11 @@ this work need doing at all, and does it need doing here?
 | The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB instance, 09-07 |
 | A long classification pass | 1.7× slower first-to-last | **level** | 36,014 rows in 10.5 h, 09-03 |
 
-The memory figures were taken on a 2 GB instance. The instance has since been resized. [The long
-version](docs/decisions.md) has the working for the last four.
+The two memory rows — the roster ingest's peak and the serving stack at rest — were measured on the
+2 GB instance it ran on then; that instance is now 4 GB. The numbers are not stale: they answer «what
+happens on 2 GB», which is the condition that forced the fixes in the first place. [The long
+version](docs/decisions.md) has the working for classification, the roster, the stack at rest and the
+long pass.
 
 ## System Architecture
 
