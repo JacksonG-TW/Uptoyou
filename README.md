@@ -20,7 +20,7 @@ Open it, create your own circle, share the link with friends. To run it yourself
 | | |
 |---|---|
 | **The idea** | A few friends want one meal, nobody wants to be the one who chose, so the app chooses and shows its work |
-| **How it decides** | Weighted dice, not a ranking: every factor multiplies a place's odds, and the reveal names each factor beside the number it contributed |
+| **How it decides** | Weighted dice, not a ranking: every factor multiplies a place's odds, and every factor is stored with the reading it came from |
 | **Data scale** | Seven government sources, six scheduled ingests, `35,965` Taipei places (`25,031` categorised), a `224 MB` database |
 | **Technical focus** | content-addressed ingest with an idempotent run log, a three-step name derivation, a retrieval-augmented classifier scored on a frozen set |
 | **Measured** | Four local models on one frozen set: `72.0` · `71.0` · `70.5` · `65.5`; a no-change ingest `1.6 s` against `15.0 s` to store; the whole city classified in `10.5 h` |
@@ -80,12 +80,14 @@ person's decision anyway.
 
 ![The reveal: the winner, and every factor that moved its odds](docs/reveal-panel.png)
 
-A weighted die can only be trusted if you can see the weights. Every factor is a stored row, linked
-to the reading it was computed from. The reveal recomputes nothing for display. It reads the same
-rows the roll used and names each one.
+A weighted die is worth trusting only if the weights can be checked. Every factor is written as a row
+at the moment of the roll, linked to the reading it was computed from, and nothing is recomputed for
+display: the reveal reads the same rows the roll used.
 
-So a member can check the result. Nobody has to take it on trust. A preference is private on the way
-in and visible on the way out. The reveal shows what moved the odds. It never shows who asked for it.
+**Who sees what.** A member sees the winner, the dice and one line. The full table — every factor and
+the row it came from — is the operator's view. The difference that matters is «take our word for it»
+against «it can be checked». A preference is private on the way in and visible on the way out: what
+moved the odds is shown, and who asked for it is not.
 
 **And privacy is enforced in the database.** Closing a round
 fires a trigger that nulls `proposal.member_id`, in the transaction that makes the result durable —
