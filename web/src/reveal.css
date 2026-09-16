@@ -1105,6 +1105,15 @@
   /* The canvas. The reveal stops being a column and becomes a composition; everything inside is
      placed against this box rather than stacked. */
   .reveal { display: block; padding: 0; }
+  /* **Except when there is no stage to carry it** (defect, owner on dev 2026-09-16). The wide
+     composition moves the screen's padding onto `.stage`, and two branches of `Reveal.tsx` render a
+     bare `main` with one sentence and no stage: 這台裝置還沒有鑰匙 for a visitor with no key, and
+     every reveal error (簽不上 among them). Their only line was drawn at y 0 — height 29.6, entirely
+     behind the fixed bar — so the screen read as blank. It takes the screen's own padding back, the
+     same expression `.reveal` uses below 1100, so the sentence clears the bar and keeps its wording
+     and its place. `:has()` asks the real question (is there a stage) rather than naming the two
+     branches, so a third bare branch is covered the day it is written. */
+  .reveal:not(:has(.stage)) { padding: calc(var(--bar-h) + 24px) 6vw 64px; }
   /* **The left column FLOWS; only the dice group and the right column are absolute.** The first
      build placed everything absolutely and the page could not grow: `scrollHeight` equalled the
      viewport exactly, so the commitment and the revealed seed sat at 843–890 behind a bar whose top
