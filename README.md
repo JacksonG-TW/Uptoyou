@@ -238,7 +238,7 @@ Most of the work is in building the list of places to choose from.
 **The approach.** A display name is resolved down a ladder: the sign an inspector recorded, then the
 brand, then the registered name. Three sources are joined by registry number, with fixed precedence
 and no fuzzy name matching. Turned down: the registered name alone; string similarity across
-sources. A trial of an outside geodata source false-joined 46% on address alone, and was dropped.
+sources. Overture Maps, the open global places dataset, was tried and dropped: 39.5% trustworthy matches, 46% false joins on address alone.
 
 ![The name ladder: sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
