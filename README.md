@@ -414,8 +414,9 @@ Nothing was instrumented and no column added:
 | 商業登記 status | 25.03 s | 2.09 s | 7 |
 | 營業稅籍 registry | 12.95 s | 3.58 s | 7 |
 
-**How much a no-change day saves depends on the source**: 3.6× on the largest one, 12× on the
-restaurant roster. That saving is what claiming the row before parsing the file buys.
+**How much a no-change day saves depends on the source**: 3.6× on the tax registry (3.58 s against
+12.95 s) and 12× on the business registration. That saving is what claiming the row before parsing
+the file buys.
 
 **Airflow's own overhead is flat — about 1.2 s a task**, whether the source's own work takes half a
 second or twenty-five. And it is not backed up: across all 361 tasks, the wait between «scheduled»
