@@ -181,8 +181,11 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
             )
         ).scalar_one()
         try:
+            # **The invite power, and not the evidence table** (owner 「拆」, 2026-09-16,
+            # revision 0047). The person who opened the circle keeps its link; D105's table
+            # identifies whose preference moved a place, and at two seats that is everyone.
             member_id, _, key = await grow_seat(
-                session, circle_id, body.nickname, operator=True
+                session, circle_id, body.nickname, operator=True, evidence=False
             )
         except SeatRefused as refused:
             # A brand-new circle cannot be full and cannot be missing, so anything here is a bug
@@ -263,7 +266,7 @@ async def reissue_ticket(circle_id: int, request: Request) -> dict:
     a data-deletion half (D42, H22) and is deliberately out of this candidate.
     """
     async with session_factory()() as session:
-        _, is_operator = await resolve_credential(session, request, circle_id)
+        _, is_operator, _ = await resolve_credential(session, request, circle_id)
         if not is_operator:
             # D105's split: the role came from the presented secret, so this cannot be argued with.
             raise HTTPException(status_code=403, detail="只有開圈子的人可以換連結。")
@@ -297,7 +300,7 @@ async def ticket_status(circle_id: int, request: Request) -> dict:
     **Keyed on the creator's own credential**, which is the only thing they still have.
     """
     async with session_factory()() as session:
-        _, is_operator = await resolve_credential(session, request, circle_id)
+        _, is_operator, _ = await resolve_credential(session, request, circle_id)
         if not is_operator:
             raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
         row = (
@@ -351,7 +354,7 @@ async def check_ticket(circle_id: int, body: TicketCheck, request: Request) -> d
     creator's question and nobody else's.
     """
     async with session_factory()() as session:
-        _, is_operator = await resolve_credential(session, request, circle_id)
+        _, is_operator, _ = await resolve_credential(session, request, circle_id)
         if not is_operator:
             raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
         row = (

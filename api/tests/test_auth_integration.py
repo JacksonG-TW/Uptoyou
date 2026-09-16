@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
-from upto.auth import member_for  # noqa: E402
+from upto.auth import credential_for, member_for  # noqa: E402
 
 TEST_DB = "upto_auth_check"
 # A fixture, not a credential — assembled from short pieces so D49's assigned-secret rule,
@@ -102,6 +102,36 @@ async def scenario(test_url: str) -> None:
         ).scalar_one()
     assert stored == sha256(TOKEN.encode()).hexdigest()
     assert TOKEN not in stored
+
+    # **The two flags resolve independently (revision 0047, owner 「拆」 2026-09-16).** `operator` is
+    # the invite power, `evidence` D105's table; `credential_for` returns the pair the presented
+    # secret carries, and one principal may hold every combination at once.
+    async with Session() as session:
+        principal = (
+            await session.execute(
+                text("select principal_id from member where id = :m"), {"m": member_a})
+        ).scalar_one()
+        combinations = {"inv": (True, False), "aud": (False, True),
+                        "both": (True, True), "plain": (False, False)}
+        for label, (is_op, sees) in combinations.items():
+            await session.execute(
+                text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                     "values (:p, :h, :o, :e)"),
+                {"p": principal, "h": sha256((TOKEN + label).encode()).hexdigest(),
+                 "o": is_op, "e": sees},
+            )
+        await session.commit()
+        for label, expected in combinations.items():
+            found = await credential_for(session, TOKEN + label, circle_a)
+            assert found == (member_a, *expected), (label, found, expected)
+        # And the row the pre-0047 insert shape writes — no `evidence` named — is the narrow one.
+        await session.execute(
+            text("insert into device_secret (principal_id, secret_sha256, operator) "
+                 "values (:p, :h, true)"),
+            {"p": principal, "h": sha256((TOKEN + "legacy").encode()).hexdigest()},
+        )
+        await session.commit()
+        assert await credential_for(session, TOKEN + "legacy", circle_a) == (member_a, True, False)
 
     await engine.dispose()
     print(

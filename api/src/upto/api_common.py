@@ -20,7 +20,10 @@ from .engine.fold import Contribution, fold
 
 
 async def resolve_credential(session, request: Request, circle_id: int):
-    """`(member_id, operator)` for the bearer token, or 401. D67's one answer for both halves.
+    """`(member_id, operator, evidence)` for the bearer token, or 401. D67's one answer for both halves.
+
+    Three values since 0047: `operator` is the invite power, `evidence` D105's table (owner 「拆」,
+    2026-09-16). A call site that means one of them says which; none may read the other by accident.
 
     The role comes from the presented secret (D105), so **an endpoint cannot be talked into an
     operator shape by anything in the request** — there is no parameter to send.
@@ -566,9 +569,15 @@ async def closed_body(
     return body
 
 
-def for_credential(body: dict, operator: bool) -> dict:
-    """The operator's payload unchanged, or the member's subset of it."""
-    if operator:
+def for_credential(body: dict, evidence: bool) -> dict:
+    """The whole payload to a credential that carries the evidence flag, or the member's subset.
+
+    **Keyed on `evidence`, not on `operator`, since 0047** (owner 「拆」, 2026-09-16): the invite
+    power and this table are two capabilities, and this function has only ever been about the
+    table. The parameter is keyword-only at every call site for that reason — a positional `True`
+    here used to mean «an operator» and now means «may see whose preference moved a place».
+    """
+    if evidence:
         return body
     return {key: body[key] for key in MEMBER_KEYS if key in body}
 

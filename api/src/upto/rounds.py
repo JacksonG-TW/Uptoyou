@@ -250,7 +250,8 @@ async def roll(round_id: int, request: Request) -> dict:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
         # The role decides which reveal shape comes back, and it comes from the credential alone —
         # there is no parameter an endpoint could be talked into.
-        member, is_operator = await _resolve_credential(session, request, round_row.circle_id)
+        member, _is_operator, sees_evidence = await _resolve_credential(
+            session, request, round_row.circle_id)
 
         if round_row.status == "closed":
             # D69: the retry gets the answer it missed, in the shape a first roll returns.
@@ -270,7 +271,7 @@ async def roll(round_id: int, request: Request) -> dict:
                     session, round_id, dice, round_row.winning_place_id,
                     {row.place_id: row.weight for row in stored}, viewer=member,
                 ),
-                operator=is_operator,
+                evidence=sees_evidence,
             )
 
         if not round_row.target_hour_typed:
@@ -385,9 +386,9 @@ async def roll(round_id: int, request: Request) -> dict:
         # see. An operator's extra detail arrives when that operator asks — its own request, its own
         # credential — which is also why the snapshot is per connection (D56).
         await publish(session, round_row.circle_id, {"type": "closed",
-                                      "result": for_credential(full, operator=False)})
+                                      "result": for_credential(full, evidence=False)})
         await session.commit()
-    return for_credential(full, operator=is_operator)
+    return for_credential(full, evidence=sees_evidence)
 
 @router.post("/rounds/{round_id}/trip", status_code=201)
 async def sign_trip(round_id: int, request: Request, response: Response) -> dict:

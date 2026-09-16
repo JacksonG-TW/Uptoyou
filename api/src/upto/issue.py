@@ -104,7 +104,7 @@ class SeatRefused(Exception):
 
 
 async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | None = None,
-                    operator: bool = False) -> tuple[int, int, str]:
+                    operator: bool = False, evidence: bool = False) -> tuple[int, int, str]:
     """`(member_id, principal_id, token)` — mint a principal, a device secret and a seat.
 
     **Extracted 2026-09-13 for A24, and the extraction is the point.** Until then this logic lived
@@ -190,12 +190,16 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
             # **D105: the role is written here and nowhere else.** It rides the secret rather than
             # the person, so it can never arrive as a request parameter and it is revocable on its
             # own — revoking an operator device leaves the seat intact.
+            #
+            # **Two flags since revision 0047** (owner 「拆」, 2026-09-16): `operator` is the invite
+            # power, `evidence` is D105's evidence table. They are issued together or apart, and
+            # `--operator` alone no longer carries the table.
             await session.execute(
                 text(
-                    "insert into device_secret (principal_id, secret_sha256, operator) "
-                    "values (:p, :h, :operator)"
+                    "insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                    "values (:p, :h, :operator, :evidence)"
                 ),
-                {"p": local_principal, "h": digest, "operator": operator},
+                {"p": local_principal, "h": digest, "operator": operator, "evidence": evidence},
             )
             member_id = (
                 await session.execute(
@@ -234,7 +238,7 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
 
 
 async def issue(circle_id: int, nickname: str, principal_id: int | None,
-                operator: bool = False) -> int:
+                operator: bool = False, evidence: bool = False) -> int:
     token = secrets.token_urlsafe(32)
     digest = sha256(token.encode("utf-8")).hexdigest()
 
@@ -291,6 +295,10 @@ async def issue(circle_id: int, nickname: str, principal_id: int | None,
             # **D105: the role is written here and nowhere else.** It rides the secret rather than
             # the person, so it can never arrive as a request parameter and it is revocable on its
             # own — revoking an operator device leaves the seat intact.
+            #
+            # **Two flags since revision 0047** (owner 「拆」, 2026-09-16): `operator` is the invite
+            # power, `evidence` is D105's evidence table. They are issued together or apart, and
+            # `--operator` alone no longer carries the table.
             await session.execute(
                 text(
                     "insert into device_secret (principal_id, secret_sha256, operator) "
@@ -353,12 +361,23 @@ def main() -> int:
     parser.add_argument(
         "--operator",
         action="store_true",
-        help="issue this device as an operator's: its reveal payload carries the evidence table "
-             "(D105). The role belongs to the secret, not the person — the same human is an "
+        help="issue this device with the INVITE power: it may mint and read the circle's join "
+             "link. **Since 2026-09-16 (owner 「拆」, revision 0047) it no longer carries D105's "
+             "evidence table** — pass --evidence as well for a credential that audits the "
+             "arithmetic. The role belongs to the secret, not the person — the same human is an "
              "ordinary member on any other device, and revoking this one leaves their seat.",
     )
+    parser.add_argument(
+        "--evidence",
+        action="store_true",
+        help="issue this device with D105's evidence table in its reveal payload: every stored "
+             "factor and its contributor, which at a small table identifies whose preference "
+             "moved a place. Independent of --operator; issue both for an auditing operator.",
+    )
     args = parser.parse_args()
-    return asyncio.run(issue(args.circle_id, args.nickname, args.principal, args.operator))
+    return asyncio.run(
+        issue(args.circle_id, args.nickname, args.principal, args.operator, args.evidence)
+    )
 
 
 if __name__ == "__main__":

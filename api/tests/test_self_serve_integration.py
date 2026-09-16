@@ -22,6 +22,7 @@ import json
 import os
 import subprocess
 import sys
+from hashlib import sha256
 
 SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src")
 sys.path.insert(0, SRC)
@@ -160,6 +161,22 @@ async def scenario(test_url: str) -> None:
         check("the creator can", again.status_code == 201, f"got {again.status_code}")
         fresh = ticket_of(again.json()["join_link"])
         check("and the new ticket is a different secret", fresh != ticket)
+
+        # **0047 (owner 「拆」, 2026-09-16): the creator keeps the link and not the table.** The two
+        # powers were one boolean until today, so the first person to tap 開一個圈子 could read
+        # every stored factor and its contributor — which at a small table is whose preference moved
+        # a place. The mint above proves the invite half; this proves the other half is gone.
+        async with Session() as session:
+            flags = (
+                await session.execute(
+                    text("select ds.operator, ds.evidence from device_secret ds "
+                         "join member m on m.principal_id = ds.principal_id "
+                         "where m.circle_id = :c and ds.secret_sha256 = :h"),
+                    {"c": circle, "h": sha256(creator_key.encode()).hexdigest()},
+                )
+            ).one()
+        check("the creator's credential carries the invite power", flags.operator is True, flags)
+        check("and NOT the evidence table (0047)", flags.evidence is False, flags)
 
         dead = await client.post(f"{BASE}/circles/{circle}/join",
                                  json={"ticket": ticket, "nickname": "太慢"})

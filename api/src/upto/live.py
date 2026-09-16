@@ -60,7 +60,7 @@ HEARTBEAT_SECONDS = float(os.environ.get("UPTO_STREAM_HEARTBEAT_SECONDS") or 25)
 router = APIRouter()
 
 
-async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False) -> dict:
+async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False) -> dict:
     """The circle's current state: an open round with its pool, else the last result (D54)."""
     open_row = (
         await session.execute(
@@ -159,7 +159,7 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
             viewer=viewer,
             # A member's snapshot discards `panel` in `for_credential` two lines down, so building
             # it would be a query and a fold thrown away. An operator's reconnect keeps it.
-            with_panel=operator,
+            with_panel=evidence,
         )
         # **B2's trip comes from `closed_body` too, and D56 is why it must be here at all.** Nothing
         # is pushed when a trip is signed (D53), so a client that was not connected at the moment —
@@ -169,20 +169,20 @@ async def _snapshot(session, circle_id: int, viewer=None, operator: bool = False
         # can be role-aware.** A pushed event goes to every subscriber and must therefore be the
         # member shape; a snapshot is built for the credential that opened *this* stream, so an
         # operator's reconnect restores the evidence table rather than losing it.
-        last_result = for_credential(last_result, operator=operator)
+        last_result = for_credential(last_result, evidence=evidence)
     return {"type": "snapshot", "open_round": None, "last_result": last_result}
 
 
 @router.get("/circles/{circle_id}/stream")
 async def stream(circle_id: int, request: Request) -> StreamingResponse:
     async with session_factory()() as session:
-        viewer, is_operator = await resolve_credential(session, request, circle_id)
+        viewer, _is_operator, sees_evidence = await resolve_credential(session, request, circle_id)
 
     async def events():
         async with subscribe(circle_id) as queue:
             # Subscribe first, snapshot second: the overlap duplicates, never drops.
             async with session_factory()() as session:
-                snapshot = await _snapshot(session, circle_id, viewer, is_operator)
+                snapshot = await _snapshot(session, circle_id, viewer, sees_evidence)
             yield "data: " + json.dumps(snapshot, ensure_ascii=False) + "\n\n"
             while True:
                 try:

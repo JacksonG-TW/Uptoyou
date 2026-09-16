@@ -89,8 +89,10 @@ async def scenario(test_url: str) -> None:
             # happened, an operator also sees how the odds got there. Asserting `weights` from a
             # member token would be asserting a leak. A second, ordinary token below checks the
             # other half — that the member shape really withholds it.
-            text("insert into device_secret (principal_id, secret_sha256, operator) "
-                 "values (:p, :h, true)"),
+            # `evidence` since revision 0047 (owner 「拆」, 2026-09-16): the table is that flag's,
+            # not `operator`'s. Both set here, which is what an auditing operator holds.
+            text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                 "values (:p, :h, true, true)"),
             {"p": principal, "h": sha256(token.encode()).hexdigest()},
         )
         plain_token = "t-plain-" + sha256(token.encode()).hexdigest()[:16]

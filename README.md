@@ -163,7 +163,7 @@ connects as its own role.*
 | Layer | What runs |
 |---|---|
 | **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN and no runtime fetch. Two subset fonts ship with the bundle. |
-| **API** | Python, FastAPI, SQLAlchemy 2.0, async end to end, 46 hand-written Alembic migrations. |
+| **API** | Python, FastAPI, SQLAlchemy 2.0, async end to end, 47 hand-written Alembic migrations. |
 | **Database** | PostgreSQL 17. Seven login roles, one per boundary: the API, the ingests, the nightly erasure, the backup, the lineage tool, the value checks, and the owner. Only the one-shot migration container ever holds the owner role. |
 | **Vector** | pgvector, in that same database. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. Its metadata is a second database in the same PostgreSQL. |

@@ -67,11 +67,13 @@ async def scenario(test_url: str, base_url: str) -> None:
             )
         ).scalar_one()
         # **One person, one seat, two devices.** Anything that differs downstream is the secret's.
-        for token, is_op in ((plain, False), (op, True)):
+        # The third value is `evidence` (revision 0047, owner 「拆」 2026-09-16): the reveal table
+        # rides that flag now, `operator` is the invite power. The auditing device holds both.
+        for token, is_op, sees in ((plain, False, False), (op, True, True)):
             await session.execute(
-                text("insert into device_secret (principal_id, secret_sha256, operator) "
-                     "values (:p, :h, :o)"),
-                {"p": principal, "h": sha256(token.encode()).hexdigest(), "o": is_op},
+                text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                     "values (:p, :h, :o, :e)"),
+                {"p": principal, "h": sha256(token.encode()).hexdigest(), "o": is_op, "e": sees},
             )
         # A categorised place plus an avoidance, so the round carries a **private** contribution —
         # the row whose reason must stay behind even from an operator (D13).
@@ -282,11 +284,53 @@ async def scenario(test_url: str, base_url: str) -> None:
             ).scalar()
         check("the member row survived the revocation", seats == 1, seats)
 
+        # ---- 0047: the two flags are two powers, and the backfill kept the old ones whole ----
+        # Owner 「拆」, 2026-09-16. A credential with the INVITE power and not the evidence flag
+        # sees the member shape; one with the evidence flag and no invite power sees the table.
+        # Neither is the person: both are this same principal's, as D105 requires.
+        invite_only = "t-invite-" + sha256(op.encode()).hexdigest()[:12]
+        audit_only = "t-audit-" + sha256(op.encode()).hexdigest()[:12]
+        async with Session() as session:
+            for tok, is_op, sees in ((invite_only, True, False), (audit_only, False, True)):
+                await session.execute(
+                    text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                         "values (:p, :h, :o, :e)"),
+                    {"p": principal, "h": sha256(tok.encode()).hexdigest(), "o": is_op, "e": sees},
+                )
+            # An old credential, written the way every row was written before 0047 — no `evidence`
+            # named at all — stands for what the backfill left on the box: the column's default is
+            # the narrow one, so this row must NOT see the table.
+            legacy = "t-legacy-" + sha256(op.encode()).hexdigest()[:12]
+            await session.execute(
+                text("insert into device_secret (principal_id, secret_sha256, operator) "
+                     "values (:p, :h, true)"),
+                {"p": principal, "h": sha256(legacy.encode()).hexdigest()},
+            )
+            await session.commit()
+        for label, tok, expect_table in (("invite-only", invite_only, False),
+                                         ("audit-only", audit_only, True),
+                                         ("a row written without the column", legacy, False)):
+            body = (await client.post("/rounds/{}/roll".format(round_id),
+                                      headers={"Authorization": "Bearer " + tok})).json()
+            has = all(field in body for field in ARITHMETIC)
+            check("{}: the evidence table is {}".format(label, "present" if expect_table else "withheld"),
+                  has == expect_table, sorted(body))
+        # And the invite power is the other flag's, still read from the secret.
+        minted = await client.post("/circles/{}/join-ticket".format(circle),
+                                   headers={"Authorization": "Bearer " + invite_only})
+        check("the invite-only credential may mint a join link", minted.status_code in (200, 201),
+              minted.status_code)
+        refused = await client.post("/circles/{}/join-ticket".format(circle),
+                                    headers={"Authorization": "Bearer " + audit_only})
+        check("and the audit-only credential may not", refused.status_code == 403, refused.status_code)
+
     await engine.dispose()
     if FAILURES:
         print("\n{} failing: {}".format(len(FAILURES), ", ".join(FAILURES)))
         raise SystemExit(1)
-    print("\nD105: one person with two devices sees two shapes — the member's keeps what happened and "
+    print("\nD105/0047: one person with several devices sees the shape each SECRET carries — the "
+          "member's keeps what happened, the evidence flag carries the table, the invite flag the "
+          "link, and a row written before the split sees no table. "
           "withholds how the odds got there, the operator's carries the table with the private row "
           "labelled and reasonless, neither carries a member id, no parameter can ask for the "
           "operator shape, the snapshot follows the credential, and revoking the operator device "
