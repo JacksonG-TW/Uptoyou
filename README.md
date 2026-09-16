@@ -141,8 +141,8 @@ roll happens, and the reveal reads them back.
   unchanged file costs nothing.
 - **A classifier scored on a frozen 200-row set.** Four local models were compared on it: 72.0 ·
   71.0 · 70.5 · 65.5.
-- **Every factor is a stored row.** A member reads it on the reveal, linked to the reading it came
-  from.
+- **Every factor is a stored row**, linked to the reading it was computed from. The reveal reads
+  those rows back rather than recomputing anything.
 
 ## Terminology and Data Units
 
@@ -401,13 +401,17 @@ of this measures the fetch / parse / store split, because nothing records it.
 
 ### 5. Observability
 
-- **The stream's heartbeat is a comment line every 25 s.** The proxy in front of it cuts a silence
-  longer than 130 s.
-- **Each API process holds one listening connection to the database** and fans events out from it.
-  So more than one instance can serve one circle. If that connection dies, the process says so.
-  `/health` answers 503 with `stream_listener` and the time it went down, and the process keeps
-  serving reads. Measured on a real kill: **503 within 0.18 s, back up on a new connection within
-  1.23 s.**
+**A live product has to say two things about itself: «I am still here» and «I can still hear the
+database».** Both are answers to the same failure — something is quietly not working and nothing
+says so.
+
+- **«I am still here» is a comment line every 25 s.** The proxy in front cuts a stream that has been
+  silent for 130 s, and a cut stream delivers nothing afterwards while looking exactly like a quiet
+  evening. The heartbeat is what keeps the silence from being ambiguous.
+- **«I can still hear the database» is what `/health` answers.** Each API process holds one listening
+  connection and fans events out from it, so more than one instance can serve one circle. When that
+  connection dies the process says so: 503 with the time it went down, reads still served. Measured
+  on a real kill: **503 within 0.18 s, back on a new connection within 1.23 s.**
 
 ### 6. Reliability
 
