@@ -341,7 +341,7 @@ async def roll(round_id: int, request: Request) -> dict:
                           {"type": "pool_swept", "round_id": round_id}, transactional=False)
             raise HTTPException(
                 status_code=409,
-                detail="池子是空的，或每一家的權重都是零，擲不出結果。",
+                detail="池子是空的，或每一家的機會都是零，擲不出結果。",
             ) from None
         # **D108: the dice come from the seed committed at open, never from a fresh draw here.**
         # This is the line the whole mechanism exists to change. `secrets.randbelow` at roll time was
