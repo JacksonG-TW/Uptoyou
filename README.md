@@ -189,8 +189,7 @@ says how an answer outside them is refused, and how the frozen evaluation set wa
 ### Data Size
 
 The production database is **224 MB** on disk. It holds 35,965 places, 25,031 of them with a
-generated category, and the 36,376 rows of the reference list this instance loaded. Size measured
-on the production instance, 09-16; row counts, 09-11.
+generated category, and the 36,376 rows of the reference list this instance loaded.
 
 ### ETL Flow
 
@@ -224,7 +223,7 @@ weight to exactly one source row.*
 | `observation_reading` | 26,847 | station observation readings |
 | `ingest_run` | 351 | one record per ingest attempt, including «no change» |
 
-Counts measured on the launch instance on 2026-09-11.
+Counts measured on the production instance.
 
 ## Key Technical Decisions
 
@@ -244,7 +243,7 @@ sources. A trial of an outside geodata source false-joined 46% on address alone,
 ![The name ladder: sign, then brand, then registered name](docs/diagrams/name-ladder.png)
 
 **The result.** The sign differs from the registered name on 93% of the rows that have one. The
-brand table renames 57% of the companies it covers. How far the ladder reaches, measured 2026-09-11 over the
+brand table renames 57% of the companies it covers. How far the ladder reaches, over the
 36,376 rows of the current publication:
 
 | Step | Rows | Share | Of those, still names a company |
