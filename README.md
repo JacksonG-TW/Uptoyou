@@ -21,7 +21,7 @@ Open it, create your own circle, share the link with friends. To run it yourself
 |---|---|
 | **The idea** | A few friends want one meal, nobody wants to be the one who chose, so the app chooses and shows its work |
 | **How it decides** | Weighted dice, not a ranking: every factor multiplies a place's odds, and every factor is stored with the reading it came from |
-| **Data scale** | Seven government sources, six scheduled ingests, `35,965` Taipei places (`25,031` categorised), a `224 MB` database |
+| **Data scale** | Seven government sources, six scheduled ingests (nine scheduled jobs with the two deletions and the backup), `35,965` Taipei places (`25,031` categorised), a `224 MB` database |
 | **Technical focus** | content-addressed ingest with an idempotent run log, a three-step name derivation, a retrieval-augmented classifier scored on a frozen set |
 | **Measured** | Four local models on one frozen set: `72.0` · `71.0` · `70.5` · `65.5`; a no-change ingest `1.6 s` against `15.0 s` to store; the whole city classified in `10.5 h` |
 | **Tech stack** | FastAPI / PostgreSQL + pgvector / Airflow / React 19 + Vite + Tailwind / nginx / Docker Compose / AWS EC2 / Cloudflare / Ollama |
@@ -148,7 +148,7 @@ roll happens, and the reveal reads them back.
 
 | Term | What it means here |
 |---|---|
-| **Circle** | A standing group of people who eat together. |
+| **Circle** | A group deciding one meal together — regular friends, or a circle opened on the spot. |
 | **Member** | One person's seat in a circle. There is no account and no email, only a device token. |
 | **Round** | One meal being decided. It opens, collects proposals, and closes on a roll. |
 | **Proposal** | A place somebody put forward in this round. |
@@ -485,7 +485,7 @@ clone needs no toolchain to commit.
 | 08-18 | The front end reversed | The hand-rolled, no-build front end was replaced by Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. | one night to re-decide; the served bundle still fetches nothing at runtime |
 | 08-19 to 08-29 | The engine's factors, and the screens that show them | Every member rolls and one roll counts, named before the dice are seen. The rain factor was made relative to the pool's driest district. «Last time we went here» halves a place. The ingredient veto was built, measured and withdrawn for want of coverage. | rain: gap ÷ 120, floored at 0.5; ingredient coverage 12.4% of places, which is why the kind left the product |
 | 08-29 to 08-31 | The screens frozen | The return-choice screen. An eleventh, then a twelfth and thirteenth category. The nightly S3 backup with a restore drill. | drill: 19.7 MB dumped in 3.7 s, restored in 9.4 s, counts identical |
-| 08-30 to 09-02 | The classifier ladder | A 7B model was admitted once the comparison ran on the machine the pipeline actually calls. Prompts v6 and v7. The test set relabelled twice. The whole city re-decided. The per-model unload that removed a slowdown. | four models on one set: 72.0 · 71.0 · 70.5 · 65.5; 36,014 rows in 10.5 h with five level curves; 其他 down 38% |
+| 08-30 to 09-02 | The classifier ladder | A 7B model was admitted once the comparison ran on the machine the pipeline actually calls. Prompts v6 and v7. The test set relabelled twice. The whole city re-decided. The per-model unload that removed a slowdown. | four models on one set: 72.0 · 71.0 · 70.5 · 65.5; 36,014 rows in 10.5 h with five level curves; the catch-all 其他 category down 38% |
 | 09-04 | The design round | The tonight screen as a menu with section marks, and one slim bar on every inner screen. The reveal's chrome reduced. Connection and rate limits on the proxy. A 25 s heartbeat on the live stream. | a stream silent for 130 s: cut through the proxy, open direct; with the heartbeat, open and delivering |
 | 09-04 to 09-07 | Launch on EC2 | One small instance in Tokyo boots the public extract and passes one ingest cycle the same day. The box wedged twice on memory. The roster ingest now streams the file; it no longer holds it whole. TLS terminated in the existing nginx with an Origin CA certificate. Cloudflare live in Full (strict). | 49 MB available under one ingest → 398 MB worst case after. The roster 172 → 77 MB. The stack 1,131 → 1,009 MiB at rest. A health check that cost 7.4 s of CPU every 20 s, gone |
 | 09-08 | Images from a registry | Seven image names collapsed to three. Images are built here and pushed to a public registry, tagged with the extract's commit. The box pulls that tag and builds nothing. | pull 9 s; memory 479 → 664 MB during the deploy, never dipping |
