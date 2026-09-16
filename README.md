@@ -164,6 +164,9 @@ roll happens, and the reveal reads them back.
 
 ## Performance and Optimization Results
 
+**None of these came from tuning a parameter.** Every row is the same question answered twice: does
+this work need doing at all, and does it need doing here?
+
 | What | Before | After | Measured on |
 |---|---|---|---|
 | An ingest day with no new file | 15.0 s | **1.6 s** | the run log, 8 days, 7 sources |
@@ -497,12 +500,15 @@ clone needs no toolchain to commit.
 
 ## Limits and future work
 
-Taipei only: twelve districts, one city's open data, addresses normalised at the ingest boundary
-because the same government file spells the city two ways. **Every source is used inside its
-licence** — one whose licence is non-commercial or uncertain is not used at all, and there are no
-ratings, no reviews and no scraped pages anywhere in the pipeline. Sized for one small group, with
-live room state per process. A portfolio project, developed in a private repository and extracted
-here after every merge, so the commit messages carry the reasoning behind each change.
+**Taipei only**: twelve districts, one city's open data, with addresses normalised at the ingest
+boundary because the same government file spells the city two ways.
+
+**Every source is used inside its licence.** One whose licence is non-commercial or uncertain is not
+used at all, and there are no ratings, no reviews and no scraped pages anywhere in the pipeline.
+
+**Sized for one small group**, with live room state per process. It is a portfolio project, developed
+in a private repository and extracted here after every merge, so the commit messages carry the
+reasoning behind each change.
 
 - **«Did you actually go?» is a transaction, not a self-report.** The honest source for a visit is a
   membership scan or a checkout, and Taiwan has established vendors of each kind — restaurant CRM and
