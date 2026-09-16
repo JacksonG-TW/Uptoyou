@@ -513,3 +513,37 @@
    `spec-pool-vetoed.md` §2. Keyed on the part rather than a second class: it IS a `roundWarn`, it
    is only a louder one, and a modifier class would invite a third. */
 .round [data-part="pool-vetoed"] { font-size: var(--text-lead); font-weight: 400; }
+
+/* ═══ 這一餐 as two columns — owner-ruled axis 1 = (a) (ec03313), spec-round-two-columns-2026-09-16 ══
+   The act left and above the fold, 這次不吃 right. **No copy changed, no control added, no state
+   removed** — every sentence keeps its words and only its position moves.
+
+   **1200 and up, and D107 stands**: below it the page keeps the single 720 column it has, now in the
+   DOM order the ruling set (act first, menu last). The gated width is 1440, where the outer column
+   is 1100 — 680 for the act, a 60 gap, 360 for the menu.
+
+   Tops come from the spec's table and are made with the existing rhythm rather than with absolute
+   positioning, so a long sentence still pushes what follows it down instead of overlapping it. */
+@media (min-width: 1200px) {
+  .round { width: 1100px; }
+  .roundCols {
+    display: grid;
+    grid-template-columns: 680px 360px;
+    column-gap: 60px;
+    align-items: start;
+  }
+  /* 找一家店 at 219 — the second rule line ends at 187, so 32 is the gap the spec's table asks for,
+     and it is `.roundSearch`'s own margin already. The input then lands at 250. */
+  .roundLeft .roundSearch { max-width: 420px; }
+  /* The pool block spans the act column rather than the input's width: it is the round's own list,
+     and the spec gives it 680 with a 106 floor so an empty round still reads as a block. */
+  .roundLeft .poolBlock { min-height: 106px; }
+  /* **這次不吃 starts level with 找一家店** (RA-2). The right column's first child is the heading,
+     and the grid row starts at the title's top, so the offset is the distance down to the label:
+     155 px. Stated once here rather than by nudging each block above it. */
+  .roundRight { margin-top: 155px; }
+  .roundRight .tonightBlock { margin-top: 0; }
+  /* One column of chips, each the column's full 360 (RA-6). `columns: 2` is the printed-menu rule
+     for a 720 column; in a 360 one it would put four characters and a number in 156 px. */
+  .round .menu { columns: 1; }
+}

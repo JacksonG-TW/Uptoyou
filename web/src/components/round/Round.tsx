@@ -322,6 +322,17 @@ export default function Round() {
 
   return (
     <main className="round" data-screen="round">
+      {/* **Two columns at 1440 — the act left, 這次不吃 right** (owner-ruled axis 1 = (a), ec03313;
+          the evaluator's `spec-round-two-columns-2026-09-16.md`). The thirteen chips used to stand
+          between the title and the search, so 找一家店, the pool and 擲骰 all sat past the fold: the
+          screen's own act was the part a person had to scroll for.
+
+          **The left column is FIRST in the DOM, and that is the structural half of the ruling** —
+          reading order and tab order reach the act before the menu, at every width. Below the
+          two-column width the same order flows as one column, so a narrow screen meets the act
+          first too. */}
+      <div className="roundCols">
+      <div className="roundLeft">
       <h1 className="roundTitle">這一餐</h1>
       {/* **「一人提一家」 was false and D110 made it checkably so** — the cap is three per person,
           stated on the home page and enforced at propose, and this line said one. Corrected to the
@@ -348,150 +359,6 @@ export default function Round() {
         同一家店不管幾個人提，都只算一份。多提不會提高中選的機會。
       </p>
 
-      {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
-          `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
-          甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
-          types moved here, **above the search on purpose** — before a person looks for a place they
-          say what tonight is not, so the stance is set while it is still cheap.
-
-          **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
-          `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
-          old page still sees it on; tapping it off posts `allow` and ends it. That is the whole
-          migration — nothing backfills and nothing is deleted.
-
-          **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
-          1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
-      <section className="tonightBlock">
-        <h2 className="roundH">這次不吃</h2>
-        {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
-            帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
-            leader dots · count, grouped under three section marks (sec. 2, 密度一).
-
-            **The leader dots are the whole signature.** Without them each row is a list item and
-            the page is a settings sheet; with them it is a menu, which is the thing this screen
-            is pretending to be. They are `aria-hidden` and empty on purpose — a decorative span
-            that a screen reader must not read out as anything.
-
-            **Order is `CATEGORIES` and is never re-sorted.** Each section's list is a filter of
-            it, so the API's closed order is the reading order and 其他 stays last. **Sorting by
-            count would be advice** (D20) and is the one thing a menu of this shape invites. */}
-        {MENU_SECTIONS.map(({ heading, Icon, values }) => (
-          <Fragment key={heading}>
-            {/* The icon is decorative and says nothing the heading beside it does not already say,
-                so it is `aria-hidden` with no label — a labelled one reads the same thing twice.
-                `strokeWidth` is lucide's own prop (1.7); `absoluteStrokeWidth` is deliberately not
-                passed, and the colour is inherited from the heading rather than set here. */}
-            <h3 className="menuSection" data-part="tonight-section">
-              <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
-              {heading}
-            </h3>
-            <ul className="menu" data-part="tonight-avoid">
-              {values.map((c) => {
-                const on = chipOn(c)
-                return (
-                  <li key={c}>
-                    <button
-                      type="button"
-                      /* 乙 §2 — the row arrives at its own place in the menu's reading order.
-                         **On the row, not on the `<li>`**: the row is what a person sees arrive,
-                         and `.chip` is the box whose transform the gate measures. Once per mount,
-                         so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
-                         press in the first frame, because opacity does not intercept clicks
-                         (`YI-6`). */
-                      className="chip arrive"
-                      style={arrive(CHIP_STEP[c] ?? ARRIVE_CAP)}
-                      data-part="tonight-chip"
-                      data-on={on ? 'yes' : 'no'}
-                      aria-pressed={on}
-                      onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
-                    >
-                      {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
-                          owner's critique. The on-state was an ink fill plus a 500→700 weight: a
-                          fill inversion is a lightness change and survives colour-blindness, but
-                          neither is a shape a person can name, and the product already has one —
-                          the 偏好 rows' square. The same part, so a row reads as selected in the
-                          vocabulary of the sheet the person just left (WCAG 1.4.1, and 1.4.11 for
-                          the 3:1). **It is not replaced by an icon and it does not move**: 密度一
-                          took the icon off the row, so this square is the row's only mark.
-
-                          `aria-hidden`: `aria-pressed` on the button is the accessible state, and
-                          a screen reader announcing a decorative box beside it would say the same
-                          thing twice in two vocabularies. */}
-                      <span className="mark" aria-hidden="true" />
-                      <span className="n" data-part="tonight-chip-name">{c}</span>
-                      <span className="lead" aria-hidden="true" />
-                      {/* **Nothing follows the dots, and that is the ruling** — the owner
-                          2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
-                          資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
-                          So `tonight-stat` is gone — with it the count, the percentage, and the
-                          `data-shape` fork that chose between them. **The dots now run to the row's
-                          end**, which is what they did before the menu spec folded a number into
-                          them; `.lead`'s `flex: 1` needs no change to do it.
-
-                          **What that fork protected is not lost, and this is the one thing to
-                          check before reviving anything here.** A category no place carries yet
-                          would have printed 「0 家會比較少中（0.0%）」, and a zero count reads as a
-                          RESULT — *we looked and nothing needed excluding* — rather than as *we
-                          have not measured this yet* (A2-G8-zero). With no count on the row there
-                          is no zero to misread, and the honest bound is stated once for the whole
-                          menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
-                          **A count coming back here brings that defect back with it.**
-
-                          The numbers themselves are not deleted from the payload (§5) — they move
-                          to the operator's reveal as bars, §3/§3a, which is the second commit. */}
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          </Fragment>
-        ))}
-
-        {/* §4's honesty requirement, moved with the types it describes. The number is the
-            payload's and is never written here — it moved from about 6% to nearly 13% in one day,
-            and a constant would have been false by the afternoon while still rendering. Shown once
-            and only while something is on: with no stance set there is nothing for it to qualify. */}
-        {anyOn && (
-          <p className="roundNote" data-part="pref-category-coverage">
-            沒有分類的店，避開讀不到。
-          </p>
-        )}
-
-        {/* **A13's sentence, verbatim from the ruling (AD-9).** Everything else here reports
-            numbers; this reports what the numbers MEAN, once, and says the part a member would
-            otherwise have to infer — that the effect shrinks as the table fills. D20 holds: it
-            states, it does not advise. */}
-        {anyOn && (
-          <p className="roundNote" data-part="pref-category-discount">
-            避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
-          </p>
-        )}
-
-        {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
-            `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
-            half is not warned, and a surface that computed it could compute it wrong.
-
-            **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
-            is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
-            half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
-            to make it appear (A2-G8b stays n/a).
-
-            **The count left this sentence on 2026-09-11 and the warning did not**
-            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
-            this screen; the evaluator's reading is that the denominator was the number and the
-            warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
-            everything that makes it a caution. Same trigger, same `crossed` read, no figure —
-            **removing the sentence itself would remove a protection, and that is the owner's word
-            to give.** Every character is in the shipped body subset, so no font rebuild. */}
-        {prefs?.breadth.crossed && (
-          <p className="roundWarn" data-part="tonight-breadth">
-            你目前的選擇，已經讓超過一半的選項受影響。
-          </p>
-        )}
-
-        {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
-            states, it does not reassure, and an empty row already says it. */}
-      </section>
 
       <label className="roundSearch">
         <span className="roundLabel">找一家店</span>
@@ -735,6 +602,159 @@ export default function Round() {
           擲骰
         </button>
       </div>
+      </div>
+
+      <div className="roundRight">
+      {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
+          `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
+          甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
+          types moved here, **before the search in reading order** — before a person looks for a place
+          they say what tonight is not, so the stance is set while it is still cheap. **Since
+          2026-09-16 that is expressed by the right column rather than by sitting above the search**
+          (owner-ruled axis 1): the thirteen chips were pushing the screen's own act past the fold,
+          so they stand beside it instead of before it. The stance is still there to set first.
+
+          **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
+          `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
+          old page still sees it on; tapping it off posts `allow` and ends it. That is the whole
+          migration — nothing backfills and nothing is deleted.
+
+          **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
+          1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
+      <section className="tonightBlock">
+        <h2 className="roundH">這次不吃</h2>
+        {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
+            帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
+            leader dots · count, grouped under three section marks (sec. 2, 密度一).
+
+            **The leader dots are the whole signature.** Without them each row is a list item and
+            the page is a settings sheet; with them it is a menu, which is the thing this screen
+            is pretending to be. They are `aria-hidden` and empty on purpose — a decorative span
+            that a screen reader must not read out as anything.
+
+            **Order is `CATEGORIES` and is never re-sorted.** Each section's list is a filter of
+            it, so the API's closed order is the reading order and 其他 stays last. **Sorting by
+            count would be advice** (D20) and is the one thing a menu of this shape invites. */}
+        {MENU_SECTIONS.map(({ heading, Icon, values }) => (
+          <Fragment key={heading}>
+            {/* The icon is decorative and says nothing the heading beside it does not already say,
+                so it is `aria-hidden` with no label — a labelled one reads the same thing twice.
+                `strokeWidth` is lucide's own prop (1.7); `absoluteStrokeWidth` is deliberately not
+                passed, and the colour is inherited from the heading rather than set here. */}
+            <h3 className="menuSection" data-part="tonight-section">
+              <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+              {heading}
+            </h3>
+            <ul className="menu" data-part="tonight-avoid">
+              {values.map((c) => {
+                const on = chipOn(c)
+                return (
+                  <li key={c}>
+                    <button
+                      type="button"
+                      /* 乙 §2 — the row arrives at its own place in the menu's reading order.
+                         **On the row, not on the `<li>`**: the row is what a person sees arrive,
+                         and `.chip` is the box whose transform the gate measures. Once per mount,
+                         so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
+                         press in the first frame, because opacity does not intercept clicks
+                         (`YI-6`). */
+                      className="chip arrive"
+                      style={arrive(CHIP_STEP[c] ?? ARRIVE_CAP)}
+                      data-part="tonight-chip"
+                      data-on={on ? 'yes' : 'no'}
+                      aria-pressed={on}
+                      onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
+                    >
+                      {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
+                          owner's critique. The on-state was an ink fill plus a 500→700 weight: a
+                          fill inversion is a lightness change and survives colour-blindness, but
+                          neither is a shape a person can name, and the product already has one —
+                          the 偏好 rows' square. The same part, so a row reads as selected in the
+                          vocabulary of the sheet the person just left (WCAG 1.4.1, and 1.4.11 for
+                          the 3:1). **It is not replaced by an icon and it does not move**: 密度一
+                          took the icon off the row, so this square is the row's only mark.
+
+                          `aria-hidden`: `aria-pressed` on the button is the accessible state, and
+                          a screen reader announcing a decorative box beside it would say the same
+                          thing twice in two vocabularies. */}
+                      <span className="mark" aria-hidden="true" />
+                      <span className="n" data-part="tonight-chip-name">{c}</span>
+                      <span className="lead" aria-hidden="true" />
+                      {/* **Nothing follows the dots, and that is the ruling** — the owner
+                          2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
+                          資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
+                          So `tonight-stat` is gone — with it the count, the percentage, and the
+                          `data-shape` fork that chose between them. **The dots now run to the row's
+                          end**, which is what they did before the menu spec folded a number into
+                          them; `.lead`'s `flex: 1` needs no change to do it.
+
+                          **What that fork protected is not lost, and this is the one thing to
+                          check before reviving anything here.** A category no place carries yet
+                          would have printed 「0 家會比較少中（0.0%）」, and a zero count reads as a
+                          RESULT — *we looked and nothing needed excluding* — rather than as *we
+                          have not measured this yet* (A2-G8-zero). With no count on the row there
+                          is no zero to misread, and the honest bound is stated once for the whole
+                          menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
+                          **A count coming back here brings that defect back with it.**
+
+                          The numbers themselves are not deleted from the payload (§5) — they move
+                          to the operator's reveal as bars, §3/§3a, which is the second commit. */}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </Fragment>
+        ))}
+
+        {/* §4's honesty requirement, moved with the types it describes. The number is the
+            payload's and is never written here — it moved from about 6% to nearly 13% in one day,
+            and a constant would have been false by the afternoon while still rendering. Shown once
+            and only while something is on: with no stance set there is nothing for it to qualify. */}
+        {anyOn && (
+          <p className="roundNote" data-part="pref-category-coverage">
+            沒有分類的店，避開讀不到。
+          </p>
+        )}
+
+        {/* **A13's sentence, verbatim from the ruling (AD-9).** Everything else here reports
+            numbers; this reports what the numbers MEAN, once, and says the part a member would
+            otherwise have to infer — that the effect shrinks as the table fills. D20 holds: it
+            states, it does not advise. */}
+        {anyOn && (
+          <p className="roundNote" data-part="pref-category-discount">
+            避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
+          </p>
+        )}
+
+        {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
+            `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
+            half is not warned, and a surface that computed it could compute it wrong.
+
+            **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
+            is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
+            half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
+            to make it appear (A2-G8b stays n/a).
+
+            **The count left this sentence on 2026-09-11 and the warning did not**
+            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
+            this screen; the evaluator's reading is that the denominator was the number and the
+            warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
+            everything that makes it a caution. Same trigger, same `crossed` read, no figure —
+            **removing the sentence itself would remove a protection, and that is the owner's word
+            to give.** Every character is in the shipped body subset, so no font rebuild. */}
+        {prefs?.breadth.crossed && (
+          <p className="roundWarn" data-part="tonight-breadth">
+            你目前的選擇，已經讓超過一半的選項受影響。
+          </p>
+        )}
+
+        {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
+            states, it does not reassure, and an empty row already says it. */}
+      </section>
+      </div>
+      </div>
+
     </main>
   )
 }
