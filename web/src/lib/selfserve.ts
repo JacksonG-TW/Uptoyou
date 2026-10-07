@@ -210,3 +210,40 @@ export async function fetchMembers(d: Device): Promise<Members> {
   const body = await r.json()
   return { members: body.members ?? [], seats: body.seats, cap: body.cap }
 }
+
+/**
+ * What `/join` may say before anyone types — `POST /circles/{id}/join/preview` (backend 9e7d48e),
+ * on frontend's terms (`spec-ux-batch-2026-10-07.md`, last section).
+ *
+ * **The ticket travels in the body, never the URL**, and the call carries no credential: a joiner
+ * has none yet. Three outcomes and no more:
+ * - `live` — the circle's name and its creator's nickname (`null` when that seat is gone);
+ * - `dead` — every dead case answers one byte-identical 404, so the screen cannot tell expired
+ *   from replaced from mistyped and does not try: it shows the server's one sentence;
+ * - `unknown` — the read itself failed (network, 5xx). The screen then behaves as it did before
+ *   the preview existed — the form, and join's own answer — rather than calling a link dead that
+ *   may be fine.
+ */
+export type JoinPreview =
+  | { kind: 'live'; circleName: string; creator: string | null }
+  | { kind: 'dead'; message: string }
+  | { kind: 'unknown' }
+
+export async function previewJoin(circleId: string, ticket: string): Promise<JoinPreview> {
+  try {
+    const r = await fetch(`/api/circles/${encodeURIComponent(circleId)}/join/preview`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ticket }),
+      cache: 'no-store',
+    })
+    const body = await r.json().catch(() => ({}))
+    if (r.ok && typeof body.circle_name === 'string') {
+      return { kind: 'live', circleName: body.circle_name, creator: body.creator_nickname ?? null }
+    }
+    if (r.status === 404 && typeof body.detail === 'string') return { kind: 'dead', message: body.detail }
+    return { kind: 'unknown' }
+  } catch {
+    return { kind: 'unknown' }
+  }
+}

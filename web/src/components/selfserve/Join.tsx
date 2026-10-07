@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { joinCircle } from '@/lib/selfserve'
+import { joinCircle, previewJoin, type JoinPreview } from '@/lib/selfserve'
 import { device, remember } from '@/lib/device'
 import { REPLACE_NOTICE } from './copy'
 
@@ -33,6 +33,15 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
   const [seated] = useState(() => device() !== null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  /** `null` while the preview is in flight: the form waits for it, so a dead link is said before
+   *  anyone types a nickname into it (walk item 8). */
+  const [preview, setPreview] = useState<JoinPreview | null>(null)
+
+  useEffect(() => {
+    let live = true
+    void previewJoin(circle, ticket).then((p) => { if (live) setPreview(p) })
+    return () => { live = false }
+  }, [circle, ticket])
 
   const join = async () => {
     if (busy) return
@@ -67,26 +76,30 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
   return (
     <main className="selfserve" data-screen="join" data-step="name">
       <>
-          {/* **The screen does NOT name the circle, and that is settled rather than pending.**
-              §4.1 originally asked it to. I reported that no payload carries a circle's name — it
-              exists server-side in `issue.py` alone — and **the evaluator withdrew the requirement
-              on a better reason than mine** (2026-09-13): resolving a ticket to a name would make a
-              small oracle, so **a leaked ticket would yield the circle's name without joining**.
-              The name is user-typed and authenticates nothing, and this screen already says what
-              will happen.
-
-              **So this is not a hole waiting for an endpoint.** My first note here said the name
-              「slots in when a payload carries one」, which would have invited exactly the endpoint
-              the withdrawal exists to prevent — and whoever built it would have met my half of the
-              reasoning and not the evaluator's. */}
+          {/* **The screen names the circle and its creator — frontend's decision of 2026-10-07**,
+              after the evaluator's input and with the owner's delegation; the reasoning, its cost
+              and the rejected 2026-09-13 branch (a leaked ticket yields the name without a trace)
+              are in `spec-ux-batch-2026-10-07.md`. Only a live ticket gets a name. The creator is
+              the honest «inviter» because a ticket does not record who passed it on, and with the
+              creator's seat gone the line says 有人 rather than a blank. */}
           <p className="eyebrow"><em>★</em>入座</p>
-          <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
-          {/* UX batch U9 (walk item 4, the half that is copy): a link opened from a chat with no
-              context first needs to know what this is. It says what the product does — and still
-              names neither the circle nor the inviter, which the 2026-09-13 reasoning above keeps
-              off this screen until the owner rules on it. */}
+          {preview?.kind === 'live' ? (
+            <h1 className="ssInvite" data-part="join-invite">
+              <span>{preview.creator ?? '有人'} 邀你加入</span>
+              <span className="lit ssCircle">「{preview.circleName}」</span>
+            </h1>
+          ) : (
+            <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
+          )}
+          {/* U9 — what the product is, for a link opened from a chat with no context. */}
           <p className="ssLead">大家各自提想吃的店，最後用骰子決定這一餐吃哪家。用這條連結進來，你會有自己的座位。</p>
 
+          {/* A dead link is said on open and the form is not drawn: every dead case is one answer
+              from the server, so this is its one sentence, verbatim. */}
+          {preview?.kind === 'dead' && (
+            <p className="ssErr" data-part="join-dead" role="alert">{preview.message}</p>
+          )}
+          {preview !== null && preview.kind !== 'dead' && (
           <form className="ssForm" onSubmit={(e) => { e.preventDefault(); void join() }}>
             <label className="ssField">
               <span className="ssLabel">你的暱稱</span>
@@ -114,6 +127,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               加入
             </button>
           </form>
+          )}
       </>
 
       {error && <p className="ssErr" data-part="selfserve-error" role="alert">{error}</p>}

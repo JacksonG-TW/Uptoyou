@@ -155,3 +155,21 @@
 .selfserve .act,
 .selfserve .ssMinor,
 .selfserve .copyBtn { align-self: flex-start; }
+
+/* /join's live title — 「<creator> 邀你加入「<circle>」」. **The body face, never the display one**:
+   both names are user-typed, and the display face is a fixed 47-glyph subset cut from the
+   stylesheets' own literals, so any name would fall back silently (the same reason the reveal's
+   `.winner` is set in the sans). Same column, size step and colour treatment as `.ssTitle`.
+   **The circle's name is clamped to two lines** (the evaluator's hole 4): it is user-typed, and a
+   long one must not push 加入 below the first screen at 1440 or 900. */
+.ssInvite {
+  display: flex; flex-direction: column;
+  margin: 0 0 16px;
+  font-family: var(--font-sans); font-weight: 900;
+  font-size: var(--text-display); line-height: 1.15;
+}
+.ssInvite .lit { color: var(--color-hot-ink); }
+.ssInvite .ssCircle {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+  overflow: hidden; overflow-wrap: anywhere;
+}
