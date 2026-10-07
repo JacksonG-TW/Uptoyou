@@ -151,6 +151,15 @@ if [ "$deployed" = "$after" ]; then
     exit 0
 fi
 
+# **A recorded sha this clone does not have is named, not misread** (the reviewer's catch,
+# 2026-10-08). `git diff` against an unknown commit exits 128, which the `deploy/` check below
+# would read as «the deploy changed» — a refusal with the wrong cause.
+if ! git cat-file -e "$deployed^{commit}" 2>/dev/null; then
+    say "REFUSING: $STATE holds $deployed, a commit this clone does not have."
+    say "          Record what is actually serving (git rev-parse HEAD > $STATE if it is HEAD)."
+    exit 10
+fi
+
 say "deployed $deployed, clone at $after"
 git --no-pager log --oneline "$deployed..$after" 2>/dev/null | sed 's/^/    /' || true
 
@@ -232,11 +241,31 @@ if [ -z "$(docker compose config --images 2>/dev/null | grep ":$after\$")" ]; th
     say "REFUSING: no image in the compose file is tagged $after — is UPTO_IMAGE_PREFIX set in .env?"
     exit 8
 fi
+# **Waiting is bounded** (the reviewer's catch, 2026-10-08): an image push that failed would
+# otherwise read as «waiting» with exit 0 for ever. The clock is when THIS script first saw the
+# commit waiting — not the commit's own date, which the extract keeps from when it was written,
+# often hours before it was published. After an hour it says so with a non-zero exit, so
+# `systemctl --failed` and the journal show it; it still deploys the moment the images arrive.
+WAITING="$APP/.waiting-since"
 if [ -n "$missing" ]; then
-    say "waiting for images at $after — not in the registry yet:$missing"
+    now=$(date +%s)
+    since=""
+    if [ -s "$WAITING" ] && [ "$(cut -d' ' -f1 "$WAITING")" = "$after" ]; then
+        since=$(cut -d' ' -f2 "$WAITING")
+    else
+        printf '%s %s\n' "$after" "$now" > "$WAITING"
+        since=$now
+    fi
+    waited=$(( now - since ))
+    say "waiting for images at $after (${waited}s so far) — not in the registry yet:$missing"
     say "  nothing pulled, nothing restarted; the next tick asks again"
+    if [ "$waited" -gt "${DEPLOY_IMAGE_WAIT_LIMIT:-3600}" ]; then
+        say "FAILED: still no images an hour after this commit was first seen — was publish_images run?"
+        exit 9
+    fi
     exit 0
 fi
+rm -f "$WAITING"
 
 say "pulling images at $after"
 docker compose pull --quiet

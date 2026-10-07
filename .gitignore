@@ -33,3 +33,4 @@ tls/*
 /.deployed-sha
 /.deployed-sha.tmp
 /.deploy-hold
+/.waiting-since
