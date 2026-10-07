@@ -2,7 +2,7 @@
 """The dataset export's rules, host-side: no database, no pyarrow, no image.
 
 *Candidate for the dataset export, owner-ruled 2026-09-12 (option (c) of
-`idea & img/research/dataset-as-product.md`).*
+`idea & img/orchestrator/research/dataset-as-product.md`).*
 
 **What is here is what does not need the world.** The column list, the generated dictionary, the
 object names, and the bucket-empty skip. The half that needs a database and a real Parquet file is

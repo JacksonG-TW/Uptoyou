@@ -11,7 +11,7 @@ statement returned, the line it was held against, the verdict (`ok` · `alert` �
 last for a value that carries no line, such as a count A10 already alerted on), and a sentence.
 ≈ 315 rows a night (the weather pair records six metrics an hour) at 169 bytes each with the index,
 ≈ 19 MB a year, measured on a scratch table
-2026-09-15 (`idea & img/research/human-facing-governance-research.md` §1.3). It is owned by the
+2026-09-15 (`idea & img/orchestrator/research/human-facing-governance-research.md` §1.3). It is owned by the
 owner like every table; the check role may insert into it and may NOT read it (no statement
 reads it, the insert returns nothing); nobody reads it yet — it is `roles.OWNER_ONLY`'s one entry.
 

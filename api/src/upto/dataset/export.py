@@ -1,7 +1,7 @@
 """The dataset export — one Parquet per reference publication, one row per place.
 
 *Owner-ruled 2026-09-12 (「有好的資料集，才好訓練模型跟給資料科學家分析」; option (c) of
-`idea & img/research/dataset-as-product.md`).* A data scientist gets a flat table: every place, the
+`idea & img/orchestrator/research/dataset-as-product.md`).* A data scientist gets a flat table: every place, the
 name a person would recognise, the category with the model and prompt that produced it, and the
 hashes of the files it was all composed against.
 
