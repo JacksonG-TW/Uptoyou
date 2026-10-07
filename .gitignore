@@ -27,3 +27,9 @@
 # — the key, the Origin CA certificate, the `listen 8443 ssl;` snippet — belongs to that one host.
 tls/*
 !tls/.gitkeep
+
+# The deploy timer's own state on the box (`deploy/pull-deploy.sh`): what is deployed, and the
+# brake a person sets to hold it still. Machine-local facts, never part of the code.
+/.deployed-sha
+/.deployed-sha.tmp
+/.deploy-hold

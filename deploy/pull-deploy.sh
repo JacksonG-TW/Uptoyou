@@ -91,8 +91,34 @@ fi
 
 cd "$APP"
 
-before=$(git rev-parse HEAD)
-say "at $before, fetching"
+# **What is deployed, recorded — not inferred from whether a pull moved HEAD** (2026-10-08). Until
+# this file existed the script deployed «if `git pull` moved HEAD». Publishing is two pushes, the
+# code and then the images, so a tick landing between them pulled the commit, failed `compose pull`
+# («manifest unknown») and exited — and every later tick saw HEAD unmoved and said «no change» for
+# ever. A failed `migrate` stranded a commit the same way. H83's shape: the clone moved, the stack
+# did not, and nothing said so. Now the clone's position and the stack's position are two facts:
+# `.deployed-sha` is written only after `up --wait` and the alert-channel check succeed, and every
+# tick compares HEAD against it. Anything that stops short leaves it alone, so the next tick retries.
+STATE="$APP/.deployed-sha"
+HOLD="$APP/.deploy-hold"
+
+# **The brake.** A person rolling back by hand, or holding the box still for any reason, touches this
+# file; the timer then does nothing — not even a fetch — until it is removed.
+if [ -e "$HOLD" ]; then
+    say "HOLD: $HOLD exists — doing nothing this tick (remove it to resume)"
+    exit 0
+fi
+
+# **No record, no guess.** Without `.deployed-sha` this cannot know what is serving, and deploying
+# «whatever HEAD is» could be deploying nothing new or skipping a migration. A person records it once.
+if [ ! -s "$STATE" ]; then
+    say "REFUSING: $STATE is missing — what is serving is not recorded."
+    say "          If the stack runs exactly this clone's HEAD, record it:  git rev-parse HEAD > $STATE"
+    exit 7
+fi
+deployed=$(tr -d ' \r\n' < "$STATE")
+
+say "deployed $deployed, fetching"
 # **`--ff-only`.** A clone that has diverged — somebody edited a file on the box — must STOP, not
 # merge. A merge commit created by a timer at 04:00 is a state nobody can reason about afterwards.
 if ! git pull --ff-only --quiet; then
@@ -100,7 +126,7 @@ if ! git pull --ff-only --quiet; then
     # the command name were COMMAND SUBSTITUTION: the failure message re-ran `git pull --ff-only`,
     # which is why the hint block printed twice the first time this path was exercised. Harmless
     # for a pull; not harmless as a habit in a script that also builds and restarts things.
-    say 'REFUSED: git pull --ff-only failed. The clone has diverged or the remote is unreachable.' 
+    say 'REFUSED: git pull --ff-only failed. The clone has diverged or the remote is unreachable.'
     say "         Nothing was built and nothing was restarted. Look before forcing anything."
     exit 4
 fi
@@ -109,9 +135,9 @@ after=$(git rev-parse HEAD)
 # **A box that is AHEAD of its remote is running code that is in no repository — say so.**
 # Found while testing this script: `--ff-only` only refuses when the remote has ALSO moved. A
 # local commit made on the box (an edit, a "quick fix") leaves HEAD ahead, the pull succeeds
-# trivially, and every tick afterwards prints "no change" while the box serves something nobody
-# can look up. That is H28's family — the served thing is not the named thing — and the only
-# difference here is that the artefact reading correct is `git log` on somebody else's machine.
+# trivially, and the box serves something nobody can look up. That is H28's family — the served
+# thing is not the named thing — and the only difference here is that the artefact reading correct
+# is `git log` on somebody else's machine.
 upstream=$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null || echo "")
 if [ -n "$upstream" ] && ! git merge-base --is-ancestor "$after" "$upstream"; then
     say "WARNING: HEAD is AHEAD of $upstream — this box holds commit(s) that are in no repository:"
@@ -120,13 +146,13 @@ if [ -n "$upstream" ] && ! git merge-base --is-ancestor "$after" "$upstream"; th
     say "         up from the repository until these are pushed or dropped."
 fi
 
-if [ "$before" = "$after" ]; then
+if [ "$deployed" = "$after" ]; then
     say "no change at $after — nothing to do"
     exit 0
 fi
 
-say "moved $before -> $after"
-git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
+say "deployed $deployed, clone at $after"
+git --no-pager log --oneline "$deployed..$after" 2>/dev/null | sed 's/^/    /' || true
 
 # **⚠️ THE SCRIPT RUNNING IS THE ONE FROM BEFORE THE PULL — H85, measured 2026-09-11.** The shell
 # read this file at exec time; `git pull` has just replaced it on disk, and nothing re-reads it. So
@@ -140,24 +166,25 @@ git --no-pager log --oneline "$before..$after" | sed 's/^/    /'
 # that never came up. **Ten minutes of 521 from a correct guard doing its job**, because the thing
 # that should have migrated was a step in a file that had not run yet.
 #
-# **So this refuses rather than deploying half a boot.** `deploy/` changing means the instructions
-# changed, and the instructions that changed are not the ones in memory. The diff is printed so the
-# operator can see what is owed, and the next run — from the new file — proceeds normally.
+# **So this refuses rather than deploying half a boot — and since 2026-10-08 it refuses on EVERY
+# tick**, because it compares against what is deployed, not against where the clone was a moment
+# ago. It used to refuse once and then fall silent (the clone had moved, so the next tick saw «no
+# change»). The hand-run ends by recording the new state, and the tick after that is normal.
 #
 # **Rejected: re-exec'ing from the pulled file.** It fixes this case and opens a worse one — a
 # pulled script with a bug takes out the deploy path itself, and D59 leaves this box no other way
 # in. A refusal keeps the box serving what it has and asks for a person; a bad re-exec leaves
 # nothing running and nobody able to reach it.
-if ! git diff --quiet "$before" "$after" -- deploy/; then
+if ! git diff --quiet "$deployed" "$after" -- deploy/; then
     say "REFUSING: this deploy changes the deploy itself."
-    git --no-pager diff --stat "$before" "$after" -- deploy/ | sed 's/^/    /'
-    say "         The script that just ran is the one from $before — it cannot perform a step it"
-    say "         does not have. Nothing was pulled into the stack and nothing was restarted;"
-    say "         the clone IS now at $after, and a plain --once would find no change and do nothing"
-    say "         (H83). Run the new file's steps by hand, with the tag set, then the next tick is normal:"
+    git --no-pager diff --stat "$deployed" "$after" -- deploy/ | sed 's/^/    /'
+    say "         The script that just ran is the one from before the pull — it cannot perform a"
+    say "         step it does not have. Nothing was pulled into the stack and nothing was restarted,"
+    say "         and every tick will say this until a person runs the new file's steps (H85):"
     say "             cd $APP && export UPTO_IMAGE_TAG=$after \\"
     say "               && docker compose pull --quiet && docker compose run --rm migrate \\"
-    say "               && docker compose up -d --wait && $HERE/pull-deploy.sh --check-alert-channel"
+    say "               && docker compose up -d --wait && $HERE/pull-deploy.sh --check-alert-channel \\"
+    say "               && git rev-parse HEAD > $STATE"
     exit 5
 fi
 
@@ -172,9 +199,11 @@ fi
 # **A pull is I/O, not memory**, so the failure this replaces is gone rather than mitigated, and the
 # stack keeps serving until the recreate — the outage window is a container restart instead of a
 # frontend build. `.env` carries `UPTO_IMAGE_PREFIX=ghcr.io/jacksong-tw/upto-`; the tag is derived
-# below from the commit this clone just moved to. **A rollback is therefore a `git` operation
-# rather than an `.env` edit**: check the clone out at an earlier extract commit and run this, and
-# the images follow the code by construction.
+# below from the commit this clone just moved to. **A rollback is not this script's job** — the
+# next tick would pull main again. Touch `.deploy-hold` first, then deploy an earlier extract by
+# hand (`export UPTO_IMAGE_TAG=<earlier full sha>`, pull, `up -d --wait`), only within one schema:
+# migrations are forward-only and an older api refuses a newer schema. Or revert on main and
+# publish, and the timer deploys the revert.
 # **The tag IS the commit this clone just moved to, and that dissolves a trade** (ruled
 # 2026-09-07). The alternative shapes were: follow `:latest` and inherit H28 one layer up — a tag
 # that resolves to something different each day is the stale image that does not announce itself —
@@ -186,6 +215,29 @@ fi
 # convenience; nothing here reads it.
 UPTO_IMAGE_TAG="$after"
 export UPTO_IMAGE_TAG
+
+# **Deploy only what has been published — wait, rather than fail, for images that are not there
+# yet** (2026-10-08). The code reaches the public repository a minute or more before its images
+# reach the registry, so a tick in between finds a commit with no images. That is not a fault: it
+# exits 0 with the state untouched and the next tick asks again. The names are compose's own
+# (`config --images` with the tag set), the tag is the full commit — the string `publish_images.sh`
+# pushes (H103) — and the registry is asked anonymously, like the pull itself.
+anon=$(mktemp -d)
+missing=""
+for ref in $(docker compose config --images 2>/dev/null | grep ":$after\$" | sort -u); do
+    DOCKER_CONFIG="$anon" docker manifest inspect "$ref" >/dev/null 2>&1 || missing="$missing $ref"
+done
+rm -rf "$anon"
+if [ -z "$(docker compose config --images 2>/dev/null | grep ":$after\$")" ]; then
+    say "REFUSING: no image in the compose file is tagged $after — is UPTO_IMAGE_PREFIX set in .env?"
+    exit 8
+fi
+if [ -n "$missing" ]; then
+    say "waiting for images at $after — not in the registry yet:$missing"
+    say "  nothing pulled, nothing restarted; the next tick asks again"
+    exit 0
+fi
+
 say "pulling images at $after"
 docker compose pull --quiet
 
@@ -213,6 +265,10 @@ if docker compose up -d --wait; then
     say "UP at $after"
     # The stack is serving; a missing alert channel is still a failed deploy (H100, exit 6).
     alert_channel_check || exit $?
+    # **Only now is it deployed.** Written last and atomically, so a run that stops anywhere above
+    # leaves the old record and the next tick tries again.
+    printf '%s\n' "$after" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+    say "recorded $after in $STATE"
 else
     status=$?
     say "FAILED to come up at $after (exit $status)"
