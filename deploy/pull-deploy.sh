@@ -259,8 +259,9 @@ if [ -n "$missing" ]; then
     waited=$(( now - since ))
     say "waiting for images at $after (${waited}s so far) — not in the registry yet:$missing"
     say "  nothing pulled, nothing restarted; the next tick asks again"
-    if [ "$waited" -gt "${DEPLOY_IMAGE_WAIT_LIMIT:-3600}" ]; then
-        say "FAILED: still no images an hour after this commit was first seen — was publish_images run?"
+    limit=${DEPLOY_IMAGE_WAIT_LIMIT:-3600}
+    if [ "$waited" -gt "$limit" ]; then
+        say "FAILED: still no images ${waited}s after this commit was first seen (limit ${limit}s) — was publish_images run?"
         exit 9
     fi
     exit 0
