@@ -1,4 +1,5 @@
-"""Ticket 19 — the write half's three endpoints: open, propose, roll.
+"""Ticket 19 — the write half's three endpoints: open, propose, roll — and the one read beside
+them, a round's result, which can never roll (reviewer's front-end finding 4, 2026-10-07).
 
 Every endpoint resolves the caller to a member of the round's circle before anything else
 (D67), and the two halves of a failed resolution — an unknown token, a circle without a seat
@@ -233,6 +234,58 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
     return {"round_id": round_id, "place_id": body.place_id, "pooled": True}
 
 
+async def _stored_result(session, round_id: int, round_row, member, sees_evidence: bool) -> dict:
+    """A closed round's stored result, in the shape a first roll returns **to this credential**.
+
+    D69 promises the answer that was missed, not a different one — so the roll's retry and the
+    read below both answer through here, and the two cannot drift apart.
+    """
+    stored = (
+        await session.execute(
+            text("select place_id, weight from proposal where round_id = :r"),
+            {"r": round_id},
+        )
+    ).all()
+    dice = (round_row.die1, round_row.die2) if round_row.die1 is not None else None
+    return for_credential(
+        await closed_body(
+            session, round_id, dice, round_row.winning_place_id,
+            {row.place_id: row.weight for row in stored}, viewer=member,
+        ),
+        evidence=sees_evidence,
+    )
+
+
+@router.get("/rounds/{round_id}/result")
+async def result(round_id: int, request: Request) -> dict:
+    """A round's result, read without the power to roll (reviewer's front-end finding 4, 2026-10-07).
+
+    **The reveal used to read through the roll.** That is safe on a closed round (D69) and is the
+    roll itself on an open one, so opening `/reveal?round=<an open round>` — a typed, edited or
+    forwarded link — closed the round for the whole circle. This endpoint has no write path: a
+    closed round answers exactly what the roll's retry answers, and an open round answers 409 and
+    leaves the round, `member_roll` and the stream untouched. Unknown round and wrong credential
+    answer as the roll does (404, 401).
+    """
+    async with session_factory()() as session:
+        round_row = (
+            await session.execute(
+                text(
+                    "select circle_id, status, die1, die2, winning_place_id "
+                    "from round where id = :r"
+                ),
+                {"r": round_id},
+            )
+        ).one_or_none()
+        if round_row is None:
+            raise HTTPException(status_code=404, detail="找不到這一輪。")
+        member, _is_operator, sees_evidence = await _resolve_credential(
+            session, request, round_row.circle_id)
+        if round_row.status != "closed":
+            raise HTTPException(status_code=409, detail="這一輪還沒擲出結果。")
+        return await _stored_result(session, round_id, round_row, member, sees_evidence)
+
+
 @router.post("/rounds/{round_id}/roll")
 async def roll(round_id: int, request: Request) -> dict:
     async with session_factory()() as session:
@@ -255,24 +308,7 @@ async def roll(round_id: int, request: Request) -> dict:
 
         if round_row.status == "closed":
             # D69: the retry gets the answer it missed, in the shape a first roll returns.
-            stored = (
-                await session.execute(
-                    text("select place_id, weight from proposal where round_id = :r"),
-                    {"r": round_id},
-                )
-            ).all()
-            dice = (
-                (round_row.die1, round_row.die2) if round_row.die1 is not None else None
-            )
-            # The retry answers in the shape a first roll would have returned **to this
-            # credential** — D69 promises the answer that was missed, not a different one.
-            return for_credential(
-                await closed_body(
-                    session, round_id, dice, round_row.winning_place_id,
-                    {row.place_id: row.weight for row in stored}, viewer=member,
-                ),
-                evidence=sees_evidence,
-            )
+            return await _stored_result(session, round_id, round_row, member, sees_evidence)
 
         if not round_row.target_hour_typed:
             # D73 through D41: a defaulted hour is re-resolved to the hour the roll stands in.

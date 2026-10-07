@@ -308,6 +308,22 @@ async def scenario(test_url: str) -> None:
         # change every other word.
         assert "一個人" in capped.json()["detail"]
 
+        # **The result read cannot roll** (reviewer's front-end finding 4, 2026-10-07). On an open
+        # round it answers 409 and writes nothing: the round stays open and no tap is recorded —
+        # the reveal used to read through the roll, and opening it closed the round for everyone.
+        early = await client.get(f"/rounds/{round_id}/result", headers=auth)
+        assert early.status_code == 409, early.text
+        assert early.json()["detail"] == "這一輪還沒擲出結果。", early.json()
+        async with Session() as session:
+            still = (await session.execute(
+                text("select status, die1 from round where id = :r"), {"r": round_id})).one()
+            taps = (await session.execute(
+                text("select count(*) from member_roll where round_id = :r"),
+                {"r": round_id})).scalar_one()
+        assert still.status == "open" and still.die1 is None, still
+        assert taps == 0, taps
+        assert (await client.get("/rounds/999999999/result", headers=auth)).status_code == 404
+
         # The roll: the whole chain in one transaction.
         rolled = await client.post(f"/rounds/{round_id}/roll", headers=auth)
         assert rolled.status_code == 200, rolled.text
@@ -380,6 +396,10 @@ async def scenario(test_url: str) -> None:
         assert again.json()["dice"] == result["dice"]
         assert again.json()["winning_place_id"] == result["winning_place_id"]
         assert again.json()["weights"] == result["weights"]
+        # The read answers what the retry answers, byte for byte, to the same credential.
+        read_back = await client.get(f"/rounds/{round_id}/result", headers=auth)
+        assert read_back.status_code == 200, read_back.text
+        assert read_back.json() == again.json()
 
         # **The other half of D105: the same round, the same member, an ordinary device.** The role
         # is on the secret, so one person holding two devices sees two shapes — which is the whole
@@ -390,6 +410,10 @@ async def scenario(test_url: str) -> None:
         )
         assert as_member.status_code == 200, as_member.text
         member_body = as_member.json()
+        member_read = await client.get(
+            f"/rounds/{round_id}/result", headers={"Authorization": "Bearer " + plain_token})
+        assert member_read.status_code == 200 and member_read.json() == member_body, member_read.text
+        assert (await client.get(f"/rounds/{round_id}/result")).status_code == 401
         for withheld in ("weights", "allocation", "panel"):
             assert withheld not in member_body, (withheld, sorted(member_body))
         for kept in ("round_id", "status", "dice", "sum", "winning_place_id", "places"):
