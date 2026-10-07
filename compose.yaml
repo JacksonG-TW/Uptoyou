@@ -345,7 +345,14 @@ services:
       # The API must not start before the database is ready (H6). pg_isready with the
       # real user and database, not a bare port check — the port opens before initdb has
       # finished, which is exactly the window that produces a flaky first boot.
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q"]
+      #
+      # **`-h 127.0.0.1`, over TCP, since 2026-10-07 (split_boot_check red twice, H6).** Without
+      # it pg_isready asks the unix socket, and on a FRESH volume the image's entrypoint runs its
+      # init scripts on a temporary server started with `listen_addresses=''` — socket only. So the
+      # check read healthy, `migrate` connected over the network and was refused («Connect call
+      # failed» / «the database system is starting up») while that server stopped and the real one
+      # started. Asking over TCP means the temporary server can never answer for the real one.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB} -q"]
       interval: 3s
       timeout: 3s
       retries: 20
