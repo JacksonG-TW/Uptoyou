@@ -241,7 +241,13 @@ export async function previewJoin(circleId: string, ticket: string): Promise<Joi
     if (r.ok && typeof body.circle_name === 'string') {
       return { kind: 'live', circleName: body.circle_name, creator: body.creator_nickname ?? null }
     }
-    if (r.status === 404 && typeof body.detail === 'string') return { kind: 'dead', message: body.detail }
+    // **An api without the preview answers its framework's own 404, `{"detail": "Not Found"}`**
+    // (FastAPI's unknown route), and that must not read as a dead link: every invite would open
+    // dead and nobody could join (the reviewer's catch, 2026-10-08 — production's candidate 24
+    // has no preview). It is `unknown`, which keeps the old form working.
+    if (r.status === 404 && typeof body.detail === 'string' && body.detail !== 'Not Found') {
+      return { kind: 'dead', message: body.detail }
+    }
     return { kind: 'unknown' }
   } catch {
     return { kind: 'unknown' }
