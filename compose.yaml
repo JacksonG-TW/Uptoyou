@@ -562,14 +562,22 @@ services:
       context: ./
       dockerfile: proxy/Dockerfile
     ports:
-      # The only published port. Everything else talks over the compose network, so the
+      # The only published ports (two, with TLS). Everything else talks over the compose network, so the
       # database is not reachable from the host at all.
       #
       # **The container side is 8080 since A11 ⑤, and the published side is unchanged.**
       # `nginxinc/nginx-unprivileged` runs its master as uid 101 and cannot bind 80, so
       # `upto.conf` listens on 8080 (frontend's 7a0b576) — `localhost:8080` and
       # `UPTO_HTTP_PORT` mean exactly what they meant before.
-      - "${UPTO_HTTP_PORT:-8080}:8080"
+      #
+      # **Bound to loopback by default (owner 「做」, 2026-10-07), the same rule as `AIRFLOW_BIND`
+      # below: the DEFAULT is the safe one.** Unbound, both product ports listened on every
+      # interface, so anyone on the dev VM's Wi-Fi could open the dev product. A clone's
+      # `localhost:8080` is unchanged; a host reached from outside — the box, which Cloudflare
+      # must reach — sets `UPTO_BIND=0.0.0.0` in its `.env`, and **that line goes in BEFORE this
+      # file reaches the box**, or the pull re-binds the live proxy to loopback and the site goes
+      # dark (pull-deploy refuses only on `deploy/` changes, and this file is not under it).
+      - "${UPTO_BIND:-127.0.0.1}:${UPTO_HTTP_PORT:-8080}:8080"
       # **8443 answers only where `tls/` holds a `listen 8443 ssl;` (candidate 12).** Published
       # everywhere so the compose file is one file (§6); on a host whose `tls/` is empty the port
       # is open on the host side and refused inside, which is a closed door, not a fault.
@@ -581,7 +589,7 @@ services:
       # that is the likeliest one already taken, and rootless Docker refuses it outright. Every
       # host but one terminates no TLS; the one that does has an `.env` already and writes
       # `UPTO_HTTPS_PORT=443` in it.
-      - "${UPTO_HTTPS_PORT:-8443}:8443"
+      - "${UPTO_BIND:-127.0.0.1}:${UPTO_HTTPS_PORT:-8443}:8443"
     volumes:
       # The one bind mount in the stack, and it carries no code (H28 stands): a host's TLS
       # material — origin certificate, private key, the three-line `listen` snippet — read-only.
