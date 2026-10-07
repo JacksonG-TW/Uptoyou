@@ -25,8 +25,7 @@ and refuses the whole write on any mismatch (D15).
 from __future__ import annotations
 
 import secrets
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -60,6 +59,9 @@ from .stream import publish
 # serves /circles/... and the outside world sees /api/circles/... — same convention as
 # /weather. A prefix here once produced a proxy-only 404 the tests could not see.
 router = APIRouter()
+
+#: Taipei's clock for the one sentence that prints a time (the trip 409); see its comment.
+TAIPEI = timezone(timedelta(hours=8), "Asia/Taipei")
 
 _resolve_member = resolve_member
 _resolve_credential = resolve_credential
@@ -517,7 +519,12 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
             # screen printed 「…在 2026-10-07T15:19:41.315711+00:00 記下…」). Taipei's clock, the
             # zone a member reads every time in (D83), as 「10月7日 23:19」 — the surface's own
             # 24-hour `HH:MM`. The machine-readable instant stays in `trip.signed_at` elsewhere.
-            when = datetime.fromisoformat(trip["signed_at"]).astimezone(ZoneInfo("Asia/Taipei"))
+            # **A fixed +08:00, not `ZoneInfo`** (the reviewer's note on c7c0e37): ZoneInfo reads the
+            # base image's tz database, which nothing here pins, so a base bump without it would
+            # turn this 409 into a 500 on a contested signing alone. Taiwan has kept no daylight
+            # saving since 1979, so the offset is the whole zone. Every other Taipei conversion
+            # stays in Postgres.
+            when = datetime.fromisoformat(trip["signed_at"]).astimezone(TAIPEI)
             raise HTTPException(
                 status_code=409,
                 detail="{}已經在 {}月{}日 {:%H:%M} 記下這一趟了。".format(

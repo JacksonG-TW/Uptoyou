@@ -134,9 +134,8 @@ async def scenario(test_url: str, base_url: str) -> None:
         check("another member is a 409 (D68)", other.status_code == 409, other.status_code)
         # **Who and when, in words a person reads** (2026-10-07): Taipei's clock as 「M月D日 HH:MM」,
         # never the wire's ISO string.
-        from datetime import datetime as _dt  # noqa: PLC0415
-        from zoneinfo import ZoneInfo  # noqa: PLC0415
-        local = _dt.fromisoformat(signed["signed_at"]).astimezone(ZoneInfo("Asia/Taipei"))
+        from datetime import datetime as _dt, timedelta as _td, timezone as _tz  # noqa: PLC0415
+        local = _dt.fromisoformat(signed["signed_at"]).astimezone(_tz(_td(hours=8)))
         said = other.json()["detail"]
         check("and the 409 carries who signed and when, on Taipei's clock",
               said == "Kevin已經在 {}月{}日 {:%H:%M} 記下這一趟了。".format(local.month, local.day, local),
