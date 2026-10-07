@@ -38,6 +38,7 @@
  */
 
 import Back from './Back'
+import { device } from '@/lib/device'
 
 /** The reveal needs a round to show. Rather than invent one, the entry carries the last round this
  *  browser actually opened — written by whatever screen last drove a roll — and hides itself until
@@ -59,10 +60,11 @@ function stops(): Stop[] {
      leaves the member surface»; the evaluator's SK-5). A switcher entry is on every screen, so it
      was the most linked thing on the surface — and the page it opens now exists for the operator
      alone, reached by typing the path. The route is untouched and still renders. */
-  const list: Stop[] = [
-    { href: '/', label: '首頁' },
-    { href: '/round', label: '這一餐' },
-  ]
+  /* **這一餐 only for a device with a seat** (UX batch U1, walk item 3). Without one the link led
+     to `/round`, which bounced to the key screen — the back door the 2026-09-16 ruling took off
+     the member surface. A link that can only bounce is not offered. */
+  const list: Stop[] = [{ href: '/', label: '首頁' }]
+  if (device()) list.push({ href: '/round', label: '這一餐' })
   const round = lastRound()
   if (round) list.push({ href: `/reveal?round=${encodeURIComponent(round)}`, label: '開獎' })
   return list

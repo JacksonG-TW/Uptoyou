@@ -634,9 +634,14 @@
 }
 .reveal .commit {
   margin: 0; font-size: var(--text-note); color: inherit; opacity: .66;
-  font-variant-numeric: tabular-nums; word-break: break-all;
+  font-variant-numeric: tabular-nums;
   max-width: min(1200px, 88vw); text-align: center; line-height: 1.7;
 }
+.reveal .commit p { margin: 0; }
+/* UX batch U3 — the same `<details>` as the round screen's; see round.css for why. */
+.reveal .verify summary { cursor: pointer; width: fit-content; margin-inline: auto; text-decoration: underline; text-underline-offset: 3px; }
+.reveal .verify[open] summary { margin-bottom: 4px; }
+.reveal .commitHash { word-break: break-all; }
 
 /* The demo scaffolding over the flood — **the rules moved to `switcher.css` on 2026-09-04 and the
    move was forced by a gate, not by taste.** They used to live here because they led with
@@ -1484,3 +1489,14 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* And its rule: ink measured 2.83 against the cobalt flood (switcher.css's table), so on a flood it
    is drawn in the face's own text colour, as the table's row rules already are. */
 .reveal[data-face] .evCounts { border-top-color: currentColor; }
+
+/* UX batch U5c — what pressing the seal does, stacked under the question inside the button. The
+   note register in the body face, and inherited colour so it reads on the flood. */
+.reveal .sealText { display: flex; flex-direction: column; gap: 6px; }
+.reveal .sealHow { font-size: var(--text-note); font-family: var(--font-sans); font-weight: 400; opacity: .72; }
+
+/* UX batch U8 (Gate 1's finding) — a shop name never breaks inside a word. 「公館商圈 來來滷肉飯」
+   was set as 「公館商圈 來 / 來滷肉飯」: CJK breaks between any two characters by default.
+   `keep-all` allows a break only at a space; `overflow-wrap: anywhere` is the fallback for a long
+   name with no space at all, which would otherwise run out of the column. */
+.reveal .winner { word-break: keep-all; overflow-wrap: anywhere; }

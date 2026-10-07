@@ -888,7 +888,16 @@ export default function Reveal({ roundId }: { roundId: number }) {
                   name is the question. A screen reader announcing an empty box before the question
                   would be describing the ink rather than the act. */}
               <span className="seal sealEmpty" aria-hidden="true" />
-              <span className="sealAsk">這一餐，說定了嗎？</span>
+              {/* UX batch U5c — what the empty seal does, said before the press: it records who
+                  said the circle went (D106 — a trip is named). **Inside the button, under the
+                  question**, because the row is one 80 px box in both states and a line beside it
+                  would vanish on signing and shrink the row; the seal is tall enough for two lines.
+                  The button's name becomes the question plus what pressing it does, which is the
+                  thing a screen reader user also needs before pressing. */}
+              <span className="sealText">
+                <span className="sealAsk">這一餐，說定了嗎？</span>
+                <span className="sealHow" data-part="sign-explain">按下去會記下：是你說這一餐去了這家。</span>
+              </span>
             </button>
           )}
         </div>
@@ -965,13 +974,21 @@ export default function Reveal({ roundId }: { roundId: number }) {
 
           Both are shown in full. A hash exists to be compared with another hash, and half of one
           cannot be. */}
+      {/* UX batch U3 — the same shape as the round screen: the claim in words, the fingerprint and
+          the seed behind 「怎麼驗證？」, closed by default. The seed is published only once the
+          answer is on screen, as before. */}
       {data?.seed_commit && (
-        <p className="commit" data-part="seed-commit">
-          這一輪的結果在開局時就固定了 · {data.seed_commit}
-          {answered && data.revealed_seed && (
-            <><br />種子 · {data.revealed_seed}</>
-          )}
-        </p>
+        <div className="commit" data-part="seed-commit">
+          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
+          <details className="verify">
+            <summary>怎麼驗證？</summary>
+            <p>開局時公開的指紋：<span className="commitHash">{data.seed_commit}</span></p>
+            {answered && data.revealed_seed && (
+              <p>這一輪的種子（十六進位）：<span className="commitHash">{data.revealed_seed}</span></p>
+            )}
+            <p>把種子轉回位元組，算一次 SHA-256，會得到開局時那串指紋。</p>
+          </details>
+        </div>
       )}
       </div>
 

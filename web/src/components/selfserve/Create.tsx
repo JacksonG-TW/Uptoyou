@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { createCircle, type Created } from '@/lib/selfserve'
-import { remember } from '@/lib/device'
+import { device, remember } from '@/lib/device'
 import InvitePanel from './InvitePanel'
-import { NO_ACCOUNT } from './copy'
+import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
 
 /**
  * §2 — creating a circle. **Three steps, and the order is the design**
@@ -32,6 +32,7 @@ type Step = 'name' | 'circle'
 
 export default function Create() {
   const [step, setStep] = useState<Step>('name')
+  const [seated] = useState(() => device() !== null)
   const [circleName, setCircleName] = useState('')
   const [nickname, setNickname] = useState('')
   const [busy, setBusy] = useState(false)
@@ -104,6 +105,12 @@ export default function Create() {
             {/* **Un-pressable in place while building, and the layout does not move** (§1's
                 states) — `disabled` on the control that is already there, never a swap for a
                 spinner that occupies a different box. */}
+            {/* One device, one circle (owner ruling (b), 2026-10-07): said before the act, only
+                when there is a seat to lose. `device()` is read at render — one local fact, no
+                request. */}
+            {seated && (
+              <p className="ssNote" data-part="replace-notice">{REPLACE_NOTICE}</p>
+            )}
             <button
               type="submit"
               className="act"

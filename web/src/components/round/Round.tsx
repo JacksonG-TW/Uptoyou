@@ -4,6 +4,8 @@ import {
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { device, type Device } from '@/lib/device'
+import { fetchMembers } from '@/lib/selfserve'
+import { fetchReveal } from '@/lib/reveal'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { arrive } from '@/lib/motion'
@@ -93,6 +95,10 @@ export default function Round() {
   /** D108's seats and the commitment, both read from the snapshot so they are on the first painted
    *  frame rather than arriving. */
   const [rolls, setRolls] = useState<Roll[]>([])
+  /** The decider, from `counts` and never from `deciding_member`, though both are on the wire:
+   *  one fact, one source, so the rule line cannot name somebody the marked row does not mark. */
+  const decidingSeat = rolls.find((r) => r.counts)
+  const decider = decidingSeat ? (decidingSeat.nickname || '這個座位') : null
   const [commit, setCommit] = useState('')
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Candidate[]>([])
@@ -109,6 +115,14 @@ export default function Round() {
   /** The stream's own state, apart from `error`: a reconnect clears this line and must not clear
    *  a refused proposal's sentence that happens to be showing beside it. */
   const [streamDown, setStreamDown] = useState<string | null>(null)
+  /** UX batch U5e — who is in this circle, by nickname only (`GET …/members`, any member may
+   *  read it; it carries no member id by rule). Empty until it answers, and on a failure: the line
+   *  is context, not the screen's job, so it goes rather than showing an error. */
+  const [people, setPeople] = useState<string[]>([])
+  /** UX batch U7 — the last closed round, for 「上一餐」. The snapshot names it (`last_result`);
+   *  its name comes from the same read the reveal uses (`GET …/result`), so this line and the
+   *  reveal can never name two different places. Names nobody: not who rolled, not who proposed. */
+  const [lastMeal, setLastMeal] = useState<{ round: number; name: string } | null>(null)
   const [busy, setBusy] = useState(false)
   const seq = useRef(0)
   /** The open round as the stream last said, readable inside the subscription without
@@ -165,6 +179,19 @@ export default function Round() {
         setRollError(null)
       }
       if (e.type === 'snapshot') {
+        const last = e.last_result?.round_id ?? null
+        if (last !== null) {
+          fetchReveal(dev, last)
+            .then((r) => {
+              const name = r.winning_place_id !== null
+                ? (r.winner_headline ?? r.places[String(r.winning_place_id)])
+                : null
+              setLastMeal(name ? { round: last, name } : null)
+            })
+            .catch(() => setLastMeal(null))
+        } else {
+          setLastMeal(null)
+        }
         // **A reconnect can land after the round it was watching has closed** — the `closed` event
         // went out while this device was not listening. The snapshot then has no open round and
         // the result's id is the one we were in, so we go where `closed` would have sent us.
@@ -270,7 +297,22 @@ export default function Round() {
      before the tree it belongs to is committed. One blank frame is the price and it is the right
      one — the alternative is a screen that flashes content the person is not entitled to. */
   useEffect(() => {
-    if (!dev) window.location.replace('/device')
+    if (!dev) return
+    let live = true
+    fetchMembers(dev)
+      .then((m) => { if (live) setPeople(m.members.map((x) => x.nickname)) })
+      .catch(() => { if (live) setPeople([]) })
+    return () => { live = false }
+  }, [dev])
+
+  useEffect(() => {
+    if (dev) return
+    /* **Home, never `/device`** (UX batch U1). The key screen is the operator's back door since
+       2026-09-16; a person with no seat needs to hear that this device has no circle and where
+       circles come from, and home is where both doors are. The flag is one-shot: home reads it
+       once and clears it, so the sentence answers this bounce and no later visit. */
+    try { sessionStorage.setItem('upto_no_seat', '1') } catch { /* storage off: home just shows no line */ }
+    window.location.replace('/')
   }, [dev])
 
   /** **The row's state comes from the GET, never from what this device just tapped** (PS-4). A
@@ -348,7 +390,15 @@ export default function Round() {
           first too. */}
       <div className="roundCols">
       <div className="roundLeft">
+      {lastMeal && (
+        <p className="roundNote lastMeal" data-part="last-meal">
+          上一餐：{lastMeal.name} · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
+        </p>
+      )}
       <h1 className="roundTitle">這一餐</h1>
+      {people.length > 0 && (
+        <p className="roundNote" data-part="circle-people">這個圈子：{people.join('、')}</p>
+      )}
       {/* **「一人提一家」 was false and D110 made it checkably so** — the cap is three per person,
           stated on the home page and enforced at propose, and this line said one. Corrected to the
           ruled number rather than to a vaguer phrasing: a screen that softens a limit into 「幾家」
@@ -461,6 +511,11 @@ export default function Round() {
           ))}
         </ul>
       )}
+      {/* UX batch U5b — the search answers at most ten (`live.py`, `limit 10`), so a full list
+          says so rather than letting ten read as all there is. A fact, not a hint (D20). */}
+      {hits.length >= 10 && (
+        <p className="roundNote" data-part="search-cap">只列出前 10 家。</p>
+      )}
 
       {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
           row is a loading spinner wearing a costume (the spec's words). It takes the step after
@@ -566,6 +621,15 @@ export default function Round() {
         >
           擲骰
         </button>
+        {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
+            seat list could not carry: anyone may press, nothing about the pair depends on who
+            does, and whose pair it is. Present from the round's first frame because `counts` is
+            (D108). Revealing, not throwing: the line credits nobody's tap with the number. */}
+        {decider !== null && (
+          <p className="roundNote" data-part="deciding">
+            誰先按都可以。結果開局時就定了，用 {decider} 的骰子。
+          </p>
+        )}
 
       {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
           **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
@@ -596,20 +660,11 @@ export default function Round() {
                     on screen with no error anywhere. */}
                 <span className="seatName">{r.nickname || `座位 ${i + 1}`}</span>
                 <span className="seatDice">
-                  {r.die1 !== null && r.die2 !== null ? `${r.die1} · ${r.die2}` : '還沒翻開'}
+                  {r.die1 !== null && r.die2 !== null ? `${r.die1} · ${r.die2}` : '還沒看結果'}
                 </span>
               </li>
             ))}
           </ul>
-          {/* Derived from `counts` and never from `deciding_member`, though both are on the wire.
-              One fact, one source: a sentence naming somebody the marked row does not mark is a
-              contradiction a reader can see, and picking whichever field the row uses makes it
-              impossible. */}
-          {rolls.some((r) => r.counts) && (
-            <p className="roundNote" data-part="deciding">
-              以 {rolls.find((r) => r.counts)!.nickname || '這個座位'} 的骰子為準。
-            </p>
-          )}
         </section>
       )}
 
@@ -619,10 +674,20 @@ export default function Round() {
 
           Shown in full rather than truncated. A hash exists to be compared against another hash,
           and half of one cannot be. */}
+      {/* **UX batch U3 — the claim in words, the proof one tap away** (walk item 9). A friend read
+          the bare 64-character hash as an error message. The commitment is unchanged and still
+          shown in full — half a hash cannot be compared — it just waits behind 「怎麼驗證？」.
+          `seed_commit` is `sha256(seed)` over the seed's 32 raw bytes (`engine/draw.py`), and the
+          seed is published as hex at close, so the how-to says to turn the hex back into bytes. */}
       {commit && (
-        <p className="commit" data-part="seed-commit">
-          這一輪的結果在開局時就固定了{' '}<span className="commitHash">· {commit}</span>
-        </p>
+        <div className="commit" data-part="seed-commit">
+          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
+          <details className="verify">
+            <summary>怎麼驗證？</summary>
+            <p>開局時公開的指紋：<span className="commitHash">{commit}</span></p>
+            <p>開獎後會公開這一輪的種子（十六進位）。把它轉回位元組，算一次 SHA-256，會得到上面這串指紋。</p>
+          </details>
+        </div>
       )}
 
       </div>
@@ -647,6 +712,12 @@ export default function Round() {
           1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
       <section className="tonightBlock">
         <h2 className="roundH">這次不吃</h2>
+        {/* UX batch U5a — who it binds and what it does, the two questions the walk found a member
+            could not answer. True to D103: one member's stance, a discount of that kind's places
+            for this round, and never a removal (the place stays proposable and in the pool). */}
+        <p className="roundNote" data-part="tonight-explain">
+          只算你自己的選擇。勾了的類別，這一輪抽中的機會會變小，店還是留在名單上。
+        </p>
         {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
             帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
             leader dots · count, grouped under three section marks (sec. 2, 密度一).

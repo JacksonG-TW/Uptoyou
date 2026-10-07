@@ -83,3 +83,18 @@ export const MEMBER_INVITE = '要邀人進來，跟開圈子的人要連結。'
 const HHMM = new Intl.DateTimeFormat('zh-TW', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
 export const linkLive = (at: Date) => `現在的連結可以用到${HHMM.format(at)}。`
 export const LINK_EXPIRED = '上一條連結過期了，朋友點了會進不來。'
+
+/**
+ * UX batch U1 — home, after `/round` bounced a device with no seat. **States where circles come
+ * from; it does not tell the person which to do** (D20): both doors are right above it.
+ */
+export const NO_SEAT = '這台裝置還沒有圈子。圈子可以自己開，也可以從朋友傳來的邀請連結進來。'
+
+/**
+ * UX batch U6 / `spec-one-circle-per-device-2026-10-07.md` — above the act on `/create` and
+ * `/join`, only when the device already holds a seat (owner ruling (b), 2026-10-07). One string
+ * for both doors. **It never says 回不去**: the old seat stays in the old circle (nothing deletes a
+ * `member` row) and a fresh link from that circle seats this device again, as a new member.
+ */
+export const REPLACE_NOTICE =
+  '這台裝置已經在一個圈子裡。繼續的話，它會換到這個新圈子，原本的座位留在原圈子，這台裝置不會再用到它。'

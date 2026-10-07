@@ -295,8 +295,18 @@
    opportunity and would otherwise run out of its column. */
 .round .commit {
   margin-top: 24px; font-size: var(--text-note); color: var(--color-muted);
-  font-variant-numeric: tabular-nums; word-break: break-all;
+  font-variant-numeric: tabular-nums;
 }
+.round .commit p { margin: 0; }
+/* UX batch U3: the proof behind 「怎麼驗證？」. A native `<details>`, so it opens with the keyboard
+   and a screen reader announces its state with no script. The summary is the one control here and
+   reads as a link-sized act, underlined, never a button-sized one: the claim above it is the
+   message, this is the way to check it. `break-all` moved onto the hash alone — the only text
+   here with no break opportunity. */
+.round .verify { margin-top: 4px; }
+.round .verify summary { cursor: pointer; width: fit-content; text-decoration: underline; text-underline-offset: 3px; }
+.round .verify p { margin-top: 4px; }
+.round .commitHash { word-break: break-all; }
 /* **The hash wraps as one piece, so its last characters never sit alone on a line** (the evaluator's
    B-4, 2026-09-15). The sentence plus a 64-character hash runs a few characters past the 720 px
    column, and `break-all` let the browser break anywhere — measured with a wide hash, a 72 px tail

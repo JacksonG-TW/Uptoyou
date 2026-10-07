@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { joinCircle } from '@/lib/selfserve'
-import { remember } from '@/lib/device'
+import { device, remember } from '@/lib/device'
+import { REPLACE_NOTICE } from './copy'
 
 /**
  * §4 — joining by the shared link, `/join#c=<circle_id>&t=<ticket>`.
@@ -29,6 +30,7 @@ import { remember } from '@/lib/device'
  */
 export default function Join({ circle, ticket }: { circle: string; ticket: string }) {
   const [nickname, setNickname] = useState('')
+  const [seated] = useState(() => device() !== null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -79,7 +81,11 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               reasoning and not the evaluator's. */}
           <p className="eyebrow"><em>★</em>入座</p>
           <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
-          <p className="ssLead">用這條連結進來，你會有自己的座位。</p>
+          {/* UX batch U9 (walk item 4, the half that is copy): a link opened from a chat with no
+              context first needs to know what this is. It says what the product does — and still
+              names neither the circle nor the inviter, which the 2026-09-13 reasoning above keeps
+              off this screen until the owner rules on it. */}
+          <p className="ssLead">大家各自提想吃的店，最後用骰子決定這一餐吃哪家。用這條連結進來，你會有自己的座位。</p>
 
           <form className="ssForm" onSubmit={(e) => { e.preventDefault(); void join() }}>
             <label className="ssField">
@@ -93,6 +99,12 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
                 autoComplete="off"
               />
             </label>
+            {/* One device, one circle (owner ruling (b), 2026-10-07): said before the act, only
+                when there is a seat to lose. `device()` is read at render — one local fact, no
+                request. */}
+            {seated && (
+              <p className="ssNote" data-part="replace-notice">{REPLACE_NOTICE}</p>
+            )}
             <button
               type="submit"
               className="act"

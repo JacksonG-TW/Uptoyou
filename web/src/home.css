@@ -414,3 +414,12 @@ h1.headline .lit { color: var(--color-hot-ink); }
 }
 .colophon b { color: var(--color-ink); font-weight: 700; margin-right: 6px; }
 .colophon .u { white-space: nowrap; }
+
+/* UX batch U1 — the one line home says after `/round` bounced a device with no seat. The
+   provenance register (`.wxsrc`'s size and weight), not an error colour: it is a fact about this
+   device, not a refusal. Under the doors, so it reads as the answer to the door just tried. */
+.noSeat {
+  margin: 12px 0 0;
+  font-size: var(--text-note);
+  max-width: 36em;
+}

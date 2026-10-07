@@ -8,6 +8,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { doorHref } from './lib/round'
+import { NO_SEAT } from './components/selfserve/copy'
 import { device } from './lib/device'
 import { arrive } from './lib/motion'
 import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
@@ -28,6 +29,15 @@ export default function App() {
   /* `device()` rather than two `getItem`s: the same helper the rest of the surface uses to answer
      "is this browser a seat", so the door and the screens cannot disagree about what a key is. */
   const hasDevice = Boolean(device())
+  /* UX batch U1: set by `/round` when it bounced a device with no seat here. Read once and
+     cleared, in the initializer so StrictMode's second render reads the same answer. */
+  const [noSeat] = useState(() => {
+    try {
+      const v = sessionStorage.getItem('upto_no_seat') === '1'
+      sessionStorage.removeItem('upto_no_seat')
+      return v && !hasDevice
+    } catch { return false }
+  })
 
   useEffect(() => {
     let live = true
@@ -139,6 +149,11 @@ export default function App() {
             <div className="wx arrive" style={arrive(0)} data-part="weather">
               {error ? (
                 <p className="wxnow"><span className="c">{error}</span></p>
+              ) : weather?.kind === 'absent' ? (
+                /* UX batch U4 — no observation and no forecast for this hour. One sentence in place
+                   of a row of dashes that read as a broken page. The API's `absence_reason` is
+                   written for an operator, so the screen states the member's fact instead. */
+                <p className="wxnow" data-part="weather-absent"><span className="c">現在拿不到{name}的天氣。</span></p>
               ) : (
                 <>
                   <p className="wxnow">
@@ -164,12 +179,12 @@ export default function App() {
                   and 22 px of block height against the reference, which is how it surfaced; the
                   reason to fix it is not the 22 px. `time_label` is the API's own word for which
                   clock `detected_at` is on. */}
-              <p className="wxsrc" data-part="weather-source">
+              {weather?.kind !== 'absent' && <p className="wxsrc" data-part="weather-source">
                 <span className="where">{name}{hour && ` ${hour}`} · </span>
                 {weather?.kind === 'observation' ? '觀測' : '預報'}
                 {' · 中央氣象署開放資料'}
                 {fetched && ` · ${fetched}`}
-              </p>
+              </p>}
             </div>
           </div>
 
@@ -290,6 +305,9 @@ export default function App() {
             <a className="act" data-part="enter" href={doorHref()}>這一餐</a>
           )}
         </div>
+        {noSeat && (
+          <p className="noSeat" data-part="no-seat" role="status">{NO_SEAT}</p>
+        )}
         </div>
 
         {/* **甲・日報's colophon** (`spec-home-dateline.md` §2) — the foot names where every fact
