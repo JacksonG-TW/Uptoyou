@@ -4,7 +4,12 @@
 # development machine to be readable at all. The deciding reason is the other one: §6 grades
 # `docker compose up` on a machine that has never seen this repository, and an image that
 # already contains what it runs is the version of that which cannot half-work.
-FROM apache/airflow:3.0.2
+# **3.0.6 since 2026-10-07 (owner, the combined deploy; H102).** 3.0.2 leaked one file descriptor
+# per task run in the LocalExecutor worker (fixed in 3.0.3, #51654) and could not run a task failure
+# callback in the DAG processor at all (`NotImplementedError`, gone from 3.0.4) — between them they
+# stopped every scheduled job on dev and wedged four DAGs on the box. One metadata migration between
+# the two (`0069_3_0_3_delete_import_errors`); `airflow-init` runs it.
+FROM apache/airflow:3.0.6
 
 # The ingest runs in its own interpreter, and this is a dependency conflict rather than a
 # preference. Airflow 3 pins SQLAlchemy below 2.0; the ingest uses 2.0's async session, which
@@ -38,7 +43,7 @@ COPY --chown=airflow:root airflow/dags /opt/airflow/dags
 
 # **A11 ⑤ — `USER airflow` stated, though it was already true. Owner-ruled 2026-08-19.**
 #
-# `apache/airflow:3.0.2` already ends on `USER airflow` (uid 50000), and nothing above switches to
+# `apache/airflow:3.0.2` (and 3.0.6, re-checked at the bump) already ends on `USER airflow` (uid 50000), and nothing above switches to
 # root, so every `RUN` here and every process in the three airflow containers already ran unprivileged
 # — verified with `docker top`, not assumed. This line therefore changes no behaviour today. It is
 # here because the property is load-bearing and currently held by a *base image's* last directive: a
