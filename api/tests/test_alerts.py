@@ -81,54 +81,144 @@ class NoCredentialLeavesThisMachine(unittest.TestCase):
 
 
 class TheMessageSaysWhatAPhoneNeedsFirst(unittest.TestCase):
+    """The readable format (owner 「告警新格式直接發出來我看」, 2026-10-08): what broke, which data,
+    since when, what it affects, what to do — in plain Chinese, the technical identity last."""
+
     def message(self, **overrides):
+        from datetime import datetime, timezone
+
         arguments = {
-            "dag_id": "upto_business_tax_ingest",
-            "task_id": "check_publication",
-            "run_id": "scheduled__2026-08-19T20:20:00+00:00",
+            "dag_id": "upto_weather_ingest",
+            "task_id": "forecast",
+            "run_id": "scheduled__2026-10-08T03:00:00+00:00",
             "try_number": 3,
             "max_tries": 2,
-            "detail": "RuntimeError: the row count collapsed",
+            "detail": "URLError: <urlopen error timed out>",
             "log_path": "/opt/airflow/logs/x/attempt=3.log",
+            "started": datetime(2026, 10, 8, 3, 0, tzinfo=timezone.utc),
+            "now": datetime(2026, 10, 8, 3, 5, tzinfo=timezone.utc),
         }
         arguments.update(overrides)
         return alerts.compose_message(**arguments)
 
-    def test_the_first_line_carries_the_dag_the_task_and_the_word_failed(self):
-        """A notification shows one line. It has to be the one that says what broke."""
+    def test_the_first_line_says_what_broke_in_words(self):
+        """A notification shows one line, so it names the data, not a DAG id."""
         first = self.message().split("\n")[0]
-        self.assertIn("upto_business_tax_ingest", first)
-        self.assertIn("check_publication", first)
-        self.assertIn("FAILED", first)
+        self.assertEqual(first, "❌ 中央氣象署的天氣預報這次沒抓到")
+        self.assertNotIn("upto_", first)
 
-    def test_the_attempt_count_reads_as_attempts_and_not_as_retries(self):
-        """`max_tries` is the number of RETRIES, so 2 means three attempts. Printing it as the total
-        gave «attempt 3 of 2», which reads as a bug in the alert instead of the last attempt."""
-        self.assertIn("attempt 3 of 3", self.message())
-
-    def test_no_max_tries_still_names_the_attempt(self):
-        self.assertIn("attempt 1", self.message(try_number=1, max_tries=0))
-
-    def test_the_run_id_and_the_log_path_are_both_there(self):
+    def test_it_says_when_on_taipei_s_clock_and_how_many_tries(self):
         body = self.message()
-        self.assertIn("scheduled__2026-08-19T20:20:00+00:00", body)
-        self.assertIn("/opt/airflow/logs/x/attempt=3.log", body)
+        self.assertIn("10月8日 11:00", body)            # 03:00 UTC
+        self.assertIn("重試 2 次都沒成功", body)
 
-    def test_the_log_pointer_is_a_path_and_never_a_url(self):
-        """The UI is on `localhost:8081`, unreachable from the phone this arrives on — a link would
-        be a dead end dressed as an answer."""
-        self.assertNotIn("http", self.message())
+    def test_a_common_cause_is_said_in_words(self):
+        self.assertIn("原因：連線逾時", self.message())
 
-    def test_a_long_detail_is_clipped_and_says_it_was(self):
-        body = self.message(detail="x" * 5000)
+    def test_an_unknown_cause_keeps_the_system_text_under_its_label(self):
+        body = self.message(detail="ValueError: unexpected column 'x'")
+        self.assertIn("原因：（系統原文）ValueError: unexpected column 'x'", body)
+
+    def test_impact_and_action_are_both_there(self):
+        body = self.message()
+        self.assertIn("影響：", body)
+        self.assertIn("要做什麼：", body)
+
+    def test_the_identity_is_the_last_line_and_counts_attempts_not_retries(self):
+        """`max_tries` is the number of RETRIES, so 2 means three attempts."""
+        last = self.message().split("\n")[-1]
+        self.assertEqual(last, "upto_weather_ingest / forecast · 第 3 次（共 3 次）")
+        self.assertIn("第 1 次", self.message(try_number=1, max_tries=0))
+
+    def test_no_container_path_and_no_url(self):
+        """The UI is on `localhost:8081`, unreachable from the phone; the path is a keyboard's."""
+        body = self.message()
+        self.assertNotIn("/opt/airflow", body)
+        self.assertNotIn("http", body)
+
+    def test_the_self_test_reads_as_success(self):
+        body = self.message(dag_id="upto_alert_selftest", task_id="selftest",
+                            detail="RuntimeError: A10 self-test — nothing is wrong")
+        self.assertTrue(body.startswith("✅ 警報測試成功"), body)
+        self.assertNotIn("❌", body)
+        self.assertNotIn("原因", body)
+
+    def test_a_stale_source_reads_as_how_long_and_since_when(self):
+        finding = {"source": "fia-business-tax", "metric": "hours_since_last_run",
+                   "value": 164.5, "threshold": 48.0, "cadence_h": 24.0, "sentence": "…"}
+        body = self.message(dag_id="upto_source_freshness", task_id="hours_since_last_run",
+                            findings=[finding])
+        self.assertTrue(body.startswith("⚠️ 有資料停止更新了"), body)
+        self.assertIn("營業稅籍（財政部）：已經 6 天 20 小時沒有更新（平常每天一次）", body)
+        self.assertIn("上次：10月1日 14:35", body)   # 2026-10-08 03:05 UTC − 164.5 h = 10-01 06:35 UTC
+
+    def test_a_value_check_names_its_source_and_the_number(self):
+        finding = {"source": "F-D0047-061", "metric": "row_step", "value": 0.42,
+                   "threshold": 0.10, "sentence": "…"}
+        body = self.message(task_id="value_check_forecast", findings=[finding])
+        self.assertIn("的數字看起來不對", body.split("\n")[0])
+        self.assertIn("天氣預報（中央氣象署）：資料筆數一次變了 42%（超過 10% 就提醒）", body)
+
+    def test_a_long_detail_is_clipped(self):
+        body = self.message(detail="ValueError: " + "x" * 5000)
         self.assertLessEqual(len(body), alerts.MESSAGE_CAP)
         self.assertIn("…", body)
 
     def test_a_missing_detail_still_composes(self):
-        """A failure with no exception in the context — the alert must still say which task."""
         body = self.message(detail="")
-        self.assertIn("check_publication", body)
-        self.assertIn("FAILED", body)
+        self.assertIn("中央氣象署的天氣預報", body)
+        self.assertNotIn("原因", body)
+
+    def test_a_date_is_not_mistaken_for_a_kill_signal(self):
+        body = self.message(detail="ValueError: file stamped 2026-09-30 is older than expected")
+        self.assertNotIn("記憶體", body)
+
+
+class NoJobShipsWithoutAName(unittest.TestCase):
+    """Every DAG id, every ingest task and every source the checks know has a Chinese name — a new
+    job must not reach a phone with an id as its headline."""
+
+    DAGS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "airflow", "dags")
+    CHECKS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "checks.py")
+
+    def dag_ids(self):
+        import re
+
+        found = set()
+        for name in os.listdir(self.DAGS):
+            if not name.endswith(".py"):
+                continue
+            with open(os.path.join(self.DAGS, name), encoding="utf-8") as f:
+                text = f.read()
+            found.update(re.findall(r'dag_id="(upto_[a-z_]+)"', text))
+            if 'dag_id=f"upto_{name}_ingest"' in text:
+                table = next(node.value for node in ast.walk(ast.parse(text))
+                             if isinstance(node, ast.Assign)
+                             and getattr(node.targets[0], "id", "") == "SOURCES")
+                found.update("upto_{}_ingest".format(row[0]) for row in ast.literal_eval(table))
+        return found
+
+    def test_the_dag_files_were_read(self):
+        self.assertGreaterEqual(len(self.dag_ids()), 14, self.dag_ids())
+
+    def test_every_dag_id_has_a_name(self):
+        self.assertEqual(sorted(self.dag_ids() - set(alerts.DAG_NAMES)), [])
+
+    def test_no_name_for_a_dag_that_does_not_exist(self):
+        self.assertEqual(sorted(set(alerts.DAG_NAMES) - self.dag_ids()), [])
+
+    def test_every_source_the_checks_know_has_a_name(self):
+        with open(self.CHECKS, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        cadence = next(node for node in ast.walk(tree)
+                       if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "RUN_CADENCE_H")
+        sources = {key.value for key in cadence.value.keys}
+        self.assertEqual(sources, set(alerts.SOURCE_NAMES))
+
+    def test_every_kind_has_its_three_lines(self):
+        kinds = {kind for _, kind in alerts.DAG_NAMES.values()} | {k for _, k in alerts.TASK_KINDS}
+        kinds.discard("selftest")
+        self.assertEqual(sorted(kinds - set(alerts.KIND_TEXT)), [])
 
 
 class TheCallbackNeverRaises(unittest.TestCase):

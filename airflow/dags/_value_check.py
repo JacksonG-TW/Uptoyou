@@ -90,10 +90,35 @@ def make_value_check_task(source: str, task_id: str = "value_check"):
                 metric.source, metric.metric, "—" if metric.value is None else "{:.3f}".format(metric.value),
                 metric.verdict, " — " + metric.detail if metric.detail else ""))
         if findings:
-            raise RuntimeError("; ".join(finding.sentence for finding in findings))
+            raise_findings(metrics, findings)
         return "{}: {} metrics recorded, no finding".format(source, len(metrics))
 
     return value_check
+
+
+def raise_findings(metrics, findings) -> None:
+    """Fail the task with the English sentences in the log AND the findings as data on the exception.
+
+    The alert (`_alerts.compose_message`) builds its Chinese lines from these fields — source,
+    metric, value, threshold, cadence, interval — instead of parsing them back out of the sentence
+    (owner 「告警新格式直接發出來我看」, 2026-10-08). `metric_history` keeps the sentence unchanged.
+    """
+    alerting = {(m.source, m.metric): m for m in metrics if m.verdict == "alert"}
+    rows = []
+    for finding in findings:
+        metric = alerting.get((finding.source, finding.metric))
+        rows.append({
+            "source": finding.source,
+            "metric": finding.metric,
+            "value": None if metric is None else metric.value,
+            "threshold": None if metric is None else metric.threshold,
+            "cadence_h": checks.RUN_CADENCE_H.get(finding.source),
+            "interval_h": checks.PUBLICATION_INTERVAL_H.get(finding.source),
+            "sentence": finding.sentence,
+        })
+    error = RuntimeError("; ".join(finding.sentence for finding in findings))
+    error.findings = rows
+    raise error
 
 
 def make_freshness_task(task_id: str = "hours_since_last_run"):
@@ -115,7 +140,7 @@ def make_freshness_task(task_id: str = "hours_since_last_run"):
                 metric.source, "—" if metric.value is None else "{:.1f} h".format(metric.value),
                 metric.verdict, " — " + metric.detail if metric.detail else ""))
         if findings:
-            raise RuntimeError("; ".join(finding.sentence for finding in findings))
+            raise_findings(metrics, findings)
         return "{} sources, none silent".format(len(rows))
 
     return hours_since_last_run

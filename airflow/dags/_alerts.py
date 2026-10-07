@@ -113,6 +113,171 @@ def scrub(text: str, extra: tuple[str, ...] = ()) -> str:
     return cleaned
 
 
+# ---- the words a person reads (owner 「告警新格式直接發出來我看」, 2026-10-08) -------------------
+#
+# **What broke, which data, since when, what it affects, what to do — in that order and in plain
+# Chinese**, because the first line is what a phone's notification shows and the reader is not at a
+# keyboard. The technical identity (DAG / task / attempt) moves to one small line at the bottom: a
+# person at a keyboard finds the log by it, a person on a phone can skip it. The system's own reason
+# stays, redacted and clipped, under 「原因」 — it is the line that says *why* (the 2026-08 ruling above
+# kept it, and the readable format keeps it).
+#
+# **Every DAG and every source has a name here, and `test_alerts` fails when one does not** — a new
+# job must not ship with an id as its headline.
+
+#: dag_id → (what a person calls it, its kind). The kind picks the headline, the impact and the
+#: action; the name is what the reader recognises.
+DAG_NAMES: dict[str, tuple[str, str]] = {
+    "upto_weather_ingest": ("中央氣象署的天氣資料", "ingest_hourly"),
+    "upto_place_reference_ingest": ("食藥署的餐飲業者名冊", "ingest_daily"),
+    "upto_brand_ingest": ("臺北市食材登錄的品牌資料", "ingest_daily"),
+    "upto_storefront_ingest": ("臺北市衛生評核的店家資料", "ingest_daily"),
+    "upto_business_status_ingest": ("經濟部商業登記的營業狀態", "ingest_daily"),
+    "upto_business_tax_ingest": ("財政部營業稅籍資料", "ingest_daily"),
+    "upto_source_freshness": ("資料新鮮度檢查", "freshness"),
+    "upto_db_backup": ("每晚的資料庫備份", "backup"),
+    "upto_preference_erasure": ("每晚清除過期偏好", "maintenance"),
+    "upto_weather_retention": ("清除舊的天氣資料", "maintenance"),
+    "upto_circle_sweep": ("清理閒置的圈子", "maintenance"),
+    "upto_dataset_export": ("資料集匯出", "maintenance"),
+    "upto_place_classify_backfill": ("店家自動分類", "maintenance"),
+    "upto_alert_selftest": ("警報測試", "selftest"),
+}
+
+#: task_id → a kind that overrides the DAG's, for the tasks inside an ingest DAG that are checks
+#: rather than fetches. Matched by prefix, so `value_check_forecast` is a value check.
+TASK_KINDS: tuple[tuple[str, str], ...] = (
+    ("value_check", "value"),
+    ("check_publication", "publication"),
+)
+
+#: The weather DAG's two fetches have names of their own.
+TASK_NAMES: dict[str, str] = {
+    "observation": "中央氣象署的天氣觀測",
+    "forecast": "中央氣象署的天氣預報",
+}
+
+#: source id (the ledger's key, `upto.checks.RUN_CADENCE_H`) → what a person calls it.
+SOURCE_NAMES: dict[str, str] = {
+    "F-D0047-061": "天氣預報（中央氣象署）",
+    "O-A0001-001": "天氣觀測（中央氣象署）",
+    "fda-97": "餐飲業者名冊（食藥署）",
+    "taipei-foodtracer": "品牌資料（臺北市食材登錄）",
+    "taipei-hygiene-grade": "衛生評核（臺北市）",
+    "gcis-restaurant-registry": "營業狀態（經濟部商業登記）",
+    "fia-business-tax": "營業稅籍（財政部）",
+}
+
+#: kind → (headline, impact, what to do). `{name}` is the DAG's or task's name.
+KIND_TEXT: dict[str, tuple[str, str, str]] = {
+    "ingest_hourly": ("❌ {name}這次沒抓到",
+                      "網站上的天氣會停在上一次的資料。每小時會自動再試一次。",
+                      "只收到一則可以不管；連續收到再處理。"),
+    "ingest_daily": ("❌ {name}今天沒抓到",
+                     "網站照常運作，店家資料停在上一版。明天同一時間會自動再試。",
+                     "不急。明天又收到的話，請 Claude 查。"),
+    "freshness": ("⚠️ 有資料停止更新了",
+                  "網站照常運作，只是這些資料變舊了。",
+                  "不急。請 Claude 查這些排程為什麼沒跑。"),
+    "value": ("⚠️ {name}的數字看起來不對",
+              "新的一版已經存進資料庫。如果數字真的錯了，網站可能會用到錯的資料。",
+              "請 Claude 看這一版資料是不是真的有問題。"),
+    "publication": ("⚠️ {name}的新一版跟上一版長得不一樣",
+                    "新的一版已經存進資料庫，但欄位變了或筆數掉太多，店名可能開始對不起來。",
+                    "請 Claude 比對這一版和上一版。"),
+    "backup": ("❌ {name}失敗了",
+               "今天沒有新的備份；之前的備份還在。",
+               "今天內請 Claude 查。連續兩天沒備份就比較危險。"),
+    "maintenance": ("❌ {name}沒有完成",
+                    "網站照常運作。下一次排程會自動再試。",
+                    "不急。連續收到再請 Claude 查。"),
+    "unknown": ("❌ {name}失敗了",
+                "不確定影響範圍。",
+                "請 Claude 查。"),
+}
+
+#: The self-test is the one message that reports success; it must never read like an outage.
+SELFTEST_TEXT = "✅ 警報測試成功\n這是一則測試訊息，代表警報管道是通的，不用處理。"
+
+TAIPEI_OFFSET_HOURS = 8   # Taiwan keeps no daylight saving (since 1979), so the offset is the zone.
+
+
+def _taipei(moment) -> str:
+    """`10月8日 11:00` on Taipei's clock, from an aware datetime; empty when there is none."""
+    from datetime import timedelta, timezone
+
+    if moment is None:
+        return ""
+    local = moment.astimezone(timezone(timedelta(hours=TAIPEI_OFFSET_HOURS)))
+    return "{}月{}日 {:%H:%M}".format(local.month, local.day, local)
+
+
+def _duration(hours: float) -> str:
+    """`6 天 20 小時`, `3 小時`, `40 分鐘` — the unit a person would say."""
+    if hours < 1:
+        return "{} 分鐘".format(max(1, int(round(hours * 60))))
+    days, rest = divmod(int(round(hours)), 24)
+    if days and rest:
+        return "{} 天 {} 小時".format(days, rest)
+    if days:
+        return "{} 天".format(days)
+    return "{} 小時".format(rest)
+
+
+def _cadence(hours: float) -> str:
+    return "每小時一次" if hours <= 1 else "每天一次" if hours <= 24 else "每 {} 一次".format(_duration(hours))
+
+
+def _finding_line(finding: dict, now) -> str:
+    """One bullet per finding, from the structured fields the check attached — never parsed back
+    out of its English sentence."""
+    from datetime import timedelta
+
+    source = finding.get("source", "")
+    name = SOURCE_NAMES.get(source, source)
+    metric = finding.get("metric", "")
+    value = finding.get("value")
+    cadence = finding.get("cadence_h")
+    if metric == "hours_since_last_run" and value is not None:
+        line = "• {}：已經 {}沒有更新".format(name, _duration(value))
+        if cadence:
+            line += "（平常{}）".format(_cadence(cadence))
+        if now is not None:
+            line += "。上次：{}".format(_taipei(now - timedelta(hours=value)))
+        return line
+    if metric == "hours_since_last_stored" and value is not None:
+        line = "• {}：已經 {}沒有新的一版".format(name, _duration(value))
+        interval = finding.get("interval_h")
+        if interval:
+            line += "（平常約{}有一版）".format(_cadence(interval).replace("一次", ""))
+        return line
+    if metric == "row_step" and value is not None:
+        return "• {}：資料筆數一次變了 {:.0f}%（超過 {:.0f}% 就提醒）".format(
+            name, value * 100, (finding.get("threshold") or 0) * 100)
+    return "• {}：{}".format(name, finding.get("sentence", metric))
+
+
+def _plain_reason(detail: str) -> str:
+    """The common causes in words; anything else is the system's own text, already redacted."""
+    lowered = detail.lower()
+    if "timed out" in lowered or "timeout" in lowered:
+        return "連線逾時（資料來源的網站沒有回應）"
+    if any(token in lowered for token in ("name or service not known", "connection refused",
+                                          "urlerror", "temporary failure in name resolution")):
+        return "連不上資料來源的網站"
+    if "memoryerror" in lowered or "sigkill" in lowered or "out of memory" in lowered:
+        return "記憶體不夠，程式被系統停掉"
+    clipped = detail if len(detail) <= DETAIL_CAP else detail[: DETAIL_CAP - 1] + "…"
+    return "（系統原文）" + clipped if clipped else ""
+
+
+def kind_of(dag_id: str, task_id: str) -> str:
+    for prefix, kind in TASK_KINDS:
+        if task_id.startswith(prefix):
+            return kind
+    return DAG_NAMES.get(dag_id, ("", "unknown"))[1]
+
+
 def compose_message(
     dag_id: str,
     task_id: str,
@@ -121,27 +286,42 @@ def compose_message(
     max_tries: int,
     detail: str,
     log_path: str = "",
+    findings: list | None = None,
+    started=None,
+    now=None,
 ) -> str:
     """The whole message. Pure — no Airflow, no network.
 
-    One line of identity, one line of what happened, one line of where to look. In that order
-    because the first line is all that shows in a phone's notification.
+    Headline, what happened, impact, what to do, then one technical line. `findings` are the
+    structured rows a check attached to its exception (`source`, `metric`, `value`, …); `started`
+    and `now` are aware datetimes, absent in a context that has none.
     """
-    # **`max_tries` is the number of RETRIES, so the total is one more.** `retries: 2` gives
-    # `max_tries = 2` and `try_number` counting 1, 2, 3 — so reading `max_tries` as the total
-    # printed "attempt 3 of 2", which reads as a bug in the alert rather than the third and last
-    # attempt it actually was.
-    attempts = ("attempt {} of {}".format(try_number, max_tries + 1) if max_tries
-                else "attempt {}".format(try_number))
-    head = "upto: {} / {} FAILED ({})".format(dag_id, task_id, attempts)
-    body = [head, "", "run: {}".format(run_id)]
-    if detail:
-        clipped = detail if len(detail) <= DETAIL_CAP else detail[: DETAIL_CAP - 1] + "…"
-        body.append(clipped)
-    if log_path:
-        body.append("")
-        body.append("log: {}".format(log_path))
-    message = "\n".join(body)
+    total = max_tries + 1 if max_tries else 0
+    attempts = "第 {} 次（共 {} 次）".format(try_number, total) if total else "第 {} 次".format(try_number)
+    # **No container path** (the readable format's promise): the DAG, task and attempt are enough for
+    # a person at a keyboard to find the log; `log_path` is accepted and deliberately not printed.
+    footer = "—\n{} / {} · {}".format(dag_id, task_id, attempts)
+
+    kind = kind_of(dag_id, task_id)
+    if kind == "selftest":
+        return SELFTEST_TEXT + "\n" + footer
+
+    name = TASK_NAMES.get(task_id) or DAG_NAMES.get(dag_id, (dag_id, "unknown"))[0]
+    headline, impact, action = KIND_TEXT.get(kind, KIND_TEXT["unknown"])
+    lines = [headline.format(name=name)]
+    if findings:
+        lines.extend(_finding_line(finding, now) for finding in findings)
+    else:
+        when = _taipei(started)
+        tries = "，重試 {} 次都沒成功".format(total - 1) if total > 1 else ""
+        lines.append("{}{}這一次失敗{}。".format(name, "，{} ".format(when) if when else "", tries))
+        reason = _plain_reason(detail)
+        if reason:
+            lines.append("原因：" + reason)
+    lines.append("影響：" + impact)
+    lines.append("要做什麼：" + action)
+    lines.append(footer)
+    message = "\n".join(lines)
     return message if len(message) <= MESSAGE_CAP else message[: MESSAGE_CAP - 1] + "…"
 
 
@@ -182,6 +362,11 @@ def _send(context) -> None:
 
     raw = context.get("exception")
     detail = "" if raw is None else "{}: {}".format(type(raw).__name__, raw)
+    # A check attaches its findings as data (`_value_check.raise_findings`), so the message is built
+    # from fields rather than parsed back out of an English sentence. Numbers and source ids only —
+    # nothing in them is secret, and they bypass no redaction because none of them is free text.
+    findings = getattr(raw, "findings", None)
+    started = getattr(instance, "start_date", None)
 
     # Airflow's own masker knows every Connection value this process has read — including the bot
     # token below, once the Connection has been fetched. Asked for first and tolerated absent: the
@@ -210,9 +395,12 @@ def _send(context) -> None:
         return
 
     detail = scrub(detail, extra=(token,))
+    from datetime import datetime, timezone
+
     message = compose_message(
         dag_id, task_id, run_id, try_number, max_tries, detail,
-        _log_path(dag_id, run_id, task_id, try_number))
+        _log_path(dag_id, run_id, task_id, try_number),
+        findings=findings, started=started, now=datetime.now(timezone.utc))
 
     payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
     request = urllib.request.Request(
