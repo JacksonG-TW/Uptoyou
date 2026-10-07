@@ -280,8 +280,13 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
     answer would outlive the hour the ticket has.
 
     **«Creator» is honestly the creator, not the sender.** A ticket belongs to a circle, not to the
-    person who forwarded it, so the server never knows who sent the link. The creator is the
-    circle's first seat holding the invite power (0047's `operator`); `None` when that seat is gone.
+    person who forwarded it, so the server never knows who sent the link. The creator is the seat
+    whose invite-power key (0047's `operator`) was minted **in the circle's own creating
+    transaction** — `device_secret.created_at = circle.created_at`, both `now()` of one
+    transaction (35 of 35 self-serve circles on dev, none ambiguous, 2026-10-08). Not «the first
+    operator seat»: once the creator's seat is gone that would name the next one, such as an
+    operator principal attached later with `--principal` (the reviewer's catch). So it is `None`
+    when that seat is gone, and for a circle made by `upto.issue` rather than this door.
     """
     response.headers.update(NO_STORE)
     digest = sha256(body.ticket.encode("utf-8")).hexdigest()
@@ -313,7 +318,9 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
             await session.execute(
                 text("select m.nickname from member m "
                      "join device_secret d on d.principal_id = m.principal_id "
-                     "where m.circle_id = :c and d.operator order by m.id limit 1"),
+                     "join circle c on c.id = m.circle_id "
+                     "where m.circle_id = :c and d.operator and d.created_at = c.created_at "
+                     "order by m.id limit 1"),
                 {"c": circle_id},
             )
         ).scalar_one_or_none()

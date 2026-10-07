@@ -213,23 +213,6 @@ async def scenario(test_url: str) -> None:
         # screen renders it verbatim, so a wording change must be a decision, not a drift.
         PREVIEW_DEAD = ("這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。"
                         "開圈子的人可以給一條新的。")
-        dead_cases = {
-            "replaced": (circle, ticket),
-            "unknown": (circle, "nonsense"),
-            "another circle's live ticket": (circle + 1000000, fresh),
-            "a circle that does not exist": (999999999, "nonsense"),
-        }
-        answers = {}
-        for label, (c, tk) in dead_cases.items():
-            got = await client.post(f"{BASE}/circles/{c}/join/preview", json={"ticket": tk})
-            answers[label] = (got.status_code, got.content, got.headers.get("cache-control"))
-        check("every dead case answers the same status and the same bytes, so c= cannot be walked",
-              len(set(answers.values())) == 1, answers)
-        status, content, cache = next(iter(answers.values()))
-        check("that answer is 404 with frontend's sentence, verbatim, and no-store",
-              status == 404 and json.loads(content)["detail"] == PREVIEW_DEAD and cache == "no-store",
-              (status, content[:80], cache))
-
         # **Re-issue does NOT eject.** Stated in the ticket and asserted here, because a screen's
         # wording will imply whichever this file proves.
         after = await client.get(f"{BASE}/circles/{circle}/members",
@@ -261,6 +244,43 @@ async def scenario(test_url: str) -> None:
         check("the refused join wrote nothing — no seat, no principal, no secret",
               seats_now == 10 and principals == 10 and secrets_now == 10,
               f"member={seats_now} principal={principals} device_secret={secrets_now}")
+
+        # (Placed after the seat-cap section: it creates two circles, and that section counts
+        # rows across the whole database.)
+        # Two more circles, so the two cases the first version only claimed are driven (the
+        # reviewer's catch, 2026-10-08): circle A's LIVE ticket presented at a real circle B, and
+        # a ticket whose hour has run out.
+        second = (await client.post(BASE + "/circles",
+                                    json={"name": "另一圈", "nickname": "阿B"})).json()
+        third = (await client.post(BASE + "/circles",
+                                   json={"name": "過期圈", "nickname": "阿C"})).json()
+        expired_ticket = ticket_of(third["join_link"])
+        async with Session() as session:
+            await session.execute(
+                text("update join_ticket set expires_at = now() - interval '1 minute' "
+                     "where circle_id = :c and revoked_at is null"), {"c": third["circle_id"]})
+            await session.commit()
+        check("the creator is named on the second circle too (its own creating transaction)",
+              (await client.post(f"{BASE}/circles/{second['circle_id']}/join/preview",
+                                 json={"ticket": ticket_of(second["join_link"])})).json()
+              == {"circle_name": "另一圈", "creator_nickname": "阿B"})
+        dead_cases = {
+            "replaced": (circle, ticket),
+            "unknown": (circle, "nonsense"),
+            "circle A's live ticket at a real circle B": (second["circle_id"], fresh),
+            "expired": (third["circle_id"], expired_ticket),
+            "a circle that does not exist": (999999999, "nonsense"),
+        }
+        answers = {}
+        for label, (c, tk) in dead_cases.items():
+            got = await client.post(f"{BASE}/circles/{c}/join/preview", json={"ticket": tk})
+            answers[label] = (got.status_code, got.content, got.headers.get("cache-control"))
+        check("every dead case answers the same status and the same bytes, so c= cannot be walked",
+              len(set(answers.values())) == 1, answers)
+        status, content, cache = next(iter(answers.values()))
+        check("that answer is 404 with frontend's sentence, verbatim, and no-store",
+              status == 404 and json.loads(content)["detail"] == PREVIEW_DEAD and cache == "no-store",
+              (status, content[:80], cache))
 
         still = await client.get(f"{BASE}/circles/{circle}/members",
                                  headers={"Authorization": "Bearer " + creator_key})
