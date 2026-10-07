@@ -31,19 +31,19 @@ export default function Pairs({ rolls }: { rolls: Roll[] }) {
     <section className="pairs" data-part="pairs">
       <h2 className="pairsH">每個人的骰子</h2>
       <ul className="pairRows">
-        {rolls.map((r) => {
+        {rolls.map((r, i) => {
           const shown = r.die1 !== null && r.die2 !== null
           return (
             <li
               key={r.member_id}
               className="pairRow"
-              data-roll-seat={r.member_id}
+              data-roll-seat={i + 1}
               data-roll-state={shown ? 'rolled' : 'waiting'}
               data-counts={r.counts ? 'yes' : 'no'}
             >
               {/* A missing nickname renders as the seat rather than as `undefined` — the same
                   insurance the round screen carries, for the same reason. */}
-              <span className="pairName">{r.nickname || `座位 ${r.member_id}`}</span>
+              <span className="pairName">{r.nickname || `座位 ${i + 1}`}</span>
               <span className="pairDice">{shown ? `${r.die1} · ${r.die2}` : '—'}</span>
             </li>
           )

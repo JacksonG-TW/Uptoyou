@@ -1,8 +1,7 @@
 import { FACES, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
 /* §3a. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
    moved them here — one definition, so the operator's figure and the payload's cannot part
-   company. `touchedLine` stays where it is: its sentence is written for a member («比較少中»), and
-   this block is a column of figures for a reader auditing them. */
+   company. */
 import { pct, type Preferences } from '@/lib/preferences'
 
 /**

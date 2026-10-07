@@ -138,7 +138,7 @@ export default function Create() {
 
       {/* **One error region for every step, rendered where the control is.** No arrival, and it is
           never cleared by a timer: a refusal stays until the person does something else. */}
-      {error && <p className="ssErr" data-part="selfserve-error">{error}</p>}
+      {error && <p className="ssErr" data-part="selfserve-error" role="alert">{error}</p>}
     </main>
   )
 }

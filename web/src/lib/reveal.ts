@@ -7,8 +7,9 @@
  * hide, toggle or forget to hide. A single type with `weights?: …` would compile the leak.
  *
  * `for_credential` in `api_common.py` builds the member shape by whitelist — `round_id · status ·
- * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier ·
- * ingredient_data · my_reasons` — so a field added to the payload is operator-only
+ * dice · sum · winning_place_id · places · trip · winner_headline · winner_qualifier · rolls ·
+ * deciding_member · seed_commit · revealed_seed · board` (`ingredient_data` and `my_reasons` left on
+ * 2026-08-30) — so a field added to the payload is operator-only
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
@@ -39,10 +40,8 @@ export type Places = Record<string, string | null>
 /** D106: the trip is named. One per round, and the proposal it beat is still anonymous. */
 export type Trip = { nickname: string; signed_at: string } | null
 
-/** D108's seat, as it reaches the reveal. **The member payload carries `rolls[]` and the reveal
- *  does not render it** — the owner ruled 「同一對」 on 2026-08-19: every screen shows the deciding
- *  pair only. A field arriving is not a field being shown, and the static per-member list is a
- *  separate unruled feature. */
+/** D108's seat, as it reaches the reveal. `Pairs` renders the list (owner 「要」); the deciding
+ *  pair is the one marked `counts`. */
 export type Roll = {
   member_id: number
   nickname: string

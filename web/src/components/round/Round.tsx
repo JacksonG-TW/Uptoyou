@@ -582,11 +582,11 @@ export default function Round() {
         <section className="seats" data-part="roll-list">
           <h2 className="roundH">這一輪的人</h2>
           <ul className="seatRows">
-            {rolls.map((r) => (
+            {rolls.map((r, i) => (
               <li
                 key={r.member_id}
                 className="seat"
-                data-roll-seat={r.member_id}
+                data-roll-seat={i + 1}
                 data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
                 data-counts={r.counts ? 'yes' : 'no'}
               >
@@ -594,7 +594,7 @@ export default function Round() {
                     at the D55 ruling — insurance against the one bug I have already shipped on this
                     surface, where a field read from the wrong level of a payload put an empty name
                     on screen with no error anywhere. */}
-                <span className="seatName">{r.nickname || `座位 ${r.member_id}`}</span>
+                <span className="seatName">{r.nickname || `座位 ${i + 1}`}</span>
                 <span className="seatDice">
                   {r.die1 !== null && r.die2 !== null ? `${r.die1} · ${r.die2}` : '還沒翻開'}
                 </span>

@@ -27,21 +27,8 @@
  * one and **both were short a character** — 它 in the first, 掉 in the second, neither in the
  * subset. On this machine they render perfectly, because a CJK fallback face draws them; on a clean
  * device they are blank gaps. Confirmed here independently: both characters are absent from
- * `charset-sub.txt`, and every character of `KEY_NOTICE` is present.
+ * `charset-sub.txt`.
  */
-
-/**
- * §2b's one line, beside the key — **backend's words, verified drawable character by character
- * against `noto-sub-variable.woff2` itself.**
- *
- * It states **what is lost, never what to do**: the copy control says what to do by being there,
- * and D20 is that the surface may state and may not advise.
- *
- * **One constant because it appears twice** — the creator's screen (§2b) and the joiner's (§4.2),
- * which §4 requires to be identical treatment. A sentence written out twice is a tally that
- * drifts, and this repository has been bitten by that often enough to keep a test for it.
- */
-export const KEY_NOTICE = '這把鑰匙只出現這一次，我們沒有留著。離開這一頁就不見了。'
 
 /**
  * §2c — the join link's life, on the creator's screen. **Backend's words, font-checked before they

@@ -104,7 +104,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
           </form>
       </>
 
-      {error && <p className="ssErr" data-part="selfserve-error">{error}</p>}
+      {error && <p className="ssErr" data-part="selfserve-error" role="alert">{error}</p>}
     </main>
   )
 }

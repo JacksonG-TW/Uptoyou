@@ -25,8 +25,9 @@ import { fetchPreferences, type Preferences } from '@/lib/preferences'
  * member payload.** The operator state will be an addition in its own component.
  *
  * **What is deliberately absent from member state (§1a), each an assertion to test for rather than a
- * feature to omit:** no per-place share, count, percentage or fraction — in any element, attribute,
- * `title` or `aria-label`; no reason and no channel label; no count of contributors; **no operator
+ * feature to omit:** no per-place share as a percentage or fraction, in any element, attribute,
+ * `title` or `aria-label` — the ruled board, which is newer, shows each place's share only as its
+ * cells (`spec-board-2026-09-11.md`); no reason and no channel label; no count of contributors; **no operator
  * affordance of any kind — no disabled control, no mode hint, because a disabled door is a door**;
  * and no promise of a member-verifiable audit, including any paraphrase of the removed line
  * 「每一個數字都查得到出處。」
@@ -621,7 +622,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
   if (error) {
     return (
       <main className="reveal" data-screen="reveal">
-        <p className="revealErr" data-part="reveal-error">{error}</p>
+        <p className="revealErr" data-part="reveal-error" role="alert">{error}</p>
       </main>
     )
   }
@@ -737,6 +738,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
       {decider && (
         <p className="decider" data-part="deciding">以 {decider} 的骰子為準。</p>
       )}
+
+      {/* The answer, said to a screen reader once it is on screen. The box below toggles
+          `aria-hidden`, which a live region does not reliably announce, so this one line is
+          the live region and holds nothing until ③. */}
+      <p className="sr-only" aria-live="polite">{answered && winner ? winner : ''}</p>
 
       <m.div
         ref={answerBox}

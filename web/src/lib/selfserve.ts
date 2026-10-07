@@ -1,21 +1,21 @@
 import { auth, type Device } from './device'
 
 /**
- * A24 — self-serve circles. **The data layer only**; no screen is built against it yet.
+ * A24 — self-serve circles: the data layer `Create`, `Join` and `InvitePanel` are built on.
  *
  * The structure was ruled at the self-serve sitting (decision-log «Self-serve sitting ①» and
  * «② and ③», owner 「1」「1」) and the endpoint shapes are fixed in
  * `doc/issues/A24-self-serve-circles.md` (`4970884`). Presentation — layout, component shape, copy
- * tone, where the key's copy control sits — is the evaluator's axis and is not decided here.
+ * tone — is the evaluator's axis and is not decided here.
  *
  * **All three calls return a secret the server prints once and stores only the hash of.** Nothing
  * in this file logs one, returns one twice, or puts one anywhere but `localStorage` through
  * `remember`.
  */
 
-/** What `POST /circles` hands back. `key` is the creator's device secret, shown once (ruling ①:
- *  a copy control and one line of notice, **no forced block** — the forced copy-before-continue
- *  was explicitly rejected, so nothing here should grow one). */
+/** What `POST /circles` hands back. `key` is the creator's device secret: stored through
+ *  `remember` and never rendered — no member screen shows a key since the owner's 2026-09-16
+ *  ruling. */
 export type Created = {
   circleId: string
   memberId: number

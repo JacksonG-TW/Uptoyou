@@ -10,10 +10,8 @@ import { useEffect, useRef, useState } from 'react'
  * failed copy leaves it untouched and says nothing alarming — an error there would tell a person
  * their key was lost while it is in front of them.
  *
- * Used by both secrets the screen ever shows, which is why the copy behaviour lives here once
- * rather than twice: the key (§2b, inside `SecretOnce`) and the join link (§2c and §5). **They are
- * never rendered together** — that is `SS-2`, and it is enforced by the step machinery in
- * `Create`/`Join`, not by this component.
+ * Used for the join link (§2c and §5). It once served the key too, on the key screen that left
+ * with the 2026-09-16 ruling; no member screen renders a key now.
  */
 export default function CopyRow({
   label,

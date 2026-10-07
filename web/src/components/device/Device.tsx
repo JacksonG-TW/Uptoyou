@@ -47,9 +47,8 @@ export default function DeviceScreen() {
        successful paste made the person press the same act again to learn where they were being
        sent; the key check has just answered that question, so the screen answers it.
 
-       `remember` has already cleared the stamp if this key is for a different circle, so
-       `doorHref()` reads the post-paste truth: `/preferences` on a circle this device has not
-       been through, `/round` on one it has.
+       With a key stored, `doorHref()` is `/round`; the 偏好 step it once routed through is gone
+       (`spec-return-choice.md` §2).
 
        **`replace`, not `href`** — the back arrow must not return to a device screen that would
        bounce a now-keyed person straight out again (§1's closing rule, D107's back affordance). */
@@ -167,7 +166,7 @@ export default function DeviceScreen() {
           />
         </label>
 
-        {error && <p className="deviceErr" data-part="device-error">{error}</p>}
+        {error && <p className="deviceErr" data-part="device-error" role="alert">{error}</p>}
 
         <Button type="submit" data-part="device-submit" disabled={busy}>
           {busy ? '確認中…' : '確認'}

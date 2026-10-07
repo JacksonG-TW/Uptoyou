@@ -12,7 +12,7 @@ import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
  * the create flow (`Create`'s 2c, where the link is already in hand from the `201`) and as the
  * durable `/circle` route a creator can return to. Two copies of this panel would be two things to
  * keep identical, and `SS-2`'s 「the invite screen carries no key」 would have to hold twice; one
- * component holds it once. Same reasoning as `SecretOnce` for the two key screens.
+ * component holds it once.
  *
  * **Why the durable route exists — `SS-13`, and it is a defect fix rather than a new screen.** Step
  * 3 lived only in the create flow's memory: `/create` showed step 1 again and nothing else reached
@@ -23,8 +23,8 @@ import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
  * control can be found.
  *
  * **This panel never renders `device.token`.** It is handed the credential because the seat list
- * and re-issue both need it, and it is used for `Authorization` and nothing else. The key belongs
- * to `SecretOnce`, once, on a screen this one is never on.
+ * and re-issue both need it, and it is used for `Authorization` and nothing else. No member screen
+ * renders a key (owner, 2026-09-16).
  */
 
 /**
@@ -246,7 +246,7 @@ export default function InvitePanel({
         </div>
       )}
 
-      {error && <p className="ssErr" data-part="selfserve-error">{error}</p>}
+      {error && <p className="ssErr" data-part="selfserve-error" role="alert">{error}</p>}
     </>
   )
 }
