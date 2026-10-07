@@ -660,7 +660,13 @@ services:
     # ingest ~470, so 640m bites before a 1.9 GB host does, where 1024m never could. The tax
     # ingest is the one to watch under it: scheduler ~188 + one worker ~220 + its CLI ~141 RSS,
     # shared pages counted once by the cgroup — measured on the box at its walk, last of the eight.
-    mem_limit: 640m
+    # **1024m since 2026-10-07 (owner 「可以」; H102).** 640m was set to bite «before a 1.9 GB host
+    # does», and the host became a t3.medium (3,834 MB) on 09-11 without this line moving. On 09-30
+    # the tax ingest crossed it and the kernel killed the executor's worker mid-run. 1024m is 1.5x
+    # the container's 664.7 MiB peak with the tax parse (A11, above), rounded up; it still bites
+    # long before this host does. The 3.0.6 peak under the tax run is measured at the dev gate and
+    # logged; over 680 MiB (two thirds of this) moves the line again by the same rule.
+    mem_limit: 1024m
     cpus: 2.0
     networks:
       - data
