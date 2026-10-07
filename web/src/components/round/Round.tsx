@@ -123,6 +123,7 @@ export default function Round() {
    *  its name comes from the same read the reveal uses (`GET …/result`), so this line and the
    *  reveal can never name two different places. Names nobody: not who rolled, not who proposed. */
   const [lastMeal, setLastMeal] = useState<{ round: number; name: string } | null>(null)
+  const lastAsked = useRef<number | null>(null)
   const [busy, setBusy] = useState(false)
   const seq = useRef(0)
   /** The open round as the stream last said, readable inside the subscription without
@@ -180,15 +181,19 @@ export default function Round() {
       }
       if (e.type === 'snapshot') {
         const last = e.last_result?.round_id ?? null
+        // Only the newest snapshot's answer may land: two snapshots close together (a reconnect)
+        // start two reads, and the older one must not overwrite the newer (reviewer 2026-10-08).
+        lastAsked.current = last
         if (last !== null) {
           fetchReveal(dev, last)
             .then((r) => {
+              if (lastAsked.current !== last) return
               const name = r.winning_place_id !== null
                 ? (r.winner_headline ?? r.places[String(r.winning_place_id)])
                 : null
               setLastMeal(name ? { round: last, name } : null)
             })
-            .catch(() => setLastMeal(null))
+            .catch(() => { if (lastAsked.current === last) setLastMeal(null) })
         } else {
           setLastMeal(null)
         }
