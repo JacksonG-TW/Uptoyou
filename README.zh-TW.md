@@ -2,7 +2,7 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-[![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-35%2C965%20places-555555)](#資料來源與資料模型) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
+[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%3A2b%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![data](https://img.shields.io/badge/data-35%2C965%20places-555555)](#資料來源與資料模型) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
 
 **一群人一起決定一餐。選的是一對加權的骰子。**
 
@@ -162,7 +162,8 @@
 | **向量** | pgvector，在同一個資料庫裡。 |
 | **排程** | Apache Airflow 3、LocalExecutor，在同一套 compose 裡。它的中繼資料是同一個 PostgreSQL 裡的第二個資料庫。 |
 | **模型** | Ollama 跑在家裡那台機器的 8 GB 顯示卡上，由開發機分批使用；正式主機不跑模型。`gemma2:2b` 生成，`snowflake-arctic-embed2` 檢索。 |
-| **部署** | 東京一台 EC2，前面是 Full (strict) 模式的 Cloudflare。它從公開 registry 拉 image，自己不 build。 |
+| **部署** | 東京一台 EC2，前面是 Full (strict) 模式的 Cloudflare。交付是拉取式的：機器從公開 registry 拉已發佈的 image，自己不 build，也沒有任何東西推進去。 |
+| **檢查** | 每個公開 commit 都跑 GitHub Actions：不需要資料庫的測試、web 的 build（含型別檢查）和 lint，以及用全新 clone 的角度讀一次 compose 檔。唯讀，不用任何 secret。 |
 
 ## 資料來源與資料模型
 

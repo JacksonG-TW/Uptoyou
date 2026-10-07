@@ -1,0 +1,86 @@
+# Checks that run beside every public commit. They use only what this repository contains:
+# no secrets, no network services, read-only access to the code.
+#
+# The tests that need a database run in the stack's own `tests` container (see the README's
+# Quick start); this workflow runs the ones that need nothing but Python, plus the web build
+# and a check that the compose file is valid for a fresh clone.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-tests:
+    name: Python tests (standard library only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      # Nothing is installed on purpose: these tests assert that the code they cover imports no
+      # third-party package, so installing the API's requirements would make one of them fail.
+      - name: Run every test that needs no database
+        env:
+          PYTHONPATH: api/src
+        run: |
+          set -u
+          failed=0
+          ran=0
+          for t in api/tests/test_*.py; do
+            case "$t" in
+              *_integration.py|*/test_ingest_idempotency.py|*/test_ingest_replay.py|*/test_role_grants.py)
+                continue ;;
+            esac
+            ran=$((ran + 1))
+            if python "$t" > /tmp/out.txt 2>&1; then
+              echo "ok    $t"
+            else
+              echo "FAIL  $t"
+              tail -n 30 /tmp/out.txt
+              failed=$((failed + 1))
+            fi
+          done
+          echo "$ran test files, $failed failed"
+          [ "$ran" -gt 0 ] && [ "$failed" -eq 0 ]
+
+  web:
+    name: Web build and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - run: npm ci --no-audit --no-fund
+      - name: Type check and build
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+
+  compose:
+    name: Compose file is valid for a fresh clone
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate with only the example environment
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+          docker compose --profile test --profile bootstrap config --services
