@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchMembers, readInviteRole, reissueJoinLink, type InviteRole, type Members } from '@/lib/selfserve'
-import type { Device } from '@/lib/round'
+import type { Device } from '@/lib/device'
 import CopyRow from './CopyRow'
 import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
 

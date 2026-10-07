@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { createCircle, type Created } from '@/lib/selfserve'
-import { remember } from '@/lib/round'
+import { remember } from '@/lib/device'
 import InvitePanel from './InvitePanel'
 import { NO_ACCOUNT } from './copy'
 

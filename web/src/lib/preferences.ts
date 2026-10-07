@@ -11,6 +11,8 @@
  * file because there is none in the product (§3 D).
  */
 
+import { auth, type Device } from './device'
+
 /* **The budget's two bands went with the 偏好 screen** (`spec-return-choice.md`, 2026-08-30):
    nothing sets a budget any more and the API refuses the kind. The wire's words were
    `tight`/`easy` and appeared on no screen; the labels were 省一點／鬆一點. */
@@ -132,20 +134,6 @@ export type Preferences = {
   /* **`ingredient_coverage`, `budget` and `avoid_ingredients[]` left the payload** with the kinds
      they described (`spec-return-choice.md` §1). Stored rows stay in the database — D24's pins
      reference them and the nightly erasure runs unchanged — they are simply never returned. */
-}
-
-/** The device's own credential, D74's operator-issued secret pasted on the device screen. Both
- *  halves or neither — a token with no circle addresses no endpoint. */
-export type Device = { token: string; circle: string }
-
-export function device(): Device | null {
-  const token = localStorage.getItem('upto_token')
-  const circle = localStorage.getItem('upto_circle')
-  return token && circle ? { token, circle } : null
-}
-
-function auth(d: Device): HeadersInit {
-  return { authorization: `Bearer ${d.token}` }
 }
 
 /**

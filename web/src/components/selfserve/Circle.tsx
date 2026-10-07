@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import InvitePanel from './InvitePanel'
-import type { Device } from '@/lib/round'
+import type { Device } from '@/lib/device'
 
 /**
  * `/circle` — the durable home of the package's step 3, for a member who holds a key.

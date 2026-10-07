@@ -6,9 +6,10 @@ import Field from './Field'
 import Pairs from './Pairs'
 import { arrive, m, useReducedMotion } from '@/lib/motion'
 import {
-  device, evidenceIn, faceOf, fetchRaw, signTrip,
-  type Device, type Evidence as EvidenceData, type MemberReveal, type Trip,
+  evidenceIn, faceOf, fetchRaw, RoundStillOpen, signTrip,
+  type Evidence as EvidenceData, type MemberReveal, type Trip,
 } from '@/lib/reveal'
+import { device, type Device } from '@/lib/device'
 /* §3a only. The operator's counts come from the same endpoint the member's 這一餐 used to render
    them from, so there is one definition of each figure and no second arithmetic. */
 import { fetchPreferences, type Preferences } from '@/lib/preferences'
@@ -402,7 +403,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
         // added later can outgrow it.
         else beat()
       })
-      .catch((e: Error) => { if (live) setError(e.message || '讀取失敗') })
+      .catch((e: Error) => {
+        if (!live) return
+        // Nothing to reveal yet: the round is still open, so the person belongs on 這一餐, where
+        // the stream will bring them back here when it closes.
+        if (e instanceof RoundStillOpen) { window.location.replace('/round'); return }
+        setError(e.message || '讀取失敗')
+      })
     return () => { live = false; window.clearTimeout(timer.current) }
   }, [dev, roundId])
 

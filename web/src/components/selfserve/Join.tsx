@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { joinCircle } from '@/lib/selfserve'
-import { remember } from '@/lib/round'
+import { remember } from '@/lib/device'
 
 /**
  * §4 — joining by the shared link, `/join#c=<circle_id>&t=<ticket>`.
  *
  * **The circle id and the ticket arrive as props, already read and already erased from the address
- * bar.** `readJoinFragment()` runs once in `main.tsx`'s `route()`, at module scope — the same place
+ * bar.** `readFragmentSecret('t')` runs once in `main.tsx`'s `route()`, at module scope — the same place
  * and for the same reason the home's fall-through `replaceState` lives there rather than in an
  * effect. So this component never touches `window.location`, and there is no render in which the
  * ticket is still in the URL (`SS-9`).

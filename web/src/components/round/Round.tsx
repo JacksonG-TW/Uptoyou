@@ -1,8 +1,9 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import {
-  device, openRound, propose, roll, searchPlaces, materialise, subscribe,
-  type Candidate, type Device, type OpenRound, type Pooled, type Roll,
+  openRound, propose, roll, searchPlaces, materialise, subscribe,
+  type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
+import { device, type Device } from '@/lib/device'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { arrive } from '@/lib/motion'
@@ -105,8 +106,14 @@ export default function Round() {
    *  success path, met on the third path. */
   const [failed, setFailed] = useState<string | null>(null)
   const [error, setError] = useState('')
+  /** The stream's own state, apart from `error`: a reconnect clears this line and must not clear
+   *  a refused proposal's sentence that happens to be showing beside it. */
+  const [streamDown, setStreamDown] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const seq = useRef(0)
+  /** The open round as the stream last said, readable inside the subscription without
+   *  re-subscribing on every change. */
+  const openId = useRef<number | null>(null)
 
   /** **「這次不吃」's state is the server's, read once on mount** (`spec-preference-split.md` §2).
    *  `null` until the GET answers, which is why the row renders its chips off rather than not at
@@ -145,6 +152,7 @@ export default function Round() {
       // One reader for both, because a snapshot and a `round_opened` carry the same object and
       // reading them in two places is how the two come to disagree after an edit to one.
       const take = (r: OpenRound | null | undefined) => {
+        openId.current = r?.round_id ?? null
         setRoundId(r?.round_id ?? null)
         setPool(r?.pool ?? [])
         setRolls(r?.rolls ?? [])
@@ -157,6 +165,13 @@ export default function Round() {
         setRollError(null)
       }
       if (e.type === 'snapshot') {
+        // **A reconnect can land after the round it was watching has closed** — the `closed` event
+        // went out while this device was not listening. The snapshot then has no open round and
+        // the result's id is the one we were in, so we go where `closed` would have sent us.
+        if (!e.open_round && openId.current !== null && e.last_result?.round_id === openId.current) {
+          window.location.href = `/reveal?round=${openId.current}`
+          return
+        }
         take(e.open_round)
       } else if (e.type === 'round_opened') {
         take(e.round)
@@ -183,7 +198,7 @@ export default function Round() {
       } else if (e.type === 'closed') {
         window.location.href = `/reveal?round=${e.result.round_id}`
       }
-    }, setError)
+    }, setStreamDown)
   }, [dev])
 
   // The typeahead. Every keystroke carries a sequence number and a late response for an older
@@ -386,9 +401,12 @@ export default function Round() {
           line for the roller (§2), and the API's own sentence whenever the event did not arrive,
           so a refusal is never silent. Every other error is untouched. */}
       {(error || (rollError && rollError.round !== swept ? rollError.message : null)) && (
-        <p className="roundErr" data-part="round-error">
+        <p className="roundErr" data-part="round-error" role="alert">
           {error || rollError?.message}
         </p>
+      )}
+      {streamDown && (
+        <p className="roundErr" data-part="stream-error" role="status">{streamDown}</p>
       )}
 
       {/* **A zero result says so; silence is only allowed while the question is still open.**

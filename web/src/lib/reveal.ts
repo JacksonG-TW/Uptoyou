@@ -12,6 +12,8 @@
  * until someone names it there. These types mirror that whitelist and nothing else.
  */
 
+import { auth, type Device } from './device'
+
 /** `place_id` → the name the API composed (D92's three layers). Keys are strings on the wire. */
 /**
  * The pool's composed names, keyed by place id **as a string** (the cells in `board` are ints —
@@ -173,37 +175,32 @@ export function faceOf(places: Places, placeId: number | null): Face | null {
   return seat < 0 ? null : FACES[seat % FACES.length]
 }
 
-export type Device = { token: string; circle: string }
-
-export function device(): Device | null {
-  const token = localStorage.getItem('upto_token')
-  const circle = localStorage.getItem('upto_circle')
-  return token && circle ? { token, circle } : null
-}
+/** The round asked about is still open: there is no result to show yet. */
+export class RoundStillOpen extends Error {}
 
 /**
- * Roll, or re-read a round already rolled.
- *
- * **D69: rolling a closed round answers 200 with the stored result**, so this one call is both
- * "roll it" and "show me what it landed on" — the retry gets what it lost. That is why the reveal
- * needs no second endpoint to read a result, and why a reload after the roll is not a special case.
+ * Read a round's result — **a read that cannot roll** (`GET /rounds/{id}/result`, backend
+ * 1309025). This used to be `POST …/roll`, which D69 makes a safe re-read on a closed round and
+ * the roll itself on an open one, so opening `/reveal?round=<open>` closed the round for the whole
+ * circle (reviewer baseline 2026-10-07, finding 4). An open round now answers 409 and writes
+ * nothing; that arrives here as `RoundStillOpen`.
  */
 export async function fetchReveal(d: Device, roundId: number): Promise<MemberReveal> {
   return (await fetchRaw(d, roundId)) as MemberReveal
 }
 
 /** The response untouched. The reveal needs both halves of it — the member fields it renders and,
- *  for an operator credential, the accounting that arrived alongside them — and asking twice would
- *  mean two rolls' worth of requests for one screen. */
+ *  for an operator credential, the accounting the server chose to send with them — so it is asked
+ *  for once. */
 export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
-  const r = await fetch(`/api/rounds/${roundId}/roll`, {
-    method: 'POST',
-    headers: { authorization: `Bearer ${d.token}` },
+  const r = await fetch(`/api/rounds/${roundId}/result`, {
+    headers: auth(d),
     cache: 'no-store',
   })
   if (!r.ok) {
     const body = await r.json().catch(() => ({}))
-    throw new Error(body.detail || `讀取失敗（${r.status}）`)
+    const message = body.detail || `讀取失敗（${r.status}）`
+    throw r.status === 409 ? new RoundStillOpen(message) : new Error(message)
   }
   return r.json()
 }
@@ -249,7 +246,7 @@ export async function signTrip(
 ): Promise<{ trip: Trip; created: boolean }> {
   const r = await fetch(`/api/rounds/${roundId}/trip`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${d.token}` },
+    headers: auth(d),
   })
   if (r.status === 201 || r.status === 200) {
     const body = await r.json().catch(() => ({}))

@@ -7,8 +7,7 @@ import Reveal from './components/reveal/Reveal.tsx'
 import Circle from './components/selfserve/Circle.tsx'
 import Create from './components/selfserve/Create.tsx'
 import Join from './components/selfserve/Join.tsx'
-import { readJoinFragment } from './lib/selfserve.ts'
-import { device } from './lib/round.ts'
+import { device, readFragmentSecret } from './lib/device.ts'
 import { NavBar } from './components/Switcher.tsx' // demo scaffolding — see the component
 import DeviceScreen from './components/device/Device.tsx'
 import Round from './components/round/Round.tsx'
@@ -97,12 +96,12 @@ function route() {
    * **A `/join` with no usable fragment falls through to the home, exactly as `/reveal?round=abc`
    * does.** A tapped link that lost its fragment, a bookmark of `/join`, a hand-typed path: none of
    * them is an error worth a screen, and `home()` already rewrites the bar so the address stops
-   * describing a screen nobody is on. `readJoinFragment` has dropped the fragment either way, so a
+   * describing a screen nobody is on. `readFragmentSecret` has dropped the fragment either way, so a
    * half-parsed link cannot leave half a secret sitting in the bar for a screenshot.
    */
   if (path === '/join') {
-    const invited = readJoinFragment()
-    return invited ? <Join circle={invited.circle} ticket={invited.ticket} /> : home()
+    const invited = readFragmentSecret('t')
+    return invited ? <Join circle={invited.circle} ticket={invited.secret} /> : home()
   }
   if (path === '/round') return <Round />
   if (path === '/reveal') {

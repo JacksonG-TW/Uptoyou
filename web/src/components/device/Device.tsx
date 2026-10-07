@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { device, doorHref, remember, verify, type Device } from '@/lib/round'
+import { doorHref, verify } from '@/lib/round'
+import { device, readFragmentSecret, remember, type Device } from '@/lib/device'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { arrive } from '@/lib/motion'
@@ -97,34 +98,13 @@ export default function DeviceScreen() {
    * identically whichever way the person arrived.
    */
   useEffect(() => {
-    let invited: Device | null = null
-    try {
-      /* `URLSearchParams` on the hash minus its `#`, never a hand-rolled split: the fragment
-         carries an operator-issued token, and percent-encoding, empty values and repeated keys are
-         exactly the cases a hand-rolled parser gets wrong on the one input that matters. */
-      const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-      const c = (fragment.get('c') ?? '').trim()
-      const k = (fragment.get('k') ?? '').trim()
-      if (c && k) invited = { token: k, circle: c }
-    } catch {
-      /* A hostile or undecodable fragment must not take the screen down — a blank screen is the
-         one outcome A20 names as unacceptable. There is nothing to recover and nothing worth
-         telling the person: they get the form, which is where this visit was heading anyway. */
-      invited = null
-    }
-    if (!invited) return
-
-    /* Path and query kept exactly as they are; only the fragment goes. `replaceState`, not
-       `pushState`: the link's own entry is the one that has to be overwritten, because a back
-       arrow that could walk onto a URL still carrying the key would put the secret back in the
-       address bar after we had taken it out. */
-    window.history.replaceState(null, '', window.location.pathname + window.location.search)
-
-    /* Held in a `const` because the narrowing above does not survive into the closure, and because
-       nothing from here on may read the fragment again — it is gone. The pair never reaches state,
-       so the key is not rendered back into the password field and cannot appear in a screen share
-       for the same reason the field is `type="password"`. */
-    const d = invited
+    /* The one reader (`lib/device.ts`): parses with `URLSearchParams`, drops the fragment with
+       `replaceState` — whenever there is one, half a link included — and answers `null` for
+       anything that is not both halves, so this visit gets the form it was heading to anyway.
+       The pair never reaches state, so the key is not rendered back into the password field. */
+    const got = readFragmentSecret('k')
+    if (!got) return
+    const d: Device = { token: got.secret, circle: got.circle }
     setBusy(true)
     setError('')
     void (async () => {

@@ -8,24 +8,7 @@
  * the one place that is not written down.
  */
 
-export type Device = { token: string; circle: string }
-
-export function device(): Device | null {
-  const token = localStorage.getItem('upto_token')
-  const circle = localStorage.getItem('upto_circle')
-  return token && circle ? { token, circle } : null
-}
-
-export function remember(d: Device): void {
-  /* **The stamp this used to clear is gone with the screen it guarded** (`spec-return-choice.md`
-     §2, 2026-08-30). `upto_pref_seen` answered *has this device been through 偏好 for this circle*
-     and had to be cleared before the new circle was written, or a stale stamp read as valid for a
-     tick and routed a person past a screen they had never seen. There is no middle screen to route
-     past any more, so there is nothing to clear and nothing to order. The key left behind in an
-     existing browser is inert. */
-  localStorage.setItem('upto_token', d.token)
-  localStorage.setItem('upto_circle', d.circle)
-}
+import { auth, device, type Device } from './device'
 
 /** Where the door leads, from one local fact. No request, so it is safe to call during render —
  *  the home's act uses it for an `href`, which is what makes middle-click and the status bar tell
@@ -36,10 +19,6 @@ export function remember(d: Device): void {
  *  table this replaced is `spec-conditional-routing.md`'s and is retired with the screen. */
 export function doorHref(): string {
   return device() ? '/round' : '/device'
-}
-
-function auth(d: Device): HeadersInit {
-  return { authorization: `Bearer ${d.token}` }
 }
 
 /**
@@ -223,24 +202,38 @@ export type OpenRound = {
  * endpoint beside it, so a screen that connects is a screen that already knows the state, and a
  * reconnect resyncs by the same code path rather than by a second one that can drift.
  *
+ * **It reconnects, and a clean close counts as a drop** (reviewer baseline 2026-10-07, finding 3).
+ * A server that ends the response — a deploy, a graceful restart — returns `done` with no error;
+ * treating that as the end left a screen showing the last state as if it were live. Every drop
+ * not caused by `abort` calls `onStatus` with a sentence, waits (1 s, doubling, capped at 30 s) and
+ * connects again; the next snapshot calls `onStatus(null)` and replaces the screen's state whole.
+ * **401, 403 and 404 do not retry** — the key or the circle is wrong, and asking again every
+ * thirty seconds would only repeat the refusal.
+ *
  * Returns an abort function. The reader is deliberately tolerant of a partial frame: SSE arrives
  * as bytes and a `data:` line can be split across chunks, so the buffer is drained on blank lines
  * rather than per chunk — the bug that shape hides is a JSON parse error under load and never in
- * a demo.
+ * a demo. **The parse and the handler are caught apart**: an exception thrown by the screen's own
+ * handler is a bug to surface, not a malformed frame to drop (finding 5).
  */
 export function subscribe(
   d: Device,
   onEvent: (e: StreamEvent) => void,
-  onError?: (m: string) => void,
+  onStatus?: (m: string | null) => void,
 ): () => void {
   const ac = new AbortController()
-  void (async () => {
+  let wait: ReturnType<typeof setTimeout> | undefined
+  const connect = async (delay: number): Promise<void> => {
     try {
       const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/stream`, {
         headers: auth(d),
         signal: ac.signal,
       })
-      if (!r.ok || !r.body) throw new Error(`連不上即時更新（${r.status}）`)
+      if (r.status === 401 || r.status === 403 || r.status === 404) {
+        onStatus?.(`連不上即時更新（${r.status}）`)
+        return
+      }
+      if (!r.ok || !r.body) throw new Error()
       const reader = r.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
@@ -254,18 +247,38 @@ export function subscribe(
           buffer = buffer.slice(cut + 2)
           for (const line of frame.split('\n')) {
             if (!line.startsWith('data:')) continue
+            let e: StreamEvent
             try {
-              onEvent(JSON.parse(line.slice(5).trim()))
+              e = JSON.parse(line.slice(5).trim())
             } catch {
               // A frame we cannot parse is dropped rather than taking the stream down: the next
               // event resyncs, and D56's snapshot means a reconnect is always authoritative.
+              continue
+            }
+            if (e.type === 'snapshot') {
+              delay = 1000
+              onStatus?.(null)
+            }
+            try {
+              onEvent(e)
+            } catch (err) {
+              // Rethrown outside the reader, so it reaches the console and the walkthrough's error
+              // capture as the bug it is, and the stream keeps reading.
+              setTimeout(() => { throw err })
             }
           }
         }
       }
-    } catch (e) {
-      if (!ac.signal.aborted) onError?.((e as Error).message || '即時更新斷了')
+    } catch {
+      // A network failure and a non-2xx answer land here alike; both are retried below.
     }
-  })()
-  return () => ac.abort()
+    if (ac.signal.aborted) return
+    onStatus?.('即時更新斷了，正在重新連線')
+    wait = setTimeout(() => void connect(Math.min(delay * 2, 30_000)), delay)
+  }
+  void connect(1000)
+  return () => {
+    ac.abort()
+    clearTimeout(wait)
+  }
 }

@@ -7,7 +7,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import { device, doorHref } from './lib/round'
+import { doorHref } from './lib/round'
+import { device } from './lib/device'
 import { arrive } from './lib/motion'
 import Switcher from './components/Switcher'   // demo scaffolding — the masthead's nav
 import { dateline } from './lib/dateline'

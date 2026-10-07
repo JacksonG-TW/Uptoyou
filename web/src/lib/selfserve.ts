@@ -1,4 +1,4 @@
-import type { Device } from './round'
+import { auth, type Device } from './device'
 
 /**
  * A24 — self-serve circles. **The data layer only**; no screen is built against it yet.
@@ -118,7 +118,7 @@ export async function joinCircle(
 export async function reissueJoinLink(d: Device): Promise<string> {
   const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
     method: 'POST',
-    headers: { authorization: `Bearer ${d.token}` },
+    headers: auth(d),
   })
   if (r.status !== 201) throw await refusal(r, '換不了連結')
   const body = await r.json()
@@ -156,7 +156,7 @@ export async function readInviteRole(d: Device): Promise<InviteRole> {
   let r: Response
   try {
     r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
-      headers: { authorization: `Bearer ${d.token}` },
+      headers: auth(d),
       cache: 'no-store',
     })
   } catch {
@@ -203,57 +203,10 @@ export type Members = { members: { nickname: string }[]; seats: number; cap: num
 
 export async function fetchMembers(d: Device): Promise<Members> {
   const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members`, {
-    headers: { authorization: `Bearer ${d.token}` },
+    headers: auth(d),
     cache: 'no-store',
   })
   if (!r.ok) throw await refusal(r, '看不到座位')
   const body = await r.json()
   return { members: body.members ?? [], seats: body.seats, cap: body.cap }
-}
-
-/**
- * The join link's fragment — `<origin>/join#c=<circle_id>&t=<ticket>` — read once and **dropped
- * from the address bar before anything else happens.**
- *
- * **A20, and the fragment is the entire reason the ticket can travel in a URL at all**: a fragment
- * reaches no proxy log, no `Referer` and not this API, which is what keeps «printed once, stored
- * nowhere» true. Moving `t` to the query would undo that silently and everything else would keep
- * working.
- *
- * Three things copied deliberately from `Device.tsx`'s invite reader, because each is a case a
- * simpler version gets wrong on the one input that matters:
- *
- * 1. **`URLSearchParams` on the hash minus its `#`, never a hand-rolled split** — percent-encoding,
- *    empty values and repeated keys are exactly what a split gets wrong.
- * 2. **The fragment is dropped with `replaceState`, not `pushState`.** The link's own history entry
- *    is the one that has to be overwritten: a back arrow onto a URL still carrying the ticket would
- *    put the secret back in the address bar after it had been taken out. Path and query are kept
- *    exactly as they are; only the fragment goes.
- * 3. **A fragment that is not both `c` and `t` is an ordinary visit, not an error**, and a hostile
- *    or undecodable one must not take the screen down — a blank screen is the one outcome A20 names
- *    as unacceptable. Both return `null` and the caller shows whatever an uninvited visit shows.
- *
- * **The drop happens even when only one half parsed**, so a malformed link cannot leave half a
- * secret sitting in the address bar for a screenshot to catch.
- *
- * `Device.tsx` carries its own copy of this for `#c=&k=`. They are not shared yet: consolidating
- * them means editing a live, gated screen, which is not this commit's scope — but a second
- * hand-rolled drop is exactly where somebody eventually forgets the `replaceState`, so it is
- * flagged rather than left to be discovered.
- */
-export function readJoinFragment(): { circle: string; ticket: string } | null {
-  let circle = ''
-  let ticket = ''
-  try {
-    const fragment = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-    circle = (fragment.get('c') ?? '').trim()
-    ticket = (fragment.get('t') ?? '').trim()
-  } catch {
-    circle = ''
-    ticket = ''
-  }
-  if (window.location.hash) {
-    window.history.replaceState(null, '', window.location.pathname + window.location.search)
-  }
-  return circle && ticket ? { circle, ticket } : null
 }
