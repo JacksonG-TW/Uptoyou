@@ -97,4 +97,4 @@ export const NO_SEAT = '這台裝置還沒有圈子。圈子可以自己開，�
  * `member` row) and a fresh link from that circle seats this device again, as a new member.
  */
 export const REPLACE_NOTICE =
-  '這台裝置已經在一個圈子裡。繼續的話，它會換到這個新圈子，原本的座位留在原圈子，這台裝置不會再用到它。'
+  '這台裝置已經在一個圈子裡。繼續的話，它會換到這個新圈子，原本的座位留在原圈子。要再回去，那個圈子的人要給一條新的邀請連結，回去會是新的座位。'
