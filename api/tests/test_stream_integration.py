@@ -214,6 +214,17 @@ async def scenario(test_url: str, base_url: str) -> None:
                     mid = json.loads(line[6:])
                     break
         assert mid["open_round"]["round_id"] == round_id
+        # **D108 from the first frame** (frontend's defect, 2026-10-07): `round_opened` carries
+        # the same seats and decider the snapshot would, so a member watching when the round opens
+        # does not need a reload to see who decides. Compared against the mid-round snapshot,
+        # because nobody has tapped yet and the two must be identical.
+        opened_event = next(e for e in events if e.get("type") == "round_opened")
+        assert opened_event["round"]["rolls"], "round_opened carried no seats (D108)"
+        assert opened_event["round"]["rolls"] == mid["open_round"]["rolls"], (
+            opened_event["round"]["rolls"], mid["open_round"]["rolls"])
+        assert opened_event["round"]["deciding_member"] == mid["open_round"]["deciding_member"]
+        assert opened_event["round"]["deciding_member"] is not None
+        assert opened_event["round"]["revealed_seed"] is None
         assert {p["name"] for p in mid["open_round"]["pool"]} == {"雨中的店", "巷口麵店"}
 
         rolled = await client.post(f"/rounds/{round_id}/roll", headers=auth)

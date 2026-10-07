@@ -34,10 +34,12 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from .api_common import (
     closed_body,
+    deciding_member_for,
     for_credential,
     place_names,
     resolve_credential,
     resolve_member,
+    seats_for,
     trip_for,
 )
 from .db import session_factory
@@ -88,7 +90,8 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
                         "values (:c, coalesce(:h, date_trunc('hour', now())), :typed, :seed, :commit, "
                         "        (select array_agg(id order by id) from member "
                         "          where circle_id = :c)) "
-                        "returning id, target_hour, target_hour_typed, opened_at, seed_commit"
+                        "returning id, target_hour, target_hour_typed, opened_at, seed_commit, "
+                        "          seat_ids"
                     ),
                     {"c": circle_id, "h": body.target_hour, "typed": typed,
                      "seed": seed, "commit": draw.commitment(seed)},
@@ -101,6 +104,13 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
             # commits**, measured, so the mechanism now carries what the ordering used to — and it
             # closes the gap the ordering could not: a crash between the commit and the publish
             # used to lose the event silently.
+            # **D108 from the first frame, not from the first reload** (frontend's defect,
+            # 2026-10-07). This event carried `rolls: []` and no decider, so a member already on
+            # 這一餐 when the round opened saw no seat list and no decider until a reconnect fetched
+            # the snapshot. The seats come from `seats_for`, the function the snapshot and the
+            # reveal use, so the three cannot drift; at open nobody has tapped, so every pair is
+            # empty and only `counts` (the decider) is set.
+            seats = await seats_for(session, row.id, row.seat_ids, seed, closed=False)
             await publish(
                 session,
                 circle_id,
@@ -116,7 +126,10 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
                         # holding the seed early can compute the winner and then choose whether to
                         # tap, which is the preference D91 forbids.
                         "seed_commit": row.seed_commit,
-                        "rolls": [],
+                        "rolls": seats,
+                        "deciding_member": deciding_member_for(seats),
+                        # Present and null, as in the snapshot: never the seed on an open round.
+                        "revealed_seed": None,
                     },
                 },
             )
