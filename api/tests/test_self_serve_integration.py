@@ -187,6 +187,46 @@ async def scenario(test_url: str) -> None:
         check("a ticket nobody issued answers 404, which is a different sentence",
               unknown.status_code == 404 and unknown.text != dead.text)
 
+        # ---- the join preview (UX items 1 and 2, 2026-10-07, frontend's terms) -----------------
+        async def counts():
+            got = []
+            async with Session() as session:
+                for q in ("select count(*) from member", "select count(*) from join_ticket",
+                          "select count(*) from device_secret", "select count(*) from principal",
+                          "select count(*) from circle"):
+                    got.append((await session.execute(text(q))).scalar_one())
+            return tuple(got)
+        before = await counts()
+        live = None
+        for _ in range(5):
+            live = await client.post(f"{BASE}/circles/{circle}/join/preview",
+                                     json={"ticket": fresh})
+        check("a live ticket's preview answers 200", live.status_code == 200,
+              f"got {live.status_code}: {live.text[:120]}")
+        check("and carries the circle's name and the creator's nickname, nothing else",
+              live.json() == {"circle_name": "週三午餐", "creator_nickname": "小美"}, live.text)
+        check("the preview is never cached", live.headers.get("cache-control") == "no-store",
+              live.headers.get("cache-control"))
+        check("five previews write nothing — every count unchanged", await counts() == before,
+              f"{before} → {await counts()}")
+        from upto.circles import PREVIEW_DEAD  # noqa: PLC0415
+        dead_cases = {
+            "replaced": (circle, ticket),
+            "unknown": (circle, "nonsense"),
+            "another circle's live ticket": (circle + 1000000, fresh),
+            "a circle that does not exist": (999999999, "nonsense"),
+        }
+        answers = {}
+        for label, (c, tk) in dead_cases.items():
+            got = await client.post(f"{BASE}/circles/{c}/join/preview", json={"ticket": tk})
+            answers[label] = (got.status_code, got.content, got.headers.get("cache-control"))
+        check("every dead case answers the same status and the same bytes, so c= cannot be walked",
+              len(set(answers.values())) == 1, answers)
+        status, content, cache = next(iter(answers.values()))
+        check("that answer is 404 with frontend's sentence, verbatim, and no-store",
+              status == 404 and json.loads(content)["detail"] == PREVIEW_DEAD and cache == "no-store",
+              (status, content[:80], cache))
+
         # **Re-issue does NOT eject.** Stated in the ticket and asserted here, because a screen's
         # wording will imply whichever this file proves.
         after = await client.get(f"{BASE}/circles/{circle}/members",

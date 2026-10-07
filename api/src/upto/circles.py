@@ -28,7 +28,7 @@ from hashlib import sha256
 
 import secrets
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
@@ -255,6 +255,63 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
         await session.commit()
 
     return {"member_id": member_id, "key": key}
+
+
+#: **One sentence for every dead case, on purpose** (frontend's terms, 2026-10-07). Unlike join's
+#: 410/404 split, a preview of a replaced ticket, an expired one, an unknown one and a circle that
+#: does not exist answers the same status and the same bytes, so `c=` cannot be walked to learn
+#: which circles exist. The sentence is frontend's, rendered verbatim, and it states rather than
+#: advises (D20).
+PREVIEW_DEAD = "這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。開圈子的人可以給一條新的。"
+NO_STORE = {"Cache-Control": "no-store"}
+
+
+@router.post("/{circle_id}/join/preview")
+async def preview_join(circle_id: int, body: TicketCheck, response: Response) -> dict:
+    """What the join page may say before the person joins: the circle's name and its creator.
+
+    *UX items 1 and 2, 2026-10-07 — my proposal narrowed to frontend's terms, which only remove.*
+    **No credential and no write.** It reads the ticket's row, the circle's name and one nickname;
+    nothing is inserted or updated, so opening the page N times leaves every count where it was —
+    the integration test asserts that. A ticket is multi-use until its hour or the cap, so a preview
+    consumes nothing either way.
+
+    **What it leaks, and to whom.** Only to a holder of a LIVE ticket, and only a subset of what that
+    ticket already buys: a holder can join and then read every nickname (`GET /members`). The
+    preview gives the name and one nickname — no seat count, no list, no id.
+
+    **The ticket rides in the body and the answer is `no-store`**, the same exposure argument as
+    `/join-ticket/check` above: the proxy's access log writes the visitor's address beside the
+    request line, so a seat-granting secret may not travel in a path or a query, and a cached
+    answer would outlive the hour the ticket has.
+
+    **«Creator» is honestly the creator, not the sender.** A ticket belongs to a circle, not to the
+    person who forwarded it, so the server never knows who sent the link. The creator is the
+    circle's first seat holding the invite power (0047's `operator`); `None` when that seat is gone.
+    """
+    response.headers.update(NO_STORE)
+    digest = sha256(body.ticket.encode("utf-8")).hexdigest()
+    async with session_factory()() as session:
+        row = (
+            await session.execute(
+                text("select t.circle_id, c.name from join_ticket t "
+                     "join circle c on c.id = t.circle_id "
+                     "where t.token_sha256 = :h and t.revoked_at is null "
+                     "and (t.expires_at is null or t.expires_at > now())"),
+                {"h": digest},
+            )
+        ).one_or_none()
+        if row is None or row.circle_id != circle_id:
+            raise HTTPException(status_code=404, detail=PREVIEW_DEAD, headers=NO_STORE)
+        creator = (
+            await session.execute(
+                text("select m.nickname from member m "
+                     "join device_secret d on d.principal_id = m.principal_id "
+                     "where m.circle_id = :c and d.operator order by m.id limit 1"),
+                {"c": circle_id},
+            )
+        ).scalar_one_or_none()
+    return {"circle_name": row.name, "creator_nickname": creator}
 
 
 @router.post("/{circle_id}/join-ticket", status_code=201)
