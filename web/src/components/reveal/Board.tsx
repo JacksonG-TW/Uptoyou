@@ -1,13 +1,20 @@
-import { faceOf, type Places } from '@/lib/reveal'
+import { faceOf, markOf, type Places } from '@/lib/reveal'
+import { PIPS, RED } from './Die'
 
 /**
  * The member's 36-cell board — `spec-board-2026-09-11.md`, the owner's three 「1」 of 2026-09-11.
  *
- * **What it is:** a 6×6 grid, one cell per outcome, each cell in its place's face colour, with a
- * legend of colour → shop name beneath and one authored line stating the mechanism. Row = die one,
- * column = die two, both 1…6 from the top left. A member reads their own two dice off the screen,
- * finds the row and the column, and the colour there is the shop. **That sentence is the whole
- * reason this exists; anything that makes it false makes the picture decorative.**
+ * **What it is:** a 6×6 grid, one cell per outcome, each cell in its place's face colour **and
+ * carrying its place's number**, with a legend of number → shop name beneath and one authored line
+ * stating the mechanism. Row = die one, column = die two, both 1…6 from the top left, and the axes
+ * are drawn as pip faces. A member reads their own two dice off the screen, finds the row and the
+ * column, and the number there is the shop. **That sentence is the whole reason this exists;
+ * anything that makes it false makes the picture decorative.**
+ *
+ * **Why a number and not colour alone** (§8, 2026-10-07): four faces cycle, so from the fifth
+ * place two shops share a colour and colour stops naming anything. The number is the identity;
+ * colour is a second cue. **Digits do one job here** — the place mark — which is why the axes are
+ * pips: a 「3」 on the board is never a die value.
  *
  * **Every cell on screen is a cell the server decided.** The payload is the drawn board, not
  * `{place_id: count}` — with counts the client would lay the cells out itself and the drawing would
@@ -19,14 +26,28 @@ import { faceOf, type Places } from '@/lib/reveal'
  * anything to this file. The cells stay countable by eye, and ruling 1 bought that *after the round
  * closes*; it is not licence to write the number down.
  *
- * **The grid is `aria-hidden` and the legend is not.** Thirty-six coloured cells announced one by
- * one is noise, and the two things a reader needs — the mechanism and which colour is which shop —
- * are the note and the legend, both real text. Same division `ALLOC36` already makes one component
+ * **The grid is `aria-hidden` and the legend is not.** Thirty-six cells announced one by one is
+ * noise, and the two things a reader needs — the mechanism and which number is which shop — are
+ * the note and the legend, both real text. Same division `ALLOC36` already makes one component
  * over.
  */
 
 /** 6 rows, 6 columns. Stated once; the grid's CSS reads the same number. */
 const SIDE = 6
+const AXIS = [1, 2, 3, 4, 5, 6] as const
+
+/** One axis label: a small die face, pips only, no digit (§8 rule 2). The pip table is the
+ *  die's own, so an axis face and a thrown die can never disagree about what 4 looks like. */
+function AxisFace({ value, axis }: { value: number; axis: 'row' | 'col' }) {
+  return (
+    <span className="boardAxis" data-part="board-axis" data-axis={axis} data-value={value}>
+      {Array.from({ length: 9 }, (_, i) => (
+        <i key={i} className="boardPip" data-on={PIPS[value].includes(i + 1) ? 'yes' : 'no'}
+          data-red={RED.has(value) ? 'yes' : 'no'} />
+      ))}
+    </span>
+  )
+}
 
 /**
  * **Is this board drawable at all**, and the answer is never «nearly».
@@ -92,8 +113,12 @@ export default function Board({
           free, and `data-row`/`data-col` put the coordinates in the DOM so BD-2 can read a cell
           without trusting document order. */}
       <div className="boardGrid" data-part="board-grid" aria-hidden="true">
-        {board.map((row, r) =>
-          row.map((placeId, c) => {
+        {/* The corner, then die two's six faces across the top (§8 rule 2). */}
+        <span className="boardCorner" />
+        {AXIS.map((v) => <AxisFace key={`c${v}`} value={v} axis="col" />)}
+        {board.map((row, r) => [
+          <AxisFace key={`r${r + 1}`} value={r + 1} axis="row" />,
+          ...row.map((placeId, c) => {
             const face = faceOf(places, placeId)
             return (
               <span
@@ -108,26 +133,36 @@ export default function Board({
                    BD-11: that is a payload bug, and a blank tile reads as a styling one. So it
                    gets its own state rather than falling through to no colour — `faceOf` returns
                    `null` for a place outside the pool rather than defaulting to seat 0, because a
-                   wrong colour is a wrong identity claim. */
+                   wrong colour is a wrong identity claim. It carries no number for the same
+                   reason. */
                 data-unknown={face === null ? 'yes' : undefined}
                 /* The lit cell lights by OUTLINE only — its fill stays equal to its neighbours of
                    the same place (BD-4). A recoloured cell would read as «that cell's shop
                    changed», which is the one thing the picture must not say. */
                 data-lit={lit && r === litRow && c === litCol ? 'yes' : undefined}
-              />
+              >
+                {markOf(places, placeId)}
+              </span>
             )
           }),
-        )}
+        ])}
       </div>
 
-      {/* Colour → shop name, and nothing else. No count, no share, no 「12 格」. */}
+      {/* Number → shop name, and nothing else (§4, §8 rule 3). The swatch carries the same number
+          the cells do; the number is an index, never a count — no 「12 格」 anywhere. */}
       <ul className="boardLegend" data-part="board-legend">
         {seats.map((placeId) => (
           <li key={placeId} data-part="board-legend-row">
-            <span className="boardSwatch" data-face={faceOf(places, Number(placeId))} aria-hidden="true" />
+            <span className="boardSwatch" data-face={faceOf(places, Number(placeId))} aria-hidden="true">
+              {markOf(places, Number(placeId))}
+            </span>
             {/* `places` is keyed by string and the cells are ints; the legend is already on the
-                string side of that join (BD-12). */}
-            <span className="boardLegendName">{places[placeId]}</span>
+                string side of that join (BD-12). The mark is said in the text too, so a screen
+                reader hears 「1 店名」 the way the eye reads it. */}
+            <span className="boardLegendName">
+              <span className="sr-only">{markOf(places, Number(placeId))} </span>
+              {places[placeId]}
+            </span>
           </li>
         ))}
       </ul>

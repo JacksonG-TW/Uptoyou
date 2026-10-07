@@ -174,6 +174,16 @@ export function faceOf(places: Places, placeId: number | null): Face | null {
   return seat < 0 ? null : FACES[seat % FACES.length]
 }
 
+/** **The place's mark: its pool number, 1…N** (`spec-board-2026-09-11.md` §8). Colour repeats
+ *  from the fifth place, so the number is what names the shop on the board and in its legend.
+ *  **An index, never a count** — it says which shop, not how many cells. Same seat as `faceOf`,
+ *  so a place's number and colour always travel together; `null` for a place not in the pool. */
+export function markOf(places: Places, placeId: number | null): number | null {
+  if (placeId === null) return null
+  const seat = Object.keys(places).indexOf(String(placeId))
+  return seat < 0 ? null : seat + 1
+}
+
 /** The round asked about is still open: there is no result to show yet. */
 export class RoundStillOpen extends Error {}
 

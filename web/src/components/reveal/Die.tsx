@@ -54,7 +54,7 @@ export const PIPS: Record<number, number[]> = {
   6: [1, 3, 4, 6, 7, 9],
 }
 
-const RED = new Set([1, 4])
+export const RED = new Set([1, 4])
 
 /**
  * **A7 direction A — 拋擲, owner-ruled from three animated candidates 2026-08-19; rebuilt on

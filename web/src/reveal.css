@@ -698,9 +698,10 @@
    whole point. The asymmetry is on purpose and is recorded in that gate report. */
 .reveal .boardGrid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  /* An axis column of pip faces, then the six outcome columns (§8 rule 2). */
+  grid-template-columns: 18px repeat(6, 1fr);
   gap: 3px;
-  width: min(100%, 288px);
+  width: min(100%, 320px);
   padding: 10px;
   box-sizing: border-box;
   background: var(--color-paper);
@@ -709,6 +710,16 @@
 }
 .reveal .boardCell {
   aspect-ratio: 1;
+  /* **The place's number, centred** (§8 rule 1 and 4): ≥ 14px, 700, tabular, in the face's own
+     `on-` colour — `test_web_contrast.py` holds every `--color-on-X` to 4.5:1 on `--color-X`, so
+     the four pairs are checked by the convention rather than by a list. Two digits fit: the cell
+     is about 41px at 320 and 36px at 430's inset width. */
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   /* **Every cell carries a `currentColor` edge, and it is not decoration.** At the gated width
      this region sits ON the flood (`.pairs`/`.evidence` take `color: inherit` in the wide
      breakpoint, FL-1), and the flood IS the winning place's own face — so the winner's twelve
@@ -720,10 +731,37 @@
   outline: 1px solid currentColor;
   outline-offset: -1px;
 }
-.reveal .boardCell[data-face="hot"]    { background: var(--color-hot); }
-.reveal .boardCell[data-face="cobalt"] { background: var(--color-cobalt); }
-.reveal .boardCell[data-face="jade"]   { background: var(--color-jade); }
-.reveal .boardCell[data-face="sun"]    { background: var(--color-sun); }
+.reveal .boardCell[data-face="hot"]    { background: var(--color-hot);    color: var(--color-on-hot); }
+.reveal .boardCell[data-face="cobalt"] { background: var(--color-cobalt); color: var(--color-on-cobalt); }
+.reveal .boardCell[data-face="jade"]   { background: var(--color-jade);   color: var(--color-on-jade); }
+.reveal .boardCell[data-face="sun"]    { background: var(--color-sun);    color: var(--color-on-sun); }
+/* **The edge stays ink when the number goes paper.** The edge is `currentColor` (above), and on a
+   cobalt cell the text colour is paper — so the outline is pinned back to ink, or the cobalt
+   cells would draw paper edges on a paper ground. */
+.reveal .boardCell[data-face] { outline-color: var(--color-ink); }
+
+/* The axes: a small die face per label, pips on a 3×3 grid, no digit (§8 rule 2). */
+.reveal .boardCorner { display: block; }
+.reveal .boardAxis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  align-self: center;
+  justify-self: center;
+  width: 16px;
+  aspect-ratio: 1;
+  padding: 1.5px;
+  box-sizing: border-box;
+  border: 1px solid var(--color-ink);
+}
+.reveal .boardPip {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+.reveal .boardPip[data-on="yes"] { background: var(--color-ink); }
+.reveal .boardPip[data-on="yes"][data-red="yes"] { background: var(--color-pipred); }
 /* **A cell whose place is not in the legend is made loud rather than blank** (BD-11): that is a
    payload bug, and a blank tile reads as a styling one. Diagonal hatching in the flood's own ink,
    so it cannot be mistaken for a fifth face. */
@@ -737,7 +775,7 @@
    cell already wears, so it is 3px, solid, and sits OUTSIDE the cell with an offset: at a glance
    it is a ring around one square rather than a slightly darker square. */
 .reveal .boardCell[data-lit="yes"] {
-  outline: 3px solid currentColor;
+  outline: 3px solid var(--color-ink);
   outline-offset: 2px;
   /* Above its neighbours, or the next cell's own edge clips the ring's inner side. */
   position: relative;
@@ -763,16 +801,24 @@
    than an extension of it** — the alternative was a legend that reads 「this colour is that shop」
    while showing no colour. */
 .reveal .boardSwatch {
-  width: 12px; height: 12px; flex: 0 0 12px;
+  /* Holds the place's number (§8 rule 1), so it grew from 12px to fit two digits. */
+  min-width: 24px; height: 22px; flex: 0 0 auto;
+  padding-inline: 3px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   box-sizing: border-box;
   background: var(--color-paper);
   border: 1.5px solid var(--color-ink);
 }
 /* The face fill replaces the paper inside the chip; the ink border stays. */
-.reveal .boardSwatch[data-face="hot"]    { background: var(--color-hot); }
-.reveal .boardSwatch[data-face="cobalt"] { background: var(--color-cobalt); }
-.reveal .boardSwatch[data-face="jade"]   { background: var(--color-jade); }
-.reveal .boardSwatch[data-face="sun"]    { background: var(--color-sun); }
+.reveal .boardSwatch[data-face="hot"]    { background: var(--color-hot);    color: var(--color-on-hot); }
+.reveal .boardSwatch[data-face="cobalt"] { background: var(--color-cobalt); color: var(--color-on-cobalt); }
+.reveal .boardSwatch[data-face="jade"]   { background: var(--color-jade);   color: var(--color-on-jade); }
+.reveal .boardSwatch[data-face="sun"]    { background: var(--color-sun);    color: var(--color-on-sun); }
 
 /* ── the operator's evidence (D105, §4b) ────────────────────────────────────
    Appends below the answer region. Nothing above it moves when it is present. */
