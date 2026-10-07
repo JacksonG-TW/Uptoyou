@@ -22,9 +22,15 @@
  * as correct all year and is wrong on exactly the day someone looks. The spec asked for the
  * source and for a `false` here if it could not be had; it could, so this is `true`.
  *
- * Only 2026 is listed. **A year absent from the table renders no segment at all** rather than an
- * extrapolation — the terms move by up to a day between years, so a copied table is a guess with
- * a citation on it. When 2027 is wanted, read 2027's own 日曆資料表 and add it here.
+ * **2027 was read the same way on 2026-10-07** from **中華民國116年日曆資料表**
+ * (`https://www.cwa.gov.tw/Data/astronomy/2027cal.pdf`, published 2026-02): page 2's table and
+ * page 1's grids, all 24 agreeing. Its page 2 also prints 2028's first four terms; they are left
+ * out on purpose, because a partial year would name 雨水 for the rest of 2028.
+ *
+ * **A year absent from the table renders no segment at all** rather than an extrapolation — the
+ * terms move by up to a day between years, so a copied table is a guess with a citation on it.
+ * **Without 2028's row the segment goes blank on 2028-01-01** — read 2028's own 日曆資料表
+ * and add it here before then.
  */
 
 /**
@@ -52,6 +58,14 @@ const SOLAR_TERMS: Record<number, readonly Term[]> = {
     ['白露', 9, 7], ['秋分', 9, 23], ['寒露', 10, 8], ['霜降', 10, 23],
     ['立冬', 11, 7], ['小雪', 11, 22], ['大雪', 12, 7], ['冬至', 12, 22],
   ],
+  2027: [
+    ['小寒', 1, 5], ['大寒', 1, 20], ['立春', 2, 4], ['雨水', 2, 19],
+    ['驚蟄', 3, 6], ['春分', 3, 21], ['清明', 4, 5], ['穀雨', 4, 20],
+    ['立夏', 5, 6], ['小滿', 5, 21], ['芒種', 6, 6], ['夏至', 6, 21],
+    ['小暑', 7, 7], ['大暑', 7, 23], ['立秋', 8, 8], ['處暑', 8, 23],
+    ['白露', 9, 8], ['秋分', 9, 23], ['寒露', 10, 8], ['霜降', 10, 23],
+    ['立冬', 11, 7], ['小雪', 11, 22], ['大雪', 12, 7], ['冬至', 12, 22],
+  ],
 }
 
 const WEEKDAYS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'] as const
@@ -73,9 +87,9 @@ function daysBetween(a: Date, bMonth: number, bDay: number): number {
  * - otherwise → the name of the period we are **inside**, which is true of every day of it
  *
  * `null` on two conditions, and both are real days rather than defensive padding: a year with no
- * table, and a date that falls **before its year's first term** — 2026-01-01 sits inside 冬至's
- * period, which began on 2025-12-22 and lives in a table this module does not have. Naming the
- * period would need a year we have not sourced, so the segment goes rather than the rule.
+ * table, and a date that falls **before its year's first term when the year before has no table**
+ * — 2026-01-01 sits inside 冬至's period, which began on 2025-12-22, a year this module does not
+ * have. When the year before IS here (2027-01-01), its last term names the period.
  */
 export function solarTerm(taipei: Date): string | null {
   if (!SOLAR_TERMS_VERIFIED) return null
@@ -89,6 +103,7 @@ export function solarTerm(taipei: Date): string | null {
     if (gap >= 1 && gap <= 3) return `${term[0]}前${COUNT[gap - 1]}日`
     if (gap < 0) current = term
   }
+  if (!current) current = SOLAR_TERMS[taipei.getFullYear() - 1]?.at(-1) ?? null
   return current ? current[0] : null
 }
 
