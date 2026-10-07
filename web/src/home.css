@@ -1,8 +1,8 @@
 /* The home screen's geometry.
    
    Written as CSS rather than as utility strings on purpose: the acceptance criterion for this
-   screen is a PIXEL DIFF against the owner-approved page (`idea & img/design-proposals/
-   home-v2.html`), and every number below is transcribed from it. Keeping the same class names and
+   screen is a PIXEL DIFF against the owner-approved page (`home-v2.html`, once in
+   `idea & img/design-proposals/`; the file is no longer on disk — it was never tracked), and every number below is transcribed from it. Keeping the same class names and
    the same declarations makes the two comparable by reading as well as by measuring — a utility
    soup would be correct and unreviewable.
    Colour and type come from the theme in `index.css`; nothing here invents a value. */

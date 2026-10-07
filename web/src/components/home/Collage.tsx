@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react'
  * **Nine, not ten, and the shipped numbers are contiguous while the source numbers are not.** The
  * 早餐 slot was dropped after five attempts across two dishes failed the nameability gate — the
  * spec's own rule, rather than burning GPU time reaching a round number. The source folder
- * `idea & img/collage/` is a historical record and its filenames never change, so it still holds a
+ * `idea & img/gpu/` is a historical record and its filenames never change, so it still holds a
  * `collage-09` and a `collage-10` with no `collage-08`. **The shipped names are made by the copy**,
  * so `public/img/` runs 01–09 with no gap: `HC-1` asserts the pool exists at `collage-01…NN` and a
  * hole at 08 would fail a check that is right to be literal. The mapping between the two lives

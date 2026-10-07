@@ -325,7 +325,7 @@ vanished with no trace); two visual weights for two meanings (the fix for a redu
 **Where the owner's "reference material" point lands, stated plainly:** the chip spec (2026-08-28) ruled weight
 and fill from the depth vocabulary and did not consult the accessibility criteria for state; that is the gap he
 named, and ruling 1 closes it with the sources above. The list of what to consult is now in
-`idea & img/research/skill-research-sources.md`'s design section.
+`idea & img/orchestrator/research/skill-research-sources.md`'s design section.
 
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
@@ -538,7 +538,7 @@ Cross-fade only (§5 rule 2); the seal's box is reserved from first paint (RV-17
 *The owner's standing complaint was 單調, and the licence given was a static image. The ruling
 spends it on pattern, not photograph: the halftone dot is print's own texture AND the die's pip —
 the one mark this product owns. Riso-print logic: paper, spot colours, halftone. Reference render:
-`idea & img/design-proposals/reveal-ground.html`. Pure CSS (`radial-gradient` tiles), zero image
+`idea & img/frontend/reveal-ground.html`. Pure CSS (`radial-gradient` tiles), zero image
 assets, §6's dead-wifi rule untouched. **Glow is banned on this ground — print does not glow**;
 the staged state's radial blur dies with this ruling. **Scope (2026-08-20, `F-6`): the ban is the
 reveal's print ground, not the whole product** — home's sun halo (`.halo`, the 5 s pulse) is
@@ -591,7 +591,7 @@ ui*, *restaurant picker*).
 
 **They are not interchangeable and the difference is load-bearing.**
 
-- **The moodboard (`idea & img/design-proposals/moodboard/`) is nine SHIPPED commercial products** —
+- **The moodboard (`idea & img/frontend/moodboard.html`) is nine SHIPPED commercial products** —
   the owner's stated bar, 「商業等級的範例」. **It is the fidelity reference and nothing else replaces
   it**: every screen in it survives real data, real names, real edge cases.
 - **The component libraries are recipes.** Useful for *how* an effect is built. Each one costs a
