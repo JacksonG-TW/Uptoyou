@@ -260,11 +260,15 @@ def _finding_line(finding: dict, now) -> str:
 def _plain_reason(detail: str) -> str:
     """The common causes in words; anything else is the system's own text, already redacted."""
     lowered = detail.lower()
+    # **The source is blamed only when the detail names a web request** (the reviewer's catch,
+    # 2026-10-08): our own Postgres also answers «connection refused» while it restarts in a deploy,
+    # and a «statement timeout» is ours too. Without a URL or a URLError the wording names nobody.
+    remote = "urlerror" in lowered or "http://" in lowered or "https://" in lowered
     if "timed out" in lowered or "timeout" in lowered:
-        return "連線逾時（資料來源的網站沒有回應）"
+        return "連線逾時（資料來源的網站沒有回應）" if remote else "連線逾時（不確定是外部網站還是我們自己的服務）"
     if any(token in lowered for token in ("name or service not known", "connection refused",
                                           "urlerror", "temporary failure in name resolution")):
-        return "連不上資料來源的網站"
+        return "連不上資料來源的網站" if remote else "連不上某個服務（可能是外部網站，也可能是我們自己的資料庫）"
     if "memoryerror" in lowered or "sigkill" in lowered or "out of memory" in lowered:
         return "記憶體不夠，程式被系統停掉"
     clipped = detail if len(detail) <= DETAIL_CAP else detail[: DETAIL_CAP - 1] + "…"
@@ -402,6 +406,11 @@ def _send(context) -> None:
         _log_path(dag_id, run_id, task_id, try_number),
         findings=findings, started=started, now=datetime.now(timezone.utc))
 
+    # **Scrubbed once more as a whole, right before it leaves** (the reviewer's note): the findings
+    # bypass the detail's redaction because they are numbers and source ids, and a finding line
+    # that falls back to its sentence prints that sentence verbatim — so the guarantee holds by
+    # construction here rather than by what today's checks happen to write.
+    message = scrub(message, extra=(token,))
     payload = json.dumps({"chat_id": chat_id, "text": message}).encode("utf-8")
     request = urllib.request.Request(
         ENDPOINT.format(token),

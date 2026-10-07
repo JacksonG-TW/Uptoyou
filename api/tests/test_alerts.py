@@ -169,6 +169,18 @@ class TheMessageSaysWhatAPhoneNeedsFirst(unittest.TestCase):
         self.assertIn("中央氣象署的天氣預報", body)
         self.assertNotIn("原因", body)
 
+    def test_our_own_database_refusing_is_not_blamed_on_the_source(self):
+        """Postgres restarting in a deploy also says «connection refused» (the reviewer's catch)."""
+        body = self.message(detail="OperationalError: connection refused (db:5432)")
+        self.assertNotIn("資料來源的網站", body)
+        self.assertIn("可能是外部網站，也可能是我們自己的資料庫", body)
+        body = self.message(detail="QueryCanceled: canceling statement due to statement timeout")
+        self.assertNotIn("資料來源的網站", body)
+
+    def test_a_web_request_failing_is_blamed_on_the_source(self):
+        body = self.message(detail="URLError: <urlopen error [Errno -2] Name or service not known>")
+        self.assertIn("原因：連不上資料來源的網站", body)
+
     def test_a_date_is_not_mistaken_for_a_kill_signal(self):
         body = self.message(detail="ValueError: file stamped 2026-09-30 is older than expected")
         self.assertNotIn("記憶體", body)
