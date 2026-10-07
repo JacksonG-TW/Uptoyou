@@ -257,12 +257,6 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
     return {"member_id": member_id, "key": key}
 
 
-#: **One sentence for every dead case, on purpose** (frontend's terms, 2026-10-07). Unlike join's
-#: 410/404 split, a preview of a replaced ticket, an expired one, an unknown one and a circle that
-#: does not exist answers the same status and the same bytes, so `c=` cannot be walked to learn
-#: which circles exist. The sentence is frontend's, rendered verbatim, and it states rather than
-#: advises (D20).
-PREVIEW_DEAD = "這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。開圈子的人可以給一條新的。"
 NO_STORE = {"Cache-Control": "no-store"}
 
 
@@ -302,7 +296,19 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
             )
         ).one_or_none()
         if row is None or row.circle_id != circle_id:
-            raise HTTPException(status_code=404, detail=PREVIEW_DEAD, headers=NO_STORE)
+            # **One sentence for every dead case, on purpose** (frontend's terms, 2026-10-07).
+            # Unlike join's 410/404 split, a replaced ticket, an expired one, an unknown one and a
+            # circle that does not exist answer the same status and the same bytes, so `c=` cannot
+            # be walked to learn which circles exist. The sentence is frontend's, rendered verbatim,
+            # stating rather than advising (D20). **Written inline, never through a constant:**
+            # `server_copy.py` reads only literals inside `detail=`, and a sentence it cannot see is
+            # one the font gate cannot check.
+            raise HTTPException(
+                status_code=404,
+                detail="這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。"
+                       "開圈子的人可以給一條新的。",
+                headers=NO_STORE,
+            )
         creator = (
             await session.execute(
                 text("select m.nickname from member m "

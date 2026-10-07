@@ -209,7 +209,10 @@ async def scenario(test_url: str) -> None:
               live.headers.get("cache-control"))
         check("five previews write nothing — every count unchanged", await counts() == before,
               f"{before} → {await counts()}")
-        from upto.circles import PREVIEW_DEAD  # noqa: PLC0415
+        # The sentence is pinned here as text, like 「一個人最多提三家。」 in the rounds test: the
+        # screen renders it verbatim, so a wording change must be a decision, not a drift.
+        PREVIEW_DEAD = ("這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。"
+                        "開圈子的人可以給一條新的。")
         dead_cases = {
             "replaced": (circle, ticket),
             "unknown": (circle, "nonsense"),
