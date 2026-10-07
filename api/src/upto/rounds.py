@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
@@ -512,8 +513,14 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
             if existing.member_id == member:
                 response.status_code = 200
                 return {"trip": trip}
+            # **A time a person reads, not a wire timestamp** (the evaluator's catch, 2026-10-07: the
+            # screen printed 「…在 2026-10-07T15:19:41.315711+00:00 記下…」). Taipei's clock, the
+            # zone a member reads every time in (D83), as 「10月7日 23:19」 — the surface's own
+            # 24-hour `HH:MM`. The machine-readable instant stays in `trip.signed_at` elsewhere.
+            when = datetime.fromisoformat(trip["signed_at"]).astimezone(ZoneInfo("Asia/Taipei"))
             raise HTTPException(
                 status_code=409,
-                detail="{}已經在 {} 記下這一趟了。".format(trip["nickname"], trip["signed_at"]),
+                detail="{}已經在 {}月{}日 {:%H:%M} 記下這一趟了。".format(
+                    trip["nickname"], when.month, when.day, when),
             ) from None
         return {"trip": await trip_for(session, round_id)}
