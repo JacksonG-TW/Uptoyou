@@ -254,3 +254,21 @@
   .navbar:has(~ .reveal[data-face]) .switcher a,
   .navbar:has(~ .reveal[data-face]) .backLink { transition: none; }
 }
+
+/* ═══ Look D — the bar on lacquer (`spec-look-d-moon-blocks-2026-10-08.md`) ═════════════════════
+   One bar on every screen, the reveal included: the lacquer, paper text (5.85), a gold hairline
+   under it. The reveal no longer floods, so its per-face bar colours above would only re-introduce
+   ink on lacquer (2.24) for a `sun` winner; these rules come last and take every case. */
+.navbar, .navbar:has(~ .reveal[data-face]) {
+  background: var(--color-ground); color: var(--color-paper);
+  border-bottom: 2px solid var(--color-gold);
+}
+.navbar .switcher a, .navbar .backLink,
+.navbar:has(~ .reveal[data-face]) .switcher a, .navbar:has(~ .reveal[data-face]) .backLink {
+  background: transparent; color: var(--color-paper);
+  border-color: rgb(242 226 160 / .45);
+}
+@media (hover: hover) {
+  .navbar .switcher a:hover, .navbar .backLink:hover { background: var(--color-paper); color: var(--color-ink); }
+}
+.navbar .switcher a:active, .navbar .backLink:active { background: var(--color-paper); color: var(--color-ink); }
