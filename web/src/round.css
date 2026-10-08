@@ -284,10 +284,9 @@
   min-width: 6em; text-align: right; white-space: nowrap;
 }
 .round .seat[data-roll-state="waiting"] .seatDice { color: var(--color-muted); }
-/* The seat the round is settled on. **A border, not a colour alone** — the same rule the reveal's
-   winner row follows, and for the same reader. It is an inset shadow rather than a border because
-   a border would add 3px to the row and move the seat below it. */
-.round .seat[data-counts="yes"] { box-shadow: inset 3px 0 0 var(--color-hot-ink); padding-left: 12px; }
+/* **The deciding seat carries no mark of its own** (the 2026-10-08 label gate). An unlabelled red
+   bar on one row read as 「可能代表目前使用者」 to both readers; the line under the roll already names
+   whose dice count, in words. `data-counts` stays on the row for the gates. */
 
 /* The commitment. The weather line's register: small, muted, and it states a fact rather than
    asking anyone to feel safer about it. `break-all` because a 64-character hash has no break
