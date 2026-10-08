@@ -674,6 +674,15 @@ export default function Reveal({ roundId }: { roundId: number }) {
    *  to say and renders no element at all. Deriving one here from the composed name would be the
    *  browser computing a name, which is the one thing A16 exists to stop. */
   const qualifier = data?.winner_qualifier ?? null
+  /** True when every pooled shop holds the same number of the 36 cells — 6 shops × 6, 4 × 9, … —
+   *  so 「每一家的機會不一樣」 would be false. Read from the drawn board, not the pool size. */
+  const evenBoard = (() => {
+    const b = data?.board
+    if (!Array.isArray(b) || b.length !== 6) return false
+    const n = new Map<number, number>()
+    for (const row of b) for (const id of row) n.set(id, (n.get(id) ?? 0) + 1)
+    return n.size > 1 && new Set(n.values()).size === 1
+  })()
 
   return (
     // The flood (§5 rule 1) — the winning place's own face colour becomes the whole ground, over
@@ -869,7 +878,13 @@ export default function Reveal({ roundId }: { roundId: number }) {
             already built, whereas a door removed later leaves a dead region people have learned to
             press. It claims that the allocation happened and that weight drove it. It does not
             claim the reader can check that, and it must not be dressed to imply so. */}
-        <p className="sentence" data-part="sentence">每一家的機會不一樣</p>
+        {/* **The sentence is read off the board, never assumed** (the look-D gate, 2026-10-08: on
+            a six-shop board of 6 cells each, four of four readers counted, found 「不一樣」 false,
+            and two would not accept the result). Uneven counts keep the ruled words; an even board
+            says so. Counted from the same `board` the cells draw, so the two cannot disagree. */}
+        <p className="sentence" data-part="sentence" data-even={evenBoard ? 'yes' : undefined}>
+          {evenBoard ? '這一輪每一家的機會一樣' : '每一家的機會不一樣'}
+        </p>
 
         {/* **The act, inline and inside `.answer` — owner-ruled 2026-08-20, option 乙.** The pinned
             BAR is retired; the act belongs to the composition it acts on. It sits under the winner
