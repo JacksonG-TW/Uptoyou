@@ -541,18 +541,45 @@ async def scenario(test_url: str) -> None:
 
         everything = ("member", "principal", "device_secret", "round", "proposal", "join_ticket",
                       "preference", "member_roll", "trip", "circle")
+        async def prefer(member_id, value):
+            async with Session() as session:
+                made = (await session.execute(
+                    text("insert into preference (member_id, kind, value, stance, persist, valid_from) "
+                         "values (:m, 'avoid_category', :v, 'avoid', true, now()) returning id"),
+                    {"m": member_id, "v": value})).scalar_one()
+                await session.commit()
+            return made
+
+        async def preference_exists(preference_id):
+            async with Session() as session:
+                return (await session.execute(text("select count(*) from preference where id = :i"),
+                                              {"i": preference_id})).scalar_one() == 1
+
+        async with Session() as session:
+            creator_id = (await session.execute(
+                text("select m.id from member m join device_secret d on d.principal_id = m.principal_id "
+                     "where m.circle_id = :c and d.secret_sha256 = :h"),
+                {"c": circle, "h": sha256(creator_key.encode()).hexdigest()})).scalar_one()
         before = await counts_of(everything)
         async with Session() as session:
             joiner_id = (await session.execute(
                 text("select m.id from member m join device_secret d on d.principal_id = m.principal_id "
                      "where m.circle_id = :c and d.secret_sha256 = :h"),
                 {"c": circle, "h": sha256(joiner_key.encode()).hexdigest()})).scalar_one()
+        joiner_pref = await prefer(joiner_id, "火鍋")
+        creator_pref = await prefer(creator_id, "火鍋")
+        before = await counts_of(everything)
         left = await client.post(f"{BASE}/circles/{circle}/leave",
                                  headers={"Authorization": "Bearer " + joiner_key})
         check("leaving answers 204", left.status_code == 204 and left.content == b"",
               f"got {left.status_code}: {left.content[:60]!r}")
-        check("and deletes nothing — every table's count is unchanged", await counts_of(everything) == before,
-              f"{before} → {await counts_of(everything)}")
+        after = await counts_of(everything)
+        expected = dict(before, preference=before["preference"] - 1)
+        check("and deletes only the seat's own unpinned preference — every other count unchanged",
+              after == expected, f"{before} → {after}")
+        check("the leaving seat's kept preference is gone (owner 「刪掉」)",
+              not await preference_exists(joiner_pref))
+        check("another member's preference is untouched", await preference_exists(creator_pref))
         async with Session() as session:
             flag = (await session.execute(text("select has_left from member where id = :m"),
                                           {"m": joiner_id})).scalar_one()
@@ -613,6 +640,21 @@ async def scenario(test_url: str) -> None:
         check("a round opened after the leave pins ten seats and not the left one",
               opened.status_code == 201 and joiner_id not in seats and len(seats) == 10,
               f"{opened.status_code} {seats}")
+
+        # A seat an OPEN round has pinned keeps its preferences when it leaves — its roll still reads them.
+        async with Session() as session:
+            back_id = (await session.execute(
+                text("select m.id from member m join device_secret d on d.principal_id = m.principal_id "
+                     "where m.circle_id = :c and d.secret_sha256 = :h"),
+                {"c": circle, "h": sha256(rejoined.json()["key"].encode()).hexdigest()})).scalar_one()
+        check("the open round pins the seat about to leave", back_id in seats, seats)
+        back_pref = await prefer(back_id, "麵食")
+        gone_too = await client.post(f"{BASE}/circles/{circle}/leave",
+                                     headers={"Authorization": "Bearer " + rejoined.json()["key"]})
+        check("that leave is a 204 like every other", gone_too.status_code == 204, gone_too.status_code)
+        check("and its preference stays, because the open round that pinned the seat will read it",
+              await preference_exists(back_pref))
+        check("the creator's preference is still untouched", await preference_exists(creator_pref))
 
         # The creator may leave; the preview then names nobody.
         await client.post(f"{BASE}/circles/{second['circle_id']}/leave",

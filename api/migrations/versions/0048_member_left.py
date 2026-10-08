@@ -2,7 +2,8 @@
 
 When a device moved to another circle its old seat stayed for ever — one of the old circle's ten,
 in its seat list, and in the way of the person's own return if that circle was full. Leaving
-marks the seat; it deletes nothing. Past rounds, rolls, trips and proposals keep pointing at the
+marks the seat and deletes only the seat's preferences no round still needs (owner 「刪掉」, same
+day; `circles.leave_circle`). Past rounds, rolls, trips and proposals keep pointing at the
 row, which is what a verifiable past needs, and the person's principal and key are untouched
 because one principal can sit in several circles.
 

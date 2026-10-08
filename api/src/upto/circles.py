@@ -455,11 +455,12 @@ async def leave_circle(circle_id: int, request: Request) -> Response:
     *Agreed with frontend: a device that moves to another circle fires this with its OLD key after
     the new join has succeeded, so a failed join never costs the old seat.*
 
-    **What leaving does.** It sets `member.has_left` (0048) and nothing else. The seat stops counting
+    **What leaving does.** It sets `member.has_left` (0048) and deletes the seat's preferences that no
+    round still needs (below). The seat stops counting
     toward D110's cap, leaves `GET /members`, is not pinned into a new round, and its key stops
     resolving in THIS circle (`auth.credential_for`) — while every past round, roll, trip and
     proposal keeps pointing at the row, and the principal and its key are untouched, because one
-    principal can sit in other circles. Nothing is deleted, so D42's erasure is not involved here.
+    principal can sit in other circles.
 
     **204 in every case** — a seat left, a seat already left, an unknown key, another circle's key,
     no key at all. The answer says nothing about which, so the endpoint cannot be used to test a
@@ -473,6 +474,19 @@ async def leave_circle(circle_id: int, request: Request) -> Response:
             if found is not None:
                 await session.execute(
                     text("update member set has_left = true where id = :m"), {"m": found[0]})
+                # **The seat's preferences go with it** (owner 「刪掉」, 2026-10-08, on the
+                # reviewer's report: kept preferences of a left seat would otherwise sit stored for
+                # ever while counting nowhere). Two kinds stay, because a round's story needs them:
+                # a version a closed round's contribution pinned (D24/D25 — the foreign key refuses
+                # the delete anyway), and every preference of a seat an OPEN round has pinned, whose
+                # roll will still read them. Only this member's rows; nobody else's are touched.
+                await session.execute(
+                    text("delete from preference p where p.member_id = :m "
+                         "and not exists (select 1 from weight_contribution w "
+                         "                 where w.preference_id = p.id) "
+                         "and not exists (select 1 from round r where r.circle_id = :c "
+                         "                 and r.status = 'open' and :m = any(r.seat_ids))"),
+                    {"m": found[0], "c": circle_id})
                 await session.commit()
     return Response(status_code=204)
 
