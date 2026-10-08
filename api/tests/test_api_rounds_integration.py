@@ -253,6 +253,30 @@ async def scenario(test_url: str) -> None:
     auth = {"Authorization": f"Bearer {token}"}
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        # **The home page's registry count (agreed with frontend 2026-10-08).** The seed's fda-97
+        # publication carries no stamp and no count, so it is passed over and there is nothing to
+        # answer: 503, and the screen shows the source's name alone.
+        missing = await client.get("/places/count")
+        assert missing.status_code == 503, missing.text
+        async with Session() as session:
+            await session.execute(text(
+                "insert into place_publication (source, content_sha256, detected_at, payload_bytes, "
+                "entry_name, entry_bytes, scope, place_rows, archive_stamp) "
+                "values ('fda-97', repeat('c', 64), now(), 1000, 'y.csv', 1000, "
+                "'餐飲場所 / 臺北市', 35965, '2026-10-04 16:30:00+00')"))
+            await session.commit()
+        counted = await client.get("/places/count")
+        assert counted.status_code == 200, counted.text
+        # 16:30 UTC on the 4th is 00:30 on the 5th in Taipei — the publisher's calendar.
+        assert counted.json() == {"count": 35965, "as_of": "2026-10-05"}, counted.json()
+        assert counted.headers.get("cache-control") == "public, max-age=3600", counted.headers
+        assert "authorization" not in {k.lower() for k in counted.request.headers}
+        # Gone again at once: names read from the newest publication, and the rest of this file
+        # was written for a world where the seed's is the newest.
+        async with Session() as session:
+            await session.execute(text("delete from place_publication where content_sha256 = repeat('c', 64)"))
+            await session.commit()
+
         # D67: no token and a wrong token read the same 401.
         assert (await client.post(f"/circles/{circle}/rounds", json={})).status_code == 401
         assert (

@@ -98,6 +98,41 @@ async def health(response: Response) -> dict:
     return {"status": "ok", "database": "reachable", "instance": INSTANCE, **listener}
 
 
+@app.get("/places/count")
+async def places_count(response: Response) -> dict:
+    """How many places the 食藥署 food-business registry lists — the home page's source line.
+
+    *Agreed with frontend 2026-10-08, contract first (spec-nav-labels-home, last section).* The
+    number used to be a literal, 36,499 — the FIRST publication's row count — while the box held
+    35,965; the owner's brief asks that a quoted count match the live one.
+
+    **The newest fda-97 publication's own `place_rows`**, stored when it was ingested, so this
+    reads one row and counts nothing. **`as_of` is the publisher's date** (`archive_stamp`, the
+    day 食藥署 cut the file) on Taipei's calendar, not the day we fetched it: «登錄 N 家» is their
+    fact. A publication without a stamp or a count is passed over rather than answered with a
+    null the screen would have to guess at. No publication at all (a fresh clone before its first
+    ingest) is a 503, and the screen then shows the source's name without a number.
+
+    No credential: it is a count of a public registry and says nothing about anyone. Cached for
+    an hour, which is far shorter than the registry's measured publication interval.
+    """
+    async with session_factory()() as session:
+        row = (
+            await session.execute(
+                text("select place_rows, "
+                     "       to_char(archive_stamp at time zone 'Asia/Taipei', 'YYYY-MM-DD') as as_of "
+                     "  from place_publication "
+                     " where source = 'fda-97' and place_rows is not null "
+                     "   and archive_stamp is not null "
+                     " order by detected_at desc limit 1")
+            )
+        ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=503, detail="no food-business registry publication yet")
+    response.headers["Cache-Control"] = "public, max-age=3600"
+    return {"count": row.place_rows, "as_of": row.as_of}
+
+
 @app.get("/weather")
 async def weather(
     township: str = Query(..., description="內政部 township code, e.g. 63000040 for 中山區"),
