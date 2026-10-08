@@ -128,12 +128,12 @@ request): each diagram is a small JSON specification — `architecture.json`, `e
 `schema-glance.json` and the others beside them — rendered to one self-contained HTML file and
 validated for crossings, label clearance and readability before it is exported to PNG.
 
-**The three pictures the README shows — `architecture.png`, `etl-flow.png`, `schema-glance.png` —
-are drawn by hand instead**, as `*.readme.svg` on an 840-unit canvas and rasterised at twice that
+**The five pictures the README shows — `architecture.png`, `etl-flow.png`, `schema-glance.png`,
+`name-ladder.png`, `evaluation-flow.png` — are drawn by hand instead**, as `*.readme.svg` on an 840-unit canvas and rasterised at twice that
 size. A README column is about 840 pixels wide, and archify's fixed text sizes left its labels
-near 9 px there; drawn at the column's own width, every word in these three is 13 px or larger.
+at 4–9 px there; drawn at the column's own width, every word in these five is 13 px or larger.
 Their facts are the archify specifications' (`architecture.json`, `etl-flow.json`,
-`schema-glance.json`), which stay the checked record of what connects to what. The charts deliberately do **not**
+`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. The charts deliberately do **not**
 use the product's own palette: they are engineering documents, meant to look like a different
 kind of artifact from the app.
 
