@@ -708,7 +708,7 @@
 .reveal .boardGrid {
   display: grid;
   /* An axis column of pip faces, then the six outcome columns (§8 rule 2). */
-  grid-template-columns: 18px repeat(6, 1fr);
+  grid-template-columns: 26px repeat(6, 1fr);
   gap: 3px;
   width: min(100%, 320px);
   padding: 10px;
@@ -758,15 +758,16 @@
   place-items: center;
   align-self: center;
   justify-self: center;
-  width: 16px;
+  width: 24px;
   aspect-ratio: 1;
-  padding: 1.5px;
+  padding: 2px;
   box-sizing: border-box;
   border: 1px solid var(--color-ink);
 }
 .reveal .boardPip {
-  width: 3px;
-  height: 3px;
+  /* 5 px on a 24 px face, from 3 on 16 (the dice gate's leftover, 2026-10-08: 「圖示很小，可能數錯」). */
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
 }
 .reveal .boardPip[data-on="yes"] { background: var(--color-ink); }
