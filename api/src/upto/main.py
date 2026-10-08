@@ -110,7 +110,9 @@ async def places_count(response: Response) -> dict:
     reads one row and counts nothing. **`as_of` is the publisher's date** (`archive_stamp`, the
     day 食藥署 cut the file) on Taipei's calendar, not the day we fetched it: «登錄 N 家» is their
     fact. A publication without a stamp or a count is passed over rather than answered with a
-    null the screen would have to guess at. No publication at all (a fresh clone before its first
+    null the screen would have to guess at — **so in that case the count describes an older
+    publication than the one the place names are read from** (both order by `detected_at`, then
+    `id`, as every name read does). Rare, deliberate, and said here so it is not a surprise. No publication at all (a fresh clone before its first
     ingest) is a 503, and the screen then shows the source's name without a number.
 
     No credential: it is a count of a public registry and says nothing about anyone. Cached for
@@ -124,7 +126,7 @@ async def places_count(response: Response) -> dict:
                      "  from place_publication "
                      " where source = 'fda-97' and place_rows is not null "
                      "   and archive_stamp is not null "
-                     " order by detected_at desc limit 1")
+                     " order by detected_at desc, id desc limit 1")
             )
         ).one_or_none()
     if row is None:
