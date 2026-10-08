@@ -83,9 +83,11 @@ async def scenario(test_url: str) -> None:
             # happened, an operator also sees how the odds got there. Asserting the allocation from a
             # member token would be asserting a leak — and the allocation is *the* statement this
             # test needs, since D72's table is the truth of the draw and a zero-weight place holding
-            # 0 of 36 outcomes is a property rather than luck.
-            text("insert into device_secret (principal_id, secret_sha256, operator) "
-                 "values (:p, :h, true)"),
+            # 0 of 36 outcomes is a property rather than luck. **`evidence` since revision 0047**,
+            # which split the evidence table off `operator`; with `operator` alone this test read a
+            # member's shape and died on the missing `allocation` (found 2026-10-08).
+            text("insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                 "values (:p, :h, true, true)"),
             {"p": principal, "h": sha256(token.encode()).hexdigest()},
         )
         for code, name in (("63000020", "信義區"),):
