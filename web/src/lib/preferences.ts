@@ -12,6 +12,7 @@
  */
 
 import { auth, type Device } from './device'
+import { detailOr } from './detail'
 
 /* **The budget's two bands went with the 偏好 screen** (`spec-return-choice.md`, 2026-08-30):
    nothing sets a budget any more and the API refuses the kind. The wire's words were
@@ -151,7 +152,7 @@ async function said(r: Response, fallback: string): Promise<Error> {
   if (r.status === 401) return new Error('這把鑰匙開不了這個圈子。回到裝置畫面重新貼一次。')
   if (r.status === 404) return new Error('找不到這個圈子。')
   const body = await r.json().catch(() => ({}))
-  return new Error((body as { detail?: string }).detail || `${fallback}（${r.status}）`)
+  return new Error(detailOr(body, fallback, r.status))
 }
 
 export async function fetchPreferences(d: Device): Promise<Preferences> {

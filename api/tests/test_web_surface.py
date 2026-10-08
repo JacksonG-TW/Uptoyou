@@ -200,6 +200,30 @@ class NoDangerousInnerHtml(unittest.TestCase):
             self.assertNotIn("dangerouslySetInnerHTML", stripped, comment)
 
 
+class TheApisDetailIsReadOnlyAsASentence(unittest.TestCase):
+    """`detail` is a sentence only sometimes: a 422 sends a list, a D68 409 an object. Passed raw into
+    `new Error(...)` it renders 「[object Object]」 — every loser of ten simultaneous opens saw it on
+    2026-10-08 (13ec776). Every read goes through `lib/detail.ts`'s `detailOr` (reviewer, same day)."""
+
+    RAW = re.compile(r"\.detail\s*(\|\||\?\?)")
+
+    def test_no_raw_detail_fallback_is_left(self):
+        offenders = [os.path.relpath(path, WEB) for path in source_files()
+                     if self.RAW.search(code_of(path))]
+        self.assertEqual(offenders, [],
+                         "a raw `detail ||` fallback is back in {} — read it through `detailOr`, which "
+                         "shows `detail` only when it is a string".format(", ".join(offenders)))
+
+    def test_the_check_can_fail(self):
+        for line in ("throw new Error(body.detail || `x`)",
+                     "new Error((body as { detail?: string }).detail || f)",
+                     "const m = body.detail ?? 'x'"):
+            self.assertRegex(line, self.RAW, line)
+
+    def test_the_helper_exists(self):
+        self.assertIn("export function detailOr", read(os.path.join(SRC, "lib", "detail.ts")))
+
+
 class TheSurfaceStatesAndDoesNotAdvise(unittest.TestCase):
     """D20's first half, over the copy in source."""
 

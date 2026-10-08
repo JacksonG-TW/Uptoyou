@@ -1,4 +1,5 @@
 import { auth, type Device } from './device'
+import { detailOr } from './detail'
 
 /**
  * A24 — self-serve circles: the data layer `Create`, `Join` and `InvitePanel` are built on.
@@ -57,7 +58,7 @@ export type Joined = {
  */
 async function refusal(r: Response, fallback: string): Promise<Error> {
   const body = await r.json().catch(() => ({}))
-  return new Error((body as { detail?: string }).detail || `${fallback}（${r.status}）`)
+  return new Error(detailOr(body, fallback, r.status))
 }
 
 /** Ruling ②: a stranger creates a circle and gets one link to paste into the group chat. 429 is

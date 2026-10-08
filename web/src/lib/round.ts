@@ -9,6 +9,7 @@
  */
 
 import { auth, device, type Device } from './device'
+import { detailOr } from './detail'
 
 /** Where the door leads, from one local fact. No request, so it is safe to call during render —
  *  the home's act uses it for an `href`, which is what makes middle-click and the status bar tell
@@ -36,7 +37,7 @@ export async function verify(d: Device): Promise<void> {
   if (r.status === 401) throw new Error('這把鑰匙開不了這個圈子。再確認一次貼上的內容。')
   if (r.status === 404) throw new Error('找不到這個圈子。')
   const body = await r.json().catch(() => ({}))
-  throw new Error(body.detail || `連不上（${r.status}）`)
+  throw new Error(detailOr(body, '連不上', r.status))
 }
 
 /**
@@ -88,7 +89,7 @@ export async function materialise(d: Device, registryNo: string): Promise<number
     body: JSON.stringify({ registry_no: registryNo }),
   })
   const body = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(body.detail || `加不進來（${r.status}）`)
+  if (!r.ok) throw new Error(detailOr(body, '加不進來', r.status))
   return body.place_id ?? body.id
 }
 
@@ -111,7 +112,7 @@ export async function openRound(d: Device): Promise<{ roundId: number; conflict:
     const won = body.detail?.open_round?.round_id
     if (won) return { roundId: won, conflict: true }
   }
-  throw new Error(typeof body.detail === 'string' ? body.detail : `開不了（${r.status}）`)
+  throw new Error(detailOr(body, '開不了', r.status))
 }
 
 /** **D70: a repeat proposal succeeds quietly.** Proposal count is not a weight, so proposing the
@@ -124,14 +125,14 @@ export async function propose(d: Device, roundId: number, placeId: number): Prom
   })
   if (r.status === 201 || r.status === 200) return
   const body = await r.json().catch(() => ({}))
-  throw new Error(body.detail || `提不進去（${r.status}）`)
+  throw new Error(detailOr(body, '提不進去', r.status))
 }
 
 export async function roll(d: Device, roundId: number): Promise<void> {
   const r = await fetch(`/api/rounds/${roundId}/roll`, { method: 'POST', headers: auth(d) })
   if (r.ok) return
   const body = await r.json().catch(() => ({}))
-  throw new Error(body.detail || `擲不出來（${r.status}）`)
+  throw new Error(detailOr(body, '擲不出來', r.status))
 }
 
 /** A pooled place, as the snapshot and each `pooled` event carry it.

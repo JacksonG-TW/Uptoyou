@@ -1,3 +1,5 @@
+import { detailOr } from './detail'
+
 /** The weather endpoint's shape, as the API actually answers it. */
 export type Weather = {
   kind: 'forecast' | 'observation' | 'absent'
@@ -51,7 +53,7 @@ export async function fetchWeather(township: string): Promise<Weather> {
   )
   if (!r.ok) {
     const body = await r.json().catch(() => ({}))
-    throw new Error(body.detail || `讀取失敗（${r.status}）`)
+    throw new Error(detailOr(body, '讀取失敗', r.status))
   }
   return r.json()
 }

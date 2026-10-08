@@ -14,6 +14,7 @@
  */
 
 import { auth, type Device } from './device'
+import { detailOr } from './detail'
 
 /** `place_id` → the name the API composed (D92's three layers). Keys are strings on the wire. */
 /**
@@ -208,7 +209,7 @@ export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
   })
   if (!r.ok) {
     const body = await r.json().catch(() => ({}))
-    const message = body.detail || `讀取失敗（${r.status}）`
+    const message = detailOr(body, '讀取失敗', r.status)
     throw r.status === 409 ? new RoundStillOpen(message) : new Error(message)
   }
   return r.json()
@@ -263,5 +264,5 @@ export async function signTrip(
   }
   if (r.status === 409) return { trip: (await fetchReveal(d, roundId)).trip, created: false }
   const body = await r.json().catch(() => ({}))
-  throw new Error(body.detail || `簽不上（${r.status}）`)
+  throw new Error(detailOr(body, '簽不上', r.status))
 }
