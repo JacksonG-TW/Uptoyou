@@ -126,24 +126,38 @@
 @theme {
   /* §1 · colour. Every `on-*` is whichever of ink/paper measured higher on that
      ground; none of them is picked by eye. */
-  --color-ink: #101114;
-  --color-paper: #FFFDF7;
-  --color-muted: #5A5C63;
+  --color-ink: #2B1713;
+  --color-paper: #F2E2A0;
+  --color-muted: #6A4A38;
+  /* **Look D (擲筊與籤詩, owner 「我喜歡D」 2026-10-08, `spec-look-d-moon-blocks-2026-10-08.md`).**
+     The page stands on lacquer and every content column is a joss-paper slip. `ground` is the
+     lacquer; `gold` is the slip's inner rule and hairlines only — decoration, never text (paper on
+     ground 5.85 · ink on paper 13.09 · muted on paper 6.1 · paper on hot 5.58 · ink on sun 7.85).
+     The flood is gone in D: all four floods are the lacquer, and the slip carries the winner.
+     **Every ratio written in this file was recomputed for D on the same day**; where an older note
+     argues from a pair that failed in the first palette, the number is now D's and the argument is
+     history. */
+  --color-ground: #9C2A1B;
+  --color-gold: #D9A93A;
+  --color-onflood-hot: #F2E2A0;
+  --color-onflood-cobalt: #F2E2A0;
+  --color-onflood-jade: #F2E2A0;
+  --color-onflood-sun: #F2E2A0;
   /* `hot` is a GROUND — pinned bar, badge fill, count tag — and is the same in both schemes.
      `hot-ink` is the same accent as TEXT or a MARK on paper, and it DOES flip: the light orange
      reads as text on the dark ground, so one accent changes role rather than needing a third
      value. They are not interchangeable. Owner-ruled 2026-08-18; every figure re-measured here
-     rather than copied — ink on hot 7.98 · hot-ink on paper 4.00 · hot on paper 2.33, which is
+     rather than copied — ink on hot 2.35 · hot-ink on paper 5.58 · hot on paper 5.58, which is
      the use this pair exists to forbid. */
-  --color-hot: #FF875C;
-  --color-hot-ink: #D95204;
-  --color-cobalt: #2547E8;
-  --color-jade: #00A870;
-  --color-sun: #FFC300;
-  --color-on-hot: #101114;
-  --color-on-cobalt: #FFFDF7;
-  --color-on-jade: #101114;
-  --color-on-sun: #101114;
+  --color-hot: #A8211A;
+  --color-hot-ink: #A8211A;
+  --color-cobalt: #2B1713;
+  --color-jade: #2F6B4F;
+  --color-sun: #D9A93A;
+  --color-on-hot: #F2E2A0;
+  --color-on-cobalt: #F2E2A0;
+  --color-on-jade: #F2E2A0;
+  --color-on-sun: #2B1713;
 
   /* The flood — the ground the WHOLE viewport takes when that face wins. With the dark scheme
      gone these are the raw hues, and the L <= 0.08 ceiling went with it along with the olive
@@ -153,10 +167,10 @@
      token, the reveal's flood would have changed silently as a side effect of a decision about a
      button, and the flood is the product's signature moment. Same argument as `pipred`: a token
      exists to keep two facts that currently coincide from being forced to move together. */
-  --color-flood-hot: #FF875C;
-  --color-flood-cobalt: #2547E8;
-  --color-flood-jade: #00A870;
-  --color-flood-sun: #FFC300;
+  --color-flood-hot: #9C2A1B;
+  --color-flood-cobalt: #9C2A1B;
+  --color-flood-jade: #9C2A1B;
+  --color-flood-sun: #9C2A1B;
 
   /* **The `-deep` step — one recipe, four colours** (the reveal's ground, evaluator-ruled
      2026-08-20). The staged flood prints this round's real pair as poster-scale die faces in a
@@ -165,10 +179,10 @@
      down the same hue. **They are tokens rather than `color-mix()` in place** because the ground is
      tone under type and its contrast was checked per face — a computed step would move silently
      the day a flood colour is retuned. */
-  --color-flood-hot-deep: #D95204;
-  --color-flood-cobalt-deep: #1B34B8;
-  --color-flood-jade-deep: #007A51;
-  --color-flood-sun-deep: #D19E00;
+  --color-flood-hot-deep: #7E2014;
+  --color-flood-cobalt-deep: #7E2014;
+  --color-flood-jade-deep: #7E2014;
+  --color-flood-sun-deep: #7E2014;
 
   /* **The `-deep` step's text companions.** The four above are the first `--color-flood-*` tokens
      that are NOT aliases of a hue — there is no `--color-cobalt-deep` for `--color-flood-cobalt-deep`
@@ -179,13 +193,13 @@
      paints the cube borders and pips `currentColor` = `--flood-deep`), so nothing reads these yet.
      They are declared anyway, and that is the point of the rule: the day a line of copy sits on a
      deep ground the colour is already decided and already checked, instead of being picked by eye
-     at that moment. Measured here: onflood-hot-deep on flood-hot-deep 4.64 · onflood-cobalt-deep on
-     flood-cobalt-deep 9.26 · onflood-jade-deep on flood-jade-deep 5.29 · onflood-sun-deep on
+     at that moment. Measured here: onflood-hot-deep on flood-hot-deep 7.68 · onflood-cobalt-deep on
+     flood-cobalt-deep 9.26 · onflood-jade-deep on flood-jade-deep 7.68 · onflood-sun-deep on
      flood-sun-deep 7.73 — and each figure is re-checked by the gate on every commit. */
-  --color-onflood-hot-deep: #101114;
-  --color-onflood-cobalt-deep: #FFFDF7;
-  --color-onflood-jade-deep: #FFFDF7;
-  --color-onflood-sun-deep: #101114;
+  --color-onflood-hot-deep: #F2E2A0;
+  --color-onflood-cobalt-deep: #F2E2A0;
+  --color-onflood-jade-deep: #F2E2A0;
+  --color-onflood-sun-deep: #F2E2A0;
 
   /* **The ornament's green — D101 (10), owner-ruled 2026-09-04.** A SIXTH colour, and the
      restriction is what pays for it: **ornament stroke only.** Never a ground, never text, never a
@@ -205,15 +219,15 @@
      on. `jade #00A870` was the only green needing no new token and was rejected — it clears the
      floor by 0.02 and is one of the four die-face colours. **This is not a fifth die face**: the
      four below keep their meaning and this green must never appear where a face colour belongs. */
-  --color-ornament: #009663;
+  --color-ornament: #2F6B4F;
 
   /* the die is an OBJECT, not a surface — identical in both schemes. `pipred` is its
      own token and never follows an accent that flips (reusing the accent measured
      2.74:1 on a bone face in dark, under the 3:1 floor for a graphical object). */
-  --color-pip: #101114;
-  --color-pipred: #FF4438;
-  --color-diefill: #FFFDF7;
-  --color-dieedge: #101114;
+  --color-pip: #2B1713;
+  --color-pipred: #C4452B;
+  --color-diefill: #FBF3D2;
+  --color-dieedge: #2B1713;
 
   /* §2 · the ladder, tier 1 (below 900px). Each is piecewise because the three
      specified points are not collinear, and floor AND ceiling both obey the ordering
@@ -488,4 +502,24 @@
      shadcn part can carry its own rounding literal that no token reaches. The die's pip
      re-rounds itself on that part — the one exemption in the system. */
   *, *::before, *::after { border-radius: 0; }
+}
+
+/* ═══ Look D — the lacquer ground and the slip (`spec-look-d-moon-blocks-2026-10-08.md`) ════════
+   The page stands on lacquer with a faint vertical grain and a soft top light; every screen's
+   content column is a joss-paper slip — a 2 px ink edge, a gold rule 8 px in, the hard offset
+   shadow. The reveal paints its own ground (its flood tokens are this lacquer). */
+body {
+  background-color: var(--color-ground);
+  background-image:
+    radial-gradient(circle at 50% 0, rgb(255 255 255 / .08), transparent 60%),
+    repeating-linear-gradient(90deg, transparent 0 3px, rgb(0 0 0 / .10) 3px 4px);
+  background-attachment: fixed;
+}
+.slip, main[data-screen]:not([data-screen="reveal"]) {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  outline: 2px solid var(--color-gold);
+  outline-offset: -10px;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / .4);
 }
