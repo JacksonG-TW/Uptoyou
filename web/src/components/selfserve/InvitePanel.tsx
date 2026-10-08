@@ -3,6 +3,7 @@ import { fetchMembers, readInviteRole, reissueJoinLink, type InviteRole, type Me
 import type { Device } from '@/lib/device'
 import CopyRow from './CopyRow'
 import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
+import { doorHref } from '@/lib/round'
 
 /**
  * The package's **step 3** — the invite screen: the link, the seat list, re-issue. **Never the
@@ -210,14 +211,33 @@ export default function InvitePanel({
       {role?.role === 'creator' && role.status?.expired && (
         <p className="ssStatus" data-part="link-status" data-state="expired">{LINK_EXPIRED}</p>
       )}
+      {/* **Role decides the page's one act** (`spec-round-diet-circle-2026-10-08.md` B). A member
+          cannot make a link, so the page says who can, once, and its one act is going to eat:
+          選這一餐, the same door the home gives (`doorHref`). Only on `/circle` — the create flow
+          (`creator`) has the link in hand as its act and keeps this panel as it was. */}
       {role?.role === 'member' && (
-        <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
+        <>
+          <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
+          {!creator && (
+            <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>
+          )}
+        </>
       )}
       {(role?.role === 'creator' || role?.role === 'unknown') && (
         <>
-          <button type="button" className="ssMinor" data-part="reissue" onClick={() => void reissue()} disabled={busy}>
-            換一條新的連結
-          </button>
+          {/* On `/circle` the creator is here to get a link to send, so re-issue IS the act: filled,
+              `data-primary`, and named for what it hands over. In the create flow the link is
+              already on screen, so it stays the quiet control it was. `unknown` takes the same
+              treatment as the creator (the server's 403 stays the backstop, as before). */}
+          {creator ? (
+            <button type="button" className="ssMinor" data-part="reissue" onClick={() => void reissue()} disabled={busy}>
+              換一條新的連結
+            </button>
+          ) : (
+            <button type="button" className="act ssAct" data-part="reissue" data-primary onClick={() => void reissue()} disabled={busy}>
+              拿一條新的邀請連結
+            </button>
+          )}
           <p className="ssNote">舊的連結就不能用了，已經進來的人不受影響。</p>
         </>
       )}
@@ -240,7 +260,7 @@ export default function InvitePanel({
           </p>
           <ul>
             {seats.members.map((m, i) => (
-              <li key={i} data-part="seat-row">{m.nickname}</li>
+              <li key={i} data-part="seat-row" data-user-content>{m.nickname}</li>
             ))}
           </ul>
         </div>

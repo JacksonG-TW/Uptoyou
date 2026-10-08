@@ -130,7 +130,6 @@
 .deviceField > span { font-size: 16px; font-weight: 700; letter-spacing: .02em; }
 
 .roundSearch { display: flex; flex-direction: column; gap: 8px; margin-top: 32px; max-width: 420px; }
-.roundLabel { font-size: var(--text-note); font-weight: 700; letter-spacing: .02em; }
 
 /* The typeahead. A list of rows, the system's own 1.5px rule — not a floating panel with a
    shadow, which is the shape §3 forbids and the one every autocomplete reaches for. */
@@ -524,39 +523,35 @@
    is only a louder one, and a modifier class would invite a third. */
 .round [data-part="pool-vetoed"] { font-size: var(--text-lead); font-weight: 400; }
 
-/* ═══ 這一餐 as two columns — owner-ruled axis 1 = (a) (ec03313), spec-round-two-columns-2026-09-16 ══
-   The act left and above the fold, 這次不吃 right. **No copy changed, no control added, no state
-   removed** — every sentence keeps its words and only its position moves.
+/* ═══ 這一餐 is one column — `spec-round-diet-circle-2026-10-08.md` A1 ══════════════════════════
+   The two-column layout (owner-ruled axis 1, 2026-09-16) kept the act above the fold beside thirteen
+   chips. The chips now fold behind one disclosure under 這一輪的人, so the right column is gone: an
+   empty 600 px beside the act would read as something failed to load.
 
-   **1200 and up, and D107 stands**: below it the page keeps the single 720 column it has, now in the
-   DOM order the ruling set (act first, menu last). The gated width is 1440, where the outer column
-   is 1100 — 680 for the act, a 60 gap, 360 for the menu.
-
-   Tops come from the spec's table and are made with the existing rhythm rather than with absolute
-   positioning, so a long sentence still pushes what follows it down instead of overlapping it. */
+   **1200 and up keeps the old 1100 outer width and the old left edge** (D107's gated width is 1440),
+   so the screen does not shift sideways against its neighbours; the content is held to the 680 the
+   left column always had. */
 @media (min-width: 1200px) {
   .round { width: 1100px; }
-  .roundCols {
-    display: grid;
-    grid-template-columns: 680px 360px;
-    column-gap: 60px;
-    align-items: start;
-  }
-  /* 找一家店 at 219 — the second rule line ends at 187, so 32 is the gap the spec's table asks for,
-     and it is `.roundSearch`'s own margin already. The input then lands at 250. */
-  .roundLeft .roundSearch { max-width: 420px; }
-  /* The pool block spans the act column rather than the input's width: it is the round's own list,
-     and the spec gives it 680 with a 106 floor so an empty round still reads as a block. */
-  .roundLeft .poolBlock { min-height: 106px; }
-  /* **這次不吃 starts level with 找一家店** (RA-2). The right column's first child is the heading,
-     and the grid row starts at the title's top, so the offset is the distance down to the label:
-     155 px. Stated once here rather than by nudging each block above it. */
-  .roundRight { margin-top: 155px; }
-  .roundRight .tonightBlock { margin-top: 0; }
-  /* **擲骰 sits 32 px under the pool block**, and 這一輪的人 and the seed line follow it (the
-     evaluator's 2026-09-16 amendment, RA-5): the act reads before the status. */
-  .roundLeft .act-row { margin-top: 32px; }
-  /* One column of chips, each the column's full 360 (RA-6). `columns: 2` is the printed-menu rule
-     for a 720 column; in a 360 one it would put four characters and a number in 156 px. */
+  .round > * { max-width: 680px; }
+  /* **A floor that holds the disclosure below the 900 px fold with a short pool**
+     (`spec-round-diet-circle-2026-10-08.md` A, «target first view»): a two-place pool is about
+     195 px tall and put 這次不想吃的類別 at y 849, a fourth control in the first view. 290 puts it
+     past 900 and stays a floor, so a longer pool still grows the block. */
+  .round .poolBlock { min-height: 290px; }
+  .round .act-row { margin-top: 32px; }
+  /* One column of chips, each the column's full width. */
   .round .menu { columns: 1; }
 }
+
+/* The disclosure's button — a link-sized quiet control like 怎麼驗證？ (it is optional, so it is
+   never a block or a fill; the roll above it is the one act). 44 px tall for a thumb. Margin above
+   separates it from the seats it follows. */
+.round .tonightToggle {
+  display: inline-flex; align-items: center; min-height: 44px;
+  margin-top: 20px; padding: 0;
+  background: none; border: 0; color: var(--color-ink);
+  font: inherit; font-size: var(--text-note); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.round .tonightToggle:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }

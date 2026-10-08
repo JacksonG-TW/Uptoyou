@@ -142,6 +142,9 @@ export default function Round() {
    *  entry is dropped and the chip snaps back to what the server last said, which is the only
    *  state this screen is allowed to assert. */
   const [pending, setPending] = useState<Record<string, boolean>>({})
+  /** Whether 「這次不想吃的類別」 is open. **Not remembered** — it starts closed on every visit
+   *  (`spec-round-diet-circle-2026-10-08.md` A1): most rounds never touch it. */
+  const [tonightOpen, setTonightOpen] = useState(false)
 
   /** **The round whose pool swept to nothing, or `null`.** A round id rather than a boolean, and
    *  that is what makes the clear rule correct: the line clears on the next `pooled` **for that
@@ -385,21 +388,17 @@ export default function Round() {
   const chipOn = (c: string) => pending[c] ?? avoided.has(c)
   const catStat = new Map((prefs?.avoid_categories ?? []).map((a) => [a.value, a]))
   const anyOn = CATEGORIES.some(chipOn)
+  /** The ticked count for the button's label. Server state plus this device's unconfirmed taps,
+   *  the same source the chips draw from, so the label and the chips cannot disagree. */
+  const anyCount = CATEGORIES.filter(chipOn).length
 
 
   return (
     <main className="round" data-screen="round">
-      {/* **Two columns at 1440 — the act left, 這次不吃 right** (owner-ruled axis 1 = (a), ec03313;
-          the evaluator's `spec-round-two-columns-2026-09-16.md`). The thirteen chips used to stand
-          between the title and the search, so 找一家店, the pool and 擲骰 all sat past the fold: the
-          screen's own act was the part a person had to scroll for.
-
-          **The left column is FIRST in the DOM, and that is the structural half of the ruling** —
-          reading order and tab order reach the act before the menu, at every width. Below the
-          two-column width the same order flows as one column, so a narrow screen meets the act
-          first too. */}
-      <div className="roundCols">
-      <div className="roundLeft">
+      {/* **One column at every width** (`spec-round-diet-circle-2026-10-08.md` A1). The two-column
+          layout existed to keep the act above the fold beside thirteen chips; the chips now fold
+          behind one disclosure below the roll, so the right column would be an empty 600 px that
+          reads as something failed to load. The act is first in the DOM and on screen. */}
       {lastMeal && (
         <p className="roundNote lastMeal" data-part="last-meal">
           上一餐：<span data-user-content>{lastMeal.name}</span> · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
@@ -420,28 +419,28 @@ export default function Round() {
           bar's 「擲骰」. The difference from the line above: D110 supplies the exact number, so that
           fix is determined; D108 forbids a phrasing without supplying the replacement, and which
           word replaces 擲 is a wording choice the evaluator gates. */}
-      <p className="roundNote">每人最多提三家。提完了就擲，兩顆骰子一次定案。</p>
-
-      {/* **The pool rule, stated** (`spec-conditional-routing.md` §5, ruling ③). D70: a place is
-          one entry in the pool however many people proposed it, and a repeat proposal succeeds
-          quietly — so without this line the quiet 200 reads as "it worked, and it counted again".
-
-          **Its own sentence, not folded into the line above.** That line is the cap and A5's
-          walkthrough asserts it by text; two facts in one sentence would make one of them
-          unassertable. D20's register: it states the mechanism and stops — 「請不要重複提」 was
-          rejected for advising. */}
+      {/* **One rule line, not two** (`spec-round-diet-circle-2026-10-08.md` A2): the first view is
+          budgeted to six pieces of our own text, and the cap and the pool rule are one fact about
+          proposing. The cap stays ruled at three (D110, stated on the home page too); the second
+          half is D70's pool rule — a place is one entry however many people proposed it, and a
+          repeat proposal succeeds quietly, so without it the quiet 200 reads as "it counted again".
+          It states the mechanism and stops (D20) — 「請不要重複提」 was rejected for advising.
+          The cap's old separate line (A5's walkthrough asserted it by text) is folded in here, so
+          that assert reads this part now. */}
       <p className="roundNote" data-part="round-pool-rule">
-        同一家店不管幾個人提，都只算一份。多提不會提高中選的機會。
+        每人最多提三家，同一家提幾次都只算一份。
       </p>
 
-
+      {/* **No visible 找一家店 label** (`spec-round-diet-circle-2026-10-08.md` A3): the placeholder
+          names the act and says what to type, so a label above it was a second piece of text
+          saying the same. The accessible name stays, as `aria-label`. */}
       <label className="roundSearch">
-        <span className="roundLabel">找一家店</span>
         <Input
           data-part="place-search"
+          aria-label="找一家店"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="店名的一部分"
+          placeholder="找一家店：打店名的一部分"
           autoComplete="off"
         />
       </label>
@@ -527,6 +526,73 @@ export default function Round() {
         <p className="roundNote" data-part="search-cap">只列出前 10 家。</p>
       )}
 
+      {/* **The roll sits ABOVE the list since item 3** (frontend, 2026-10-08,
+          `spec-round-diet-circle-2026-10-08.md`). Under the list, a ten-shop pool pushed it below
+          the first view at both widths (`g_multi_device` MD-6: 0 primary on every device), so the
+          one act of the screen was the one thing a full table could not see. Above, it is at the
+          same place whatever the pool's length: the list's heading names what it rolls. */}
+      {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. It sits
+          directly under the pool it acts on: *these are the places · roll them*.
+
+          **It moved above 這一輪的人 and the seed line on 2026-09-16** (the evaluator's amendment to
+          `spec-round-two-columns-2026-09-16.md`, closing RA-5). Those two are status — who has
+          looked, and the commitment that fixes the result — and status reads after the act. With six
+          places pooled they had pushed 擲骰's top to 1071, past the fold the two-column ruling exists
+          to keep it above.
+
+          **The disabled state survives here and only here.** §4's rule that a disabled control is
+          never filled still applies pre-pool: with fewer than two places there is nothing to roll,
+          and a filled control would invite a press that does nothing. The old bar expressed this
+          as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
+          dashed box as an offender, so it is a bordered paper block instead. */}
+      <div className="act-row">
+        <button
+          type="button"
+          className="act"
+          data-part="roll"
+          data-primary
+          disabled={roundId === null || pool.length < 2 || busy}
+          onClick={() => {
+            if (!dev || roundId === null) return
+            setBusy(true)
+            // No navigation here on purpose — the `closed` event moves every device at once.
+            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
+               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
+               gets — and the screen must show one. **The 409's text is suppressed rather than made
+               identical to the event's:** the detail is the API's string and lives under
+               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
+               the same string would put one sentence under two owners. That is the drift this
+               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
+               here keeps one owner per string.
+
+               **Suppressed only when the event actually arrived for THIS round.** The event is
+               published before the 409 returns, but if it ever did not arrive the person would be
+               left with a refusal and no reason, so the fallback is the API's own sentence. */
+            void roll(dev, roundId).catch((e: Error) => {
+              setRollError({ round: roundId, message: e.message })
+              setBusy(false)
+            })
+          }}
+        >
+          {/* Says what pressing does (N2): the dice roll and the result shows. Never 「決定」 —
+              the line beside it says the result was fixed at the open (D108). */}
+          擲骰子，看結果
+        </button>
+        {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
+            seat list could not carry: anyone may press, nothing about the pair depends on who
+            does, and whose pair it is. Present from the round's first frame because `counts` is
+            (D108). Revealing, not throwing: the line credits nobody's tap with the number. */}
+        {decider !== null && (
+          <p className="roundNote" data-part="deciding">
+            {/* One string, so the sentence is one piece of text: the nickname is inside a sentence
+                that reads as one (`spec-round-diet-circle-2026-10-08.md`; the budget counts text
+                nodes, and three nodes for one sentence would count three). */}
+            {`誰先按都可以。結果開局時就定了，用 ${decider} 的骰子。`}
+          </p>
+        )}
+
+      </div>
+
       {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
           row is a loading spinner wearing a costume (the spec's words). It takes the step after
           the menu's cap, because it is the last thing on the screen in reading order. */}
@@ -587,62 +653,6 @@ export default function Round() {
         )}
       </section>
 
-      {/* **The act, inline — owner-ruled 2026-08-20, option 乙.** The pinned BAR is retired. It sits
-          directly under the pool it acts on: *these are the places · roll them*.
-
-          **It moved above 這一輪的人 and the seed line on 2026-09-16** (the evaluator's amendment to
-          `spec-round-two-columns-2026-09-16.md`, closing RA-5). Those two are status — who has
-          looked, and the commitment that fixes the result — and status reads after the act. With six
-          places pooled they had pushed 擲骰's top to 1071, past the fold the two-column ruling exists
-          to keep it above.
-
-          **The disabled state survives here and only here.** §4's rule that a disabled control is
-          never filled still applies pre-pool: with fewer than two places there is nothing to roll,
-          and a filled control would invite a press that does nothing. The old bar expressed this
-          as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
-          dashed box as an offender, so it is a bordered paper block instead. */}
-      <div className="act-row">
-        <button
-          type="button"
-          className="act"
-          data-part="roll"
-          data-primary
-          disabled={roundId === null || pool.length < 2 || busy}
-          onClick={() => {
-            if (!dev || roundId === null) return
-            setBusy(true)
-            // No navigation here on purpose — the `closed` event moves every device at once.
-            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
-               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
-               gets — and the screen must show one. **The 409's text is suppressed rather than made
-               identical to the event's:** the detail is the API's string and lives under
-               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
-               the same string would put one sentence under two owners. That is the drift this
-               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
-               here keeps one owner per string.
-
-               **Suppressed only when the event actually arrived for THIS round.** The event is
-               published before the 409 returns, but if it ever did not arrive the person would be
-               left with a refusal and no reason, so the fallback is the API's own sentence. */
-            void roll(dev, roundId).catch((e: Error) => {
-              setRollError({ round: roundId, message: e.message })
-              setBusy(false)
-            })
-          }}
-        >
-          {/* Says what pressing does (N2): the dice roll and the result shows. Never 「決定」 —
-              the line beside it says the result was fixed at the open (D108). */}
-          擲骰子，看結果
-        </button>
-        {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
-            seat list could not carry: anyone may press, nothing about the pair depends on who
-            does, and whose pair it is. Present from the round's first frame because `counts` is
-            (D108). Revealing, not throwing: the line credits nobody's tap with the number. */}
-        {decider !== null && (
-          <p className="roundNote" data-part="deciding">
-            誰先按都可以。結果開局時就定了，用 {decider} 的骰子。
-          </p>
-        )}
 
       {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
           **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
@@ -672,41 +682,20 @@ export default function Round() {
                     surface, where a field read from the wrong level of a payload put an empty name
                     on screen with no error anywhere. */}
                 <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
-                <span className="seatDice">
-                  {r.die1 !== null && r.die2 !== null ? `${r.die1} · ${r.die2}` : '還沒看結果'}
-                </span>
+                {/* A waiting seat shows 「—」 and keeps its words for assistive tech
+                    (`spec-round-diet-circle-2026-10-08.md` A4): one 「還沒看結果」 per seat was the
+                    biggest repeated text on the screen. The seat's attributes are untouched. */}
+                {r.die1 !== null && r.die2 !== null ? (
+                  <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
+                ) : (
+                  <span className="seatDice" role="img" aria-label="還沒看結果">—</span>
+                )}
               </li>
             ))}
           </ul>
         </section>
       )}
 
-      {/* The commitment, in the provenance register this surface already uses for the weather's
-          source — small, muted, factual, and never asked to reassure. It states when the number was
-          fixed; it does not tell anyone what to conclude from that (D20).
-
-          Shown in full rather than truncated. A hash exists to be compared against another hash,
-          and half of one cannot be. */}
-      {/* **UX batch U3 — the claim in words, the proof one tap away** (walk item 9). A friend read
-          the bare 64-character hash as an error message. The commitment is unchanged and still
-          shown in full — half a hash cannot be compared — it just waits behind 「怎麼驗證？」.
-          `seed_commit` is `sha256(seed)` over the seed's 32 raw bytes (`engine/draw.py`), and the
-          seed is published as hex at close, so the how-to says to turn the hex back into bytes. */}
-      {commit && (
-        <div className="commit" data-part="seed-commit">
-          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
-          <details className="verify">
-            <summary>怎麼驗證？</summary>
-            <p>開局時公開的指紋：<span className="commitHash">{commit}</span></p>
-            <p>開獎後會公開這一輪的種子（十六進位）。把它轉回位元組，算一次 SHA-256，會得到上面這串指紋。</p>
-          </details>
-        </div>
-      )}
-
-      </div>
-      </div>
-
-      <div className="roundRight">
       {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
           `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
           甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
@@ -714,7 +703,9 @@ export default function Round() {
           they say what tonight is not, so the stance is set while it is still cheap. **Since
           2026-09-16 that is expressed by the right column rather than by sitting above the search**
           (owner-ruled axis 1): the thirteen chips were pushing the screen's own act past the fold,
-          so they stand beside it instead of before it. The stance is still there to set first.
+          so they stand beside it instead of before it. **Since 2026-10-08 the whole menu folds behind
+          one button below 這一輪的人** (`spec-round-diet-circle-2026-10-08.md` A1): optional, and most
+          rounds never touch it. Nothing inside it changed.
 
           **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
           `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
@@ -723,8 +714,18 @@ export default function Round() {
 
           **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
           1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
-      <section className="tonightBlock">
-        <h2 className="roundH">這次不吃</h2>
+      <button
+        type="button"
+        className="tonightToggle"
+        data-part="tonight-toggle"
+        aria-expanded={tonightOpen}
+        aria-controls="tonight-block"
+        onClick={() => setTonightOpen((o) => !o)}
+      >
+        {anyCount > 0 ? `這次不想吃的類別（已勾 ${anyCount}）` : '這次不想吃的類別'}
+      </button>
+      {tonightOpen && (
+      <section className="tonightBlock" id="tonight-block">
         {/* UX batch U5a — who it binds and what it does, the two questions the walk found a member
             could not answer. True to D103: one member's stance, a discount of that kind's places
             for this round, and never a removal (the place stays proposable and in the pool). */}
@@ -835,33 +836,58 @@ export default function Round() {
           </p>
         )}
 
-        {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
-            `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
-            half is not warned, and a surface that computed it could compute it wrong.
-
-            **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
-            is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
-            half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
-            to make it appear (A2-G8b stays n/a).
-
-            **The count left this sentence on 2026-09-11 and the warning did not**
-            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
-            this screen; the evaluator's reading is that the denominator was the number and the
-            warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
-            everything that makes it a caution. Same trigger, same `crossed` read, no figure —
-            **removing the sentence itself would remove a protection, and that is the owner's word
-            to give.** Every character is in the shipped body subset, so no font rebuild. */}
-        {prefs?.breadth.crossed && (
-          <p className="roundWarn" data-part="tonight-breadth">
-            你目前的選擇，已經讓超過一半的選項受影響。
-          </p>
-        )}
-
         {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
             states, it does not reassure, and an empty row already says it. */}
       </section>
-      </div>
-      </div>
+      )}
+      {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
+          `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
+          half is not warned, and a surface that computed it could compute it wrong.
+
+          **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
+          is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
+          half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
+          to make it appear (A2-G8b stays n/a).
+
+          **The count left this sentence on 2026-09-11 and the warning did not**
+          (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
+          this screen; the evaluator's reading is that the denominator was the number and the
+          warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
+          everything that makes it a caution. Same trigger, same `crossed` read, no figure —
+          **removing the sentence itself would remove a protection, and that is the owner's word
+          to give.** Every character is in the shipped body subset, so no font rebuild.
+
+      **It sits outside the fold on purpose** (`spec-round-diet-circle-2026-10-08.md` A1): a caution
+      that is protection must not be hidden by a closed disclosure. */}
+      {prefs?.breadth.crossed && (
+        <p className="roundWarn" data-part="tonight-breadth">
+          你目前的選擇，已經讓超過一半的選項受影響。
+        </p>
+      )}
+
+
+      {/* The commitment, in the provenance register this surface already uses for the weather's
+          source — small, muted, factual, and never asked to reassure. It states when the number was
+          fixed; it does not tell anyone what to conclude from that (D20).
+
+          Shown in full rather than truncated. A hash exists to be compared against another hash,
+          and half of one cannot be. */}
+      {/* **UX batch U3 — the claim in words, the proof one tap away** (walk item 9). A friend read
+          the bare 64-character hash as an error message. The commitment is unchanged and still
+          shown in full — half a hash cannot be compared — it just waits behind 「怎麼驗證？」.
+          `seed_commit` is `sha256(seed)` over the seed's 32 raw bytes (`engine/draw.py`), and the
+          seed is published as hex at close, so the how-to says to turn the hex back into bytes. */}
+      {commit && (
+        <div className="commit" data-part="seed-commit">
+          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
+          <details className="verify">
+            <summary>怎麼驗證？</summary>
+            <p>開局時公開的指紋：<span className="commitHash">{commit}</span></p>
+            <p>開獎後會公開這一輪的種子（十六進位）。把它轉回位元組，算一次 SHA-256，會得到上面這串指紋。</p>
+          </details>
+        </div>
+      )}
+
 
     </main>
   )

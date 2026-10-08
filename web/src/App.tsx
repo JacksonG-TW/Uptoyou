@@ -13,7 +13,7 @@ import { device } from './lib/device'
 import { arrive } from './lib/motion'
 import { dateline } from './lib/dateline'
 import { fetchPlaceCount, type PlaceCount } from './lib/places'
-import { fetchMembers, type Members } from './lib/selfserve'
+import { fetchMembers, readInviteRole, type Members } from './lib/selfserve'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -81,6 +81,20 @@ export default function App() {
     return () => { live = false }
   }, [])
 
+  /* **The 邀朋友加入 door is the creator's alone** (`spec-round-diet-circle-2026-10-08.md` B): only
+     they can make a link, so for everyone else the door led to a page that says «ask someone
+     else». The same read `/circle` uses. Not shown while the read is in flight, and not shown if
+     it fails or says anything but creator (`unknown` is `/circle`'s fallback, not a reason to
+     offer the door here). */
+  const [isCreator, setIsCreator] = useState(false)
+  useEffect(() => {
+    const d = device()
+    if (!d) return
+    let live = true
+    readInviteRole(d).then((r) => { if (live) setIsCreator(r.role === 'creator') }).catch(() => {})
+    return () => { live = false }
+  }, [])
+
   const name = TOWNSHIPS.find((t) => t.code === township)?.name ?? ''
   const hour = weather?.hour?.slice(11, 16) ?? ''
   const fetched = fetchedLabel(weather)
@@ -126,8 +140,12 @@ export default function App() {
             <div className="act-row homeAct">
               {hasDevice ? (
                 <>
-                  <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>
-                  <a className="act actMinor" data-part="circle-invite" href="/circle">邀朋友加入</a>
+                  {/* 「一起」 since the member-home gate (2026-10-08): with the circle named above
+                      it, both readers still asked 「是不是只有我自己抽？」. The bar keeps 選這一餐. */}
+                  <a className="act" data-part="enter" data-primary href={doorHref()}>一起選這一餐</a>
+                  {isCreator && (
+                    <a className="act actMinor" data-part="circle-invite" href="/circle">邀朋友加入</a>
+                  )}
                   <a className="act actMinor" data-part="create-circle" href="/create">開一個圈子</a>
                 </>
               ) : (

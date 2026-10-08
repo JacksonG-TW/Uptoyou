@@ -64,7 +64,11 @@ export const NO_ACCOUNT = '不用帳號，也不用 email。'
  *
  * Every character checked against `charset-sub.txt` before it was written here; none absent.
  */
-export const MEMBER_INVITE = '要邀人進來，跟開圈子的人要連結。'
+export const MEMBER_INVITE = '邀請連結由開這個圈子的人發。'
+
+/* **Reworded 2026-10-08** (`spec-round-diet-circle-2026-10-08.md` B): it now states only who can
+   make a link, in one line, because the member's page also carries its own act (選這一餐) and the
+   old sentence told them to go and ask — a second instruction beside the first. */
 
 /**
  * The creator's `/circle` — **is the link they sent still alive** (owner 「顯示」 2026-09-13; the

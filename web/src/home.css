@@ -434,6 +434,13 @@ h1.headline .lit { color: var(--color-hot-ink); }
 @media (min-width: 900px) {
   .hero { margin-bottom: auto; }
 }
+/* **Below 900 the first view also ends where the hero ends** (`spec-round-diet-circle-2026-10-08.md`
+   B). A member who is not the circle's creator has two doors, not three, so the doors fit one row
+   at 430 and the date line under the hero rose into the 760 px first view. The column is held to
+   the viewport the way ≥900 already holds it, so the date starts below the fold at any door count. */
+@media (max-width: 899px) {
+  .col { min-height: 100svh; }
+}
 /* The doors wrap as one row; three of them for a seated member. */
 .homeAct { display: flex; flex-wrap: wrap; gap: 12px; }
 

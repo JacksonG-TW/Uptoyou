@@ -152,6 +152,11 @@
    wide, the width of the column, which reads as a banner rather than a control. Measured at 1440
    before this rule. The blocks above them (the link box, the seat list) DO want the column's full
    width, so the fix is on the controls rather than on the container's `align-items`. */
+/* The filled re-issue / 選這一餐 on `/circle` (`spec-round-diet-circle-2026-10-08.md` B): `.act`
+   already supplies the box, so this only opens the gap that `.ssMinor` carried and joins the status
+   line to its act the way `.ssStatus + .ssMinor` does. */
+.ssAct, .selfserve a.act { margin-top: 24px; }
+.ssStatus + .ssAct { margin-top: 12px; }
 .selfserve .act,
 .selfserve .ssMinor,
 .selfserve .copyBtn { align-self: flex-start; }
