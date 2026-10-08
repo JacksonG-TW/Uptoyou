@@ -77,9 +77,15 @@ async def until(predicate, seconds: float, step: float = 0.2):
 
 
 async def listener_pid(test_url: str, application_name: str) -> int | None:
+    # **`datname = current_database()`, because `pg_stat_activity` is the whole cluster's** (found
+    # 2026-10-08). Without it, the dev stack's own listener — same application_name, database
+    # `upto` — could come back first: the test then killed dev 8080's live listener and waited for
+    # its own instance to notice a kill that never touched it. Red about two runs in five, and
+    # every run reached outside its own database.
     pids = await admin_sql(
         test_url,
-        "select pid from pg_stat_activity where application_name = :a and pid <> pg_backend_pid()",
+        "select pid from pg_stat_activity where application_name = :a "
+        "and datname = current_database() and pid <> pg_backend_pid()",
         {"a": application_name})
     return pids[0] if pids else None
 
