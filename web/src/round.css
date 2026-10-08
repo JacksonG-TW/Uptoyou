@@ -555,3 +555,42 @@
   text-decoration: underline; text-underline-offset: 3px;
 }
 .round .tonightToggle:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+
+/* ═══ Look D — the slip ═══ the screen's `main` is a joss-paper slip on the lacquer (the paper,
+   ink edge, gold rule and shadow come from the shared rule in `index.css`). Here: its width, its
+   place below the fixed bars, and padding that clears the gold rule (outline at -10px). */
+main.round, main.device {
+  width: min(680px, calc(100vw - 32px));
+  margin: calc(var(--bar-h) + 24px) auto 56px;
+  padding: 36px 22px 44px;
+  min-height: 0;
+  display: block;
+}
+@media (min-width: 900px) {
+  main.round, main.device { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + 40px); }
+}
+/* the device screen sits on a column of its own; the flex centring of the bare page is retired */
+main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-ink); }
+/* Buttons: seal red, 3 px ink edge, 6 px hard shadow; the secondary is bare with the same edge. */
+.round .act, .device button[type="submit"] {
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 0 var(--color-ink);
+  background: var(--color-hot);
+  color: var(--color-on-hot);
+  border-radius: 0;
+}
+@media (hover: hover) {
+  .round .act:hover:not(:disabled), .device button[type="submit"]:hover:not(:disabled) {
+    transform: translate(3px, 3px); box-shadow: 3px 3px 0 0 var(--color-ink);
+  }
+}
+.round .act:active:not(:disabled), .device button[type="submit"]:active:not(:disabled) {
+  transform: translate(6px, 6px); box-shadow: 0 0 0 0 var(--color-ink);
+  background: var(--color-ink); color: var(--color-paper);
+}
+.round .act:disabled, .device button[type="submit"]:disabled {
+  background: transparent; color: var(--color-muted); box-shadow: none; transform: none;
+}
+.device input, .round input { border-width: 2px; background: var(--color-paper); }
+.roundTitle { border-bottom: 3px solid var(--color-ink); padding-bottom: 10px; }
+.round .roundH { border-bottom: 1.5px solid rgb(43 23 19 / .45); padding-bottom: 6px; }

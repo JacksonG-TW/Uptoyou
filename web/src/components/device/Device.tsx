@@ -129,7 +129,7 @@ export default function DeviceScreen() {
       {/* **Two lines, and the second is the sentence the note used to end with** (§3's copy
           accounting: every clause of the old note survives somewhere). Serif 900 — the display
           face, the same one the home's headline uses. */}
-      <h1 className="deviceTitle arrive" style={arrive(0)}>
+      <h1 className="deviceTitle dSerif arrive" style={arrive(0)}>
         <span>貼上鑰匙</span><span className="lit">這台裝置就是你的座位</span>
       </h1>
       <p className="deviceLead arrive" style={arrive(0)}>這一頁給手上已經有鑰匙的人。</p>

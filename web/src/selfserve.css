@@ -178,3 +178,32 @@
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
   overflow: hidden; overflow-wrap: anywhere;
 }
+
+/* ═══ Look D — the slip ═══ the same slip as the other screens: width, place below the bars, padding
+   that clears the gold rule. The one fixed top of the steps (2026-09-15) is kept as a fixed margin. */
+main.selfserve {
+  width: min(680px, calc(100vw - 32px));
+  margin: calc(var(--bar-h) + 24px) auto 56px;
+  padding: 36px 22px 44px;
+  min-height: 0;
+  display: block;
+}
+@media (min-width: 900px) {
+  main.selfserve { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + 40px); }
+}
+.selfserve .act {
+  border: 3px solid var(--color-ink);
+  box-shadow: 6px 6px 0 0 var(--color-ink);
+  background: var(--color-hot);
+  color: var(--color-on-hot);
+}
+@media (hover: hover) {
+  .selfserve .act:hover:not(:disabled) { transform: translate(3px, 3px); box-shadow: 3px 3px 0 0 var(--color-ink); }
+}
+.selfserve .act:active:not(:disabled) {
+  transform: translate(6px, 6px); box-shadow: 0 0 0 0 var(--color-ink);
+  background: var(--color-ink); color: var(--color-paper);
+}
+.selfserve .act:disabled { background: transparent; color: var(--color-muted); box-shadow: none; transform: none; }
+.selfserve .ssMinor, .selfserve .copyBtn { border-width: 3px; background: transparent; }
+.ssTitle, .ssInvite { border-bottom: 3px solid var(--color-ink); padding-bottom: 10px; }

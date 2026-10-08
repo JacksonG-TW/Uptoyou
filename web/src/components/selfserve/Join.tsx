@@ -98,7 +98,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               <span className="lit ssCircle" data-user-content>「{preview.circleName}」</span>
             </h1>
           ) : (
-            <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
+            <h1 className="ssTitle dSerif"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
           )}
           {/* U9 — what the product is, for a link opened from a chat with no context. */}
           <p className="ssLead">大家各自提想吃的店，最後用骰子決定這一餐吃哪家。用這條連結進來，你會有自己的座位。</p>

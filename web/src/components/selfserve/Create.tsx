@@ -76,7 +76,7 @@ export default function Create() {
       {step === 'name' && (
         <>
           <p className="eyebrow"><em>★</em>開一個圈子</p>
-          <h1 className="ssTitle"><span>取個名字</span><span className="lit">就可以開始</span></h1>
+          <h1 className="ssTitle dSerif"><span>取個名字</span><span className="lit">就可以開始</span></h1>
           <p className="ssLead">{NO_ACCOUNT}</p>
 
           {/* §2a — two fields and nothing else on the screen. */}
@@ -132,7 +132,7 @@ export default function Create() {
         /* §2c. **No key is rendered anywhere in this branch** — the other half of `SS-2`. */
         <>
           <p className="eyebrow"><em>★</em>{circleName.trim()}</p>
-          <h1 className="ssTitle"><span>邀朋友加入</span></h1>
+          <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
 
           {/* **Step 3 is one component, shared with the durable `/circle` route** (`SS-13`).
               The link is passed in because the `201` already handed it over — this flow must not

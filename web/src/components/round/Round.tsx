@@ -404,7 +404,7 @@ export default function Round() {
           上一餐：<span data-user-content>{lastMeal.name}</span> · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
         </p>
       )}
-      <h1 className="roundTitle">這一餐</h1>
+      <h1 className="roundTitle dSerif">這一餐</h1>
       {people.length > 0 && (
         <p className="roundNote" data-part="circle-people">這個圈子：<span data-user-content>{people.join('、')}</span></p>
       )}
@@ -597,7 +597,7 @@ export default function Round() {
           row is a loading spinner wearing a costume (the spec's words). It takes the step after
           the menu's cap, because it is the last thing on the screen in reading order. */}
       <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
-        <h2 className="roundH">這一輪的名單</h2>
+        <h2 className="roundH dSerif">這一輪的名單</h2>
         {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
             (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
             「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
@@ -667,7 +667,7 @@ export default function Round() {
           「以 … 的骰子為準」 rather than anything that gives them agency they did not have. */}
       {rolls.length > 0 && (
         <section className="seats" data-part="roll-list">
-          <h2 className="roundH">這一輪的人</h2>
+          <h2 className="roundH dSerif">這一輪的人</h2>
           <ul className="seatRows">
             {rolls.map((r, i) => (
               <li

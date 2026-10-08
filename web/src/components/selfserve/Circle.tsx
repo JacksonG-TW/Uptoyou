@@ -53,7 +53,7 @@ export default function Circle({ device }: { device: Device }) {
     <main className="selfserve" data-screen="circle">
       {/* No 「★ 這個圈子」 eyebrow (`spec-round-diet-circle-2026-10-08.md` B): the title already says
           where you are, and the eyebrow was one more piece of text in a first view that is budgeted. */}
-      <h1 className="ssTitle"><span>邀朋友加入</span></h1>
+      <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
       <InvitePanel device={device} link={link} onLink={setLink} />
     </main>
   )
