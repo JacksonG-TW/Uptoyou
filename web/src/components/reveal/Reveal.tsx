@@ -820,7 +820,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
         {/* Look D: the winner is a joss-paper slip. The red head band is a brand plate, drawn only
             for the eye (`aria-hidden`); the name inside is still the `h1`. */}
         <div className="slip" data-part="slip">
-        <div className="slipHead" aria-hidden="true" data-plate="由你決定" />
+        <div className="slipHead" aria-hidden="true" />
         <div className="winnerLine">
           {!evidence && data && data.winning_place_id !== null && (
             <span className="boardSwatch winnerMark" data-part="winner-mark" aria-hidden="true"

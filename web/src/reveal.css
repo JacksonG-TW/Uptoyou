@@ -1597,5 +1597,9 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
     font-size: clamp(calc(24 * var(--k)), calc(400 * var(--k) / (var(--len, 6) + 1.4)), calc(84 * var(--k)));
   }
 }
-/* The plate's characters are drawn from `data-plate`, so the first-view text count is unchanged. */
-.reveal .slipHead::before { content: attr(data-plate); }
+/* **The band carries no lettering, on purpose.** A 由你決定 plate here was drawn from a CSS
+   `content:` so the first-view counter would not see it — text a person reads but the budget does
+   not count is the instrument fooled, not the budget kept. As a real text node it made the reveal
+   seven pieces against six, so the band stays a plain seal-red strip: the slip still reads as a
+   slip, and the brand is on the home's own band. */
+.reveal .slipHead { min-height: 26px; }

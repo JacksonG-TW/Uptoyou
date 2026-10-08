@@ -523,3 +523,8 @@ body {
   outline-offset: -10px;
   box-shadow: 8px 8px 0 rgb(0 0 0 / .4);
 }
+/* Look D — our own fixed copy in the serif (titles and section heads that hold literal text, marked
+   `dSerif` in the components). Names and anything from an expression stay in the sans: the serif is
+   subset from this copy alone (`tools/subset_fonts.py` derives it from the classes that ask for it),
+   so a name set in it would mix two faces inside one word. */
+.dSerif { font-family: "UpTo Serif", "Noto Serif TC", serif; }
