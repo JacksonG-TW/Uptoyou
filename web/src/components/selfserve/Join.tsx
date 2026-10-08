@@ -31,6 +31,11 @@ import { REPLACE_NOTICE } from './copy'
 export default function Join({ circle, ticket }: { circle: string; ticket: string }) {
   const [nickname, setNickname] = useState('')
   const [seated] = useState(() => device() !== null)
+  /** **Already in THIS circle** — typically the creator tapping their own link to check it (the
+   *  reviewer's catch on 0de0aaa). Joining would mint a second seat here and leave the first,
+   *  taking its invite power with it, so the form is not offered: the line says where the device
+   *  already is and links to it. Read once at mount, like `seated`. */
+  const [here] = useState(() => device()?.circle === circle)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   /** `null` while the preview is in flight: the form waits for it, so a dead link is said before
@@ -100,10 +105,15 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
 
           {/* A dead link is said on open and the form is not drawn: every dead case is one answer
               from the server, so this is its one sentence, verbatim. */}
-          {preview?.kind === 'dead' && (
+          {here && (
+            <p className="ssNote" data-part="join-already-here">
+              這台裝置已經在這個圈子裡。<a href="/round">到這一餐 →</a>
+            </p>
+          )}
+          {!here && preview?.kind === 'dead' && (
             <p className="ssErr" data-part="join-dead" role="alert">{preview.message}</p>
           )}
-          {preview !== null && preview.kind !== 'dead' && (
+          {!here && preview !== null && preview.kind !== 'dead' && (
           <form className="ssForm" onSubmit={(e) => { e.preventDefault(); void join() }}>
             <label className="ssField">
               <span className="ssLabel">你的暱稱</span>
