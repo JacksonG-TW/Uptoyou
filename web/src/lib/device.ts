@@ -19,8 +19,22 @@ export function device(): Device | null {
 /** One key, one circle: writing a second circle replaces the first (an open ruling — reviewer
  *  baseline finding 1). The key left behind in an existing browser is inert. */
 export function remember(d: Device): void {
+  // A different circle's last round is not this circle's 上一餐, and the new key cannot read it.
+  if (localStorage.getItem('upto_circle') !== d.circle) localStorage.removeItem('upto_last_round')
   localStorage.setItem('upto_token', d.token)
   localStorage.setItem('upto_circle', d.circle)
+}
+
+/**
+ * The round the bar's 上一餐結果 points at. **Only ever moves forward**: round ids grow, so a
+ * smaller id is an older meal — a reveal opened from an old chat link must not pull the label back
+ * to it (the reviewer, fd14276). Written by 這一餐 from the snapshot and by every reveal opened.
+ */
+export function noteLastRound(id: number): void {
+  try {
+    const held = Number(localStorage.getItem('upto_last_round'))
+    if (!Number.isFinite(held) || id > held) localStorage.setItem('upto_last_round', String(id))
+  } catch { /* storage off: the bar simply has no 上一餐結果 */ }
 }
 
 export function auth(d: Device): HeadersInit {

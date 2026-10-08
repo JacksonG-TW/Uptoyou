@@ -9,7 +9,7 @@ import {
   evidenceIn, faceOf, fetchRaw, RoundStillOpen, signTrip,
   type Evidence as EvidenceData, type MemberReveal, type Trip,
 } from '@/lib/reveal'
-import { device, type Device } from '@/lib/device'
+import { device, noteLastRound, type Device } from '@/lib/device'
 /* §3a only. The operator's counts come from the same endpoint the member's 這一餐 used to render
    them from, so there is one definition of each figure and no second arithmetic. */
 import { fetchPreferences, type Preferences } from '@/lib/preferences'
@@ -378,10 +378,9 @@ export default function Reveal({ roundId }: { roundId: number }) {
         setData(d)
         setTrip(d.trip)
         setEvidence(evidenceIn(raw))
-        // Demo scaffolding: the switcher's 開獎 stop needs a round to point at and there is no
-        // endpoint for "this circle's latest". Recording the one actually looked at is the
-        // cheapest honest answer, and it disappears with the switcher.
-        localStorage.setItem('upto_last_round', String(roundId))
+        // The bar's 上一餐結果 — forward only, so an older reveal from a chat link cannot pull it
+        // back (`noteLastRound`).
+        noteLastRound(roundId)
         // **Reduced motion lands instantly and still lands** (§5 rule 3: the end states apply, the
         // transitions do not). Not "no animation and no reveal" — the person still gets the answer.
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) land('reduced')

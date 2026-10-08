@@ -3,7 +3,7 @@ import {
   openRound, propose, roll, searchPlaces, materialise, subscribe,
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
-import { device, type Device } from '@/lib/device'
+import { device, noteLastRound, type Device } from '@/lib/device'
 import { fetchMembers } from '@/lib/selfserve'
 import { fetchReveal } from '@/lib/reveal'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
@@ -189,7 +189,7 @@ export default function Round() {
              should on 3b0921d). It read `upto_last_round`, which only the reveal wrote — so a
              member who missed the last rounds was sent to an older meal under a label that says
              «last». The snapshot names the circle's latest closed round; it is recorded here. */
-          try { localStorage.setItem('upto_last_round', String(last)) } catch { /* storage off */ }
+          noteLastRound(last)
           fetchReveal(dev, last)
             .then((r) => {
               if (lastAsked.current !== last) return
