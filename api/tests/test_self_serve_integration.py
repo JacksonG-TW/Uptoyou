@@ -148,10 +148,12 @@ async def scenario(test_url: str) -> None:
               payload["cap"] == 10 and payload["seats"] == 3, str(payload))
         check("the circle's own name travels too, so the home can say which circle this is",
               payload["name"] == "週三午餐"
-              and set(payload) == {"name", "members", "seats", "cap", "creator_nickname"},
+              and set(payload) == {"name", "members", "seats", "cap", "creator_nickname", "your_nickname"},
               str(payload))
         check("and the creator by nickname, so a member who did not create it knows who can invite",
               payload["creator_nickname"] == "小美", str(payload))
+        check("and the reader's own seat, read from the credential, so a joiner knows which name is theirs",
+              payload["your_nickname"] == "小明", str(payload))
 
         anonymous = await client.get(f"{BASE}/circles/{circle}/members")
         check("a circle's membership is not readable without a credential",
@@ -638,6 +640,8 @@ async def scenario(test_url: str) -> None:
               elsewhere.status_code == 200, f"got {elsewhere.status_code}")
         check("a member who is not the creator reads that circle's own creator, not the first one's",
               elsewhere.json().get("creator_nickname") == "阿B", elsewhere.text)
+        check("and its own seat there, not the one it left in the first circle",
+              elsewhere.json().get("your_nickname") == "兩邊都在", elsewhere.text)
 
         # A round opened after leaving does not pin the left seat.
         opened = await client.post(f"{BASE}/circles/{circle}/rounds", json={},

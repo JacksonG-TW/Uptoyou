@@ -525,9 +525,17 @@ async def circle_members(circle_id: int, request: Request) -> dict:
     **`creator_nickname` since 2026-10-08 (frontend, on the evaluator's finding: a member who did not
     create the circle could not tell who can make an invite link).** The preview's own rule and key,
     through the same query; it widens nothing for the same reason `name` does.
+
+    **`your_nickname` since 2026-10-08 (frontend, on the evaluator's finding: both readers asked
+    «am I 小明?»).** The caller's own seat, read from the credential, so it names nobody the caller
+    did not already know; with duplicate nicknames it is the only way the page can say which one
+    is you.
     """
     async with session_factory()() as session:
-        await resolve_credential(session, request, circle_id)
+        member_id, _, _ = await resolve_credential(session, request, circle_id)
+        yours = (
+            await session.execute(text("select nickname from member where id = :m"), {"m": member_id})
+        ).scalar_one()
         name = (
             await session.execute(text("select name from circle where id = :c"), {"c": circle_id})
         ).scalar_one()
@@ -539,4 +547,4 @@ async def circle_members(circle_id: int, request: Request) -> dict:
         ).scalars().all()
         creator = await creator_nickname(session, circle_id)
     return {"name": name, "members": [{"nickname": n} for n in rows], "seats": len(rows),
-            "cap": SEAT_CAP, "creator_nickname": creator}
+            "cap": SEAT_CAP, "creator_nickname": creator, "your_nickname": yours}
