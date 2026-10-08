@@ -649,6 +649,7 @@ async def scenario(test_url: str) -> None:
                 {"c": circle, "h": sha256(rejoined.json()["key"].encode()).hexdigest()})).scalar_one()
         check("the open round pins the seat about to leave", back_id in seats, seats)
         back_pref = await prefer(back_id, "麵食")
+        back_unused = await prefer(back_id, "火鍋")
         gone_too = await client.post(f"{BASE}/circles/{circle}/leave",
                                      headers={"Authorization": "Bearer " + rejoined.json()["key"]})
         check("that leave is a 204 like every other", gone_too.status_code == 204, gone_too.status_code)
@@ -660,14 +661,30 @@ async def scenario(test_url: str) -> None:
         auth = {"Authorization": "Bearer " + creator_key}
         for shop in ("巷口麵店", "轉角咖哩"):
             made = await client.post(f"{BASE}/circles/{circle}/places", json={"name": shop}, headers=auth)
+            if shop == "巷口麵店":
+                # A category the left seat avoids, so this roll pins that preference version.
+                async with Session() as session:
+                    await session.execute(
+                        text("update place set category = '麵食', category_model = 'test-stub', "
+                             "category_prompt_version = 'v-test', category_generated_at = now(), "
+                             "category_input = '測試' where id = :p"), {"p": made.json()["place_id"]})
+                    await session.commit()
             proposed = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/proposals",
                                          json={"place_id": made.json()["place_id"]}, headers=auth)
             check(f"{shop} goes into the pool", proposed.status_code == 201, proposed.status_code)
         rolled = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/roll", headers=auth)
         check("the round that pinned the left seat rolls", rolled.status_code == 200,
               f"got {rolled.status_code}: {rolled.text[:120]}")
-        check("and the left seat's spared preference is gone once the roll has read it",
-              not await preference_exists(back_pref))
+        check("the left seat's preference this roll used is kept — its contribution pins it (D24/D25)",
+              await preference_exists(back_pref))
+        async with Session() as session:
+            pinned_by = (await session.execute(
+                text("select count(*) from weight_contribution where preference_id = :i"),
+                {"i": back_pref})).scalar_one()
+        check("and it is pinned by this roll's own contribution, written before the delete ran",
+              pinned_by >= 1, pinned_by)
+        check("the left seat's preference the roll did not use is gone once the roll has read it",
+              not await preference_exists(back_unused))
         check("while a seated member's preference is still untouched", await preference_exists(creator_pref))
 
         # The creator may leave; the preview then names nobody.
