@@ -146,6 +146,9 @@ async def scenario(test_url: str) -> None:
               all(set(m) == {"nickname"} for m in payload["members"]), str(payload["members"]))
         check("the cap travels in the payload so no screen hard-codes ten",
               payload["cap"] == 10 and payload["seats"] == 3, str(payload))
+        check("the circle's own name travels too, so the home can say which circle this is",
+              payload["name"] == "週三午餐" and set(payload) == {"name", "members", "seats", "cap"},
+              str(payload))
 
         anonymous = await client.get(f"{BASE}/circles/{circle}/members")
         check("a circle's membership is not readable without a credential",

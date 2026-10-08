@@ -493,7 +493,7 @@ async def leave_circle(circle_id: int, request: Request) -> Response:
 
 @router.get("/{circle_id}/members")
 async def circle_members(circle_id: int, request: Request) -> dict:
-    """Who is at the table — nicknames, in the order they joined, and nothing else.
+    """Who is at the table — the circle's name, then nicknames in the order they joined.
 
     *Added on frontend's finding, 2026-09-13: the spec's §2c draws a seat list and two gate lines
     measure it, and before a round exists a circle's membership was unreadable — nicknames reached a
@@ -509,13 +509,21 @@ async def circle_members(circle_id: int, request: Request) -> dict:
 
     **Duplicate nicknames come back as the server holds them**, because §7 rules duplicates legal
     and the screen adds no marker. This endpoint deduplicates nothing; two 小明 are two rows.
+
+    **`name` since 2026-10-08 (frontend, on the evaluator's cold reader: the home never said which
+    circle you were in).** It widens nothing: a stranger holding a live ticket already reads it on
+    `/join/preview`, and this reader is a seated member.
     """
     async with session_factory()() as session:
         await resolve_credential(session, request, circle_id)
+        name = (
+            await session.execute(text("select name from circle where id = :c"), {"c": circle_id})
+        ).scalar_one()
         rows = (
             await session.execute(
                 text("select nickname from member where circle_id = :c and not has_left order by id"),
                 {"c": circle_id},
             )
         ).scalars().all()
-    return {"members": [{"nickname": n} for n in rows], "seats": len(rows), "cap": SEAT_CAP}
+    return {"name": name, "members": [{"nickname": n} for n in rows], "seats": len(rows),
+            "cap": SEAT_CAP}
