@@ -51,7 +51,7 @@ export default function InvitePanel({
   device,
   link,
   onLink,
-  creator = false,
+  inCreateFlow = false,
 }: {
   device: Device
   /** The current join link, or `''` when this screen cannot read one — see `Circle`. Passed in
@@ -63,7 +63,7 @@ export default function InvitePanel({
   /** `true` only from the create flow, which renders solely for the person who just made the
    *  circle — so it skips the role read and draws the control at once, exactly as before
    *  (Addendum 4, point 4: the create flow is unchanged). `/circle` leaves it `false` and asks. */
-  creator?: boolean
+  inCreateFlow?: boolean
 }) {
   const [seats, setSeats] = useState<Members | null>(null)
   const [busy, setBusy] = useState(false)
@@ -71,7 +71,7 @@ export default function InvitePanel({
   /* **`null` until the read answers, and the slot draws nothing while it is `null`** (Addendum 4,
      point 3). Drawing the control first and removing it on a 403 would flash a button at exactly
      the reader it was ruled away from. */
-  const [role, setRole] = useState<InviteRole | null>(creator ? { role: 'creator', status: null } : null)
+  const [role, setRole] = useState<InviteRole | null>(inCreateFlow ? { role: 'creator', status: null } : null)
 
   /* **One read decides the role and, for the creator, carries the link's status** (Addendum 5). It
      runs on mount, on the person looking again, and after a successful re-issue — never on a timer.
@@ -89,7 +89,7 @@ export default function InvitePanel({
      (started before the re-issue) is followed by one more rather than trusted. A focus return
      never passes it, which is what keeps one look at one request. */
   const readRole = useCallback(async (fresh = false) => {
-    if (creator) return
+    if (inCreateFlow) return
     if (reading.current) { if (fresh) again.current = true; return }
     reading.current = true
     try {
@@ -101,7 +101,7 @@ export default function InvitePanel({
     } finally {
       reading.current = false
     }
-  }, [creator, device])
+  }, [inCreateFlow, device])
 
   useEffect(() => {
     mounted.current = true
@@ -214,11 +214,11 @@ export default function InvitePanel({
       {/* **Role decides the page's one act** (`spec-round-diet-circle-2026-10-08.md` B). A member
           cannot make a link, so the page says who can, once, and its one act is going to eat:
           選這一餐, the same door the home gives (`doorHref`). Only on `/circle` — the create flow
-          (`creator`) has the link in hand as its act and keeps this panel as it was. */}
+          (`inCreateFlow`) has the link in hand as its act and keeps this panel as it was. */}
       {role?.role === 'member' && (
         <>
           <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
-          {!creator && (
+          {!inCreateFlow && (
             <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>
           )}
         </>
@@ -229,7 +229,7 @@ export default function InvitePanel({
               `data-primary`, and named for what it hands over. In the create flow the link is
               already on screen, so it stays the quiet control it was. `unknown` takes the same
               treatment as the creator (the server's 403 stays the backstop, as before). */}
-          {creator ? (
+          {inCreateFlow ? (
             <button type="button" className="ssMinor" data-part="reissue" onClick={() => void reissue()} disabled={busy}>
               換一條新的連結
             </button>

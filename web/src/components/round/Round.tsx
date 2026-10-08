@@ -428,7 +428,7 @@ export default function Round() {
           The cap's old separate line (A5's walkthrough asserted it by text) is folded in here, so
           that assert reads this part now. */}
       <p className="roundNote" data-part="round-pool-rule">
-        每人最多提三家，同一家提幾次都只算一份。
+        每人最多提三家。同一家不管幾個人提，都只算一份。
       </p>
 
       {/* **No visible 找一家店 label** (`spec-round-diet-circle-2026-10-08.md` A3): the placeholder
@@ -724,8 +724,10 @@ export default function Round() {
       >
         {anyCount > 0 ? `這次不想吃的類別（已勾 ${anyCount}）` : '這次不想吃的類別'}
       </button>
-      {tonightOpen && (
-      <section className="tonightBlock" id="tonight-block">
+      {/* Always mounted, hidden while closed, so `aria-controls` names an element that exists
+          (reviewer, d92b978). The chips render only when open, as before. */}
+      <section className="tonightBlock" id="tonight-block" hidden={!tonightOpen}>
+      {tonightOpen && (<>
         {/* UX batch U5a — who it binds and what it does, the two questions the walk found a member
             could not answer. True to D103: one member's stance, a discount of that kind's places
             for this round, and never a removal (the place stays proposable and in the pool). */}
@@ -838,8 +840,8 @@ export default function Round() {
 
         {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
             states, it does not reassure, and an empty row already says it. */}
+      </>)}
       </section>
-      )}
       {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
           `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
           half is not warned, and a surface that computed it could compute it wrong.
