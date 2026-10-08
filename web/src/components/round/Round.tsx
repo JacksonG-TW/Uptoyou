@@ -185,6 +185,11 @@ export default function Round() {
         // start two reads, and the older one must not overwrite the newer (reviewer 2026-10-08).
         lastAsked.current = last
         if (last !== null) {
+          /* **The bar's 上一餐結果 follows the server, not this device's history** (the reviewer's
+             should on 3b0921d). It read `upto_last_round`, which only the reveal wrote — so a
+             member who missed the last rounds was sent to an older meal under a label that says
+             «last». The snapshot names the circle's latest closed round; it is recorded here. */
+          try { localStorage.setItem('upto_last_round', String(last)) } catch { /* storage off */ }
           fetchReveal(dev, last)
             .then((r) => {
               if (lastAsked.current !== last) return

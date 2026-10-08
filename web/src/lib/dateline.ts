@@ -1,7 +1,7 @@
 /**
  * 甲・日報 — the masthead's dateline. `spec-home-dateline.md` §1, evaluator 2026-08-26.
  *
- * Four segments — date · weekday · solar term · edition — computed here and never fetched. The
+ * Three segments — date · weekday · solar term — computed here and never fetched. The
  * page is a dated sheet; this is its date.
  *
  * **Every word is a statement of fact (D20).** That is the whole reason 甲 won over the two
@@ -107,24 +107,20 @@ export function solarTerm(taipei: Date): string | null {
   return current ? current[0] : null
 }
 
-/** 05–10 早報 · 11–16 午報 · otherwise 晚報 — the hour in Taipei. */
-export function edition(hour: number): string {
-  if (hour >= 5 && hour <= 10) return '早報'
-  if (hour >= 11 && hour <= 16) return '午報'
-  return '晚報'
-}
+/* The edition word (早報／午報／晚報) left with 2026-10-08's home rebuild
+   (`spec-nav-labels-home-2026-10-08.md` N3): the cold reader read 「午報」 as noise, and the brief's
+   voice is a friend, not a newspaper. Deleted rather than kept unused (the reviewer, 3b0921d). */
 
 export type Dateline = {
   date: string
   weekday: string
-  /** `null` renders nothing — three segments, two dots. */
+  /** `null` renders nothing — two segments, one dot. */
   term: string | null
-  edition: string
 }
 
 /**
- * **Computed once, on mount.** A sheet printed at 16:59 does not become the evening edition while
- * you look at it, so nothing here ticks and there is no timer to clean up.
+ * **Computed once, on mount.** The date does not change while you look at the page, so nothing
+ * here ticks and there is no timer to clean up.
  */
 export function dateline(now: Date = new Date()): Dateline {
   const taipei = taipeiNow(now)
@@ -132,6 +128,5 @@ export function dateline(now: Date = new Date()): Dateline {
     date: `${taipei.getFullYear()}年${taipei.getMonth() + 1}月${taipei.getDate()}日`,
     weekday: WEEKDAYS[taipei.getDay()],
     term: solarTerm(taipei),
-    edition: edition(taipei.getHours()),
   }
 }
