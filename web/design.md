@@ -1,5 +1,29 @@
 # design.md — the grounding file for this surface
 
+## The brand brief — owner's 「定稿」, 2026-10-08 (verbatim; every spec header draws from it)
+
+由你決定：品牌介紹
+**你說「隨便」，真的是隨便嗎？**
+朋友問要吃什麼，大家都回「都可以」。可是真的都可以嗎？還是我們怕的，其實是選錯之後，那一句「早知道就不要吃這家」？
+**沒有人不想吃好吃的，只是沒有人想承擔選擇的責任。**
+所以我們把責任交給骰子。每個人提自己想吃的店，骰子擲一次，就定案。結果不是誰硬要的，沒有人是壞人，大家都能笑著去吃飯。
+**那骰子公平嗎？** 公平。每家店的機會有根據，而且開局時就固定，事後誰都改不了。
+**這是什麼樣的地方？**
+- 像一個隨和的老朋友。結果出來，就說：「好啦，就這家。走吧！」
+- 厲害在細節，不在音量：做工很細、像真正的產品，背後是全臺北 3 萬多家店和政府公開資料。
+**我們不是什麼？**
+- 不是美食推薦網站：我們不說哪家好吃，只說事實。
+- 不是投票：多數決會讓少數人每次都吃虧。
+- 不是隨便亂抽：機會有根據，而且沒人能作弊。
+**原則：** 每個畫面只做一件主要的事。每個按鈕、每段字，都要說得出它幫你做什麼；按鈕的名字要說「按了會發生什麼」。
+
+*Two notes that travel with it (the evaluator gates both): the Socratic voice belongs to the brief,
+the README and about-type text only — UI labels stay plain acts, under the principle. And
+「3 萬多家店」, wherever it is quoted publicly, must match backend's live count (dev 36,499; the
+README's 35,965 on production).*
+
+---
+
 **Read this before writing any component in `app/web/`.** It holds the tokens, the type ladder, the
 named parts and the rules that bind every screen. A build spec references parts from here **by
 name** and adds only what is specific to its screen, so the job is composition, not invention.
