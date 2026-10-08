@@ -137,6 +137,9 @@
      **Every ratio written in this file was recomputed for D on the same day**; where an older note
      argues from a pair that failed in the first palette, the number is now D's and the argument is
      history. */
+  /* **The face names now lie and that is known** (reviewer, 9a8fefb): under D, `cobalt` is brown
+     ink, `jade` temple green, `sun` gold and all four floods are one lacquer. The names are kept so
+     no component changes with the look; they are renamed by role when D settles. */
   --color-ground: #9C2A1B;
   --color-gold: #D9A93A;
   --color-onflood-hot: #F2E2A0;
