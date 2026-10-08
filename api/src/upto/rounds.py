@@ -305,12 +305,16 @@ async def result(round_id: int, request: Request) -> dict:
 @router.post("/rounds/{round_id}/roll")
 async def roll(round_id: int, request: Request) -> dict:
     async with session_factory()() as session:
+        # **`for update`: simultaneous rolls queue on the round row** (frontend's 10-device
+        # self-test, 2026-10-08). Read unlocked, every member who pressed at once saw `open`, and all
+        # but the first died 500 in the engine. Locked, the losers wait for the winner's commit,
+        # re-read the row as `closed`, and answer through D69's retry below — the stored result.
         round_row = (
             await session.execute(
                 text(
                     "select circle_id, status, target_hour_typed, die1, die2, "
                     "winning_place_id, outcome_seed, seed_commit, seat_ids "
-                    "from round where id = :r"
+                    "from round where id = :r for update"
                 ),
                 {"r": round_id},
             )

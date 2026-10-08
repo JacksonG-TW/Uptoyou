@@ -348,9 +348,17 @@ async def scenario(test_url: str) -> None:
         assert taps == 0, taps
         assert (await client.get("/rounds/999999999/result", headers=auth)).status_code == 404
 
-        # The roll: the whole chain in one transaction.
-        rolled = await client.post(f"/rounds/{round_id}/roll", headers=auth)
-        assert rolled.status_code == 200, rolled.text
+        # The roll: the whole chain in one transaction — **pressed by several at once.** Six
+        # simultaneous rolls used to read the round open with no lock, and every loser died 500 in
+        # the engine («round N is not an open round»; frontend's 10-device self-test, 2026-10-08).
+        # The round row is now locked, so the losers wait and answer as D69's retry does.
+        together = await asyncio.gather(
+            *(client.post(f"/rounds/{round_id}/roll", headers=auth) for _ in range(6)))
+        assert [r.status_code for r in together] == [200] * 6, [
+            (r.status_code, r.text[:120]) for r in together]
+        assert len({json.dumps(r.json(), sort_keys=True) for r in together}) == 1, (
+            "simultaneous rolls answered different results")
+        rolled = together[0]
         result = rolled.json()
         assert result["status"] == "closed"
         d1, d2 = result["dice"]
