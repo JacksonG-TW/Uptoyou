@@ -200,7 +200,7 @@ export async function readInviteRole(d: Device): Promise<InviteRole> {
  * has moved once already, and a client that hard-codes ten is a client that will one day disagree
  * with the server about D110.
  */
-export type Members = { members: { nickname: string }[]; seats: number; cap: number }
+export type Members = { name: string | null; members: { nickname: string }[]; seats: number; cap: number }
 
 export async function fetchMembers(d: Device): Promise<Members> {
   const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members`, {
@@ -209,7 +209,13 @@ export async function fetchMembers(d: Device): Promise<Members> {
   })
   if (!r.ok) throw await refusal(r, '看不到座位')
   const body = await r.json()
-  return { members: body.members ?? [], seats: body.seats, cap: body.cap }
+  // `name` is the circle's own name, asked of backend on 2026-10-08 for the member's home (the
+  // evaluator's item-1 red: the home never said which circle you are in). Absent until that lands,
+  // and the home then says 這個圈子 with the nicknames alone.
+  return {
+    name: typeof body.name === 'string' && body.name ? body.name : null,
+    members: body.members ?? [], seats: body.seats, cap: body.cap,
+  }
 }
 
 /**

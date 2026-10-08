@@ -444,6 +444,14 @@ h1.headline .lit { color: var(--color-hot-ink); }
   font-size: var(--text-note); color: var(--color-muted);
 }
 
+/* A member's circle, ABOVE the doors (item-1 gate, 2026-10-08): the three acts are acts on this
+   circle, so it is read first and in ink, not in the provenance register. The circle's name is the
+   one bold word; the nicknames wrap rather than run past the column. */
+.yourCircle {
+  margin: 0 0 16px; font-size: var(--text-body); color: var(--color-ink); max-width: 32em;
+}
+.yourCircle b { font-weight: 700; }
+
 /* ── below the first view ─────────────────────────────────────────────────────────────────
    Today's conditions, then the sources. One ink rule above, in the masthead's own weight, so the
    page reads as a sheet that continues rather than a second page stapled on. */

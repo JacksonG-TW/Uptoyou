@@ -13,6 +13,7 @@ import { device } from './lib/device'
 import { arrive } from './lib/motion'
 import { dateline } from './lib/dateline'
 import { fetchPlaceCount, type PlaceCount } from './lib/places'
+import { fetchMembers, type Members } from './lib/selfserve'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -66,6 +67,20 @@ export default function App() {
     return () => { live = false }
   }, [])
 
+  /* **A member's home names their circle and who is in it** (the evaluator's item-1 gate,
+     2026-10-08: a reader told «a friend added you yesterday» could not tell from the home that they
+     were in a circle at all, nor whether 選這一餐 decides for them alone). One line above the doors,
+     so the three acts read as acts on that circle. Any failure renders nothing: a key that no
+     longer opens the circle is the round screen's to explain, not this line's. */
+  const [circle, setCircle] = useState<Members | null>(null)
+  useEffect(() => {
+    const d = device()
+    if (!d) return
+    let live = true
+    fetchMembers(d).then((m) => { if (live) setCircle(m) }).catch(() => {})
+    return () => { live = false }
+  }, [])
+
   const name = TOWNSHIPS.find((t) => t.code === township)?.name ?? ''
   const hour = weather?.hour?.slice(11, 16) ?? ''
   const fetched = fetchedLabel(weather)
@@ -100,6 +115,14 @@ export default function App() {
                 as «join someone's». `/circle` and `/create` keep their ruled reasons — the invite
                 link is reachable after the create flow (SS-13), and a seated person may leave for
                 another circle, which the next screen's notice explains. */}
+            {hasDevice && circle && circle.members.length > 0 && (
+              <p className="circleLine yourCircle" data-part="your-circle">
+                {circle.name
+                  ? <>你在「<b data-user-content>{circle.name}</b>」，一起的人：</>
+                  : <>你在這個圈子，一起的人：</>}
+                <span data-user-content>{circle.members.map((m) => m.nickname).join('、')}</span>
+              </p>
+            )}
             <div className="act-row homeAct">
               {hasDevice ? (
                 <>
