@@ -3,10 +3,11 @@
 
 Run: python3 app/api/tests/test_readme_parity.py    (no network, no database)
 
-`README.md` is canonical and `README.zh-TW.md` is its Traditional Chinese copy. The failure mode
-this file exists for is not a mistranslation of prose — a reader can see that — it is the English
-being **updated** and the Chinese being left behind, so the public front page carries two different
-measurements of the same thing and nothing complains. That happened to decision 8 in one language
+Neither page is canonical: each is written for its own reader (decision log 2026-10-08, «Neither
+README is canonical»), so the facts are what this file holds them to. The failure mode it exists for
+is not a mistranslation of prose — a reader can see that — it is one page being **updated** and the
+other left behind, so the public front page carries two different measurements of the same thing and
+nothing complains. That happened to decision 8 in one language
 before the second existed: it still claimed 12–19 s a name, which was the CPU-only figure, an order
 of magnitude off, for as long as nobody re-read it.
 
@@ -84,9 +85,8 @@ class TheTwoReadmesAgree(unittest.TestCase):
         missing_from_english = chinese - english
         self.assertFalse(
             missing_from_chinese or missing_from_english,
-            "the two READMEs state different numbers — the English is canonical, so a figure only "
-            "in English means the Chinese was not updated, and a figure only in Chinese means it "
-            "was invented\n  only in README.md:       {}\n  only in README.zh-TW.md: {}".format(
+            "the two READMEs state different numbers — a figure on one page alone means the other "
+            "was not updated, or the figure was invented\n  only in README.md:       {}\n  only in README.zh-TW.md: {}".format(
                 dict(missing_from_chinese), dict(missing_from_english)
             ),
         )
@@ -98,28 +98,10 @@ class TheTwoReadmesAgree(unittest.TestCase):
             "the same document in another language, not a summary of it",
         )
 
-    def test_each_points_at_the_other_and_says_which_is_canonical(self):
+    def test_each_points_at_the_other(self):
         english, chinese = read(EN), read(ZH)
-        self.assertIn("README.zh-TW.md", english, "README.md does not mention the Chinese copy")
-        self.assertIn("README.md", chinese, "README.zh-TW.md does not link back to the English")
-        # **Before the first `##` section, the same way the Chinese half below is checked.** It
-        # used to split on the literal heading `## Stack`, which stopped existing when the page was
-        # reshaped — and a split on an absent needle returns the WHOLE document, so the assertion
-        # quietly widened from «in the opening» to «anywhere on the page» and could no longer fail
-        # for the thing it was written to catch.
-        self.assertIn(
-            "canonical", english.split("\n## ")[0],
-            "README.md's opening does not say it is canonical — which one wins has to be stated "
-            "where a reader arrives, not inferred from filenames",
-        )
-        # Before the first `##` section, mirroring the English check rather than counting
-        # paragraphs. The paragraph-index version broke the moment the head grew a language
-        # switcher and a badge row — a check that depends on how many paragraphs precede a
-        # sentence is a check that fails on formatting.
-        self.assertIn(
-            "英文版為準", chinese.split("\n## ")[0],
-            "README.zh-TW.md does not say the English is authoritative before the first section",
-        )
+        self.assertIn("README.zh-TW.md", english, "README.md does not link to the Chinese page")
+        self.assertIn("README.md", chinese, "README.zh-TW.md does not link to the English page")
 
     def test_the_check_can_fail(self):
         """A tally that differs must be caught — otherwise this file is decoration."""
