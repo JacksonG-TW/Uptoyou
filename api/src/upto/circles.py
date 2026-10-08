@@ -315,17 +315,25 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
                        "開圈子的人可以給一條新的。",
                 headers=NO_STORE,
             )
-        creator = (
-            await session.execute(
-                text("select m.nickname from member m "
-                     "join device_secret d on d.principal_id = m.principal_id "
-                     "join circle c on c.id = m.circle_id "
-                     "where m.circle_id = :c and not m.has_left and d.operator and d.created_at = c.created_at "
-                     "order by m.id limit 1"),
-                {"c": circle_id},
-            )
-        ).scalar_one_or_none()
+        creator = await creator_nickname(session, circle_id)
     return {"circle_name": row.name, "creator_nickname": creator}
+
+
+async def creator_nickname(session, circle_id: int) -> str | None:
+    """The real creator's nickname: the seat whose operator key was minted in the circle's own
+    creating transaction, `None` once that seat has left or when there never was one (a circle made
+    by the CLI). One query for the two readers — the join preview and the member list — so they
+    cannot name different people."""
+    return (
+        await session.execute(
+            text("select m.nickname from member m "
+                 "join device_secret d on d.principal_id = m.principal_id "
+                 "join circle c on c.id = m.circle_id "
+                 "where m.circle_id = :c and not m.has_left and d.operator and d.created_at = c.created_at "
+                 "order by m.id limit 1"),
+            {"c": circle_id},
+        )
+    ).scalar_one_or_none()
 
 
 @router.post("/{circle_id}/join-ticket", status_code=201)
@@ -513,6 +521,10 @@ async def circle_members(circle_id: int, request: Request) -> dict:
     **`name` since 2026-10-08 (frontend, on the evaluator's cold reader: the home never said which
     circle you were in).** It widens nothing: a stranger holding a live ticket already reads it on
     `/join/preview`, and this reader is a seated member.
+
+    **`creator_nickname` since 2026-10-08 (frontend, on the evaluator's finding: a member who did not
+    create the circle could not tell who can make an invite link).** The preview's own rule and key,
+    through the same query; it widens nothing for the same reason `name` does.
     """
     async with session_factory()() as session:
         await resolve_credential(session, request, circle_id)
@@ -525,5 +537,6 @@ async def circle_members(circle_id: int, request: Request) -> dict:
                 {"c": circle_id},
             )
         ).scalars().all()
+        creator = await creator_nickname(session, circle_id)
     return {"name": name, "members": [{"nickname": n} for n in rows], "seats": len(rows),
-            "cap": SEAT_CAP}
+            "cap": SEAT_CAP, "creator_nickname": creator}

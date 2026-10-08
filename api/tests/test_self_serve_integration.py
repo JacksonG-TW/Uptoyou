@@ -147,8 +147,11 @@ async def scenario(test_url: str) -> None:
         check("the cap travels in the payload so no screen hard-codes ten",
               payload["cap"] == 10 and payload["seats"] == 3, str(payload))
         check("the circle's own name travels too, so the home can say which circle this is",
-              payload["name"] == "週三午餐" and set(payload) == {"name", "members", "seats", "cap"},
+              payload["name"] == "週三午餐"
+              and set(payload) == {"name", "members", "seats", "cap", "creator_nickname"},
               str(payload))
+        check("and the creator by nickname, so a member who did not create it knows who can invite",
+              payload["creator_nickname"] == "小美", str(payload))
 
         anonymous = await client.get(f"{BASE}/circles/{circle}/members")
         check("a circle's membership is not readable without a credential",
@@ -633,6 +636,8 @@ async def scenario(test_url: str) -> None:
                                      headers={"Authorization": "Bearer " + joiner_key})
         check("the same key still opens the principal's other circle — the secret was not revoked",
               elsewhere.status_code == 200, f"got {elsewhere.status_code}")
+        check("a member who is not the creator reads that circle's own creator, not the first one's",
+              elsewhere.json().get("creator_nickname") == "阿B", elsewhere.text)
 
         # A round opened after leaving does not pin the left seat.
         opened = await client.post(f"{BASE}/circles/{circle}/rounds", json={},
@@ -697,6 +702,10 @@ async def scenario(test_url: str) -> None:
                                     json={"ticket": ticket_of(second["join_link"])})
         check("after the creator leaves, the preview's creator is null (the screen says 有人)",
               preview.json() == {"circle_name": "另一圈", "creator_nickname": None}, preview.text)
+        seats_after = await client.get(f"{BASE}/circles/{second['circle_id']}/members",
+                                       headers={"Authorization": "Bearer " + joiner_key})
+        check("and the member list agrees: one query, so the two readers cannot name different people",
+              seats_after.json().get("creator_nickname") is None, seats_after.text)
 
         await engine.dispose()
 
