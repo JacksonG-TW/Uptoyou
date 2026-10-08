@@ -817,6 +817,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
             the first view joined the lit cell's 「3」 to the name — the list that does sits below
             it). The same swatch as the list row and the cells (`markOf`/`faceOf`), outside the
             `h1` so the name's own text stays the name. Member only: the operator has no marks. */}
+        {/* Look D: the winner is a joss-paper slip. The red head band is a brand plate, drawn only
+            for the eye (`aria-hidden`); the name inside is still the `h1`. */}
+        <div className="slip" data-part="slip">
+        <div className="slipHead" aria-hidden="true" data-plate="由你決定" />
         <div className="winnerLine">
           {!evidence && data && data.winning_place_id !== null && (
             <span className="boardSwatch winnerMark" data-part="winner-mark" aria-hidden="true"
@@ -825,6 +829,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
             </span>
           )}
           <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
+        </div>
         </div>
 
         {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
@@ -972,6 +977,9 @@ export default function Reveal({ roundId }: { roundId: number }) {
             </button>
           )}
         </div>
+        {/* Moved up from the commitment block below the fold: the claim belongs where the member
+            decides, under the seal, in the first view. The fingerprint details stay in `.commit`. */}
+        {data?.seed_commit && <p className="commitClaim">結果開局就固定了，事後改不了。</p>}
       </m.div>
 
       {/* **§0b, owner-amended: the member sees the LIST, never the numbers.** 「使用者畫面我認為可
@@ -1050,7 +1058,6 @@ export default function Reveal({ roundId }: { roundId: number }) {
           answer is on screen, as before. */}
       {data?.seed_commit && (
         <div className="commit" data-part="seed-commit">
-          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
           <details className="verify">
             <summary>怎麼驗證？</summary>
             <p>開局時公開的指紋：<span className="commitHash">{data.seed_commit}</span></p>

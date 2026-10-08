@@ -1507,3 +1507,95 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 }
 /* The seal's stamp: 定 in the display face, upright inside the solid square. */
 .reveal .sealGlyph { font-size: 30px; line-height: 1; }
+
+/* ═══ look D (擲筊與籤詩) — the winner is a joss-paper slip (frontend, 2026-10-08) ═══════════════
+   `spec-look-d-moon-blocks-2026-10-08.md`. The ritual feel is wanted; the binding condition is that
+   the board and the odds stay in the first view at 1440×900 and 430×760. Member only: every
+   selector carries `:not(:has(.evNum))`. The name stays in the SANS (Noto Sans TC 900) — an
+   arbitrary restaurant name cannot be promised a serif face's glyphs. */
+.reveal:not(:has(.evNum)) .slip {
+  position: relative;
+  background: var(--color-paper); color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  outline: 2px solid var(--color-gold); outline-offset: -10px;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / .4);
+  display: flex; flex-direction: column; align-items: center;
+  width: min(100%, 300px); box-sizing: border-box;
+  padding-bottom: 22px; text-align: center;
+}
+/* The brand plate: decoration, `aria-hidden`; seal red with paper characters (paper on hot 5.58). */
+.reveal .slipHead {
+  position: relative; align-self: stretch;
+  background: var(--color-hot); color: var(--color-paper);
+  font-weight: 900; font-size: 15px; letter-spacing: .5em; padding: 7px 0 7px .5em;
+  text-align: center; margin: -2px -2px 12px;
+}
+.reveal:not(:has(.evNum)) .slip .winnerLine { justify-content: center; gap: .3em; padding-inline: 14px; max-width: 100%; box-sizing: border-box; }
+.reveal:not(:has(.evNum)) .slip .winner { text-align: center; color: var(--color-ink); }
+.reveal:not(:has(.evNum)) .slip .winnerMark { min-width: 30px; height: 30px; font-size: 17px; }
+
+/* The claim under the seal, in the first view; full-strength paper on lacquer, not the receipt's
+   .66 register. */
+.reveal .commitClaim { margin: 0; color: inherit; font-size: var(--text-note); line-height: 1.6; }
+.reveal:not(:has(.evNum)) .answer > .commitClaim { margin-top: 14px; text-align: center; }
+
+/* The seal button: paper block, ink edge, hard shadow; the 定 square in seal red, tilted. */
+.reveal .sealBtn {
+  background: var(--color-paper); color: var(--color-ink);
+  border: 3px solid var(--color-ink); box-shadow: 6px 6px 0 var(--color-ink);
+  padding: 12px 18px 12px 12px; gap: 14px;
+}
+.reveal .sealBtn .sealEmpty {
+  background: var(--color-hot); color: var(--color-paper); border: 0; box-shadow: none;
+  inline-size: 52px; block-size: 52px; transform: rotate(-5deg);
+}
+.reveal .sealBtn .sealGlyph { font-size: 32px; }
+@media (hover: hover) {
+  .reveal .sealBtn:hover:not(:disabled) { box-shadow: 3px 3px 0 var(--color-ink); }
+}
+.reveal .sealBtn:active:not(:disabled) { box-shadow: none; }
+.reveal .sealBtn:hover:not(:disabled) .sealEmpty,
+.reveal .sealBtn:active:not(:disabled) .sealEmpty { transform: rotate(-5deg); }
+.reveal .sealBtn:focus-visible { outline: 3px solid var(--color-paper); outline-offset: 6px; }
+.reveal .sealBtn .sealHow { opacity: 1; font-size: var(--text-note); }
+
+@media (max-width: 1099px) {
+  .reveal:not(:has(.evNum)) .slip { width: min(88vw, 340px); padding-bottom: 8px; }
+  .reveal .slipHead { font-size: 13px; padding-block: 4px; margin-bottom: 6px; }
+  .reveal:not(:has(.evNum)) .winner {
+    color: var(--color-ink);
+    font-size: clamp(24px, calc((min(88vw, 340px) - 84px) / (var(--len, 6) + 0.3)), var(--text-answer));
+  }
+  .reveal:not(:has(.evNum)) .boardSlot { margin-bottom: 12px; }
+  /* The odds line and the seal sit tight under the slip so the seal and the claim stay in view. */
+  .reveal:not(:has(.evNum)) .answer { --answer-gap: 8px; }
+  .reveal:not(:has(.evNum)) .act-row { margin-top: 6px; min-height: 0; }
+  .reveal .sealBtn { padding-block: 8px; }
+  .reveal:not(:has(.evNum)) .answer > .commitClaim { margin-top: 2px; }
+}
+
+@media (min-width: 1100px) {
+  /* Two columns: the slip stands on the left, everything that was under the name stands beside it. */
+  .reveal:not(:has(.evNum)) .answer {
+    display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: calc(44 * var(--k));
+    align-items: start; justify-items: start;
+  }
+  .reveal:not(:has(.evNum)) .answer > :not(.slip) { grid-column: 2; }
+  .reveal:not(:has(.evNum)) .answer > .slip { grid-column: 1; grid-row: 1 / span 6; }
+  .reveal:not(:has(.evNum)) .answer > .commitClaim { text-align: left; }
+  .reveal:not(:has(.evNum)) .answer > .sentence { margin-top: 0; }
+  .reveal:not(:has(.evNum)) .answer > .act-row { margin-top: calc(26 * var(--k)); }
+  .reveal:not(:has(.evNum)) .slip {
+    width: calc(190 * var(--k)); height: calc(500 * var(--k)); padding-bottom: calc(18 * var(--k));
+  }
+  .reveal .slipHead { font-size: calc(17 * var(--k)); }
+  .reveal:not(:has(.evNum)) .slip .winnerLine { flex-direction: column; flex: 1 1 auto; min-height: 0; gap: calc(12 * var(--k)); padding-inline: 0; }
+  .reveal:not(:has(.evNum)) .slip .winner {
+    writing-mode: vertical-rl; text-orientation: mixed; letter-spacing: .02em; text-align: start;
+    line-height: 1.15; min-height: 0; flex: 1 1 auto; max-height: 100%;
+    /* The constraint is the slip's HEIGHT: ~400·k of name room, `--len` em long. */
+    font-size: clamp(calc(24 * var(--k)), calc(400 * var(--k) / (var(--len, 6) + 1.4)), calc(84 * var(--k)));
+  }
+}
+/* The plate's characters are drawn from `data-plate`, so the first-view text count is unchanged. */
+.reveal .slipHead::before { content: attr(data-plate); }
