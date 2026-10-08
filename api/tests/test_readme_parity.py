@@ -68,7 +68,9 @@ def structure(path: str) -> dict:
         "sections": len(re.findall(r"^## ", text, re.M)),
         "subsections": len(re.findall(r"^### ", text, re.M)),
         "decisions": len(re.findall(r"^\*\*\d\. ", text, re.M)),
-        "tables": text.count("|---"),
+        # One separator row per table. Counting «|---» counted COLUMNS, so a table re-cut to fewer
+        # columns for one language read as a missing table (2026-10-08, the zh top table).
+        "tables": len(re.findall(r"^\|(?:\s*:?-+:?\s*\|)+\s*$", text, re.M)),
     }
 
 
