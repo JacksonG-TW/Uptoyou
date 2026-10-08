@@ -282,8 +282,12 @@
 .reveal .dieCell { display: grid; place-items: center; }
 
 /* §3's single radius exemption. A die's pips are round; squaring them makes the face a grid. */
+/* **44% of its cell, doubled from 22% on the item-2 gate** (2026-10-08): a reader read a landed
+   (6,2) as 「六點和一點」 and another said the dice 「看不太懂」. At the landed scale a 22% pip was
+   about 9 px, two of them sat a whole face apart on white, and a 2 read as one pip. At 44% a pip
+   is about 18 px landed and the pattern reads at a glance, the way a real die's does. */
 .reveal .pip {
-  width: 22%;
+  width: 44%;
   aspect-ratio: 1;
   border-radius: 50%;
   background: var(--color-pip);
