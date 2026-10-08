@@ -473,3 +473,34 @@ h1.headline .lit { color: var(--color-hot-ink); }
 
 /* The how-line keeps its last clause whole («沒有人要當／壞人» split at 22em, 1440). */
 .say { max-width: 26em; text-wrap: pretty; }
+
+/* ═══ Look D — the home on lacquer (`spec-look-d-moon-blocks-2026-10-08.md`) ═════════════════════
+   The masthead is the slip's seal-red head band, set apart; the hero's left half is the slip that
+   holds the headline, the circle line and the doors; the photos stand on the lacquer beside it;
+   the sheet below the fold is a second slip. Text never sits on the lacquer in ink (2.24) — only
+   paper does (5.85), which is why every reading surface here is a slip. */
+.mast {
+  background: var(--color-hot); color: var(--color-on-hot);
+  border-color: var(--color-ink); box-shadow: 6px 6px 0 rgb(0 0 0 / .4);
+}
+.brand b { letter-spacing: .5em; }
+.heroL {
+  background: var(--color-paper); color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  outline: 2px solid var(--color-gold); outline-offset: -10px;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / .4);
+  padding: 30px 26px 32px;
+  align-self: center;
+}
+.heroL h1.headline { margin-top: 0; }
+.today {
+  background: var(--color-paper); color: var(--color-ink);
+  border: 2px solid var(--color-ink);
+  outline: 2px solid var(--color-gold); outline-offset: -10px;
+  box-shadow: 8px 8px 0 rgb(0 0 0 / .4);
+  padding: 32px 30px 28px; margin-bottom: 48px;
+}
+@media (min-width: 900px) {
+  .heroL { padding: 44px 44px 46px; }
+  .today { padding: 40px 44px 32px; }
+}
