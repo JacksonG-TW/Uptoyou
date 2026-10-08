@@ -41,7 +41,9 @@ async def credential_for(session, token: str, circle_id: int):
                 "select m.id as member_id, ds.operator as operator, ds.evidence as evidence "
                 "from device_secret ds "
                 "join member m on m.principal_id = ds.principal_id "
-                "where ds.secret_sha256 = :digest and m.circle_id = :circle"
+                # **A left seat is no seat here** (0048): the same «not a member» as an unknown
+                # token (D67), for this circle only — the principal's other seats are untouched.
+                "where ds.secret_sha256 = :digest and m.circle_id = :circle and not m.has_left"
             ),
             {"digest": digest, "circle": circle_id},
         )

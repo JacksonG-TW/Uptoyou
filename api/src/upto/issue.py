@@ -147,7 +147,8 @@ async def grow_seat(session, circle_id: int, nickname: str, principal_id: int | 
     # device_secret, no token. Unchanged from the CLI's own arrangement and for its reason.
     seats = (
         await session.execute(
-            text("select count(*) from member where circle_id = :c"), {"c": circle_id}
+            text("select count(*) from member where circle_id = :c and not has_left"),
+            {"c": circle_id}
         )
     ).scalar_one()
     if seats >= SEAT_CAP:
@@ -259,7 +260,8 @@ async def issue(circle_id: int, nickname: str, principal_id: int | None,
             # back for the same reason; this one never starts.
             seats = (
                 await session.execute(
-                    text("select count(*) from member where circle_id = :c"), {"c": circle_id}
+                    text("select count(*) from member where circle_id = :c and not has_left"),
+            {"c": circle_id}
                 )
             ).scalar_one()
             if seats >= SEAT_CAP:

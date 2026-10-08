@@ -320,6 +320,50 @@ async def scenario(test_url: str) -> None:
         places["local"]: Decimal("1"),
     }, weights
 
+    # **0048: a seat that was left keeps its say only in rounds that pinned it** (owner 「可以」,
+    # 2026-10-08). Kevin leaves. The round opened while he sat still reads his avoidance — its
+    # seats were pinned at open — and a round opened after he left does not, though his
+    # preference row is untouched.
+    async with Session() as session:
+        # Pinned seats come with the seed drawn at open (ck_round_seats_with_seed, D108).
+        from upto.engine import draw  # noqa: PLC0415
+        drawn = draw.new_seed()
+        await session.execute(
+            text("update round set seat_ids = :s, outcome_seed = :seed, seed_commit = :commit "
+                 "where id = :r"),
+            {"s": sorted(members.values()), "seed": drawn, "commit": draw.commitment(drawn),
+             "r": round_id})
+        await session.execute(text("update member set has_left = true where id = :m"),
+                              {"m": members["Kevin"]})
+        await session.commit()
+    async with Session() as session:
+        pinned_round = await load_contributions(session, round_id)
+    assert (places["hotpot"], members["Kevin"]) in {
+        (p.contribution.place_id, p.member_id) for p in pinned_round.contributions}, (
+        "leaving rewrote a round opened while the seat was taken")
+    # A round opened after he left pins the seats without him — the same round re-pinned stands in
+    # for it, since a circle holds one open round at a time (D52).
+    async with Session() as session:
+        await session.execute(
+            text("update round set seat_ids = :s where id = :r"),
+            {"s": sorted(m for n, m in members.items() if n != "Kevin"), "r": round_id})
+        await session.commit()
+    async with Session() as session:
+        after = await load_contributions(session, round_id)
+    who = {(p.contribution.place_id, p.member_id) for p in after.contributions}
+    assert (places["hotpot"], members["Kevin"]) not in who, (
+        "a member who left still steered a round opened after they left")
+    assert (places["hotpot"], members["Amy"]) in who, "the members still seated lost their say"
+
+    # Put the scenario back as the roll below expects it: no pinned seats, no seed, Kevin seated.
+    async with Session() as session:
+        await session.execute(
+            text("update round set seat_ids = null, outcome_seed = null, seed_commit = null "
+                 "where id = :r"), {"r": round_id})
+        await session.execute(text("update member set has_left = false where id = :m"),
+                              {"m": members["Kevin"]})
+        await session.commit()
+
     # And it lands: three private rows, each with its own member and its own pinned version.
     # **The winner is 壽司店 by the fixture's choice now, not by refusal.** It used to be the only
     # legal winner — D45 refuses a zero-weight one, and the avoidance made every other place zero.
@@ -374,7 +418,7 @@ async def scenario(test_url: str) -> None:
         "members and two pinned versions; a member with two avoidances produces one record "
         "each; no row, an `allow`, an unavoided category and no category all produce nothing; "
         "two objections compound to 0.5625 at four seats (A13); the three rows land in the private channel and their pinned "
-        "versions refuse deletion"
+        "versions refuse deletion; a seat that was left counts only in rounds that pinned it (0048)"
     )
 
 

@@ -319,14 +319,18 @@ async def load_contributions(session, round_id: int) -> LoadedRound:
                 # against categories. Owner-ruled 2026-08-18 (D103): the ingredient pass is its own,
                 # below, and inert for a stated reason instead of an accidental one.
                 "   where kind = 'avoid_category'"
-                "     and member_id in (select id from member where circle_id = :c)"
+                # **A left seat's preferences follow its pinned seat, not its row** (0048): they
+                # count in a round opened while the seat was taken and in no round after. Every
+                # other member reads exactly as before.
+                "     and member_id in (select id from member where circle_id = :c"
+                "                        and (not has_left or id = any(:seats)))"
                 "   order by member_id, value, valid_from desc, id desc"
                 # D25 as amended: the latest row per key is taken first, and if THAT row is a
                 # lapsed `persist = false` the key has nothing in force — nothing older is
                 # consulted, so a lapsed `allow` never uncovers a kept `avoid`.
                 ") latest where stance = 'avoid' and " + IN_FORCE_PREDICATE
             ),
-            {"c": round_row.circle_id},
+            {"c": round_row.circle_id, "seats": list(round_row.seat_ids or [])},
         )
     ).all()
     # member_id -> {category: preference_id}. The id is the *version in force*, which is what the

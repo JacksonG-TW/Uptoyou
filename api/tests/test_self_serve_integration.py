@@ -72,7 +72,7 @@ async def scenario(test_url: str) -> None:
         made = await client.post(BASE + "/circles",
                                  json={"name": "週三午餐", "nickname": "小美"})
         check("a stranger with no credential can create a circle", made.status_code == 201,
-              f"got {made.status_code}: {made.text[:120]}")
+              f"got {made.status_code}")   # never the body: it holds a key (H101)
         body = made.json()
         circle = body["circle_id"]
         creator_key = body["key"]
@@ -80,7 +80,8 @@ async def scenario(test_url: str) -> None:
         check("and the response carries a key and a join link",
               bool(creator_key) and bool(link))
         check("the ticket rides in the fragment, never the query (A20)",
-              "#" in link and "?" not in link.split("#")[0], link)
+              "#" in link and "?" not in link.split("#")[0],
+              link.split("#")[0] + "#…")   # the fragment holds the ticket: never printed (H101)
         ticket = ticket_of(link)
 
         # **Only the hash is stored** — the property that makes a database read useless.
@@ -124,7 +125,7 @@ async def scenario(test_url: str) -> None:
         joined = await client.post(f"{BASE}/circles/{circle}/join",
                                    json={"ticket": ticket, "nickname": "小明"})
         check("a tap on the shared link grows a seat", joined.status_code == 201,
-              f"got {joined.status_code}: {joined.text[:120]}")
+              f"got {joined.status_code}")   # never the body: it holds a key (H101)
         joiner_key = joined.json()["key"]
         check("and hands that device a key of its own", joiner_key != creator_key)
 
@@ -409,7 +410,7 @@ async def scenario(test_url: str) -> None:
         early = await client.post(f"{BASE}/circles/{timed_circle}/join",
                                   json={"ticket": timed_ticket, "nickname": "準時"})
         check("a tap at +59 minutes still joins", early.status_code == 201,
-              f"got {early.status_code}: {early.text[:120]}")
+              f"got {early.status_code}")   # never the body: it holds a key (H101)
 
         await shift(61)
         late = await client.post(f"{BASE}/circles/{timed_circle}/join",
@@ -428,7 +429,7 @@ async def scenario(test_url: str) -> None:
             f"{BASE}/circles/{timed_circle}/join",
             json={"ticket": ticket_of(renewed.json()["join_link"]), "nickname": "終於"})
         check("and the late friend joins on the new link", second_chance.status_code == 201,
-              f"got {second_chance.status_code}: {second_chance.text[:120]}")
+              f"got {second_chance.status_code}")   # never the body: it holds a key (H101)
 
         async with Session() as probe:
             fresh_span = (
@@ -528,6 +529,98 @@ async def scenario(test_url: str) -> None:
                                     json={"ticket": fresh, "nickname": "走錯"})
         check("a ticket presented against another circle is unknown, not a seat there",
               crossed.status_code == 404, f"got {crossed.status_code}")
+
+        # ---- leaving a seat (0048, owner 「可以」 2026-10-08) -----------------------------------
+        # Last in the scenario on purpose: the sections above count seats and rows.
+        async def counts_of(tables):
+            got = {}
+            async with Session() as session:
+                for name in tables:
+                    got[name] = (await session.execute(text(f"select count(*) from {name}"))).scalar_one()
+            return got
+
+        everything = ("member", "principal", "device_secret", "round", "proposal", "join_ticket",
+                      "preference", "member_roll", "trip", "circle")
+        before = await counts_of(everything)
+        async with Session() as session:
+            joiner_id = (await session.execute(
+                text("select m.id from member m join device_secret d on d.principal_id = m.principal_id "
+                     "where m.circle_id = :c and d.secret_sha256 = :h"),
+                {"c": circle, "h": sha256(joiner_key.encode()).hexdigest()})).scalar_one()
+        left = await client.post(f"{BASE}/circles/{circle}/leave",
+                                 headers={"Authorization": "Bearer " + joiner_key})
+        check("leaving answers 204", left.status_code == 204 and left.content == b"",
+              f"got {left.status_code}: {left.content[:60]!r}")
+        check("and deletes nothing — every table's count is unchanged", await counts_of(everything) == before,
+              f"{before} → {await counts_of(everything)}")
+        async with Session() as session:
+            flag = (await session.execute(text("select has_left from member where id = :m"),
+                                          {"m": joiner_id})).scalar_one()
+        check("the seat is marked left, and the row is still there", flag is True, flag)
+        gone = await client.get(f"{BASE}/circles/{circle}/members",
+                                headers={"Authorization": "Bearer " + joiner_key})
+        check("the left key no longer opens this circle — the same 401 as an unknown token",
+              gone.status_code == 401, f"got {gone.status_code}")
+        listed = (await client.get(f"{BASE}/circles/{circle}/members",
+                                   headers={"Authorization": "Bearer " + creator_key})).json()
+        check("the seat list drops it and the count frees a seat", listed["seats"] == 9, listed)
+
+        rejoined = await client.post(f"{BASE}/circles/{circle}/join",
+                                     json={"ticket": fresh, "nickname": "回來的人"})
+        check("a full circle takes a new seat once one was left (D110 counts seats taken)",
+              rejoined.status_code == 201, f"got {rejoined.status_code}")   # never the body: it holds a key (H101)
+
+        quiet = {
+            "already left": {"Authorization": "Bearer " + joiner_key},
+            "an unknown key": {"Authorization": "Bearer " + "x" * 43},
+            "another circle's key": {"Authorization": "Bearer " + second["key"]},
+            "no key at all": {},
+        }
+        before = await counts_of(everything)
+        answers = {}
+        for label, headers in quiet.items():
+            got = await client.post(f"{BASE}/circles/{circle}/leave", headers=headers)
+            answers[label] = (got.status_code, got.content)
+        check("every other leave answers the same 204 and the same empty body",
+              set(answers.values()) == {(204, b"")}, answers)
+        check("and writes nothing", await counts_of(everything) == before)
+        async with Session() as session:
+            second_creator_left = (await session.execute(
+                text("select has_left from member where circle_id = :c"),
+                {"c": second["circle_id"]})).scalars().all()
+        check("another circle's key leaving circle A leaves nothing in its own circle",
+              second_creator_left == [False], second_creator_left)
+
+        # A principal seated in two circles: leaving one leaves the other alone.
+        async with Session() as session:
+            principal = (await session.execute(text("select principal_id from member where id = :m"),
+                                               {"m": joiner_id})).scalar_one()
+            await session.execute(
+                text("insert into member (principal_id, circle_id, nickname) values (:p, :c, '兩邊都在')"),
+                {"p": principal, "c": second["circle_id"]})
+            await session.commit()
+        elsewhere = await client.get(f"{BASE}/circles/{second['circle_id']}/members",
+                                     headers={"Authorization": "Bearer " + joiner_key})
+        check("the same key still opens the principal's other circle — the secret was not revoked",
+              elsewhere.status_code == 200, f"got {elsewhere.status_code}")
+
+        # A round opened after leaving does not pin the left seat.
+        opened = await client.post(f"{BASE}/circles/{circle}/rounds", json={},
+                                   headers={"Authorization": "Bearer " + creator_key})
+        async with Session() as session:
+            seats = (await session.execute(text("select seat_ids from round where id = :r"),
+                                           {"r": opened.json()["round_id"]})).scalar_one()
+        check("a round opened after the leave pins ten seats and not the left one",
+              opened.status_code == 201 and joiner_id not in seats and len(seats) == 10,
+              f"{opened.status_code} {seats}")
+
+        # The creator may leave; the preview then names nobody.
+        await client.post(f"{BASE}/circles/{second['circle_id']}/leave",
+                          headers={"Authorization": "Bearer " + second["key"]})
+        preview = await client.post(f"{BASE}/circles/{second['circle_id']}/join/preview",
+                                    json={"ticket": ticket_of(second["join_link"])})
+        check("after the creator leaves, the preview's creator is null (the screen says 有人)",
+              preview.json() == {"circle_name": "另一圈", "creator_nickname": None}, preview.text)
 
         await engine.dispose()
 

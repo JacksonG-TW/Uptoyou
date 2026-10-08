@@ -34,6 +34,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from .api_common import resolve_credential
+from .auth import credential_for
 from .db import session_factory
 from .issue import SEAT_CAP, SeatRefused, grow_seat
 from .issue import DEFAULT_PUBLIC_ORIGIN, PUBLIC_ORIGIN_VAR
@@ -319,7 +320,7 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
                 text("select m.nickname from member m "
                      "join device_secret d on d.principal_id = m.principal_id "
                      "join circle c on c.id = m.circle_id "
-                     "where m.circle_id = :c and d.operator and d.created_at = c.created_at "
+                     "where m.circle_id = :c and not m.has_left and d.operator and d.created_at = c.created_at "
                      "order by m.id limit 1"),
                 {"c": circle_id},
             )
@@ -447,6 +448,35 @@ async def check_ticket(circle_id: int, body: TicketCheck, request: Request) -> d
     return {"status": "live", "expires_at": row.expires_at}
 
 
+@router.post("/{circle_id}/leave", status_code=204, response_class=Response)
+async def leave_circle(circle_id: int, request: Request) -> Response:
+    """Give the seat back: the old key, no body, 204 whatever happened (owner 「可以」, 2026-10-08).
+
+    *Agreed with frontend: a device that moves to another circle fires this with its OLD key after
+    the new join has succeeded, so a failed join never costs the old seat.*
+
+    **What leaving does.** It sets `member.has_left` (0048) and nothing else. The seat stops counting
+    toward D110's cap, leaves `GET /members`, is not pinned into a new round, and its key stops
+    resolving in THIS circle (`auth.credential_for`) — while every past round, roll, trip and
+    proposal keeps pointing at the row, and the principal and its key are untouched, because one
+    principal can sit in other circles. Nothing is deleted, so D42's erasure is not involved here.
+
+    **204 in every case** — a seat left, a seat already left, an unknown key, another circle's key,
+    no key at all. The answer says nothing about which, so the endpoint cannot be used to test a
+    key or a circle. The creator may leave too: the invite power goes with the seat, and a new link
+    then needs the operator CLI.
+    """
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        async with session_factory()() as session:
+            found = await credential_for(session, header[7:].strip(), circle_id)
+            if found is not None:
+                await session.execute(
+                    text("update member set has_left = true where id = :m"), {"m": found[0]})
+                await session.commit()
+    return Response(status_code=204)
+
+
 @router.get("/{circle_id}/members")
 async def circle_members(circle_id: int, request: Request) -> dict:
     """Who is at the table — nicknames, in the order they joined, and nothing else.
@@ -470,7 +500,7 @@ async def circle_members(circle_id: int, request: Request) -> dict:
         await resolve_credential(session, request, circle_id)
         rows = (
             await session.execute(
-                text("select nickname from member where circle_id = :c order by id"),
+                text("select nickname from member where circle_id = :c and not has_left order by id"),
                 {"c": circle_id},
             )
         ).scalars().all()

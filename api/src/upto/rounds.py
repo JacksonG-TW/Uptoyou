@@ -92,7 +92,7 @@ async def open_round(circle_id: int, body: OpenRoundBody, request: Request) -> d
                         "                   outcome_seed, seed_commit, seat_ids) "
                         "values (:c, coalesce(:h, date_trunc('hour', now())), :typed, :seed, :commit, "
                         "        (select array_agg(id order by id) from member "
-                        "          where circle_id = :c)) "
+                        "          where circle_id = :c and not has_left)) "
                         "returning id, target_hour, target_hour_typed, opened_at, seed_commit, "
                         "          seat_ids"
                     ),
