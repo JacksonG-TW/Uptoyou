@@ -206,6 +206,9 @@ export type Members = {
    *  returns (agreed with backend 2026-10-08). `null` when that seat has left, for a CLI circle,
    *  or from an API that does not send it yet. */
   creatorNickname: string | null
+  /** The reader's own seat, by nickname (`your_nickname`, backend 6c6cb2f): so 「開這個圈子的是 小明」
+   *  no longer leaves a reader asking 「我是不是小明？」 (the evaluator, 2026-10-08). */
+  yourNickname: string | null
 }
 
 export async function fetchMembers(d: Device): Promise<Members> {
@@ -222,6 +225,7 @@ export async function fetchMembers(d: Device): Promise<Members> {
     name: typeof body.name === 'string' && body.name ? body.name : null,
     members: body.members ?? [], seats: body.seats, cap: body.cap,
     creatorNickname: typeof body.creator_nickname === 'string' && body.creator_nickname ? body.creator_nickname : null,
+    yourNickname: typeof body.your_nickname === 'string' && body.your_nickname ? body.your_nickname : null,
   }
 }
 

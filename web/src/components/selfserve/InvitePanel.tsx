@@ -52,7 +52,7 @@ export default function InvitePanel({
   link,
   onLink,
   inCreateFlow = false,
-  onMember,
+  onRole,
 }: {
   device: Device
   /** The current join link, or `''` when this screen cannot read one — see `Circle`. Passed in
@@ -65,9 +65,10 @@ export default function InvitePanel({
    *  circle — so it skips the role read and draws the control at once, exactly as before
    *  (Addendum 4, point 4: the create flow is unchanged). `/circle` leaves it `false` and asks. */
   inCreateFlow?: boolean
-  /** Told when the role read says this seat is a member, with the seat list once it arrives — so
-   *  `/circle` can title the page for what a member can do there (the evaluator's 2026-10-08 red). */
-  onMember?: (seats: Members | null) => void
+  /** Told once the role read answers, with the seat list once it arrives — so `/circle` can title
+   *  the page for what this seat can do there (the evaluator's 2026-10-08 red), and title nothing
+   *  before it knows (the reviewer's note: a member saw 邀朋友加入 flip to the circle's name). */
+  onRole?: (role: InviteRole['role'], seats: Members | null) => void
 }) {
   const [seats, setSeats] = useState<Members | null>(null)
   const [busy, setBusy] = useState(false)
@@ -110,8 +111,8 @@ export default function InvitePanel({
   /* A member's `/circle` is titled by its parent for what a member does there — told here, once the
      role read and the seat list have answered. */
   useEffect(() => {
-    if (role?.role === 'member') onMember?.(seats)
-  }, [role, seats, onMember])
+    if (role) onRole?.(role.role, seats)
+  }, [role, seats, onRole])
 
   useEffect(() => {
     mounted.current = true
@@ -231,7 +232,12 @@ export default function InvitePanel({
           {/* **Who to ask, by name** (the evaluator's red, 2026-10-08: 「我不知道自己是不是開圈子的
               人」). A fact, not advice (D20): it names the seat, it does not tell anyone to ask. */}
           {seats?.creatorNickname && (
-            <p className="ssNote" data-part="creator-name">開這個圈子的是 <b data-user-content>{seats.creatorNickname}</b>。</p>
+            <p className="ssNote" data-part="creator-name">
+              {/* The reader's own name first, so two people both called 小明 can still tell which
+                  one they are: two facts, never a match of one name against the other. */}
+              {seats.yourNickname && <>你是 <b data-user-content>{seats.yourNickname}</b>；</>}
+              開這個圈子的是 <b data-user-content>{seats.creatorNickname}</b>。
+            </p>
           )}
           {!inCreateFlow && (
             <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>

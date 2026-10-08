@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import InvitePanel from './InvitePanel'
 import type { Device } from '@/lib/device'
-import type { Members } from '@/lib/selfserve'
+import type { InviteRole, Members } from '@/lib/selfserve'
 
 /**
  * `/circle` — the durable home of the package's step 3, for a member who holds a key.
@@ -49,9 +49,9 @@ export default function Circle({ device }: { device: Device }) {
    * alive — which is the question they actually arrived with.
    */
   const [link, setLink] = useState('')
-  /** `null` until the panel says this seat is a member; then the seat list (or `undefined` while it loads). */
-  const [member, setMember] = useState<Members | null | undefined>(null)
-  const onMember = useCallback((m: Members | null) => setMember(m ?? undefined), [])
+  /** `null` until the role read answers; then the role and the seat list (null while it loads). */
+  const [known, setKnown] = useState<{ role: InviteRole['role']; seats: Members | null } | null>(null)
+  const onRole = useCallback((role: InviteRole['role'], seats: Members | null) => setKnown({ role, seats }), [])
 
   return (
     <main className="selfserve" data-screen="circle">
@@ -60,15 +60,19 @@ export default function Circle({ device }: { device: Device }) {
       {/* **The title follows what this seat can do here** (the evaluator's red, 2026-10-08: a member
           read 「邀朋友加入」 over a page whose only act was 選這一餐 — 「標題和按鈕的用途對不起來」).
           The creator gets the invite page; a member gets their circle, by its name, in the sans
-          because it is somebody's typing. Until the role read answers, the invite title stands. */}
-      {member === null ? (
-        <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
-      ) : (
+          because it is somebody's typing. **Until the role read answers the title is empty** (the
+          reviewer, 37b16e0): showing 邀朋友加入 first and then the circle's name was the same
+          mismatch, briefer, and a heading that changes under a screen reader. */}
+      {known === null ? (
+        <h1 className="ssTitle" aria-busy="true">{'\u00a0'}</h1>
+      ) : known.role === 'member' ? (
         <h1 className="ssInvite" data-part="circle-title">
-          <span data-user-content>{member?.name ?? '你的圈子'}</span>
+          <span data-user-content>{known.seats?.name ?? '你的圈子'}</span>
         </h1>
+      ) : (
+        <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
       )}
-      <InvitePanel device={device} link={link} onLink={setLink} onMember={onMember} />
+      <InvitePanel device={device} link={link} onLink={setLink} onRole={onRole} />
     </main>
   )
 }
