@@ -1254,92 +1254,11 @@
   }
   .reveal .right:has(.evNum) { width: min(680 * var(--k), 46vw); }
 
-  /* ══ 甲改 · the centred composition, owner-confirmed 2026-08-26 ═══════════════
-     **The complaint the old composition earned: the dice tumbled off to one side of a column
-     nobody was reading yet, and the list sat in the opposite corner.** The eye had to hold two
-     places at once during the only part of the screen that is a mechanism. So while it rolls,
-     everything is on one vertical axis — the group on the viewport's true centre, the list
-     directly under it — and the whole sequence is read in one glance.
-
-     **`:not(:has(.evNum))` — this is the MEMBER composition and the operator keeps the two
-     columns.** They genuinely fight: the operator's table is `min(680px, 46vw)` = 662 px at 1440
-     and a centred 760 px answer would run straight under it (the defect fixed on 2026-08-26,
-     re-created from the other side). The operator screen is an instrument read side by side, not
-     a result read down the middle, so it keeps what it has. Named here rather than discovered:
-     if the two are ever to be one composition, that is a ruling, not a media query.
-
-     **Every state change here is `transform` or `opacity` and nothing else** — `D91`'s zero-shift
-     clause binds this sequence, and the boxes are where they are from the first painted frame. */
-  .reveal:not(:has(.evNum)) .right {
-    left: 50%; right: auto; margin-left: calc(-200 * var(--k)); top: calc(520 * var(--k));
-    transition: transform .9s cubic-bezier(.22, 1.1, .36, 1);
-  }
-  /* **The list rises on the FLOOD's cue, not on the retreat's** — the colour arriving and the list
-     settling into it are one event (the evaluator's 「the list settling on the same cue」), and the
-     retreat is already carrying the eye elsewhere at ①. */
-  .reveal:not(:has(.evNum))[data-stage="flooded"] .right,
-  .reveal:not(:has(.evNum))[data-stage="answered"] .right {
-    /* **`--list-top` is measured, and the spec's flat −140 px is why.** It is the answer block's
-       real bottom plus a gutter, set by `Reveal.tsx`; the mock's number was right for a short
-       name and put the list through the middle of a three-line one. The fallback is the mock's
-       own 380 px, so a browser that never runs the observer gets the composition it was ruled
-       from. */
-    transform: translateY(calc(var(--list-top, calc(380 * var(--k))) - 520 * var(--k)));
-  }
-
-  /* The flowing column centres itself. **It stays in FLOW and that is deliberate**: the note on
-     `.stage` above records what absolute positioning cost here — the page stopped being able to
-     grow, and the commitment and the revealed seed sat behind the bar with no scroll that could
-     reach them. The mock is absolute because a mock has no content it has not seen. */
-  /* **The column starts below the retreated dice, not beside them.** The mock puts the answer at
-     150 and its own name fitted; measured with a real one, a two-line 摩斯漢堡（中山林森北路）
-     centred in 760 px reaches x 365 while the corner record ends at 380, so the first glyph sat on
-     top of a die. Derived from the record's own box — 96 top + `--die` at the staged 42% + a
-     gutter — so a change to `--die` moves the column with it instead of re-creating the collision.
-     Rejected: narrowing the answer until it clears. It would have to come down to ~600 px, and a
-     104 px headline in 600 px turns every branch name into three lines to protect a corner that
-     has empty space beside it anyway. */
-  .reveal:not(:has(.evNum)) .stage {
-    padding-top: calc(96 * var(--k) + var(--die) * 0.42 + 48 * var(--k));
-  }
-  .reveal:not(:has(.evNum)) .decider {
-    position: absolute; left: 50%; top: calc(118 * var(--k)); transform: translateX(-50%);
-    max-width: none; text-align: center;
-    /* **It is on screen from the first frame and it stays there — `D108`.** The mock fades it in
-       at the stage; that is the one thing this line may not do, because naming the deciding seat
-       before any dice are seen is the ruling's own honesty mechanism. So it only MOVES: while the
-       dice roll it sits in the gap between them and the list, where it reads as a caption on the
-       mechanism; at the answer it takes its place at the head of the column. */
-    transition: transform .6s ease-out;
-  }
-  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider,
-  .reveal:not(:has(.evNum))[data-stage="staged"] .decider,
-  .reveal:not(:has(.evNum))[data-stage="flooded"] .decider {
-    transform: translateX(-50%) translateY(calc(322 * var(--k)));
-  }
-  .reveal:not(:has(.evNum)) .answer {
-    margin: 0 auto; max-width: calc(760 * var(--k)); text-align: center;
-  }
-  .reveal:not(:has(.evNum)) .winner { text-align: center; }
-  .reveal:not(:has(.evNum)) .sentence { text-align: center; margin-top: calc(26 * var(--k)); }
-  /* No `.qualifier` line here on purpose: the 8px above the qualifier does not vary by
-     composition, and the 26px below it is the SENTENCE's margin, which the rule above already
-     sets. Two compositions, one declaration. */
-  /* The hole the absolute list sits in, reserved from the list's own measured height rather than
-     from a number — `--list-h` is set by `Reveal.tsx`; the fallback is one screen's worth of a
-     five-place round, so a browser that never runs the observer still gets a readable page. */
-  /* The hole the absolute list sits in: the gutter above it (72, `LIST_GUTTER_PX`), the list's own
-     measured height, and the gutter below. Reserved rather than hoped for — `.under` is in flow and
-     the list is not, so nothing else would keep them apart. */
-  .reveal:not(:has(.evNum)) .under {
-    margin-top: calc(var(--list-h, calc(300 * var(--k))) + 168 * var(--k));
-    max-width: calc(760 * var(--k)); margin-inline: auto;
-  }
-  .reveal:not(:has(.evNum)) .commit { text-align: center; }
-  /* The act is a row inside a centred column, so the ROW has to centre too — `text-align` cannot
-     reach it, it is a flex container. Measured before this: the seal and its question sat as a
-     pair centred on x 490 in a column centred on 720. */
-  .reveal:not(:has(.evNum)) .act-row { justify-content: center; }
+  /* ══ 甲改's centred member composition was here until item 2 (2026-10-08) ═══════════════
+     It put the tumbling pair on the viewport's centre and the list under it. Item 2 puts the
+     board in the first screen beside the dice (`spec-reveal-board-first-2026-10-08.md`), so the
+     member now takes the two columns the operator always had; its own rules are the «item 2»
+     block at the end of this file. `git show main~:app/web/src/reveal.css` has the old one. */
 
   /* ── the lower left ───────────────────────────────────────────────────────
      **The evaluator left the lower half empty on purpose and asked for a proposal; this is it.**
@@ -1417,31 +1336,9 @@
 @media (min-width: 1100px) {
   .reveal .die { perspective: calc(900 * var(--k)); }
 
-  /* Operator: the pair's drawn left edge on the headline's left edge. */
-  .reveal:has(.evNum) .group { left: calc(var(--stage-pad) + 12.6 * var(--k)); }
+  /* Both readers since item 2: the pair's drawn left edge on the headline's left edge. */
+  .reveal .group { left: calc(var(--stage-pad) + 12.6 * var(--k)); }
 
-  /* Member: the pair centred in the column. The group's untransformed box is two dice and their gap;
-     it lands at scale .42 about its top-left corner, so half its drawn width is .21 of that box. The
-     tumble stays centred with no change here — `Reveal.tsx` reads the group's own used `left` and
-     derives the rolling offset from it. */
-  .reveal:not(:has(.evNum)) .group {
-    left: calc(50% - (2 * var(--die) + 56 * var(--k)) * .21);
-  }
-
-  /* **The decider moves under the pair**, because a centred pair now occupies the place it used to
-     be centred in (top 118, inside the pair's 96–222). It sits 18 below the pair's drawn bottom; the
-     column below starts 28 under the decider's line instead of 48 under the pair, so the headline
-     comes down by 20 and no more. While the dice tumble it keeps exactly the position it had —
-     118 + 322 = 440 — so the rolling composition is untouched. */
-  .reveal:not(:has(.evNum)) .decider { top: calc(96 * var(--k) + var(--die) * .42 + 18 * var(--k)); }
-  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider,
-  .reveal:not(:has(.evNum))[data-stage="staged"] .decider,
-  .reveal:not(:has(.evNum))[data-stage="flooded"] .decider {
-    transform: translateX(-50%) translateY(calc(440 * var(--k) - (96 * var(--k) + var(--die) * .42 + 18 * var(--k))));
-  }
-  .reveal:not(:has(.evNum)) .stage {
-    padding-top: calc(96 * var(--k) + var(--die) * .42 + 68 * var(--k));
-  }
 }
 
 /* **No ground die behind the settled pair.** The ground's cubes are placed in stage percentages and
@@ -1500,3 +1397,96 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
    `keep-all` allows a break only at a space; `overflow-wrap: anywhere` is the fallback for a long
    name with no space at all, which would otherwise run out of the column. */
 .reveal .winner { word-break: keep-all; overflow-wrap: anywhere; }
+
+/* ═══ item 2 — the board in the reveal's first screen (frontend, 2026-10-08) ═══════════════════
+   `spec-reveal-board-first-2026-10-08.md`. The board is the product's fairness argument — the
+   dice point at a cell, the cell is a shop — and it sat a full scroll below the dice (top 1160 at
+   1440). It is now in the first screen at every gated width, present and unlit from the first
+   frame. **Member only**: every selector carries `:not(:has(.evNum))`, so the operator's
+   instrument does not move. */
+
+/* One column below 1100: dice → whose dice → board → name. Centred like the column it sits in;
+   the grid is narrower than the stage's 320 so the name still reaches the first view at 430×760. */
+.reveal .boardSlot { display: contents; }
+.reveal:not(:has(.evNum)) .boardSlot { display: block; width: min(100%, 88vw); margin-bottom: 16px; }
+.reveal:not(:has(.evNum)) .boardSlot .board {
+  width: 100%; margin: 0; padding-inline: 0;
+  /* Present from the first frame (item 2 §2): no fade on arrival, the cell lights later. */
+  animation: none;
+}
+.reveal:not(:has(.evNum)) .boardSlot .boardNote { text-align: center; }
+.reveal:not(:has(.evNum)) .boardSlot .boardGrid { width: min(100%, 224px); margin-inline: auto; }
+/* **The first view has to reach the seal at 430×760** (item 2 §6: the one primary act in view).
+   The board took 280 px above the name, so two reserves go: the name's second line, which the
+   shrink-to-fit in §5 makes unnecessary for most names (a long one still wraps and takes it), and
+   20 px of the act row's lead. Wide keeps its own composition, below. */
+@media (max-width: 1099px) {
+  .reveal:not(:has(.evNum)) .winner { min-height: 0; }
+  .reveal:not(:has(.evNum)) .act-row { margin-top: 24px; }
+}
+/* The decider is a centred caption on the pair. It was a bare left-aligned line at x 0 at 430. */
+.reveal:not(:has(.evNum)) .decider { text-align: center; }
+
+/* The list's marks are the board's swatches, sat in the row ahead of the name. */
+.reveal .evTable .rowMark { margin-right: 10px; vertical-align: 2px; }
+
+/* §5 — a long name shrinks to one line before it wraps. `--len` is the name's width in em
+   (`Reveal.tsx`'s `nameEm`); the ceiling is the size this headline always had. */
+.reveal:not(:has(.evNum)) .winner {
+  font-size: clamp(28px, calc(88vw / var(--len, 6)), var(--text-answer));
+}
+
+@media (min-width: 1100px) {
+  /* The right column: the board at the top, beside the dice; the list a gutter under it. */
+  .reveal:not(:has(.evNum)) .boardSlot {
+    margin-bottom: 0; position: absolute; right: var(--stage-pad); top: calc(96 * var(--k));
+    width: calc(400 * var(--k)); z-index: 2;
+  }
+  .reveal:not(:has(.evNum)) .boardSlot .boardNote { text-align: left; }
+  .reveal:not(:has(.evNum)) .boardSlot .boardGrid { width: min(100%, calc(320 * var(--k))); margin-inline: 0; }
+  .reveal:not(:has(.evNum)) .right {
+    top: calc(96 * var(--k) + var(--board-h, calc(380 * var(--k))) + 32 * var(--k));
+  }
+  .reveal[data-face]:not(:has(.evNum)) .boardSlot {
+    background: var(--flood);
+    box-shadow: 0 0 0 calc(24 * var(--k)) var(--flood);
+  }
+  /* The column is absolute and adds nothing to the stage's height, so the stage is held open to
+     its measured end — or the last rows of a ten-place list sit past a page that cannot scroll. */
+  .reveal:not(:has(.evNum)) .stage {
+    min-height: max(100vh, calc(var(--right-end, 0px) + 72 * var(--k)));
+  }
+  .reveal:not(:has(.evNum)) .decider { text-align: left; transition: transform .6s ease-out; }
+  /* While the pair tumbles at full size it covers the decider's resting line, so the caption sits
+     under the pair until the retreat (D108: on screen from the first frame, never faded in). */
+  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider {
+    transform: translateY(calc(var(--die) - 124 * var(--k)));
+  }
+  /* **The receipt starts below the first view** (item 2 §6). At 1440 the pairs and the
+     commitment began at y 695 and put five more text pieces in the first screen (10 against the
+     budget's 6). The left column ends near 600·k for any one-line name — §5 makes nearly every name
+     one line — so the gap is the viewport less that; a longer column only pushes it further. */
+  .reveal:not(:has(.evNum)) .under {
+    margin-top: max(calc(72 * var(--k)), calc(100vh - 600 * var(--k)));
+  }
+  .reveal:not(:has(.evNum)) .winner {
+    font-size: clamp(calc(48 * var(--k)), calc((100vw - 668 * var(--k)) / var(--len, 6)), calc(104 * var(--k)));
+  }
+}
+
+/* §4 — the seal reads as a button. The dashed empty square read as a placeholder (walk item 8):
+   now one framed control — a solid 2 px edge and the depth vocabulary's 4 px offset shadow — with
+   the seal mark inside it. SINK still drives the press. */
+.reveal .sealBtn {
+  border: 2px solid currentColor; box-shadow: 4px 4px 0 0 currentColor;
+  padding: 14px 22px 14px 14px;
+  transition: transform var(--t-press) ease-out, box-shadow var(--t-press) ease-out;
+}
+.reveal .sealBtn .sealEmpty { border-style: solid; box-shadow: none; inline-size: 56px; block-size: 56px; }
+@media (hover: hover) {
+  .reveal .sealBtn:hover:not(:disabled) { transform: translate(2px, 2px); box-shadow: 2px 2px 0 0 currentColor; }
+}
+.reveal .sealBtn:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: none; }
+/* The frame presses now, so the mark inside stops moving on its own — one press, one movement. */
+.reveal .sealBtn:hover:not(:disabled) .sealEmpty,
+.reveal .sealBtn:active:not(:disabled) .sealEmpty { transform: none; box-shadow: none; }

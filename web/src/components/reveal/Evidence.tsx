@@ -1,4 +1,4 @@
-import { FACES, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
+import { FACES, faceOf, markOf, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
 /* §3a. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
    moved them here — one definition, so the operator's figure and the payload's cannot part
    company. */
@@ -157,7 +157,9 @@ export default function Evidence({
       )}
 
       <table className="evTable" data-part="table">
-        <thead>
+        {/* **A member's list has no header since item 2**: each row now leads with its shop's
+            board mark, and a column of marked names needs no 「提名」 over it. */}
+        {ev && <thead>
           <tr>
             <th scope="col" className="evPlace">提名</th>
             {ev && <th scope="col" className="evNum">格數</th>}
@@ -167,7 +169,7 @@ export default function Evidence({
                 the payload is not allowed to hand over. */}
             {ev && <th scope="col" className="evWhy">權重來源</th>}
           </tr>
-        </thead>
+        </thead>}
         <tbody>
           {seats.map((placeId, seat) => {
             const n = ev?.allocation[placeId] ?? 0
@@ -184,6 +186,16 @@ export default function Evidence({
                       means nothing, and above four places it would repeat and mean something
                       wrong. */}
                   {ev && <span className="chip" data-face={FACES[seat % FACES.length]} />}
+                  {/* **The board's legend, folded into the row (item 2).** The member's board sits
+                      beside this list from the first frame and draws no legend of its own; the
+                      mark is the same `markOf`/`faceOf` the cells use, so a row and its cells
+                      cannot disagree (RB-6). An index, never a count. */}
+                  {!ev && (
+                    <span className="boardSwatch rowMark" data-part="row-mark"
+                      data-face={faceOf(places, Number(placeId)) ?? undefined} aria-hidden="true">
+                      {markOf(places, Number(placeId))}
+                    </span>
+                  )}
                   {/* **The name is laid out twice and painted once**, and `reveal.css` explains
                       why: the winner's mark is a real 900 weight that appears at the landing
                       frame, and on a name that ends near a line's edge a weight change adds a

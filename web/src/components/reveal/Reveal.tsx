@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import Die, { SEQUENCE_MS } from './Die'
 import Board from './Board'
 import Evidence from './Evidence'
@@ -126,7 +126,11 @@ const ANSWER_AFTER_STAGED_MS = 1400
  * name is still arriving is the screen answering twice» (§3).
  */
 const BOARD_AFTER_STAGED_MS = 2000
-const LIT_AFTER_STAGED_MS = 2450
+/** **The cell lights BEFORE the name since item 2** (`spec-reveal-board-first-2026-10-08.md` §2):
+ *  the member's board is on screen from the first frame, so its cell is the first thing the stop
+ *  answers — dice at rest, retreat, cell, flood, name. 500 ms is the retreat spring's visible
+ *  settle; the flood follows at 900. The operator's board still enters at 2000, already lit. */
+const LIT_AFTER_STAGED_MS = 500
 
 /** **How long a total absence of animation frames means the sequence is not coming.** Not a guess
  *  at how long the dice take — that number is what `RV-19` forbids. Two seconds of *silence* is far
@@ -160,6 +164,15 @@ const WATCHDOG_MS = 2000
  *  is 72 px at 1440 and grows with everything else. */
 const LIST_GUTTER = 72
 const STAGED = { x: 0, y: 0, scale: 0.42 }
+
+/** A name's width in em, for the headline's fit (item 2 §5): a CJK or full-width character is
+ *  one em, everything else about 0.6. Never below 1, so a one-letter name cannot ask for an
+ *  infinite size. */
+function nameEm(name: string): number {
+  let em = 0
+  for (const ch of name) em += /[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef]/.test(ch) ? 1 : 0.6
+  return Math.max(1, Math.round(em * 10) / 10)
+}
 
 /**
  * **The slot machine — §0c amendment B, the owner reversing his own 08-19 rule** (「選取條可以減速
@@ -318,6 +331,8 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const group = useRef<HTMLDivElement | null>(null)
   const list = useRef<HTMLDivElement | null>(null)
   const answerBox = useRef<HTMLDivElement | null>(null)
+  /** The member's board, beside the dice at ≥ 1100 and above the name below it (item 2). */
+  const boardSlot = useRef<HTMLDivElement | null>(null)
   /** Where the tumbling group has to be so it is centred on the viewport — see `STAGED` above.
    *  **`null` until measured, and the group is not drawn while it is `null`** (2026-09-15). The old
    *  fallback, 288, was the right answer only for a group resting at x 104, and the spring then
@@ -505,10 +520,25 @@ export default function Reveal({ roundId }: { roundId: number }) {
         // `offsetWidth` is the untransformed box, which is what centring is about — reading the
         // rect would fold in whatever the retreat spring is doing at that instant.
         const w = group.current.offsetWidth
-        if (w > 0) setRollX(Math.round((window.innerWidth - w) / 2 - pad))
+        // **Item 2: a member's tumble centres on the LEFT column**, because the board now stands
+        // in the right one from the first frame and a viewport-centred 656 px pair runs over it
+        // (RB-3). The column ends a gutter before the board's slot; the slot is absolute only in
+        // the two-column composition, so below 1100 this is the viewport centre as before.
+        const slot = boardSlot.current
+        const beside = slot && getComputedStyle(slot).position === 'absolute'
+        const right = beside ? slot.offsetLeft - 40 * (parseFloat(getComputedStyle(r).getPropertyValue('--k')) || 1) : window.innerWidth - pad
+        if (w > 0) setRollX(Math.round((pad + right) / 2 - w / 2 - pad))
       }
       if (list.current) {
         r.style.setProperty('--list-h', `${Math.round(list.current.offsetHeight)}px`)
+      }
+      // The list sits under the board in the right column, and the stage must grow to hold both:
+      // an absolute column adds nothing to its parent's height (the `.stage` note in reveal.css).
+      if (boardSlot.current) {
+        r.style.setProperty('--board-h', `${Math.round(boardSlot.current.offsetHeight)}px`)
+      }
+      if (list.current) {
+        r.style.setProperty('--right-end', `${Math.round(list.current.offsetTop + list.current.offsetHeight)}px`)
       }
       // **Where the list may sit once the answer is on screen: under it, never through it.**
       // The mock puts the staged list at a flat 380 px, which is 「140 px up from 520」 and is
@@ -538,6 +568,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
     if (group.current) ro.observe(group.current)
     if (list.current) ro.observe(list.current)
     if (answerBox.current) ro.observe(answerBox.current)
+    if (boardSlot.current) ro.observe(boardSlot.current)
     return () => { window.removeEventListener('resize', measure); ro.disconnect() }
   }, [data])
 
@@ -738,6 +769,25 @@ export default function Reveal({ roundId }: { roundId: number }) {
         <p className="decider" data-part="deciding">以 {decider} 的骰子為準。</p>
       )}
 
+      {/* **Item 2 — the member's board is in the first screen, from the first frame**
+          (`spec-reveal-board-first-2026-10-08.md`). The board is the product's fairness argument:
+          the dice point at a cell and the cell is a shop. A full scroll below the dice, nobody saw
+          that, and the result read as a lottery (the evaluator's walk, 2026-10-07).
+
+          **Here in the DOM, between whose dice and the name**, because below 1100 the column reads
+          dice → board → name. At ≥ 1100 the slot is lifted into the right column (reveal.css) and
+          the tumble centres on the left one, so the pair never covers it.
+
+          Unlit until the dice are at rest and retreating (`boardLit`, staged + 500 ms), so nothing
+          marks the winner while the dice still move (D91). No legend: each list row carries its
+          shop's mark instead (`Evidence`), so the two never say the same thing twice. The
+          operator's board stays in `.under`, unchanged. */}
+      <div className="boardSlot" ref={boardSlot}>
+        {data && !evidence && (
+          <Board board={data.board} places={data.places} dice={data.dice} lit={boardLit} legend={false} />
+        )}
+      </div>
+
       {/* The answer, said to a screen reader once it is on screen. The box below toggles
           `aria-hidden`, which a live region does not reliably announce, so this one line is
           the live region and holds nothing until ③. */}
@@ -760,7 +810,9 @@ export default function Reveal({ roundId }: { roundId: number }) {
             `RV-2` is written to walk text and attributes looking for precisely it. The dice
             already say what they rolled, in pips, which is the form that cannot be mistaken for a
             share of anything. */}
-        <h1 className="winner" data-part="winner" data-user-content>{winner}</h1>
+        {/* `--len` is the name's width in em (CJK 1, Latin 0.6) — the stylesheet shrinks the
+            headline to fit one line before it lets it wrap (item 2 §5). */}
+        <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
 
         {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
             D92 composes onto a name that needs one, set as its own line under the headline instead
@@ -881,6 +933,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
               type="button"
               className="sealRow sealBtn"
               data-part="sign"
+              data-primary
               onClick={() => void sign()}
               disabled={signing}
             >
@@ -958,7 +1011,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
           **`boarded`, not `answered`** (§3): it enters after the answer block, and its cell
           lights after it in turn. A swept pool and a short board both render nothing here, which
           is `Board`'s own guard — never a grey grid. */}
-      {boarded && data && (
+      {boarded && data && evidence && (
         <Board board={data.board} places={data.places} dice={data.dice} lit={boardLit} />
       )}
 

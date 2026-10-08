@@ -74,6 +74,7 @@ export default function Board({
   places,
   dice,
   lit,
+  legend = true,
 }: {
   board: number[][] | undefined
   places: Places
@@ -84,6 +85,9 @@ export default function Board({
    *  the cell lights after the board (§3). Handed in rather than timed here: the reveal's sequence
    *  lives in one place, and a component running its own clock would be a second, unmeasured one. */
   lit: boolean
+  /** **False for the member's first-screen board (item 2):** the places list beside it carries
+   *  each shop's mark on its row, so a legend here would say the same thing twice. */
+  legend?: boolean
 }) {
   if (!drawable(board)) return null
 
@@ -101,9 +105,11 @@ export default function Board({
 
   return (
     <section className="board" data-part="board">
-      {/* States the mechanism once, and states rather than advises (D20). */}
+      {/* States the mechanism once, and states rather than advises (D20). **Names nobody since
+          item 2:** it said 「你的兩顆骰子」, which was true for one reader in N — the dice that count
+          are the decider's, and the line directly above the board already names them. */}
       <p className="boardNote" data-part="board-note">
-        三十六格，你的兩顆骰子會指到其中一格。
+        骰子指到哪一格，就是哪一家。
       </p>
 
       {/* **Nested map, not `board.flat()` with computed indices.** Backend's own note with the
@@ -151,7 +157,7 @@ export default function Board({
 
       {/* Number → shop name, and nothing else (§4, §8 rule 3). The swatch carries the same number
           the cells do; the number is an index, never a count — no 「12 格」 anywhere. */}
-      <ul className="boardLegend" data-part="board-legend">
+      {legend && <ul className="boardLegend" data-part="board-legend">
         {seats.map((placeId) => (
           <li key={placeId} data-part="board-legend-row">
             <span className="boardSwatch" data-face={faceOf(places, Number(placeId))} aria-hidden="true">
@@ -166,7 +172,7 @@ export default function Board({
             </span>
           </li>
         ))}
-      </ul>
+      </ul>}
     </section>
   )
 }
