@@ -196,6 +196,9 @@ export default function Evidence({
                       {markOf(places, Number(placeId))}
                     </span>
                   )}
+                  {/* The mark said in text as well, so a screen reader hears 「1 店名」 the way the
+                      eye reads the row — the line the board's legend used to carry. */}
+                  {!ev && <span className="sr-only">{markOf(places, Number(placeId))} </span>}
                   {/* **The name is laid out twice and painted once**, and `reveal.css` explains
                       why: the winner's mark is a real 900 weight that appears at the landing
                       frame, and on a name that ends near a line's edge a weight change adds a

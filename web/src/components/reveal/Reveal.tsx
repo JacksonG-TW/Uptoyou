@@ -112,7 +112,8 @@ const HOLD_MS = 1000
 const FLOOD_AFTER_STAGED_MS = 900
 const ANSWER_AFTER_STAGED_MS = 1400
 /**
- * ④ and ⑤ — the member's board, `spec-board-2026-09-11.md` §3.
+ * ④ and ⑤ — **since item 2, the OPERATOR's board only** (the member's is on screen from the first
+ * frame and lights at `LIT_AFTER_STAGED_MS` below). The history, `spec-board-2026-09-11.md` §3:
  *
  * **Measured from `staged` like the two above, because this screen has one clock.** The file's own
  * rule: the offsets are from `staged` and nothing hangs off `landed`. Two more offsets in the same

@@ -29,7 +29,9 @@ import { PIPS, RED } from './Die'
  * **The grid is `aria-hidden` and the legend is not.** Thirty-six cells announced one by one is
  * noise, and the two things a reader needs — the mechanism and which number is which shop — are
  * the note and the legend, both real text. Same division `ALLOC36` already makes one component
- * over.
+ * over. **For a member since item 2 there is no legend here** (`legend={false}`): the places list
+ * beside the board says each row's mark in text (`Evidence`'s sr-only twin), which is the same
+ * mark → shop line in the one place it is now drawn.
  */
 
 /** 6 rows, 6 columns. Stated once; the grid's CSS reads the same number. */
