@@ -14,7 +14,7 @@
 <text x="32" y="344" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• The 7B did not move while every small model gained 5–9: a 10.5-point gap became 1.0, inside the band</text>
 <text x="20" y="390" text-anchor="start" font-size="15" font-weight="700" fill="#111111" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">What makes two numbers comparable</text>
 <text x="32" y="414" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• A round file names its own test set; read that field before comparing anything</text>
-<text x="32" y="434" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• A prompt or label change makes every crib stale, and a round refuses a stale crib</text>
-<text x="32" y="454" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• gemini is the hosted baseline: host-side only, and --rag is refused (the crib is the answer key)</text>
-<text x="32" y="474" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• The crib is example_embedding (pgvector, k=5, leave-one-out)</text>
+<text x="32" y="434" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• The crib: labelled examples handed to the model (example_embedding, pgvector, k=5, leave-one-out)</text>
+<text x="32" y="454" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• A prompt or label change makes the crib stale, and a round refuses a stale crib</text>
+<text x="32" y="474" text-anchor="start" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">• gemini is the hosted baseline: host-side only, and --rag is refused (the crib is the answer key)</text>
 </svg>
