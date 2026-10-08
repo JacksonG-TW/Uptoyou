@@ -5051,7 +5051,7 @@
         <text x="745" y="68" class="t-dim" font-size="9" font-weight="600" text-anchor="middle">04 / Read by</text>
 
         <!-- Flow paths -->
-        <path data-edge-from="cwa" data-edge-to="ingest" data-edge-label="JSON, hourly" data-edge-key="0" data-composition-points="156,157;207.5,157;207.5,264;259,264" d="M 156 157 L 207.5 157 L 207.5 264 L 259 264" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+        <path data-edge-from="cwa" data-edge-to="ingest" data-edge-label="forecast + observation, hourly" data-edge-key="0" data-composition-points="170,157;214.5,157;214.5,264;259,264" d="M 170 157 L 214.5 157 L 214.5 264 L 259 264" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="daily" data-edge-to="ingest" data-edge-label="zip, csv, nightly" data-edge-key="1" data-composition-points="156,385;207.5,385;207.5,278;259,278" d="M 156 385 L 207.5 385 L 207.5 278 L 259 278" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="ingest" data-edge-to="db" data-edge-label="new content only" data-edge-key="2" data-composition-points="371,271;474,271" d="M 371 271 L 474 271" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <path data-edge-from="db" data-edge-to="app" data-edge-label="reads" data-edge-key="3" data-composition-points="586,265;637.5,265;637.5,157;689,157" d="M 586 265 L 637.5 265 L 637.5 157 L 689 157" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
@@ -5061,15 +5061,15 @@
         <path data-edge-from="checks" data-edge-to="alert" data-edge-label="a rule breaks, 2 retries" data-edge-key="7" data-composition-points="400,506;689,506" d="M 400 506 L 689 506" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
 
         <!-- Nodes -->
-        <g id="node-cwa" data-node-id="cwa" data-node-label="中央氣象署" tabindex="0" role="button" aria-label="Focus 中央氣象署, 01 / Public sources" aria-pressed="false" data-node-kind="external" data-node-context="01 / Public sources">
-          <title>中央氣象署 · 01 / Public sources</title>
-          <rect x="44" y="128" width="112" height="58" rx="6" class="c-mask"/>
-          <rect x="44" y="128" width="112" height="58" rx="6" class="c-external" stroke-width="1.5"/>
-          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(50 134) scale(0.6875)">
+        <g id="node-cwa" data-node-id="cwa" data-node-label="中央氣象署 (2 sources)" tabindex="0" role="button" aria-label="Focus 中央氣象署 (2 sources), 01 / Public sources" aria-pressed="false" data-node-kind="external" data-node-context="01 / Public sources">
+          <title>中央氣象署 (2 sources) · 01 / Public sources</title>
+          <rect x="30" y="128" width="140" height="58" rx="6" class="c-mask"/>
+          <rect x="30" y="128" width="140" height="58" rx="6" class="c-external" stroke-width="1.5"/>
+          <g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(36 134) scale(0.6875)">
             <rect x="2.5" y="5" width="8.5" height="8" rx="1.5"/>
             <path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"/>
           </g>
-          <text data-node-label="" x="100" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">中央氣象署</text>
+          <text data-node-label="" x="100" y="149" class="t-primary" font-size="10" font-weight="600" text-anchor="middle">中央氣象署 (2 sources)</text>
         </g>
 
         <g id="node-daily" data-node-id="daily" data-node-label="five daily sources" tabindex="0" role="button" aria-label="Focus five daily sources, 01 / Public sources" aria-pressed="false" data-node-kind="external" data-node-context="01 / Public sources">
@@ -5160,9 +5160,9 @@
         </g>
 
         <!-- Flow labels -->
-        <g data-detail="context" data-edge-from="cwa" data-edge-to="ingest" data-edge-label="JSON, hourly" data-edge-key="0">
-          <rect x="172.1" y="189.5" width="70.8" height="16" rx="4" class="c-mask"/>
-          <text x="207.5" y="200.5" class="t-backend" font-size="8" text-anchor="middle">JSON, hourly</text>
+        <g data-detail="context" data-edge-from="cwa" data-edge-to="ingest" data-edge-label="forecast + observation, hourly" data-edge-key="0">
+          <rect x="135" y="189.5" width="159" height="16" rx="4" class="c-mask"/>
+          <text x="214.5" y="200.5" class="t-backend" font-size="8" text-anchor="middle">forecast + observation, hourly</text>
         </g>
         <g data-detail="context" data-edge-from="daily" data-edge-to="ingest" data-edge-label="zip, csv, nightly" data-edge-key="1">
           <rect x="159.85" y="310.5" width="95.3" height="16" rx="4" class="c-mask"/>

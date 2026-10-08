@@ -31,9 +31,10 @@
     {
       "id": "cwa",
       "type": "external",
-      "label": "中央氣象署",
+      "label": "中央氣象署 (2 sources)",
       "stage": 0,
-      "row": 0
+      "row": 0,
+      "width": 140
     },
     {
       "id": "daily",
@@ -100,7 +101,7 @@
     {
       "from": "cwa",
       "to": "ingest",
-      "label": "JSON, hourly",
+      "label": "forecast + observation, hourly",
       "variant": "emphasis"
     },
     {
