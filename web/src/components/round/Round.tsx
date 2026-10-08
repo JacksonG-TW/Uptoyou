@@ -682,13 +682,16 @@ export default function Round() {
                     surface, where a field read from the wrong level of a payload put an empty name
                     on screen with no error anywhere. */}
                 <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
-                {/* A waiting seat shows 「—」 and keeps its words for assistive tech
-                    (`spec-round-diet-circle-2026-10-08.md` A4): one 「還沒看結果」 per seat was the
-                    biggest repeated text on the screen. The seat's attributes are untouched. */}
+                {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
+                    「—」 until the 2026-10-08 label gate: two of two readers took the dash for
+                    「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
+                    looks there is nothing to show; a seat that has looked shows its pair. One
+                    「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
+                    attributes are untouched. */}
                 {r.die1 !== null && r.die2 !== null ? (
                   <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
                 ) : (
-                  <span className="seatDice" role="img" aria-label="還沒看結果">—</span>
+                  <span className="seatDice" role="img" aria-label="還沒看結果" />
                 )}
               </li>
             ))}

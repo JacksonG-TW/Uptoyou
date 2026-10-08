@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import InvitePanel from './InvitePanel'
 import type { Device } from '@/lib/device'
+import type { Members } from '@/lib/selfserve'
 
 /**
  * `/circle` — the durable home of the package's step 3, for a member who holds a key.
@@ -48,13 +49,26 @@ export default function Circle({ device }: { device: Device }) {
    * alive — which is the question they actually arrived with.
    */
   const [link, setLink] = useState('')
+  /** `null` until the panel says this seat is a member; then the seat list (or `undefined` while it loads). */
+  const [member, setMember] = useState<Members | null | undefined>(null)
+  const onMember = useCallback((m: Members | null) => setMember(m ?? undefined), [])
 
   return (
     <main className="selfserve" data-screen="circle">
       {/* No 「★ 這個圈子」 eyebrow (`spec-round-diet-circle-2026-10-08.md` B): the title already says
           where you are, and the eyebrow was one more piece of text in a first view that is budgeted. */}
-      <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
-      <InvitePanel device={device} link={link} onLink={setLink} />
+      {/* **The title follows what this seat can do here** (the evaluator's red, 2026-10-08: a member
+          read 「邀朋友加入」 over a page whose only act was 選這一餐 — 「標題和按鈕的用途對不起來」).
+          The creator gets the invite page; a member gets their circle, by its name, in the sans
+          because it is somebody's typing. Until the role read answers, the invite title stands. */}
+      {member === null ? (
+        <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
+      ) : (
+        <h1 className="ssInvite" data-part="circle-title">
+          <span data-user-content>{member?.name ?? '你的圈子'}</span>
+        </h1>
+      )}
+      <InvitePanel device={device} link={link} onLink={setLink} onMember={onMember} />
     </main>
   )
 }

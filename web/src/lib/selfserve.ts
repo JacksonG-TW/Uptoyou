@@ -200,7 +200,13 @@ export async function readInviteRole(d: Device): Promise<InviteRole> {
  * has moved once already, and a client that hard-codes ten is a client that will one day disagree
  * with the server about D110.
  */
-export type Members = { name: string | null; members: { nickname: string }[]; seats: number; cap: number }
+export type Members = {
+  name: string | null; members: { nickname: string }[]; seats: number; cap: number
+  /** The seat that opened the circle, by nickname — the same `creator_nickname` /join/preview
+   *  returns (agreed with backend 2026-10-08). `null` when that seat has left, for a CLI circle,
+   *  or from an API that does not send it yet. */
+  creatorNickname: string | null
+}
 
 export async function fetchMembers(d: Device): Promise<Members> {
   const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members`, {
@@ -215,6 +221,7 @@ export async function fetchMembers(d: Device): Promise<Members> {
   return {
     name: typeof body.name === 'string' && body.name ? body.name : null,
     members: body.members ?? [], seats: body.seats, cap: body.cap,
+    creatorNickname: typeof body.creator_nickname === 'string' && body.creator_nickname ? body.creator_nickname : null,
   }
 }
 

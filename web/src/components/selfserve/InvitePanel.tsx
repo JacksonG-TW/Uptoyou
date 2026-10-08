@@ -52,6 +52,7 @@ export default function InvitePanel({
   link,
   onLink,
   inCreateFlow = false,
+  onMember,
 }: {
   device: Device
   /** The current join link, or `''` when this screen cannot read one — see `Circle`. Passed in
@@ -64,6 +65,9 @@ export default function InvitePanel({
    *  circle — so it skips the role read and draws the control at once, exactly as before
    *  (Addendum 4, point 4: the create flow is unchanged). `/circle` leaves it `false` and asks. */
   inCreateFlow?: boolean
+  /** Told when the role read says this seat is a member, with the seat list once it arrives — so
+   *  `/circle` can title the page for what a member can do there (the evaluator's 2026-10-08 red). */
+  onMember?: (seats: Members | null) => void
 }) {
   const [seats, setSeats] = useState<Members | null>(null)
   const [busy, setBusy] = useState(false)
@@ -102,6 +106,12 @@ export default function InvitePanel({
       reading.current = false
     }
   }, [inCreateFlow, device])
+
+  /* A member's `/circle` is titled by its parent for what a member does there — told here, once the
+     role read and the seat list have answered. */
+  useEffect(() => {
+    if (role?.role === 'member') onMember?.(seats)
+  }, [role, seats, onMember])
 
   useEffect(() => {
     mounted.current = true
@@ -218,6 +228,11 @@ export default function InvitePanel({
       {role?.role === 'member' && (
         <>
           <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
+          {/* **Who to ask, by name** (the evaluator's red, 2026-10-08: 「我不知道自己是不是開圈子的
+              人」). A fact, not advice (D20): it names the seat, it does not tell anyone to ask. */}
+          {seats?.creatorNickname && (
+            <p className="ssNote" data-part="creator-name">開這個圈子的是 <b data-user-content>{seats.creatorNickname}</b>。</p>
+          )}
           {!inCreateFlow && (
             <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>
           )}
