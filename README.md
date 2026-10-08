@@ -13,7 +13,7 @@
 | | Before → after | What was measured |
 |---|---|---|
 | **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
-| **AI classification** | Cuisine labels: **51.5% → 61.0% correct** by adding retrieval | A local 2-billion-parameter model labels each restaurant, scored on 200 frozen hand-labelled names. Retrieving five labelled look-alikes first gave the jump. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0%. An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent trace any number to its source. |
+| **AI classification** | Cuisine labels: **51.5% → 61.0% correct** by adding retrieval | A local 2-billion-parameter model labels each restaurant, scored on 200 frozen hand-labelled names. Retrieving five labelled look-alikes first gave the jump. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
 | **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
 
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
