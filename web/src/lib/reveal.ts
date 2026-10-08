@@ -165,8 +165,10 @@ export function evidenceIn(body: unknown): Evidence | null {
 export const FACES = ['hot', 'cobalt', 'jade', 'sun'] as const
 export type Face = (typeof FACES)[number]
 
-/** The seat a place holds in the pool, and therefore its face. Key order is the payload's, which
- *  is the pool's, so the same place keeps the same colour between the round screen and the reveal.
+/** The seat a place holds in the pool, and therefore its face. **The seat is the place's rank by
+ *  ascending id, not the payload's order:** `places` is keyed by integer-like strings and JavaScript
+ *  orders those numerically (pinned by `reveal.test.ts`, 2026-10-08). Every screen reads the same
+ *  `Object.keys(places)`, so the same place keeps the same colour and number everywhere.
  *  Returns `null` for a place not in the pool rather than defaulting to seat 0 — a wrong colour is
  *  a wrong identity claim, and silence is better than a confident one. */
 export function faceOf(places: Places, placeId: number | null): Face | null {

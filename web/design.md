@@ -868,6 +868,16 @@ is not a product screen** — where one is cited, only its colour energy and typ
 
 ## 9 · Writing a check against this surface
 
+**Unit tests for the surface's own logic — Vitest (owner 「裝」, 2026-10-08).** Pure functions in
+`src/lib/` get a `*.test.ts` beside them: the board's cell and mark mapping, the odds sentence's
+even-board rule, `detailOr`. **Run them before every handover**, from `app/web` (no node on the host):
+`docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v "$PWD":/w -w /w node:22-alpine sh -c 'npm ci && npm test'`.
+A logic rule that is only ever checked by someone reading a screenshot is checked last and by the
+most expensive instrument — the even-board odds line was found that way. Tests import from
+`vitest` and are never bundled (`vite build` follows imports from `main.tsx`); `tsc -b` type-checks
+them inside the proxy build, so a test that does not compile stops the build. Strings in a test
+count as copy to the font gate (it reads all of `src/`): keep them to characters the shipped set has.
+
 **A box is not its content — measure the edge you actually mean (added 2026-08-19).** Any element
 carrying `padding-bottom` to reserve the fixed `BAR`'s height has two different bottoms, and they
 differ by exactly the reservation. D110's home line: **text bottom 790, padding-box bottom 975, a

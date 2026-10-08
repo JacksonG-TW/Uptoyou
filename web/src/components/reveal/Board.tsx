@@ -1,5 +1,6 @@
 import { faceOf, markOf, type Places } from '@/lib/reveal'
 import { PIPS, RED } from './Die'
+import { litCell } from '@/lib/board'
 
 /**
  * The member's 36-cell board — `spec-board-2026-09-11.md`, the owner's three 「1」 of 2026-09-11.
@@ -97,8 +98,9 @@ export default function Board({
      expression the nesting exists to make literal. Nothing is recomputed from `winning_place_id`:
      BD-3b's job is to assert that these two agree, and a client that derived one from the other
      would make that gate unfalsifiable. */
-  const litRow = dice ? dice[0] - 1 : -1
-  const litCol = dice ? dice[1] - 1 : -1
+  const cell = litCell(dice)   // `lib/board.ts`, unit-tested there
+  const litRow = cell ? cell[0] : -1
+  const litCol = cell ? cell[1] : -1
 
   /* The legend is the pool, in pool order, which is what gives each place its face — `faceOf` keys
      off `Object.keys(places)` so a place wears the same colour here, on the round screen and in the
