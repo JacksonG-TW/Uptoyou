@@ -12,6 +12,7 @@ import { CIRCLE_LINE, NO_SEAT } from './components/selfserve/copy'
 import { device } from './lib/device'
 import { arrive } from './lib/motion'
 import { dateline } from './lib/dateline'
+import { fetchPlaceCount, type PlaceCount } from './lib/places'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -56,6 +57,14 @@ export default function App() {
    *  ruling: a sheet printed at 16:59 does not become the evening edition while you look at it,
    *  so there is no interval here and nothing to tear down. */
   const [sheet] = useState(dateline)
+  /** The source's own count, read live (the brief: 「3 萬多家店」 must match it). `null` until it
+   *  answers and on any failure — then the line names the source without a number. */
+  const [places, setPlaces] = useState<PlaceCount | null>(null)
+  useEffect(() => {
+    let live = true
+    void fetchPlaceCount().then((c) => { if (live) setPlaces(c) })
+    return () => { live = false }
+  }, [])
 
   const name = TOWNSHIPS.find((t) => t.code === township)?.name ?? ''
   const hour = weather?.hour?.slice(11, 16) ?? ''
@@ -170,11 +179,15 @@ export default function App() {
           </p>}
         </div>
 
-        {/* 甲's colophon: where every fact on this page came from. The 36,499 count left the
+        {/* 甲's colophon: where every fact on this page came from. The shop count left the
             collage (the cold reader read 「家在冊」 as noise) and lives here as what it is — the
-            size of a source, not a boast. One literal per number, as before. */}
+            size of a source, with the source's own date. **Read live, never written into the
+            page** (`GET /api/places/count`): the literal 36,499 was August's first file and wrong
+            on production. No answer → no number. */}
         <footer className="colophon" data-part="colophon">
-          <span className="u"><b>店家</b>衛福部 食品業者登錄 36,499 家</span>
+          <span className="u" data-part="place-count"><b>店家</b>衛福部 食品業者登錄
+            {places && <>{' '}{places.count.toLocaleString('en-US')} 家（{places.asOf}）</>}
+          </span>
           <span className="u"><b>天氣</b>中央氣象署 開放資料</span>
           <span className="u"><b>招牌與品牌</b>臺北市政府 開放資料</span>
           <span className="u"><b>營業狀態</b>經濟部 商工登記</span>
