@@ -43,7 +43,7 @@ export default function Pairs({ rolls }: { rolls: Roll[] }) {
             >
               {/* A missing nickname renders as the seat rather than as `undefined` — the same
                   insurance the round screen carries, for the same reason. */}
-              <span className="pairName">{r.nickname || `座位 ${i + 1}`}</span>
+              <span className="pairName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
               <span className="pairDice">{shown ? `${r.die1} · ${r.die2}` : '—'}</span>
             </li>
           )

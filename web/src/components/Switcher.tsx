@@ -63,18 +63,23 @@ function stops(): Stop[] {
   /* **這一餐 only for a device with a seat** (UX batch U1, walk item 3). Without one the link led
      to `/round`, which bounced to the key screen — the back door the 2026-09-16 ruling took off
      the member surface. A link that can only bounce is not offered. */
+  /* **Labels say what is on the other side** (`spec-nav-labels-home-2026-10-08.md` N1–N2, the
+     owner's attention principle): 選這一餐 where 這一餐 named a page the cold reader could not
+     predict, 上一餐結果 where 開獎 named an event (who opens it? when?). */
   const list: Stop[] = [{ href: '/', label: '首頁' }]
-  if (device()) list.push({ href: '/round', label: '這一餐' })
+  if (device()) list.push({ href: '/round', label: '選這一餐' })
   const round = lastRound()
-  if (round) list.push({ href: `/reveal?round=${encodeURIComponent(round)}`, label: '開獎' })
+  if (round) list.push({ href: `/reveal?round=${encodeURIComponent(round)}`, label: '上一餐結果' })
   return list
 }
 
 export default function Switcher() {
   const here = window.location.pathname.replace(/\/+$/, '') || '/'
+  /* **Never the screen you are on** (N1): a stop that reloads the page you are reading is a
+     control with nothing to do, and the budget counts it. */
   return (
-    <nav className="switcher" data-part="demo-switcher" aria-label="示範導覽">
-      {stops().map((s) => (
+    <nav className="switcher" data-part="demo-switcher" aria-label="主要導覽">
+      {stops().filter((s) => s.href.split('?')[0] !== here).map((s) => (
         <a
           key={s.href}
           href={s.href}

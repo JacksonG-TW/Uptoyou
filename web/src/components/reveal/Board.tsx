@@ -124,6 +124,7 @@ export default function Board({
               <span
                 key={`${r}-${c}`}
                 className="boardCell"
+                data-user-content
                 data-part="board-cell"
                 data-row={r + 1}
                 data-col={c + 1}
@@ -159,7 +160,7 @@ export default function Board({
             {/* `places` is keyed by string and the cells are ints; the legend is already on the
                 string side of that join (BD-12). The mark is said in the text too, so a screen
                 reader hears 「1 店名」 the way the eye reads it. */}
-            <span className="boardLegendName">
+            <span className="boardLegendName" data-user-content>
               <span className="sr-only">{markOf(places, Number(placeId))} </span>
               {places[placeId]}
             </span>

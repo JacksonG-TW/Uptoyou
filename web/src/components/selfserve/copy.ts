@@ -98,3 +98,10 @@ export const NO_SEAT = '這台裝置還沒有圈子。圈子可以自己開，�
  */
 export const REPLACE_NOTICE =
   '這台裝置已經在一個圈子裡。繼續的話，它會換到這個新圈子，原本的座位會讓出來。要再回去，那個圈子的人要給一條邀請連結，回去會是新的座位。'
+
+/**
+ * Home, under 開一個圈子 — what a 圈子 is (`spec-nav-labels-home-2026-10-08.md` N2). The cold
+ * reader could only guess the word from «最多 10 人»; it is the product's word on twenty screens,
+ * so it is defined once here rather than renamed everywhere. States, never advises (D20).
+ */
+export const CIRCLE_LINE = '圈子就是一起吃飯的那幾個人，最多 10 位。不用帳號，把連結貼到 LINE 就好。'

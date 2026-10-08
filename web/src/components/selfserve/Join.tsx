@@ -94,8 +94,8 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
           <p className="eyebrow"><em>★</em>入座</p>
           {preview?.kind === 'live' ? (
             <h1 className="ssInvite" data-part="join-invite">
-              <span>{preview.creator ?? '有人'} 邀你加入</span>
-              <span className="lit ssCircle">「{preview.circleName}」</span>
+              <span><span data-user-content>{preview.creator ?? '有人'}</span> 邀你加入</span>
+              <span className="lit ssCircle" data-user-content>「{preview.circleName}」</span>
             </h1>
           ) : (
             <h1 className="ssTitle"><span>有人邀你</span><span className="lit">一起吃飯</span></h1>
@@ -136,6 +136,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               type="submit"
               className="act"
               data-part="join-submit"
+              data-primary
               disabled={busy || !nickname.trim()}
             >
               加入

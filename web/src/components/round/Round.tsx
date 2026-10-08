@@ -397,12 +397,12 @@ export default function Round() {
       <div className="roundLeft">
       {lastMeal && (
         <p className="roundNote lastMeal" data-part="last-meal">
-          上一餐：{lastMeal.name} · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
+          上一餐：<span data-user-content>{lastMeal.name}</span> · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
         </p>
       )}
       <h1 className="roundTitle">這一餐</h1>
       {people.length > 0 && (
-        <p className="roundNote" data-part="circle-people">這個圈子：{people.join('、')}</p>
+        <p className="roundNote" data-part="circle-people">這個圈子：<span data-user-content>{people.join('、')}</span></p>
       )}
       {/* **「一人提一家」 was false and D110 made it checkably so** — the cap is three per person,
           stated on the home page and enforced at propose, and this line said one. Corrected to the
@@ -509,7 +509,7 @@ export default function Round() {
                 {/* D92's composed name — sign, then address-derived, then registered. The API
                     composes it; nothing here re-derives a name, which is what keeps the format
                     the provenance. */}
-                <span className="hitName">{c.name}</span>
+                <span className="hitName" data-user-content>{c.name}</span>
                 {c.district && <span className="hitWhere">{c.district}</span>}
               </button>
             </li>
@@ -561,7 +561,7 @@ export default function Round() {
             <ul className="rows">
               {pool.map((p) => (
                 <li key={p.place_id} className="row" data-part="pool-row">
-                  <span className="rowName">{p.name}</span>
+                  <span className="rowName" data-user-content>{p.name}</span>
                 </li>
               ))}
             </ul>
@@ -575,7 +575,7 @@ export default function Round() {
               // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
               // else, and the reveal is where numbers are allowed to exist at all.
               <li key={p.place_id} className="row" data-part="pool-row">
-                <span className="rowName">{p.name}</span>
+                <span className="rowName" data-user-content>{p.name}</span>
               </li>
             ))}
           </ul>
@@ -601,6 +601,7 @@ export default function Round() {
           type="button"
           className="act"
           data-part="roll"
+          data-primary
           disabled={roundId === null || pool.length < 2 || busy}
           onClick={() => {
             if (!dev || roundId === null) return
@@ -624,7 +625,9 @@ export default function Round() {
             })
           }}
         >
-          擲骰
+          {/* Says what pressing does (N2): the dice roll and the result shows. Never 「決定」 —
+              the line beside it says the result was fixed at the open (D108). */}
+          擲骰子，看結果
         </button>
         {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
             seat list could not carry: anyone may press, nothing about the pair depends on who
@@ -663,7 +666,7 @@ export default function Round() {
                     at the D55 ruling — insurance against the one bug I have already shipped on this
                     surface, where a field read from the wrong level of a payload put an empty name
                     on screen with no error anywhere. */}
-                <span className="seatName">{r.nickname || `座位 ${i + 1}`}</span>
+                <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
                 <span className="seatDice">
                   {r.die1 !== null && r.die2 !== null ? `${r.die1} · ${r.die2}` : '還沒看結果'}
                 </span>

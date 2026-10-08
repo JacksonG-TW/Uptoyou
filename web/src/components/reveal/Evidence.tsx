@@ -178,7 +178,7 @@ export default function Evidence({
                 data-part="table-row"
                 data-sweep={sweep === placeId ? 'on' : undefined}
               >
-                <td className="evPlace" data-won={String(placeId) === String(winnerId) ? 'yes' : 'no'}>
+                <td className="evPlace" data-user-content data-won={String(placeId) === String(winnerId) ? 'yes' : 'no'}>
                   {/* CHIP — identity, never quantity, and **operator only**. It exists to key a row
                       to its cells in `ALLOC36`; with no grid to key to, it would be a colour that
                       means nothing, and above four places it would repeat and mean something

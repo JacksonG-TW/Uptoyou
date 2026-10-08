@@ -119,6 +119,7 @@ export default function Create() {
               type="submit"
               className="act"
               data-part="create-submit"
+              data-primary
               disabled={busy || !circleName.trim() || !nickname.trim()}
             >
               建立
@@ -131,7 +132,7 @@ export default function Create() {
         /* §2c. **No key is rendered anywhere in this branch** — the other half of `SS-2`. */
         <>
           <p className="eyebrow"><em>★</em>{circleName.trim()}</p>
-          <h1 className="ssTitle"><span>找人進來</span></h1>
+          <h1 className="ssTitle"><span>邀朋友加入</span></h1>
 
           {/* **Step 3 is one component, shared with the durable `/circle` route** (`SS-13`).
               The link is passed in because the `201` already handed it over — this flow must not

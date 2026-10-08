@@ -761,7 +761,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
             `RV-2` is written to walk text and attributes looking for precisely it. The dice
             already say what they rolled, in pips, which is the form that cannot be mistaken for a
             share of anything. */}
-        <h1 className="winner" data-part="winner">{winner}</h1>
+        <h1 className="winner" data-part="winner" data-user-content>{winner}</h1>
 
         {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
             D92 composes onto a name that needs one, set as its own line under the headline instead
@@ -863,6 +863,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
                     vertical setting exists for. */}
                 <span
                   className="sealName"
+                  data-user-content
                   data-set={/[\u3400-\u9FFF\uF900-\uFAFF]/.test(trip.nickname) ? 'vertical' : 'horizontal'}
                 >
                   {trip.nickname}

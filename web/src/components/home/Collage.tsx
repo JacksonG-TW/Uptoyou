@@ -178,7 +178,6 @@ export default function Collage() {
                style={{ opacity: leaving[i] ? 0 : 1 }} />
         </figure>
       ))}
-      <p className="tag"><b>36,499</b><span>家在冊</span></p>
     </div>
   )
 }

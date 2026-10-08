@@ -423,3 +423,38 @@ h1.headline .lit { color: var(--color-hot-ink); }
   font-size: var(--text-note);
   max-width: 36em;
 }
+
+/* ── 2026-10-08 · home's first view to the attention budget ───────────────────────────────
+   `spec-nav-labels-home-2026-10-08.md` N3: the first view holds the wordmark, the headline, the
+   doors and one line; the weather, the date and the sources sit below it in `.today`.
+
+   **The hero now closes the first view on its own.** `.homeFoot` (the shape line and the act)
+   is gone — the act moved up into `.heroL` — so the hero takes BOTH auto margins at ≥900 and
+   centres alone between the masthead and the fold, which is the job the pair used to share. */
+@media (min-width: 900px) {
+  .hero { margin-bottom: auto; }
+}
+/* The doors wrap as one row; three of them for a seated member. */
+.homeAct { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* What a 圈子 is, under the door — the provenance register (`.wxsrc`'s size and colour): an
+   answer to a question, not a second headline. Also carries the no-seat line after a bounce. */
+.circleLine {
+  margin-top: 14px; max-width: 30em; line-height: 1.7;
+  font-size: var(--text-note); color: var(--color-muted);
+}
+
+/* ── below the first view ─────────────────────────────────────────────────────────────────
+   Today's conditions, then the sources. One ink rule above, in the masthead's own weight, so the
+   page reads as a sheet that continues rather than a second page stapled on. */
+.today {
+  width: var(--col); margin: 0 auto; padding: 40px 0 48px;
+  border-top: 2px solid var(--color-ink);
+}
+.today .dateline { order: 0; }
+.wxHead { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.todayH { margin: 0; font-size: var(--text-lead); font-weight: 900; }
+.today .colophon { margin-top: 32px; }
+
+/* The how-line keeps its last clause whole («沒有人要當／壞人» split at 22em, 1440). */
+.say { max-width: 26em; text-wrap: pretty; }
