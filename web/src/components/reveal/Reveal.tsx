@@ -6,7 +6,7 @@ import Field from './Field'
 import Pairs from './Pairs'
 import { arrive, m, useReducedMotion } from '@/lib/motion'
 import {
-  evidenceIn, faceOf, fetchRaw, RoundStillOpen, signTrip,
+  evidenceIn, faceOf, fetchRaw, markOf, RoundStillOpen, signTrip,
   type Evidence as EvidenceData, type MemberReveal, type Trip,
 } from '@/lib/reveal'
 import { device, noteLastRound, type Device } from '@/lib/device'
@@ -813,7 +813,19 @@ export default function Reveal({ roundId }: { roundId: number }) {
             share of anything. */}
         {/* `--len` is the name's width in em (CJK 1, Latin 0.6) — the stylesheet shrinks the
             headline to fit one line before it lets it wrap (item 2 §5). */}
-        <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
+        {/* **The winner's board number beside its name** (item 2 gate: at 430 and 900 nothing in
+            the first view joined the lit cell's 「3」 to the name — the list that does sits below
+            it). The same swatch as the list row and the cells (`markOf`/`faceOf`), outside the
+            `h1` so the name's own text stays the name. Member only: the operator has no marks. */}
+        <div className="winnerLine">
+          {!evidence && data && data.winning_place_id !== null && (
+            <span className="boardSwatch winnerMark" data-part="winner-mark" aria-hidden="true"
+              data-face={faceOf(data.places, data.winning_place_id) ?? undefined}>
+              {markOf(data.places, data.winning_place_id)}
+            </span>
+          )}
+          <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
+        </div>
 
         {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
             D92 composes onto a name that needs one, set as its own line under the headline instead
@@ -941,7 +953,12 @@ export default function Reveal({ roundId }: { roundId: number }) {
               {/* `aria-hidden` on the seal itself: it is the drawing, and the button's accessible
                   name is the question. A screen reader announcing an empty box before the question
                   would be describing the ink rather than the act. */}
-              <span className="seal sealEmpty" aria-hidden="true" />
+              {/* **A stamp, not a box** (item 2 gate, 2026-10-08: two readers of two read the empty
+                  square as a checkbox — 「不確定是要點方框還是點整個區塊」). The frame already says
+                  «button»; inside it the seal carries the act's own character, 定, set in the
+                  display face like the question beside it (`.sealAsk`, so the glyph is already in
+                  the cut set). Signing replaces it with the name, as before. */}
+              <span className="seal sealEmpty" aria-hidden="true"><span className="sealAsk sealGlyph">定</span></span>
               {/* UX batch U5c — what the empty seal does, said before the press: it records who
                   said the circle went (D106 — a trip is named). **Inside the button, under the
                   question**, because the row is one 80 px box in both states and a line beside it

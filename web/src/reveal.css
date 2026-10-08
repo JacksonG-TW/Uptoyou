@@ -1433,7 +1433,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* §5 — a long name shrinks to one line before it wraps. `--len` is the name's width in em
    (`Reveal.tsx`'s `nameEm`); the ceiling is the size this headline always had. */
 .reveal:not(:has(.evNum)) .winner {
-  font-size: clamp(28px, calc(88vw / var(--len, 6)), var(--text-answer));
+  font-size: clamp(28px, calc(88vw / (var(--len, 6) + 0.8)), var(--text-answer));
 }
 
 @media (min-width: 1100px) {
@@ -1470,7 +1470,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
     margin-top: max(calc(72 * var(--k)), calc(100vh - 600 * var(--k)));
   }
   .reveal:not(:has(.evNum)) .winner {
-    font-size: clamp(calc(48 * var(--k)), calc((100vw - 668 * var(--k)) / var(--len, 6)), calc(104 * var(--k)));
+    font-size: clamp(calc(48 * var(--k)), calc((100vw - 668 * var(--k)) / (var(--len, 6) + 0.8)), calc(104 * var(--k)));
   }
 }
 
@@ -1490,3 +1490,15 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* The frame presses now, so the mark inside stops moving on its own — one press, one movement. */
 .reveal .sealBtn:hover:not(:disabled) .sealEmpty,
 .reveal .sealBtn:active:not(:disabled) .sealEmpty { transform: none; box-shadow: none; }
+
+/* The winner's board mark sits on the name's first line (item 2 gate). Sized in the name's own em
+   so a reader sees the same chip as the cell and the list row; the name's fit reserves 0.8em. */
+.reveal .winnerLine { display: flex; align-items: center; justify-content: center; gap: .25em; }
+.reveal .winnerLine .winner { min-width: 0; }
+.reveal .winnerMark { min-width: 30px; height: 30px; font-size: 17px; border-width: 2px; }
+@media (min-width: 1100px) {
+  .reveal .winnerLine { justify-content: flex-start; }
+  .reveal .winnerMark { min-width: calc(44 * var(--k)); height: calc(44 * var(--k)); font-size: calc(24 * var(--k)); }
+}
+/* The seal's stamp: 定 in the display face, upright inside the solid square. */
+.reveal .sealGlyph { font-size: 30px; line-height: 1; }
