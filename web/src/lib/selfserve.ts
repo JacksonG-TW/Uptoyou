@@ -213,7 +213,7 @@ export async function fetchMembers(d: Device): Promise<Members> {
 
 /**
  * What `/join` may say before anyone types — `POST /circles/{id}/join/preview` (backend 9e7d48e),
- * on frontend's terms (`spec-ux-batch-2026-10-07.md`, last section).
+ * on frontend's terms (`doc/decision-log.md`, 2026-10-07 «/join names the circle»).
  *
  * **The ticket travels in the body, never the URL**, and the call carries no credential: a joiner
  * has none yet. Three outcomes and no more:

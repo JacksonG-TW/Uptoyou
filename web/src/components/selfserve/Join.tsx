@@ -88,7 +88,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
           {/* **The screen names the circle and its creator — frontend's decision of 2026-10-07**,
               after the evaluator's input and with the owner's delegation; the reasoning, its cost
               and the rejected 2026-09-13 branch (a leaked ticket yields the name without a trace)
-              are in `spec-ux-batch-2026-10-07.md`. Only a live ticket gets a name. The creator is
+              are in `doc/decision-log.md` (2026-10-07 «/join names the circle»). Only a live ticket gets a name. The creator is
               the honest «inviter» because a ticket does not record who passed it on, and with the
               creator's seat gone the line says 有人 rather than a blank. */}
           <p className="eyebrow"><em>★</em>入座</p>
