@@ -253,3 +253,25 @@ export async function previewJoin(circleId: string, ticket: string): Promise<Joi
     return { kind: 'unknown' }
   }
 }
+
+/**
+ * Give back the seat this device is leaving — `POST /circles/{id}/leave` (backend 81f1c63), on
+ * the shape agreed 2026-10-08: the OLD key as bearer, no body, 204 in every case. The seat stops
+ * counting toward the cap and leaves the member list; the old key stops working in that circle
+ * only (a principal seated elsewhere keeps those seats). Nothing is deleted.
+ *
+ * **Called only after the new seat exists and is remembered**, so a failed join never costs the
+ * old seat. **`keepalive`**, because `/join` navigates away the moment it has its key and a plain
+ * fetch would be cancelled with the page. Every outcome is ignored: a failure, or an api without
+ * the route (production before 81f1c63), leaves the old seat exactly as it was before this
+ * existed — the one-circle notice's claim degrades to 「留在原圈子」, which was true until now.
+ */
+export function leaveCircle(old: Device): void {
+  try {
+    void fetch(`/api/circles/${encodeURIComponent(old.circle)}/leave`, {
+      method: 'POST',
+      headers: auth(old),
+      keepalive: true,
+    }).catch(() => {})
+  } catch { /* nothing to recover */ }
+}

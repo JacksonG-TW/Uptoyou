@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { joinCircle, previewJoin, type JoinPreview } from '@/lib/selfserve'
+import { joinCircle, leaveCircle, previewJoin, type JoinPreview } from '@/lib/selfserve'
 import { device, remember } from '@/lib/device'
 import { REPLACE_NOTICE } from './copy'
 
@@ -52,7 +52,11 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
       /* Seated before the screen moves, exactly as `Create` does. **A full navigation rather than a
          step**, because the seat this person now holds belongs to 這一餐 and there is no longer a
          screen of our own between the two. */
+      // The seat this device held until now, read before the new key replaces it (one device,
+      // one circle), then given back once the new one is safe (`leaveCircle`).
+      const old = device()
       remember({ token: j.key, circle })
+      if (old) leaveCircle(old)
       window.location.href = '/round'
     } catch (e) {
       /* **The server's own sentence, immediately, with no arrival** (`SS-6`): 409 the circle is

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
-import { createCircle, type Created } from '@/lib/selfserve'
+import { createCircle, leaveCircle, type Created } from '@/lib/selfserve'
 import { device, remember } from '@/lib/device'
 import InvitePanel from './InvitePanel'
 import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
@@ -52,7 +52,11 @@ export default function Create() {
       /* **Seated before the screen moves**, and since the key step went this is the only place the
          secret is handled at all: a person who closes the tab still has a working seat on this
          device, and no second device can be seated. */
+      // The seat this device held until now, read before the new key replaces it, then given
+      // back once the new one is safe (`leaveCircle`).
+      const old = device()
       remember({ token: c.key, circle: c.circleId })
+      if (old) leaveCircle(old)
       setMade(c)
       setLink(c.joinLink)
       /* Straight to the invite step: the link is already in hand from the `201`, and the key it also
