@@ -432,6 +432,19 @@ async def roll(round_id: int, request: Request) -> dict:
             session, round_id, pinned, weights, winner, dice,
             forecast_baseline=loaded.forecast_baseline,
         )
+        # **A seat that left while this round was open keeps nothing past it** (owner 「刪掉」,
+        # 2026-10-08: hold nothing that is never read again). `leave` spared such a seat's
+        # preferences because this roll would read them; it has now read them. So the left seats
+        # this round pinned lose every preference version that no contribution pinned — the ones
+        # `write_roll` just wrote included, which is why this runs after it, in its transaction.
+        await session.execute(
+            text("delete from preference p "
+                 " where p.member_id in (select m.id from member m "
+                 "                        where m.has_left and m.id = any(:seats)) "
+                 "   and not exists (select 1 from weight_contribution w "
+                 "                    where w.preference_id = p.id)"),
+            {"seats": list(round_row.seat_ids or [])},
+        )
         full = await closed_body(session, round_id, dice, winner, weights, viewer=member)
         # **D53's push carries the member shape, because a broadcast has no credential.** One event
         # goes to every subscriber on the circle's channel, so it can only be the shape everyone may

@@ -656,6 +656,20 @@ async def scenario(test_url: str) -> None:
               await preference_exists(back_pref))
         check("the creator's preference is still untouched", await preference_exists(creator_pref))
 
+        # When that open round is rolled, it has read them — and the left seat keeps nothing after.
+        auth = {"Authorization": "Bearer " + creator_key}
+        for shop in ("巷口麵店", "轉角咖哩"):
+            made = await client.post(f"{BASE}/circles/{circle}/places", json={"name": shop}, headers=auth)
+            proposed = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/proposals",
+                                         json={"place_id": made.json()["place_id"]}, headers=auth)
+            check(f"{shop} goes into the pool", proposed.status_code == 201, proposed.status_code)
+        rolled = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/roll", headers=auth)
+        check("the round that pinned the left seat rolls", rolled.status_code == 200,
+              f"got {rolled.status_code}: {rolled.text[:120]}")
+        check("and the left seat's spared preference is gone once the roll has read it",
+              not await preference_exists(back_pref))
+        check("while a seated member's preference is still untouched", await preference_exists(creator_pref))
+
         # The creator may leave; the preview then names nobody.
         await client.post(f"{BASE}/circles/{second['circle_id']}/leave",
                           headers={"Authorization": "Bearer " + second["key"]})
