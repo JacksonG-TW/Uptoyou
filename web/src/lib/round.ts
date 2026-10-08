@@ -104,11 +104,14 @@ export async function openRound(d: Device): Promise<{ roundId: number; conflict:
   // the race wanted a round open; one is. Joining it is what they meant, so this is not an error
   // to report — it is the same success by another path, and the flag exists only so the screen can
   // say so rather than pretend nothing happened.
+  // The winner rides in `detail.open_round` (`rounds.py`'s IntegrityError branch). Reading
+  // `detail.round_id` instead lost every race: ten devices proposing at once put eight shops in
+  // the pool and showed the losers `[object Object]` (g_multi_device MD-3, 2026-10-08).
   if (r.status === 409) {
-    const won = body.round_id ?? body.detail?.round_id
+    const won = body.detail?.open_round?.round_id
     if (won) return { roundId: won, conflict: true }
   }
-  throw new Error(body.detail || `開不了（${r.status}）`)
+  throw new Error(typeof body.detail === 'string' ? body.detail : `開不了（${r.status}）`)
 }
 
 /** **D70: a repeat proposal succeeds quietly.** Proposal count is not a weight, so proposing the
