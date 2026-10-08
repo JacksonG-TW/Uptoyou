@@ -3,7 +3,6 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "Up to You — the stack as it is served",
-    "subtitle": "One cloud host running docker compose, Cloudflare in front; the model runs at home in batches, never from the host.",
     "output": "architecture.html",
     "quality_profile": "showcase",
     "legend": {
@@ -12,9 +11,9 @@
   },
   "layout": {
     "mode": "grid",
-    "cols": 5,
-    "gapX": 78,
-    "gapY": 60,
+    "cols": 4,
+    "gapX": 64,
+    "gapY": 100,
     "cellW": 168,
     "cellH": 72
   },
@@ -23,155 +22,117 @@
       "id": "members",
       "type": "external",
       "label": "Members",
-      "sublabel": "a few friends",
-      "row": 1,
-      "col": 0
+      "sublabel": "phones",
+      "col": 0,
+      "row": 0
     },
     {
       "id": "cloudflare",
       "type": "cloud",
       "label": "Cloudflare",
-      "sublabel": "the edge",
-      "brand": "cloudflare",
-      "row": 2,
-      "col": 0
+      "sublabel": "TLS edge",
+      "col": 1,
+      "row": 0
     },
     {
       "id": "proxy",
       "type": "frontend",
       "label": "nginx",
-      "sublabel": "serves the front end",
-      "row": 1,
-      "col": 1
+      "sublabel": "the front end",
+      "col": 2,
+      "row": 0
     },
     {
       "id": "api",
       "type": "backend",
       "label": "FastAPI",
-      "sublabel": "rounds and weights",
-      "brand": "fastapi",
-      "row": 0,
-      "col": 2
+      "sublabel": "rounds, stream",
+      "col": 3,
+      "row": 0
+    },
+    {
+      "id": "devbox",
+      "type": "external",
+      "label": "Dev machine",
+      "sublabel": "builds images",
+      "col": 0,
+      "row": 1
+    },
+    {
+      "id": "ghcr",
+      "type": "cloud",
+      "label": "Image registry",
+      "sublabel": "public, by commit",
+      "col": 1,
+      "row": 1
     },
     {
       "id": "airflow",
       "type": "backend",
-      "label": "Apache Airflow",
-      "sublabel": "the scheduled ingests",
-      "brand": "apache-airflow",
-      "row": 1,
-      "col": 2
+      "label": "Airflow",
+      "sublabel": "ingests, checks",
+      "col": 2,
+      "row": 1
     },
     {
       "id": "db",
       "type": "database",
       "label": "PostgreSQL",
-      "sublabel": "with pgvector",
-      "brand": "postgresql",
-      "row": 0,
-      "col": 3
-    },
-    {
-      "id": "s3",
-      "type": "cloud",
-      "label": "S3",
-      "sublabel": "thirty nightly dumps",
-      "row": 1,
-      "col": 3
+      "sublabel": "pgvector",
+      "col": 3,
+      "row": 1
     },
     {
       "id": "gpu",
       "type": "external",
       "label": "Ollama",
-      "sublabel": "the model, at home",
-      "brand": "ollama",
-      "row": 2,
-      "col": 4
+      "sublabel": "home GPU",
+      "col": 0,
+      "row": 2
     },
     {
-      "id": "devbox",
+      "id": "s3",
+      "type": "cloud",
+      "label": "S3",
+      "sublabel": "nightly dumps",
+      "col": 1,
+      "row": 2
+    },
+    {
+      "id": "telegram",
       "type": "external",
-      "label": "Development machine",
-      "sublabel": "batch runs",
-      "row": 1,
-      "col": 4
+      "label": "Telegram",
+      "sublabel": "alerts",
+      "col": 2,
+      "row": 2
+    },
+    {
+      "id": "agent",
+      "type": "external",
+      "label": "AI agent",
+      "sublabel": "MCP lineage tool",
+      "col": 3,
+      "row": 2
     }
   ],
   "boundaries": [
     {
       "kind": "region",
-      "label": "People",
-      "wraps": [
-        "members"
-      ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "Edge",
-      "wraps": [
-        "cloudflare"
-      ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "AWS Cloud — one EC2 instance, docker compose",
+      "label": "One EC2 instance, docker compose",
       "wraps": [
         "proxy",
         "api",
         "airflow",
-        "db",
-        "s3"
-      ],
-      "pad": 34
-    },
-    {
-      "kind": "security-group",
-      "label": "Ingress",
-      "wraps": [
-        "proxy"
-      ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "Containers",
-      "wraps": [
-        "api",
-        "airflow"
-      ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "Data",
-      "wraps": [
         "db"
       ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "Backups",
-      "wraps": [
-        "s3"
-      ],
-      "pad": 16
+      "pad": 24
     },
     {
       "kind": "region",
       "label": "Home",
       "wraps": [
+        "devbox",
         "gpu"
-      ],
-      "pad": 16
-    },
-    {
-      "kind": "region",
-      "label": "Development",
-      "wraps": [
-        "devbox"
       ],
       "pad": 16
     }
@@ -179,7 +140,8 @@
   "connections": [
     {
       "from": "members",
-      "to": "cloudflare"
+      "to": "cloudflare",
+      "label": "HTTPS"
     },
     {
       "from": "cloudflare",
@@ -188,50 +150,51 @@
     },
     {
       "from": "proxy",
-      "to": "api"
+      "to": "api",
+      "label": "/api"
     },
     {
       "from": "api",
-      "to": "db"
+      "to": "db",
+      "label": "SQL",
+      "labelDy": 24
     },
     {
       "from": "airflow",
-      "to": "db"
+      "to": "db",
+      "label": "ingest"
     },
     {
-      "from": "airflow",
-      "to": "s3"
+      "from": "devbox",
+      "to": "ghcr",
+      "label": "push"
+    },
+    {
+      "from": "ghcr",
+      "to": "proxy",
+      "label": "box pulls"
     },
     {
       "from": "devbox",
       "to": "gpu",
-      "variant": "dashed"
-    }
-  ],
-  "cards": [
-    {
-      "dot": "cyan",
-      "title": "One host, one compose file",
-      "items": [
-        "Every box inside the cloud boundary is a container on one EC2 instance",
-        "The schema is applied once per deploy, and an instance refuses a schema it was not written against"
-      ]
+      "label": "batch classify",
+      "labelDy": 24
     },
     {
-      "dot": "emerald",
-      "title": "Roles, not one superuser",
-      "items": [
-        "Seven logins, one per boundary — and the owner is held only by the one-shot migration container",
-        "The backup role can read everything and write nothing"
-      ]
+      "from": "airflow",
+      "to": "s3",
+      "label": "pg_dump"
     },
     {
-      "dot": "amber",
-      "title": "Off the host",
-      "items": [
-        "The model runs in batches on a home card; the production host runs no model",
-        "Backups keep thirty nightly dumps, swept only after a successful upload"
-      ]
+      "from": "airflow",
+      "to": "telegram",
+      "label": "on failure",
+      "labelDy": 24
+    },
+    {
+      "from": "agent",
+      "to": "db",
+      "label": "read-only role"
     }
   ]
 }

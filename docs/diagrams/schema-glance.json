@@ -2,17 +2,16 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "The schema at a glance",
-    "subtitle": "Thirteen tables of thirty-two, no columns. Every arrow out of weight_contribution is a pin: one weight names exactly one source row.",
+    "title": "The schema at a glance — 13 of its 33 tables",
     "output": "schema-glance.html",
     "quality_profile": "showcase"
   },
   "layout": {
     "mode": "grid",
     "cols": 4,
-    "gapX": 90,
+    "gapX": 56,
     "gapY": 54,
-    "cellW": 190,
+    "cellW": 168,
     "cellH": 66
   },
   "components": [

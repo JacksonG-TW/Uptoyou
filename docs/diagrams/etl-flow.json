@@ -2,26 +2,29 @@
   "schema_version": 1,
   "diagram_type": "dataflow",
   "meta": {
-    "title": "Up to You — seven public sources through six ingest DAGs",
+    "title": "Up to You — the scheduled pipeline",
     "output": "etl-flow.html",
     "quality_profile": "showcase",
-    "viewBox": [
-      1000,
-      610
-    ]
+    "legend": {
+      "entries": {
+        "security": {
+          "label": "alert path"
+        }
+      }
+    }
   },
   "stages": [
     {
-      "label": "Publishers"
+      "label": "Public sources"
     },
     {
-      "label": "Airflow + CLI"
+      "label": "Airflow"
     },
     {
-      "label": "Store + ledger"
+      "label": "PostgreSQL"
     },
     {
-      "label": "Consumers"
+      "label": "Read by"
     }
   ],
   "nodes": [
@@ -29,178 +32,116 @@
       "id": "cwa",
       "type": "external",
       "label": "中央氣象署",
-      "sublabel": "two sources, one fetch",
       "stage": 0,
-      "row": 1,
-      "width": 140,
-      "tag": "hourly"
+      "row": 0
     },
     {
       "id": "daily",
       "type": "external",
       "label": "five daily sources",
-      "sublabel": "zip and csv",
       "stage": 0,
-      "row": 3,
-      "width": 140,
-      "tag": "19:00 → 20:20 UTC"
+      "row": 2
     },
     {
-      "id": "dags",
+      "id": "ingest",
       "type": "backend",
       "label": "six ingest DAGs",
-      "sublabel": "each runs upto.ingest.run_*",
       "stage": 1,
-      "row": 2,
-      "width": 180,
-      "tag": "max_active_runs=1 · exit 0·1·2"
+      "row": 1
     },
     {
-      "id": "pubs",
+      "id": "checks",
+      "type": "security",
+      "label": "value + freshness checks",
+      "stage": 1,
+      "row": 3,
+      "width": 170
+    },
+    {
+      "id": "db",
       "type": "database",
-      "label": "seven publication tables",
-      "sublabel": "one row per fetched file",
+      "label": "publications",
       "stage": 2,
       "row": 1,
-      "width": 190,
-      "tag": "content_sha256 + archive_stamp"
+      "yOffset": 7
     },
     {
-      "id": "ledger",
-      "type": "database",
-      "label": "ingest_run",
-      "sublabel": "the ledger",
-      "stage": 2,
-      "row": 3,
-      "width": 150,
-      "tag": "stored · no_change · failed"
-    },
-    {
-      "id": "classify",
-      "type": "backend",
-      "label": "classify backfill",
-      "sublabel": "asset, never a cron",
+      "id": "app",
+      "type": "frontend",
+      "label": "the product",
       "stage": 3,
-      "row": 0,
-      "width": 170,
-      "tag": "Asset(place_publication)"
+      "row": 0
     },
     {
-      "id": "engine",
-      "type": "backend",
-      "label": "the weight engine",
-      "sublabel": "what a round may propose",
+      "id": "backup",
+      "type": "cloud",
+      "label": "nightly backup",
       "stage": 3,
-      "row": 2,
-      "width": 170,
-      "tag": "reads, never writes"
+      "row": 1,
+      "yOffset": 7
     },
     {
-      "id": "check",
-      "type": "security",
-      "label": "check_publication",
-      "sublabel": "compared to the previous publication",
+      "id": "export",
+      "type": "cloud",
+      "label": "dataset export",
+      "stage": 3,
+      "row": 2
+    },
+    {
+      "id": "alert",
+      "type": "external",
+      "label": "Telegram",
       "stage": 3,
       "row": 3,
-      "width": 170,
-      "tag": "no −20% drop · same signature"
+      "yOffset": 7
     }
   ],
   "flows": [
     {
       "from": "cwa",
-      "to": "dags",
-      "label": "JSON",
-      "classification": "two publications, one fetch",
-      "variant": "emphasis",
-      "labelAt": [
-        205,
-        314
-      ]
+      "to": "ingest",
+      "label": "JSON, hourly",
+      "variant": "emphasis"
     },
     {
       "from": "daily",
-      "to": "dags",
-      "label": "fetch",
-      "classification": "one task per source",
-      "variant": "emphasis",
-      "labelDx": 28
+      "to": "ingest",
+      "label": "zip, csv, nightly",
+      "variant": "emphasis"
     },
     {
-      "from": "dags",
-      "to": "pubs",
+      "from": "ingest",
+      "to": "db",
       "label": "new content only",
-      "classification": "sha256 decides",
-      "variant": "emphasis",
-      "labelAt": [
-        420,
-        322
-      ]
+      "variant": "emphasis"
     },
     {
-      "from": "dags",
-      "to": "ledger",
-      "label": "every run, even a no-op",
-      "classification": "outcome + rows_written",
-      "labelAt": [
-        480,
-        455
-      ]
+      "from": "db",
+      "to": "app",
+      "label": "reads",
+      "variant": "emphasis"
     },
     {
-      "from": "pubs",
-      "to": "classify",
-      "label": "emits an asset",
-      "classification": "no_change emits nothing",
-      "variant": "emphasis",
-      "labelDx": 55,
-      "labelAt": [
-        698,
-        200
-      ]
+      "from": "db",
+      "to": "backup",
+      "label": "pg_dump",
+      "labelDy": 14
     },
     {
-      "from": "pubs",
-      "to": "engine",
-      "label": "the reference set",
-      "labelDy": 0,
-      "labelDx": 55
+      "from": "db",
+      "to": "export",
+      "label": "places"
     },
     {
-      "from": "pubs",
-      "to": "check",
-      "label": "previous publication",
-      "classification": "compared, or n/a",
-      "labelDx": 55,
-      "labelAt": [
-        698,
-        428
-      ]
-    }
-  ],
-  "cards": [
-    {
-      "dot": "amber",
-      "title": "Seven sources, six DAGs (UTC)",
-      "items": [
-        "weather @hourly · place 19:00 · brand 19:20 · storefront 19:40 · status 20:00 · tax 20:20",
-        "seven because the weather DAG stores two: forecast and observation are separate sources"
-      ]
+      "from": "db",
+      "to": "checks",
+      "label": "counts, hours"
     },
     {
-      "dot": "cyan",
-      "title": "Every source idempotent — every column compared, twice",
-      "items": [
-        "content_sha256 decides new from unchanged — never the publisher's own stamp"
-      ]
-    },
-    {
-      "dot": "emerald",
-      "title": "The ledger, and one at a time",
-      "items": [
-        "Every run writes an ingest_run row, including the ones that store nothing",
-        "max_active_runs=1, catchup=False, crons stepped 20 minutes apart"
-      ]
+      "from": "checks",
+      "to": "alert",
+      "label": "a rule breaks, 2 retries",
+      "variant": "security"
     }
   ]
 }

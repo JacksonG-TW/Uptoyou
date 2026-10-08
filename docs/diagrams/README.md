@@ -7,7 +7,7 @@ label on the three drawn diagrams was read out of the source file named in its f
 | Diagram | Files | How it was made |
 |---|---|---|
 | Entity relationships | `er-overview` + four clusters, `.mmd` and `.png` | generated — `pg_dump` → `er_schema.py` → **erdify** → **mermaid-cli** |
-| Architecture | `architecture.html` · `.png` | drawn — the `architecture-diagram` skill, screenshotted with headless chromium |
+| Architecture | `architecture.json` · `.html` · `.png` | drawn — an archify specification, rendered and exported with headless chromium |
 | ETL pipeline | `etl-flow.html` · `.png` | drawn — same |
 | AI evaluation | `evaluation-flow.html` · `.png` | drawn — same |
 
@@ -26,7 +26,7 @@ is added to any image in the stack, and no output arrives owned by root.
 
 ### Why it starts at the database rather than at model classes
 
-**This project has no ORM models.** The schema lives in 19 hand-written Alembic migrations that
+**This project has no ORM models.** The schema lives in 48 hand-written Alembic migrations that
 call `op.create_table`, and every query is SQL written through SQLAlchemy Core. There is no
 `DeclarativeBase`, no `Mapped[...]`, no `__tablename__` anywhere under `api/src`. An ERD
 generator that parses model classes therefore finds zero entities here — that is a fact about
@@ -123,11 +123,13 @@ check would eventually report the tool's own version bump as a schema change.
 
 `architecture.html` · `etl-flow.html` · `evaluation-flow.html`
 
-Built with the project-scoped `architecture-diagram` skill
-(`.claude/skills/architecture-diagram/`, MIT, from Cocoon AI, modified — see that folder's
-`INSTALL-NOTE.md`). The charts deliberately do **not** use the product's own palette: they are
-engineering documents on the skill's dark design system, and they are meant to look like a
-different kind of artifact from the app.
+Drawn with archify (MIT, `tt-a1i/archify`, patched so the rendered page makes no external
+request): each diagram is a small JSON specification — `architecture.json`, `etl-flow.json`,
+`schema-glance.json` and the others beside them — rendered to one self-contained HTML file and
+validated for crossings, label clearance and readability before it is exported to PNG. The PNGs
+are laid out to read at the width a README column gives them. The charts deliberately do **not**
+use the product's own palette: they are engineering documents, meant to look like a different
+kind of artifact from the app.
 
 **Each file is one file.** No stylesheet, no webfont, no CDN script, no remote image — the
 upstream skill's Google Fonts link and its two CDN export scripts were removed for exactly this
