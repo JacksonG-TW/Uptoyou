@@ -177,6 +177,11 @@
 .ssInvite .ssCircle {
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
   overflow: hidden; overflow-wrap: anywhere;
+  /* **Tall enough for the face's own glyph box, because the clamp needs `overflow: hidden`.** At the
+     invite's 1.15 the line box was 50.5 px against a 64 px glyph box, so a Latin name lost the tails
+     of g, j, p, q, y (the evaluator, 2026-10-09). Padding would let the clamped third line peek
+     into it; a taller line keeps every glyph inside its own line. */
+  line-height: 1.5;
 }
 
 /* ═══ Look D — the slip ═══ the same slip as the other screens: width, place below the bars, padding
