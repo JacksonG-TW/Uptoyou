@@ -10,7 +10,7 @@ import { REPLACE_NOTICE } from './copy'
  * **The circle id and the ticket arrive as props, already read and already erased from the address
  * bar.** `readFragmentSecret('t')` runs once in `main.tsx`'s `route()`, at module scope — the same place
  * and for the same reason the home's fall-through `replaceState` lives there rather than in an
- * effect. So this component never touches `window.location`, and there is no render in which the
+ * effect. So this component never reads `window.location`, and there is no render in which the
  * ticket is still in the URL (`SS-9`).
  *
  * **One step since 2026-09-16** (owner-ruled, «the key leaves the member surface», e0ff214; the
@@ -82,7 +82,10 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
          409. A screen that counted seats and greyed out joining at ten would one day predict the
          rule wrongly and refuse a legal join. */
       setError((e as Error).message)
-    } finally {
+      /* **Released on refusal only.** On success the lock stays set: assigning `location.href`
+         does not stop this script, and a `finally` here re-armed 加入 until the page unloaded —
+         a second click took a second seat on the same multi-use ticket (the reviewer's catch on
+         88a3b8b). */
       inFlight.current = false
       setBusy(false)
     }
