@@ -134,7 +134,10 @@ export default function App() {
                 {circle.name
                   ? <>你在「<b data-user-content>{circle.name}</b>」，一起的人：</>
                   : <>你在這個圈子，一起的人：</>}
-                <span data-user-content>{circle.members.map((m) => m.nickname).join('、')}</span>
+                {/* **Ten names, then the count.** Self-serve caps a circle at ten, so this never
+                    cuts there; a CLI circle can hold dozens and filled the card with them. */}
+                <span data-user-content>{circle.members.slice(0, 10).map((m) => m.nickname).join('、')}</span>
+                {circle.members.length > 10 && <>…等 {circle.members.length} 人</>}
               </p>
             )}
             <div className="act-row homeAct">
