@@ -627,6 +627,12 @@ async def remove_member(circle_id: int, member_id: int, request: Request) -> Res
         ).scalar_one_or_none()
         if present is None:
             raise HTTPException(status_code=404, detail="這個人已經不在圈子裡了。")
+        # **The open round is locked before the «already submitted» read** (the reviewer's should,
+        # 2026-10-09): read unlocked, a submit could land between this check and the removal.
+        # Circle first, then round — the same order `release_seat` takes.
+        await session.execute(
+            text("select id from round where circle_id = :c and status = 'open' for update"),
+            {"c": circle_id})
         submitted = (
             await session.execute(
                 text("select 1 from member_roll mr join round r on r.id = mr.round_id "
