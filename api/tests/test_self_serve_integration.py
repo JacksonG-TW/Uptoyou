@@ -134,6 +134,32 @@ async def scenario(test_url: str) -> None:
         check("a duplicate nickname is legal and is not refused (§7)", twin.status_code == 201,
               f"got {twin.status_code}")
 
+        # ---- over-length: a sentence, never pydantic's list ------------------------------------
+        #
+        # **The surface renders a string `detail` as is and falls back to the status for anything
+        # else** (frontend's ask, 2026-10-09). Pydantic's own 422 carries a list, so a person who
+        # typed too much read «開不了圈子（422）». The count is code points: `👨‍👩‍👧` is 5 of them.
+        def is_sentence(reply, starts: str) -> bool:
+            detail = reply.json().get("detail")
+            return reply.status_code == 422 and isinstance(detail, str) and detail.startswith(starts)
+
+        async with Session() as s:
+            circles_before = (await s.execute(text("select count(*) from circle"))).scalar_one()
+        long_name = await client.post(BASE + "/circles", json={"name": "名" * 81, "nickname": "小美"})
+        check("a circle name over 80 answers 422 with a sentence", is_sentence(long_name, "圈子名稱"),
+              long_name.text[:120])
+        long_nick = await client.post(BASE + "/circles", json={"name": "週四", "nickname": "暱" * 41})
+        check("a nickname over 40 at creation answers 422 with a sentence",
+              is_sentence(long_nick, "暱稱"), long_nick.text[:120])
+        async with Session() as s:
+            circles_after = (await s.execute(text("select count(*) from circle"))).scalar_one()
+        check("and neither refusal wrote a circle", circles_after == circles_before,
+              f"{circles_before} -> {circles_after}")
+        family = await client.post(f"{BASE}/circles/{circle}/join",
+                                   json={"ticket": ticket, "nickname": "👨‍👩‍👧" * 9})
+        check("nine family emoji (45 code points) at join answer 422 with a sentence",
+              is_sentence(family, "暱稱"), family.text[:120])
+
         # ---- the seat list -------------------------------------------------------------------
         seats = await client.get(f"{BASE}/circles/{circle}/members",
                                  headers={"Authorization": "Bearer " + joiner_key})
@@ -253,6 +279,12 @@ async def scenario(test_url: str) -> None:
         check("the refused join wrote nothing — no seat, no principal, no secret",
               seats_now == 10 and principals == 10 and secrets_now == 10,
               f"member={seats_now} principal={principals} device_secret={secrets_now}")
+
+        # The over-length limit's accepting edge. **Here and not beside its refusals**, because it
+        # creates a circle and the check above counts rows across the whole database.
+        at_cap = await client.post(BASE + "/circles", json={"name": "名" * 80, "nickname": "暱" * 40})
+        check("exactly 80 and 40 are still accepted", at_cap.status_code == 201,
+              f"got {at_cap.status_code}")   # never the body: it holds a key (H101)
 
         # (Placed after the seat-cap section: it creates two circles, and that section counts
         # rows across the whole database.)

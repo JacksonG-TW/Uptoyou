@@ -130,14 +130,39 @@ class _Trimmed(BaseModel):
         return stripped
 
 
+#: **Counted in code points, by the server alone.** A client `maxLength` counts UTF-16 units and can
+#: cut an IME composition mid-word, so the one count and the one sentence live here (frontend's ask,
+#: 2026-10-09). `👨‍👩‍👧` is one glyph and five code points, which is why the sentences say so.
+NAME_MAX = 80
+NICKNAME_MAX = 40
+
+
 class CreateCircle(_Trimmed):
-    name: str = Field(min_length=1, max_length=80)
-    nickname: str = Field(min_length=1, max_length=40)
+    # **No `max_length` on the two typed fields, on purpose.** Pydantic's 422 carries a list as its
+    # `detail`, which the surface cannot read, so a person who typed too much saw only a status.
+    # The handler refuses with a sentence instead; the proxy's 32k body cap still bounds the input.
+    name: str = Field(min_length=1)
+    nickname: str = Field(min_length=1)
 
 
 class JoinCircle(_Trimmed):
     ticket: str = Field(min_length=1, max_length=200)
-    nickname: str = Field(min_length=1, max_length=40)
+    nickname: str = Field(min_length=1)
+
+
+def _refuse_too_long(nickname: str, name: str | None = None) -> None:
+    """The over-length refusal, as a sentence the person can act on. The literals stay inside
+    `detail=` so `server_copy.py` reads them and the font subset draws them."""
+    if name is not None and len(name) > NAME_MAX:
+        raise HTTPException(
+            status_code=422,
+            detail="圈子名稱太長了，最多80個字。一個表情符號可能算好幾個字。",
+        )
+    if len(nickname) > NICKNAME_MAX:
+        raise HTTPException(
+            status_code=422,
+            detail="暱稱太長了，最多40個字。一個表情符號可能算好幾個字。",
+        )
 
 
 @router.post("", status_code=201)
@@ -152,6 +177,7 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
     made the circle is the one who can re-issue its link, and there is no parameter by which anyone
     else could ask to be.
     """
+    _refuse_too_long(body.nickname, body.name)
     async with session_factory()() as session:
         # **The ceiling is checked before anything is written**, the same arrangement `grow_seat`
         # uses for the cap: a refusal leaves no circle, no principal, no seat and no ticket.
@@ -217,6 +243,7 @@ async def join_circle(circle_id: int, body: JoinCircle, request: Request) -> dic
     guessing, so telling a holder that their link was *replaced* rather than that it never existed
     costs nothing and is the only message they can act on.
     """
+    _refuse_too_long(body.nickname)
     digest = sha256(body.ticket.encode("utf-8")).hexdigest()
     async with session_factory()() as session:
         # **`expired` is computed by the database, in the same statement.** It used to be a second
