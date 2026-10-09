@@ -587,7 +587,23 @@ async def release_seat(session, circle_id: int, member_id: int, event: str) -> N
     await publish(session, circle_id,
                   {"type": "submitted", "round_id": open_round, "submitted": submitted,
                    "required": required})
-    if required and len(submitted) == required:
+    if required == 0:
+        # **Every pinned seat has left: the round is void** (owner, 2026-10-09 — «the invitation
+        # lapsed»; revision 0050). Not closed — nobody invited to it is here to be shown a result —
+        # and not left open, because nothing could ever complete it and the circle could open no
+        # other round. The row and its seed commitment stay; there is no reveal.
+        await session.execute(
+            text("update round set status = 'void', closed_at = now() where id = :r"),
+            {"r": open_round})
+        # The left seats' preferences the open round was keeping for its roll: the roll will never
+        # come, so they go now, as the close would have removed them.
+        await session.execute(
+            text("delete from preference p where p.member_id = any(:seats) "
+                 "and exists (select 1 from member m where m.id = p.member_id and m.has_left) "
+                 "and not exists (select 1 from weight_contribution w where w.preference_id = p.id)"),
+            {"seats": list(round_row.seat_ids or [])})
+        await publish(session, circle_id, {"type": "voided", "round_id": open_round})
+    elif len(submitted) == required:
         try:
             async with session.begin_nested():
                 await close_round(session, open_round, round_row, None)

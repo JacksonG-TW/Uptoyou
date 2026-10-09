@@ -254,6 +254,50 @@ async def scenario(test_url: str) -> None:
                 text("select status from round where id = :r"), {"r": rid2})).scalar_one()
         check("the last unsubmitted seat leaving closes the round", status == "closed", status)
 
+        # ---- every pinned seat leaves: the round is void (owner, 2026-10-09) --------------------
+        #
+        # **The reviewer's block.** A opens a round alone, B joins after the open, A leaves: nobody
+        # the round waits for is left, B cannot submit to it, and one open round per circle meant
+        # no other round could open — stuck for good. «The invitation lapsed», so it is voided.
+        alone = (await client.post(BASE + "/circles",
+                                   json={"name": "一個人的局", "nickname": "先到"})).json()
+        lone_circle, A = alone["circle_id"], alone["key"]
+        lone = await client.post(f"{BASE}/circles/{lone_circle}/rounds", json={}, headers=bearer(A))
+        lone_rid = lone.json()["round_id"]
+        b_join = (await client.post(f"{BASE}/circles/{lone_circle}/join",
+                                    json={"ticket": ticket_of(alone["join_link"]),
+                                          "nickname": "後到"})).json()
+        B = b_join["key"]
+        b_view = Listener(client, lone_circle, B)
+        await b_view.wait_for("snapshot")
+        await client.post(f"{BASE}/circles/{lone_circle}/leave", headers=bearer(A))
+        voided = await b_view.wait_for("voided")
+        check("the latecomer's device hears that the round was voided",
+              voided is not None and voided.get("round_id") == lone_rid, voided)
+        check("and no `closed` comes with it — a void round has no reveal",
+              not any(e.get("type") == "closed" for e in b_view.events), [e.get("type") for e in b_view.events])
+        b_view.cancel()
+        async with Session() as session:
+            row = (await session.execute(
+                text("select status, closed_at, winning_place_id, die1, seed_commit from round "
+                     "where id = :r"), {"r": lone_rid})).one()
+        check("the row stays, marked void, with its time and its seed commitment and no result",
+              row.status == "void" and row.closed_at is not None and row.winning_place_id is None
+              and row.die1 is None and row.seed_commit is not None, str(row))
+        read = await client.get(f"{BASE}/rounds/{lone_rid}/result", headers=bearer(B))
+        check("its result reads 410 with a sentence, never «not yet»",
+              read.status_code == 410 and "作廢" in read.text, read.text)
+        late_submit = await client.post(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
+        check("a submit to it says it is void", late_submit.status_code == 409
+              and "作廢" in late_submit.text, late_submit.text)
+        fresh_view = Listener(client, lone_circle, B)
+        fresh = await fresh_view.wait_for("snapshot")
+        check("a device that arrives now sees no open round",
+              fresh is not None and fresh.get("open_round") is None, str(fresh)[:160])
+        fresh_view.cancel()
+        reopened = await client.post(f"{BASE}/circles/{lone_circle}/rounds", json={}, headers=bearer(B))
+        check("and the circle can open its next round", reopened.status_code == 201, reopened.text)
+
     await engine.dispose()
 
 
