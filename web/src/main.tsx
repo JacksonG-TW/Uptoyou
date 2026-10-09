@@ -11,6 +11,7 @@ import { device, readFragmentSecret } from './lib/device.ts'
 import { NavBar } from './components/Switcher.tsx' // demo scaffolding — see the component
 import DeviceScreen from './components/device/Device.tsx'
 import Round from './components/round/Round.tsx'
+import Eaves from './components/Eaves.tsx'
 
 /**
  * One path, one screen — read once at boot, with no router library.
@@ -115,6 +116,14 @@ function route() {
 
 const screen = route()
 
+/** Roof C on the four ruled screens and nowhere else (owner 「照建議做」, 2026-10-09): not the
+ *  reveal, whose full first view the roof pushed past the fold; not home, which waits on the weather
+ *  ruling; not `/device`, which the ruling did not name. Read once here, beside the route it
+ *  follows, for the same reason `home()` rewrites the bar here: outside any render. A path that
+ *  fell through to home is `/` by now, so it is not matched. */
+const roofed = ['/create', '/join', '/round', '/circle'].includes(window.location.pathname.replace(/\/+$/, ''))
+if (roofed) document.documentElement.dataset.eaves = ''
+
 /** The bar is on every screen except the home entry. Two reasons, and they were one before 乙:
  *  home is where 返回 goes, so a back control there is either a no-op or an exit from the product;
  *  and the home's own switcher is a child of the masthead now (`App.tsx`), not of this file. */
@@ -131,6 +140,7 @@ createRoot(document.getElementById('root')!).render(
         `Back` is now imported by the bar rather than rendered beside it. The home's switcher is
         not here: it is a child of the masthead in `App.tsx`. */}
     {!atHome && <NavBar />}
+    {roofed && <Eaves />}
     {screen}
     </LazyMotion>
   </StrictMode>,
