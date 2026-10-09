@@ -396,5 +396,38 @@ class TheTripIsReadForItsIdAndNeverForItsSigner(unittest.TestCase):
         self.assertIn("closed_at", queries.ROUND_LAST_TRIP)
 
 
+class AVoidRoundIsNotOpen(unittest.TestCase):
+    """revision 0050: a void round answers as void — never «open … cannot be checked yet»."""
+
+    def test_a_void_round_says_it_was_voided_and_reveals_no_seed(self):
+        row = {"id": 7, "circle_id": 1, "status": "void", "die1": None, "die2": None,
+               "winning_place_id": None, "seed_commit": "a" * 64, "outcome_seed": b"\x01" * 32,
+               "seat_ids": [3]}
+
+        class Rows:
+            def mappings(self):
+                return self
+
+            def first(self):
+                return row
+
+        class Session:
+            async def execute(self, *_args, **_kwargs):
+                return Rows()
+
+        # Host-side has no SQLAlchemy; `explain_round` imports `text` locally, so a stand-in that
+        # returns the SQL unchanged is all the fake session needs.
+        import types  # noqa: PLC0415
+        from unittest import mock  # noqa: PLC0415
+        stand_in = types.ModuleType("sqlalchemy")
+        stand_in.text = lambda sql: sql
+        with mock.patch.dict(sys.modules, {"sqlalchemy": sys.modules.get("sqlalchemy", stand_in)}):
+            answer = asyncio.run(queries.explain_round(Session(), 7))
+        self.assertEqual(answer.detail, {"status": "void"})
+        self.assertIn("voided", answer.note)
+        self.assertNotIn("the round is open", answer.note)
+        self.assertIsNone(answer.rows[0]["revealed_seed"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

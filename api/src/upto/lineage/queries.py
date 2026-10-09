@@ -489,7 +489,9 @@ async def explain_round(session, round_id: int) -> Answer:
     lying.** One sentence closes a route to exactly the wrong belief about the thing this proves.
 
     An open round reveals no seed and says so: before close, a member holding it could compute the
-    winner and then choose whether to tap, which is the preference D91 forbids.
+    winner and then choose whether to tap, which is the preference D91 forbids. **A void round**
+    (revision 0050: every seat pinned at its open left the circle) has no result and never will,
+    so it says that instead — its commitment stands, unrevealed, with nothing to check it against.
     """
     from sqlalchemy import text  # noqa: PLC0415 — the module keeps SQL imports local (see the top)
 
@@ -514,6 +516,19 @@ async def explain_round(session, round_id: int) -> Answer:
             rows=[{"status": row["status"], "commitment": None}],
             note="this round predates revision 0026 and carries no commitment. It cannot be given "
                  "one now: a commitment made after the places were known would not be a commitment.",
+        )
+    if row["status"] == "void":
+        # **Not «open … yet»** (the reviewer's should, 2026-10-09): a void round is over, and its
+        # seed will never be revealed because there is no result for it to prove.
+        return Answer(
+            question=question,
+            found=True,
+            detail={"status": "void"},
+            rows=[{"status": "void", "seed_commit": row["seed_commit"], "revealed_seed": None}],
+            note="the round was voided: every seat pinned at its open left the circle before anyone "
+                 "could be shown a result, so it has no dice and no winner. The commitment published "
+                 "at open stands; the seed is not revealed, because there is no result for it to "
+                 "prove and nothing to recompute.",
         )
     if row["status"] != "closed":
         return Answer(
