@@ -18,7 +18,6 @@
   padding-bottom: 56px;
 }
 
-
 /* **The device screen takes the HOME's column** — 丙, `spec-device-typeset.md` §1. It sat on
    `min(720px, 88vw)`, so at 1440 its left edge was x=360 against the home's 120: the first two
    screens a person meets had different gutters and read as two buildings. The content stays
@@ -566,19 +565,26 @@ main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-
    Owner 「左邊輸入右邊顯示清單」 (49ade4e), built per the v7b preview (44ac714). Input on the left,
    this round's list on the right. **Last in the file and on `main.round`**, because the paper rule
    above (`main.round, main.device`) sets a 680 width and `display: block`, and it must win over
-   both. Below 900 the two wrappers are plain blocks and the screen reads in DOM order, as one
-   column. The list sticks under the bars, so a long result list on the left never pushes it out of
+   both. Below 900 the three wrappers are plain blocks in the one-column order (input, list,
+   tonight menu), so a phone reads exactly what it read before. The list sticks under the bars, so a long result list on the left never pushes it out of
    view. */
 @media (min-width: 900px) {
   main.round {
-    width: min(1200px, calc(100vw - 64px));
+    width: min(1200px, 90vw);
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* Row 2 takes whatever height the list adds beyond the input, so the tonight menu sits straight
+       under the input wrapper rather than under a gap. */
+    grid-template-rows: auto 1fr;
     column-gap: 72px;
     align-items: start;
   }
+  .round .roundInput { grid-column: 1; grid-row: 1; }
+  .round .roundTonight { grid-column: 1; grid-row: 2; }
   .round .roundInput .roundSearch { max-width: none; }
   .round .roundList {
+    grid-column: 2; grid-row: 1 / 3;
+    align-self: start;
     position: sticky;
     top: calc(var(--bar-h) + var(--eaves-h, 0px) + 24px);
   }
