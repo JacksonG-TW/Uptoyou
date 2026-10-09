@@ -229,16 +229,9 @@ export default function InvitePanel({
       {role?.role === 'member' && (
         <>
           <p className="ssNote" data-part="reissue-member">{MEMBER_INVITE}</p>
-          {/* **Who to ask, by name** (the evaluator's red, 2026-10-08: 「我不知道自己是不是開圈子的
-              人」). A fact, not advice (D20): it names the seat, it does not tell anyone to ask. */}
-          {seats?.creatorNickname && (
-            <p className="ssNote" data-part="creator-name">
-              {/* The reader's own name first, so two people both called 小明 can still tell which
-                  one they are: two facts, never a match of one name against the other. */}
-              {seats.yourNickname && <>你是 <b data-user-content>{seats.yourNickname}</b>；</>}
-              開這個圈子的是 <b data-user-content>{seats.creatorNickname}</b>。
-            </p>
-          )}
+          {/* The creator line (「你是 X；開這個圈子的是 Y。」) went on 2026-10-09: the link follows the host,
+              so a line naming the creator turns false after a hand-over, and the seat list's 房主 tag
+              already names who to ask (the evaluator's pre-read of the waiting room). */}
           {!inCreateFlow && (
             <a className="act" data-part="enter" data-primary href={doorHref()}>選這一餐</a>
           )}
@@ -281,7 +274,11 @@ export default function InvitePanel({
           </p>
           <ul>
             {seats.members.map((m, i) => (
-              <li key={i} data-part="seat-row" data-user-content>{m.nickname}</li>
+              <li key={i} data-part="seat-row">
+                <span data-user-content>{m.nickname}</span>
+                {/* 房主 for every viewer, the host included (owner: 「一樣房主兩字就好」). */}
+                {m.isHost && <span className="hostTag" data-part="host-tag">房主</span>}
+              </li>
             ))}
           </ul>
         </div>

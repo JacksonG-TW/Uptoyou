@@ -283,3 +283,9 @@
   .navbar .switcher a:hover, .navbar .backLink:hover { background: var(--color-paper); color: var(--color-ink); }
 }
 .navbar .switcher a:active, .navbar .backLink:active { background: var(--color-paper); color: var(--color-ink); }
+
+/* **Never the same act twice in one view** (the evaluator's note on the waiting-room pre-read, the
+   owner's own «same thing twice» catch): a member's /circle carries 選這一餐 as its red primary
+   (`[data-part=enter]`), so the bar's 選這一餐 stop under it goes. Keyed on the page's own primary
+   rather than on a route, so the host's /circle, whose primary is the invite link, keeps the stop. */
+body:has([data-part="enter"][href="/round"]) .switcher a[href="/round"] { display: none; }

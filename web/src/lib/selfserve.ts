@@ -201,7 +201,8 @@ export async function readInviteRole(d: Device): Promise<InviteRole> {
  * with the server about D110.
  */
 export type Members = {
-  name: string | null; members: { nickname: string }[]; seats: number; cap: number
+  /** `is_host` per row (backend, 2026-10-09): which seat carries the 房主 tag. Never an id. */
+  name: string | null; members: { nickname: string; isHost: boolean }[]; seats: number; cap: number
   /** The seat that opened the circle, by nickname — the same `creator_nickname` /join/preview
    *  returns (agreed with backend 2026-10-08). `null` when that seat has left, for a CLI circle,
    *  or from an API that does not send it yet. */
@@ -209,6 +210,8 @@ export type Members = {
   /** The reader's own seat, by nickname (`your_nickname`, backend 6c6cb2f): so 「開這個圈子的是 小明」
    *  no longer leaves a reader asking 「我是不是小明？」 (the evaluator, 2026-10-08). */
   yourNickname: string | null
+  /** Whether the reader is the host (`you_are_host`): the invite link follows the host. */
+  youAreHost: boolean
 }
 
 export async function fetchMembers(d: Device): Promise<Members> {
@@ -223,10 +226,26 @@ export async function fetchMembers(d: Device): Promise<Members> {
   // and the home then says 這個圈子 with the nicknames alone.
   return {
     name: typeof body.name === 'string' && body.name ? body.name : null,
-    members: body.members ?? [], seats: body.seats, cap: body.cap,
+    members: ((body.members ?? []) as { nickname: string; is_host?: boolean }[])
+      .map((m) => ({ nickname: m.nickname, isHost: m.is_host === true })),
+    seats: body.seats, cap: body.cap,
     creatorNickname: typeof body.creator_nickname === 'string' && body.creator_nickname ? body.creator_nickname : null,
     yourNickname: typeof body.your_nickname === 'string' && body.your_nickname ? body.your_nickname : null,
+    youAreHost: body.you_are_host === true,
   }
+}
+
+/** **The host asks a seat that won't come back to leave** (owner, 2026-10-09). The effect is that
+ *  seat leaving: the round stops waiting for it and may close on the spot. Refused for anyone but
+ *  the host, for the host's own seat, and for a seat that has already submitted; the sentences are
+ *  the API's. */
+export async function removeSeat(d: Device, memberId: number): Promise<void> {
+  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members/${memberId}`, {
+    method: 'DELETE',
+    headers: auth(d),
+  })
+  if (r.ok) return
+  throw await refusal(r, '請不走')
 }
 
 /**

@@ -513,14 +513,59 @@
 /* The disclosure's button — a link-sized quiet control like 怎麼驗證？ (it is optional, so it is
    never a block or a fill; the roll above it is the one act). 44 px tall for a thumb. Margin above
    separates it from the seats it follows. */
-.round .tonightToggle {
-  display: inline-flex; align-items: center; min-height: 44px;
-  margin-top: 20px; padding: 0;
-  background: none; border: 0; color: var(--color-ink);
-  font: inherit; font-size: var(--text-note); cursor: pointer;
-  text-decoration: underline; text-underline-offset: 3px;
+/* **A real button, not a link-sized one** (owner on the waiting-room preview: 「這次想要避開的類別為何
+   按鈕這麼小」). The secondary shape the screen's other quiet acts share (`.secondary` below): paper,
+   2 px ink edge, a 3 px ink shadow, ≥ 48 px tall. The chevron says it opens a fold. */
+.round .tonightToggle, .round .secondary {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 48px;
+  margin-top: 22px; padding: 0 18px;
+  background: var(--color-paper); border: 2px solid var(--color-ink); color: var(--color-ink);
+  box-shadow: 3px 3px 0 0 var(--color-ink);
+  font: inherit; font-size: var(--text-body); font-weight: 700; cursor: pointer;
 }
-.round .tonightToggle:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+.round .tonightToggle::after {
+  content: ""; width: 8px; height: 8px; margin-left: 2px;
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px);
+}
+.round .tonightToggle[aria-expanded="true"]::after { transform: rotate(-135deg) translateY(-2px); }
+.round .tonightToggle:focus-visible, .round .secondary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
+.round .secondary:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+
+/* ═══ The waiting room — `spec-round-waiting-room-2026-10-09.md` ═══════════════════════════════
+   **The submitted button is the same `.act`, recoloured** so its box cannot drift from 提交's: paper
+   ground, ink text and edge, a jade check. It reads as done, not as a second red call to act. */
+.round .act.actDone { display: inline-flex; align-items: center; background: var(--color-paper); color: var(--color-ink); gap: 10px; white-space: nowrap; }
+/* Tailwind's base makes every `svg` a block, which put the check on a line of its own and grew the
+   button 22 px; inline here, so the submitted box keeps 提交's height. */
+.round .act .tick { display: inline-block; }
+.round .act .tick { width: 22px; height: 22px; flex: none; }
+.round .act .tick circle { fill: var(--color-jade); }
+.round .act .tick path { stroke: var(--color-paper); }
+/* **The wait line holds the rule's and the search's place**, so the act button below does not move
+   when the seat submits (owner: 「…為何不用同一個位置就好」). Its height is the two it replaces:
+   the rule line, the search's 32 px gap and the search box. */
+.round .waitSlot {
+  display: flex; align-items: flex-end; margin: 0;
+  min-height: calc(36px + 32px + var(--search-h, 52px)); padding-bottom: 12px; box-sizing: border-box;
+  font-size: var(--text-body); color: var(--color-ink);
+}
+.round .seatGroup + .seatGroup { margin-top: 22px; }
+@media (max-width: 899px) { .round .waitSlot { --search-h: 46px; } }
+.round .seatGroup .secondary { margin-top: 14px; }
+/* The one-line removed screen and the confirm: a narrow slip, not the two-column page. */
+main.round.roundSingle { display: block; width: min(680px, calc(100vw - 32px)); }
+.round .roundSingle .waitSlot, main.round.roundSingle > .waitSlot { min-height: 0; padding: 0; }
+.round .confirmCard { display: grid; gap: 18px; max-width: 520px; }
+.round .confirmCard h1 { margin: 0; }
+.round .confirmCard .choices { display: grid; gap: 10px; }
+.round .confirmCard .choice {
+  display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px;
+  border: 2px solid var(--color-ink); background: var(--color-paper); font-size: var(--text-body); cursor: pointer;
+}
+.round .confirmCard .choice input { width: 20px; height: 20px; accent-color: var(--color-ink); }
+.round .confirmCard .confirmRow { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.round .confirmCard .confirmRow .secondary { margin-top: 0; }
 
 /* ═══ Look D — the slip ═══ the screen's `main` is a joss-paper slip on the lacquer (the paper,
    ink edge, gold rule and shadow come from the shared rule in `index.css`). Here: its width, its

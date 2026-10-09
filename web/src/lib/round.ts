@@ -128,11 +128,23 @@ export async function propose(d: Device, roundId: number, placeId: number): Prom
   throw new Error(detailOr(body, '提不進去', r.status))
 }
 
-export async function roll(d: Device, roundId: number): Promise<void> {
-  const r = await fetch(`/api/rounds/${roundId}/roll`, { method: 'POST', headers: auth(d) })
+/** **提交** (owner, 2026-10-09): this seat is done. The round closes inside the request that brings
+ *  the last seat in, and every device, this one included, learns it from `closed` on the stream.
+ *  A repeat is the same submission. The refusals (fewer than two places, a seat that joined after
+ *  the open, a void round) are the API's sentences. */
+export async function submit(d: Device, roundId: number): Promise<void> {
+  const r = await fetch(`/api/rounds/${roundId}/submit`, { method: 'POST', headers: auth(d) })
   if (r.ok) return
   const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '擲不出來', r.status))
+  throw new Error(detailOr(body, '提交不了', r.status))
+}
+
+/** **收回提交**: allowed until the last submission lands; after that the API says it is too late. */
+export async function unsubmit(d: Device, roundId: number): Promise<void> {
+  const r = await fetch(`/api/rounds/${roundId}/submit`, { method: 'DELETE', headers: auth(d) })
+  if (r.ok) return
+  const body = await r.json().catch(() => ({}))
+  throw new Error(detailOr(body, '收不回來', r.status))
 }
 
 /** A pooled place, as the snapshot and each `pooled` event carry it.
@@ -151,7 +163,9 @@ export type Pooled = { place_id: number; name: string | null }
  *  read off the router — `round_opened` nests its payload under `round`, `pooled` under `place`,
  *  and `closed` under `result`, and none of those is guessable from the others. */
 export type StreamEvent =
-  | { type: 'snapshot'; open_round: OpenRound | null; last_result: { round_id: number } | null }
+  /** `me` and `host` are member ids, or null (backend, 2026-10-09): who this device is, and who may
+   *  ask a seat to leave. Broadcast events never carry `me`, because they have no viewer. */
+  | { type: 'snapshot'; me: number | null; host: number | null; open_round: OpenRound | null; last_result: { round_id: number } | null }
   | { type: 'round_opened'; round: OpenRound }
   | { type: 'pooled'; round_id: number; place: Pooled }
   /** A19 / the owner's 2026-08-30 ruling: a roll found every pooled weight at 0, so nothing could
@@ -160,6 +174,15 @@ export type StreamEvent =
    *  stays open and proposing continues; this is a state, not an end. */
   | { type: 'pool_swept'; round_id: number }
   | { type: 'closed'; result: { round_id: number } }
+  /** The waiting room: who has submitted, out of how many the round waits for. On every submit,
+   *  un-submit, and when a pinned seat leaves. */
+  | { type: 'submitted'; round_id: number; submitted: number[]; required: number }
+  /** Every seat pinned at the open has left: the round is void, no reveal follows. */
+  | { type: 'voided'; round_id: number }
+  /** A seat left, or the host asked it to; the named seat's own stream ends right after. */
+  | { type: 'seat_left'; member_id: number }
+  | { type: 'seat_removed'; member_id: number }
+  | { type: 'host_changed'; member_id: number | null }
 
 /**
  * A6 / D108 — one member's seat in the round. **Present from the snapshot, before anyone has
@@ -183,6 +206,9 @@ export type Roll = {
   die1: number | null
   die2: number | null
   counts: boolean
+  /** The waiting room (owner, 2026-10-09). `left`: a pinned seat that has left is not waited for. */
+  submitted?: boolean
+  left?: boolean
 }
 
 export type OpenRound = {
@@ -224,6 +250,10 @@ export function subscribe(
   d: Device,
   onEvent: (e: StreamEvent) => void,
   onStatus?: (m: string | null) => void,
+  /** The key no longer opens this circle (401, 403 or 404 on connect): the seat was removed while
+   *  this device was away, or is otherwise gone. Given, the screen decides what to say; without it,
+   *  the status line says the code as before. */
+  onDead?: () => void,
 ): () => void {
   const ac = new AbortController()
   let wait: ReturnType<typeof setTimeout> | undefined
@@ -234,7 +264,8 @@ export function subscribe(
         signal: ac.signal,
       })
       if (r.status === 401 || r.status === 403 || r.status === 404) {
-        onStatus?.(`連不上即時更新（${r.status}）`)
+        if (onDead) onDead()
+        else onStatus?.(`連不上即時更新（${r.status}）`)
         return
       }
       if (!r.ok || !r.body) throw new Error()

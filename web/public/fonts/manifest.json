@@ -1,13 +1,13 @@
 {
   "charsets": {
     "display": {
-      "covered_by_source_face": 50,
+      "covered_by_source_face": 59,
       "dropped": "",
       "dropped_absent_from_source_face": 0,
       "dropped_means": "the source face has no glyph for these characters, so no subset of it can carry them — not characters the subsetter lost",
       "file": "charset-display.txt",
-      "requested": 50,
-      "sha256": "0604602c8e5422f1b8d3bd2b2e886c008c3987393f266ead2aa1dcee2400c11b",
+      "requested": 59,
+      "sha256": "d07b2269794ce7b362b7b9c7d3719f4882bc816760555e489a8a9bb68b0a6ee8",
       "source": "NotoSerifTC.ttf"
     },
     "sub": {
@@ -34,11 +34,11 @@
       "why": "OFL 1.1 — a subset is a derivative work and the notice travels with it (D66, amended 2026-08-18)"
     },
     "noto-display-var.woff2": {
-      "bytes": 21432,
-      "characters_in_the_built_face": 50,
+      "bytes": 25716,
+      "characters_in_the_built_face": 59,
       "charset": "display",
       "font_weight_declaration": "font-weight: 200 900",
-      "sha256": "509f850951ff21dd9adfed9d7e5507d5e0cc1cb81afbf3a6fead292dd4244233",
+      "sha256": "b5fbfbe193d0f34299c98f53b1642bc288864d3e78217482067d6e34509a045a",
       "source": "NotoSerifTC.ttf",
       "wght": "variable 200-900"
     },
@@ -52,7 +52,7 @@
       "wght": "variable 100-900"
     }
   },
-  "generated_at": "2026-10-08T13:45:10+00:00",
+  "generated_at": "2026-10-09T14:24:23+00:00",
   "sources": {
     "NotoSansTC.ttf": {
       "path": "/home/jackson/.fonts/NotoSansTC.ttf",

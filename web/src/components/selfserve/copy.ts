@@ -60,11 +60,12 @@ export const NO_ACCOUNT = '不用帳號，也不用 email。'
  * **It replaces a button that failed every time for this reader.** Measured on 8080 before it: a
  * member saw 換一條新的連結 enabled, pressed it, and got a 403 that landed under the seat list,
  * 250 px from the button — the rule learned by breaking it, and the remedy never stated. This line
- * gives both before anything is pressed, in the product's own word for the creator, 開圈子的人.
+ * gives both before anything is pressed. **Since 2026-10-09 it names the host (房主), not the
+ * creator**: the link follows the host, and the host can change hands (owner's host ruling).
  *
  * Every character checked against `charset-sub.txt` before it was written here; none absent.
  */
-export const MEMBER_INVITE = '邀請連結由開這個圈子的人發。'
+export const MEMBER_INVITE = '邀請連結由房主發。'
 
 /* **Reworded 2026-10-08** (`spec-round-diet-circle-2026-10-08.md` B): it now states only who can
    make a link, in one line, because the member's page also carries its own act (選這一餐) and the

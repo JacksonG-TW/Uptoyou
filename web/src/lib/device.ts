@@ -30,6 +30,18 @@ export function remember(d: Device): void {
  * smaller id is an older meal — a reveal opened from an old chat link must not pull the label back
  * to it (the reviewer, fd14276). Written by 這一餐 from the snapshot and by every reveal opened.
  */
+/** **Forget this device's circle**: its seat is gone (the host asked it to leave, or the server no
+ *  longer accepts the key). Without this the home kept opening a circle the seat was no longer in
+ *  (the reviewer's should on 4a54d82). */
+export function forget(): void {
+  // Blocked storage throws; the line and the move home must still happen.
+  try {
+    localStorage.removeItem('upto_token')
+    localStorage.removeItem('upto_circle')
+    localStorage.removeItem('upto_last_round')
+  } catch { /* nothing to recover */ }
+}
+
 export function noteLastRound(id: number): void {
   try {
     const held = Number(localStorage.getItem('upto_last_round'))
