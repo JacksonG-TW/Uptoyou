@@ -34,9 +34,12 @@ export function remember(d: Device): void {
  *  longer accepts the key). Without this the home kept opening a circle the seat was no longer in
  *  (the reviewer's should on 4a54d82). */
 export function forget(): void {
-  localStorage.removeItem('upto_token')
-  localStorage.removeItem('upto_circle')
-  localStorage.removeItem('upto_last_round')
+  // Blocked storage throws; the line and the move home must still happen.
+  try {
+    localStorage.removeItem('upto_token')
+    localStorage.removeItem('upto_circle')
+    localStorage.removeItem('upto_last_round')
+  } catch { /* nothing to recover */ }
 }
 
 export function noteLastRound(id: number): void {

@@ -169,7 +169,13 @@ export default function Round() {
   const [removed, setRemoved] = useState<null | 'removed' | 'dead'>(null)
 
   /** Forget the circle, say one line, go home (spec §The device that was asked to leave). */
+  const goneOnce = useRef(false)
   const gone = (why: 'removed' | 'dead') => {
+    // **Once.** The server ends a removed seat's stream right after `seat_removed`, the stream
+    // reconnects a second later and meets a 401, and without this guard that second path replaced
+    // 「房主請你離開了這個圈子。」 with the neutral line mid-message (the reviewer, on 2241d86).
+    if (goneOnce.current) return
+    goneOnce.current = true
     forget()
     setRemoved(why)
     window.setTimeout(() => { window.location.href = '/' }, 2500)
