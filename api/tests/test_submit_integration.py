@@ -268,6 +268,12 @@ async def scenario(test_url: str) -> None:
                                     json={"ticket": ticket_of(alone["join_link"]),
                                           "nickname": "後到"})).json()
         B = b_join["key"]
+        # A proposes before leaving, so the void has an author to erase (the reviewer's should:
+        # D14's erasure was pinned only for a close).
+        lone_place = (await client.post(f"{BASE}/circles/{lone_circle}/places",
+                                        json={"name": "巷口麵店"}, headers=bearer(A))).json()["place_id"]
+        await client.post(f"{BASE}/rounds/{lone_rid}/proposals", json={"place_id": lone_place},
+                          headers=bearer(A))
         b_view = Listener(client, lone_circle, B)
         await b_view.wait_for("snapshot")
         await client.post(f"{BASE}/circles/{lone_circle}/leave", headers=bearer(A))
@@ -284,12 +290,24 @@ async def scenario(test_url: str) -> None:
         check("the row stays, marked void, with its time and its seed commitment and no result",
               row.status == "void" and row.closed_at is not None and row.winning_place_id is None
               and row.die1 is None and row.seed_commit is not None, str(row))
+        async with Session() as session:
+            authors = (await session.execute(
+                text("select member_id from proposal where round_id = :r"), {"r": lone_rid})).scalars().all()
+        check("a void round's proposals lose their author, as a closed round's do (D14)",
+              len(authors) == 1 and authors[0] is None, authors)
         read = await client.get(f"{BASE}/rounds/{lone_rid}/result", headers=bearer(B))
         check("its result reads 410 with a sentence, never «not yet»",
               read.status_code == 410 and "作廢" in read.text, read.text)
         late_submit = await client.post(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
         check("a submit to it says it is void", late_submit.status_code == 409
               and "作廢" in late_submit.text, late_submit.text)
+        late_back = await client.delete(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
+        check("taking a submission back from it says it is void too",
+              late_back.status_code == 409 and "作廢" in late_back.text, late_back.text)
+        late_propose = await client.post(f"{BASE}/rounds/{lone_rid}/proposals",
+                                         json={"place_id": lone_place}, headers=bearer(B))
+        check("and so does proposing to it", late_propose.status_code == 409
+              and "作廢" in late_propose.text, late_propose.text)
         fresh_view = Listener(client, lone_circle, B)
         fresh = await fresh_view.wait_for("snapshot")
         check("a device that arrives now sees no open round",
