@@ -23,10 +23,24 @@ function useWidth() {
   return w
 }
 
+/** **The scale is decided by the SAME media query that sets `--eaves-h`** (`switcher.css`). A
+ *  `clientWidth < 700` test excludes the scrollbar while the media query includes it, so a window
+ *  of about 700–716 px drew the small roof over the large room (the reviewer's catch on 95c405c). */
+const NARROW = '(max-width: 699px)'
+function useNarrow() {
+  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
+  useEffect(() => {
+    const mq = window.matchMedia(NARROW)
+    const on = () => setNarrow(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
+  return narrow
+}
+
 export default function Eaves() {
   const W = useWidth()
-  // Under 700 px the roof draws at 0.7 scale; `--eaves-h` switches at the same width.
-  const s = W < 700 ? 0.7 : 1
+  const s = useNarrow() ? 0.7 : 1
   const H = Math.round(118 * s)
   const top = 30 * s, eaveY = H - 26 * s, lip = 46 * s, rx = lip + 40 * s
   const roof = `M ${rx} ${top} L ${W - rx} ${top} Q ${W - lip} ${eaveY - 30 * s} ${W - 4 * s} ${eaveY - 24 * s} `
