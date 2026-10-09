@@ -39,7 +39,9 @@ from .api_common import (
     place_names,
     resolve_credential,
     resolve_member,
+    refuse_if_submitted,
     seats_for,
+    submit_state,
     trip_for,
 )
 from .db import session_factory
@@ -177,7 +179,10 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
     async with session_factory()() as session:
         round_row = (
             await session.execute(
-                text("select circle_id, status from round where id = :r"), {"r": round_id}
+                # `for share` queues behind a submit's `for update`, so a proposal cannot slip in
+                # between a seat submitting and the count that may close the round.
+                text("select circle_id, status from round where id = :r for share"),
+                {"r": round_id},
             )
         ).one_or_none()
         if round_row is None:
@@ -185,6 +190,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
         member = await _resolve_member(session, request, round_row.circle_id)
         if round_row.status != "open":
             raise HTTPException(status_code=409, detail="這一輪已經擲過了。")
+        await refuse_if_submitted(session, round_id, member)
         place = (
             await session.execute(
                 text("select origin, circle_id from place where id = :p"),
@@ -302,22 +308,171 @@ async def result(round_id: int, request: Request) -> dict:
         return await _stored_result(session, round_id, round_row, member, sees_evidence)
 
 
-@router.post("/rounds/{round_id}/roll")
-async def roll(round_id: int, request: Request) -> dict:
-    async with session_factory()() as session:
-        # **`for update`: simultaneous rolls queue on the round row** (frontend's 10-device
-        # self-test, 2026-10-08). Read unlocked, every member who pressed at once saw `open`, and all
-        # but the first died 500 in the engine. Locked, the losers wait for the winner's commit,
-        # re-read the row as `closed`, and answer through D69's retry below — the stored result.
-        round_row = (
+ROUND_FOR_CLOSE = (
+    "select circle_id, status, target_hour_typed, die1, die2, "
+    "winning_place_id, outcome_seed, seat_ids "
+    "from round where id = :r for update"
+)
+
+
+class PoolSwept(Exception):
+    """The close found nothing to draw from. `pool_swept` has already gone to every seat."""
+
+
+async def close_round(session, round_id: int, round_row, member) -> dict:
+    """Today's roll, unchanged in what it computes — now run by whichever request completes the set.
+
+    **The close used to be the first tap; since 提交 (owner, 2026-10-09) it is the last submit, a
+    leave, or a removal that leaves every remaining pinned seat submitted.** The arithmetic is
+    the same: the dice are the decider's pair from the seed committed at open, so who happened to
+    complete the set changes nothing about the result. The caller holds `round_row` locked
+    `for update` and owns the commit. Returns the full body; the caller picks the credential's
+    shape.
+
+    Raises `PoolSwept` after telling every seat; the round stays open.
+    """
+    if not round_row.target_hour_typed:
+        # D73 through D41: a defaulted hour is re-resolved to the hour the roll stands in.
+        await session.execute(
+            text("update round set target_hour = date_trunc('hour', now()) where id = :r"),
+            {"r": round_id},
+        )
+
+    loaded = await load_contributions(session, round_id)
+    pinned = loaded.contributions
+    pool = (
+        (
             await session.execute(
-                text(
-                    "select circle_id, status, target_hour_typed, die1, die2, "
-                    "winning_place_id, outcome_seed, seed_commit, seat_ids "
-                    "from round where id = :r for update"
-                ),
-                {"r": round_id},
+                text("select place_id from proposal where round_id = :r"), {"r": round_id}
             )
+        )
+        .scalars()
+        .all()
+    )
+    weights = {
+        place: fold(
+            place, [p.contribution for p in pinned if p.contribution.place_id == place]
+        ).weight
+        for place in pool
+    }
+    try:
+        table = build_table(weights)
+    except EmptyPoolError:
+        # **Owner-ruled 2026-08-30: every seat is told, and the round stays open.** The roller
+        # learns from the 409 below; the other four learn from here, because a swept pool is
+        # not a fact about whoever happened to tap — it is the state of their round, and four
+        # people staring at a screen that did nothing is the silence §3.0 is built against.
+        #
+        # **Type and round id, no text.** The sentence lives in the surface and is rendered for
+        # this event *and* for the 409, so one wording has one owner. The 409's `detail` stays
+        # as the API's own contract — a curl reader wants it — and no member reads it, which is
+        # what stops two sentences for one event drifting apart in two repositories.
+        #
+        # **The round id is not decoration: it is the clear rule.** The surface clears this
+        # notice on the next `pooled` event *for that round*, so an event without it would
+        # either never clear or be cleared by a different round's proposal.
+        # **`transactional=False`, and D37 is the whole reason.** This path raises the 409
+        # below, so its transaction rolls back — and a notification inside a transaction that
+        # rolls back is never delivered (measured 2026-09-11). The other four members would
+        # learn nothing, and «four people staring at a screen that did nothing is the silence
+        # §3.0 is built against». So this one goes on its own connection, unconditionally: the
+        # event says the pool was empty, which is true whatever becomes of this request.
+        await publish(session, round_row.circle_id,
+                      {"type": "pool_swept", "round_id": round_id}, transactional=False)
+        raise PoolSwept() from None
+    # **D108: the dice come from the seed committed at open, never from a fresh draw here.**
+    # This is the line the whole mechanism exists to change. `secrets.randbelow` at roll time was
+    # honest randomness and unprovable: nobody could check afterwards that it had not been drawn
+    # with the places in view. Now the pair is `hmac(seed, "member:<decider>")`, the seed's hash
+    # was published before any place existed, and the seed is revealed below — so the claim
+    # *this was fixed before anyone saw anything* becomes checkable instead of asserted.
+    #
+    # **A round that predates revision 0026 has no seed**, and there is no honest way to give it
+    # one, so it keeps the old behaviour rather than being refused: a commitment made after the
+    # places were known would not be a commitment.
+    if round_row.outcome_seed is not None:
+        # **The seats pinned at open, never live membership.** Reading `member` here is the bug
+        # revision 0027 exists for: the decider moved whenever the circle's membership changed, so
+        # a closed round's arithmetic stopped checking out and an open round's decider could change
+        # under a member who joined mid-round. A round with a seed and no pinned seats predates
+        # 0027 and falls back, because there is nothing honest to reconstruct.
+        seat_ids = list(round_row.seat_ids or [])
+        if not seat_ids:
+            seat_ids = list(
+                (
+                    await session.execute(
+                        text("select id from member where circle_id = :c order by id"),
+                        {"c": round_row.circle_id},
+                    )
+                )
+                .scalars()
+                .all()
+            )
+        dice = draw.deciding_pair(bytes(round_row.outcome_seed), seat_ids)
+    else:
+        dice = (secrets.randbelow(6) + 1, secrets.randbelow(6) + 1)
+    winner = place_for(table, dice[0], dice[1])
+    await write_roll(
+        session, round_id, pinned, weights, winner, dice,
+        forecast_baseline=loaded.forecast_baseline,
+    )
+    # **A seat that left while this round was open keeps nothing past it** (owner 「刪掉」,
+    # 2026-10-08: hold nothing that is never read again). `leave` spared such a seat's
+    # preferences because this roll would read them; it has now read them. So the left seats
+    # this round pinned lose every preference version that no contribution pinned — the ones
+    # `write_roll` just wrote included, which is why this runs after it, in its transaction.
+    await session.execute(
+        text("delete from preference p "
+             " where p.member_id in (select m.id from member m "
+             "                        where m.has_left and m.id = any(:seats)) "
+             "   and not exists (select 1 from weight_contribution w "
+             "                    where w.preference_id = p.id)"),
+        {"seats": list(round_row.seat_ids or [])},
+    )
+    full = await closed_body(session, round_id, dice, winner, weights, viewer=member)
+    # **D53's push carries the member shape, because a broadcast has no credential.** One event
+    # goes to every subscriber on the circle's channel, so it can only be the shape everyone may
+    # see. An operator's extra detail arrives when that operator asks — its own request, its own
+    # credential — which is also why the snapshot is per connection (D56).
+    await publish(session, round_row.circle_id, {"type": "closed",
+                                  "result": for_credential(full, evidence=False)})
+    return full
+
+
+def _state(round_id: int, submitted: list, required: int) -> dict:
+    return {"type": "submitted", "round_id": round_id, "submitted": submitted, "required": required}
+
+
+async def settle(session, round_id: int, round_row, member) -> tuple[dict | None, dict]:
+    """After a seat submits, un-submits, leaves or is removed: publish the count, and close if done.
+
+    Returns `(closed body or None, state)`. **The count event goes out on every change, including
+    the one that closes**, so a device that misses `closed` still sees everyone submitted.
+    """
+    submitted, required = await submit_state(session, round_id, round_row.circle_id,
+                                             round_row.seat_ids)
+    state = _state(round_id, submitted, required)
+    await publish(session, round_row.circle_id, state)
+    if required and len(submitted) == required:
+        return await close_round(session, round_id, round_row, member), state
+    return None, state
+
+
+@router.post("/rounds/{round_id}/submit")
+async def submit(round_id: int, request: Request) -> dict:
+    """提交: this seat is done. The round closes in this request if it was the last one.
+
+    **The game room (owner, 2026-10-09).** Every pinned seat that has not left must submit; there is
+    no timer and nobody can start without the rest. The tap row is the submission —
+    `uq_member_roll_once` makes a repeat the same submission. A submit to a closed round answers
+    the stored result (D69), so a retry gets what it missed.
+    """
+    async with session_factory()() as session:
+        # **`for update`: simultaneous submits queue on the round row** (frontend's 10-device
+        # self-test, 2026-10-08). The last two submitters arriving together must not both read
+        # «one missing» and both stay open — nor both close.
+        round_row = (
+            await session.execute(text(ROUND_FOR_CLOSE), {"r": round_id})
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
@@ -327,18 +482,12 @@ async def roll(round_id: int, request: Request) -> dict:
             session, request, round_row.circle_id)
 
         if round_row.status == "closed":
-            # D69: the retry gets the answer it missed, in the shape a first roll returns.
+            # D69: the retry gets the answer it missed, in the shape a first close returns.
             return await _stored_result(session, round_id, round_row, member, sees_evidence)
 
-        if not round_row.target_hour_typed:
-            # D73 through D41: a defaulted hour is re-resolved to the hour the roll stands in.
-            await session.execute(
-                text("update round set target_hour = date_trunc('hour', now()) where id = :r"),
-                {"r": round_id},
-            )
+        if round_row.seat_ids and member not in round_row.seat_ids:
+            raise HTTPException(status_code=409, detail="你是這一輪開始後才加入的，下一輪再一起選。")
 
-        loaded = await load_contributions(session, round_id)
-        pinned = loaded.contributions
         pool = (
             (
                 await session.execute(
@@ -348,15 +497,14 @@ async def roll(round_id: int, request: Request) -> dict:
             .scalars()
             .all()
         )
-        # **D108's minimum, checked before the tap is recorded.** One place is not a decision, it is
-        # a notification — and a member who taps into a one-place round has not spent their tap,
-        # because nothing was decided. So this refusal comes first and `member_roll` stays empty.
+        # **D108's minimum, checked before the submission is recorded.** One place is not a
+        # decision, it is a notification — so this refusal comes first and `member_roll` stays empty.
         if len(pool) < 2:
             raise HTTPException(
                 status_code=409, detail="一輪至少要兩家店。一家店不是決定，是通知。"
             ) from None
-        # **The tap, recorded and idempotent.** `uq_member_roll_once` makes a second tap the same
-        # tap (D69 per person), and `on conflict do nothing` is how that reads without a round trip
+        # **The submission, recorded and idempotent.** `uq_member_roll_once` makes a second submit
+        # the same submission (D69 per person), and `on conflict do nothing` is how that reads without a round trip
         # to find out first. The dice are NOT stored — they are derived from the seed every time, so
         # there is only ever one source for a member's pair.
         await session.execute(
@@ -366,98 +514,47 @@ async def roll(round_id: int, request: Request) -> dict:
             ),
             {"r": round_id, "c": round_row.circle_id, "m": member},
         )
-        weights = {
-            place: fold(
-                place, [p.contribution for p in pinned if p.contribution.place_id == place]
-            ).weight
-            for place in pool
-        }
         try:
-            table = build_table(weights)
-        except EmptyPoolError:
-            # **Owner-ruled 2026-08-30: every seat is told, and the round stays open.** The roller
-            # learns from the 409 below; the other four learn from here, because a swept pool is
-            # not a fact about whoever happened to tap — it is the state of their round, and four
-            # people staring at a screen that did nothing is the silence §3.0 is built against.
-            #
-            # **Type and round id, no text.** The sentence lives in the surface and is rendered for
-            # this event *and* for the 409, so one wording has one owner. The 409's `detail` stays
-            # as the API's own contract — a curl reader wants it — and no member reads it, which is
-            # what stops two sentences for one event drifting apart in two repositories.
-            #
-            # **The round id is not decoration: it is the clear rule.** The surface clears this
-            # notice on the next `pooled` event *for that round*, so an event without it would
-            # either never clear or be cleared by a different round's proposal.
-            # **`transactional=False`, and D37 is the whole reason.** This path raises the 409
-            # below, so its transaction rolls back — and a notification inside a transaction that
-            # rolls back is never delivered (measured 2026-09-11). The other four members would
-            # learn nothing, and «four people staring at a screen that did nothing is the silence
-            # §3.0 is built against». So this one goes on its own connection, unconditionally: the
-            # event says the pool was empty, which is true whatever becomes of this request.
-            await publish(session, round_row.circle_id,
-                          {"type": "pool_swept", "round_id": round_id}, transactional=False)
+            full, state = await settle(session, round_id, round_row, member)
+        except PoolSwept:
             raise HTTPException(
                 status_code=409,
                 detail="池子是空的，或每一家的機會都是零，擲不出結果。",
             ) from None
-        # **D108: the dice come from the seed committed at open, never from a fresh draw here.**
-        # This is the line the whole mechanism exists to change. `secrets.randbelow` at roll time was
-        # honest randomness and unprovable: nobody could check afterwards that it had not been drawn
-        # with the places in view. Now the pair is `hmac(seed, "member:<decider>")`, the seed's hash
-        # was published before any place existed, and the seed is revealed below — so the claim
-        # *this was fixed before anyone saw anything* becomes checkable instead of asserted.
-        #
-        # **A round that predates revision 0026 has no seed**, and there is no honest way to give it
-        # one, so it keeps the old behaviour rather than being refused: a commitment made after the
-        # places were known would not be a commitment.
-        if round_row.outcome_seed is not None:
-            # **The seats pinned at open, never live membership.** Reading `member` here is the bug
-            # revision 0027 exists for: the decider moved whenever the circle's membership changed, so
-            # a closed round's arithmetic stopped checking out and an open round's decider could change
-            # under a member who joined mid-round. A round with a seed and no pinned seats predates
-            # 0027 and falls back, because there is nothing honest to reconstruct.
-            seat_ids = list(round_row.seat_ids or [])
-            if not seat_ids:
-                seat_ids = list(
-                    (
-                        await session.execute(
-                            text("select id from member where circle_id = :c order by id"),
-                            {"c": round_row.circle_id},
-                        )
-                    )
-                    .scalars()
-                    .all()
-                )
-            dice = draw.deciding_pair(bytes(round_row.outcome_seed), seat_ids)
-        else:
-            dice = (secrets.randbelow(6) + 1, secrets.randbelow(6) + 1)
-        winner = place_for(table, dice[0], dice[1])
-        await write_roll(
-            session, round_id, pinned, weights, winner, dice,
-            forecast_baseline=loaded.forecast_baseline,
-        )
-        # **A seat that left while this round was open keeps nothing past it** (owner 「刪掉」,
-        # 2026-10-08: hold nothing that is never read again). `leave` spared such a seat's
-        # preferences because this roll would read them; it has now read them. So the left seats
-        # this round pinned lose every preference version that no contribution pinned — the ones
-        # `write_roll` just wrote included, which is why this runs after it, in its transaction.
-        await session.execute(
-            text("delete from preference p "
-                 " where p.member_id in (select m.id from member m "
-                 "                        where m.has_left and m.id = any(:seats)) "
-                 "   and not exists (select 1 from weight_contribution w "
-                 "                    where w.preference_id = p.id)"),
-            {"seats": list(round_row.seat_ids or [])},
-        )
-        full = await closed_body(session, round_id, dice, winner, weights, viewer=member)
-        # **D53's push carries the member shape, because a broadcast has no credential.** One event
-        # goes to every subscriber on the circle's channel, so it can only be the shape everyone may
-        # see. An operator's extra detail arrives when that operator asks — its own request, its own
-        # credential — which is also why the snapshot is per connection (D56).
-        await publish(session, round_row.circle_id, {"type": "closed",
-                                      "result": for_credential(full, evidence=False)})
         await session.commit()
+    if full is None:
+        return {**state, "status": "open"}
     return for_credential(full, evidence=sees_evidence)
+
+
+@router.delete("/rounds/{round_id}/submit")
+async def unsubmit(round_id: int, request: Request) -> dict:
+    """收回: this seat is not done after all — allowed until the last submission lands.
+
+    Same lock as `submit`, so an un-submit and the completing submit cannot both win: whichever
+    takes the row first decides, and the other reads the result.
+    """
+    async with session_factory()() as session:
+        round_row = (
+            await session.execute(text(ROUND_FOR_CLOSE), {"r": round_id})
+        ).one_or_none()
+        if round_row is None:
+            raise HTTPException(status_code=404, detail="找不到這一輪。")
+        member, _is_operator, _evidence = await _resolve_credential(
+            session, request, round_row.circle_id)
+        if round_row.status == "closed":
+            raise HTTPException(status_code=409, detail="大家都提交了，已經開獎，收不回來了。")
+        await session.execute(
+            text("delete from member_roll where round_id = :r and member_id = :m"),
+            {"r": round_id, "m": member},
+        )
+        submitted, required = await submit_state(session, round_id, round_row.circle_id,
+                                                 round_row.seat_ids)
+        state = _state(round_id, submitted, required)
+        await publish(session, round_row.circle_id, state)
+        await session.commit()
+    return {**state, "status": "open"}
+
 
 @router.post("/rounds/{round_id}/trip", status_code=201)
 async def sign_trip(round_id: int, request: Request, response: Response) -> dict:

@@ -716,8 +716,21 @@ async def scenario(test_url: str) -> None:
             proposed = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/proposals",
                                          json={"place_id": made.json()["place_id"]}, headers=auth)
             check(f"{shop} goes into the pool", proposed.status_code == 201, proposed.status_code)
-        rolled = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/roll", headers=auth)
-        check("the round that pinned the left seat rolls", rolled.status_code == 200,
+        # **Every other seat still here submits by row** (提交, 2026-10-09): the round waits for each
+        # pinned seat that has not left, and these seats' keys are not held here. The creator's
+        # submit then completes the set and closes the round.
+        async with Session() as session:
+            await session.execute(
+                text("insert into member_roll (round_id, circle_id, member_id) "
+                     "select r.id, r.circle_id, m.id from round r join member m on m.id = any(r.seat_ids) "
+                     "where r.id = :r and not m.has_left and m.id <> "
+                     "  (select m2.id from member m2 join device_secret d on d.principal_id = m2.principal_id "
+                     "   where m2.circle_id = r.circle_id and d.secret_sha256 = :h)"),
+                {"r": opened.json()["round_id"], "h": sha256(creator_key.encode()).hexdigest()})
+            await session.commit()
+        rolled = await client.post(f"{BASE}/rounds/{opened.json()['round_id']}/submit", headers=auth)
+        check("the round that pinned the left seat rolls", rolled.status_code == 200
+              and rolled.json().get("winning_place_id") is not None,
               f"got {rolled.status_code}: {rolled.text[:120]}")
         check("the left seat's preference this roll used is kept — its contribution pins it (D24/D25)",
               await preference_exists(back_pref))

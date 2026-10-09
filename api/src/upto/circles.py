@@ -33,11 +33,13 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from .api_common import resolve_credential
+from .api_common import resolve_credential, submit_state
 from .auth import credential_for
 from .db import session_factory
 from .issue import SEAT_CAP, SeatRefused, grow_seat
 from .issue import DEFAULT_PUBLIC_ORIGIN, PUBLIC_ORIGIN_VAR
+from .rounds import ROUND_FOR_CLOSE, PoolSwept, close_round
+from .stream import publish
 
 router = APIRouter(prefix="/circles", tags=["circles"])
 
@@ -507,23 +509,60 @@ async def leave_circle(circle_id: int, request: Request) -> Response:
         async with session_factory()() as session:
             found = await credential_for(session, header[7:].strip(), circle_id)
             if found is not None:
-                await session.execute(
-                    text("update member set has_left = true where id = :m"), {"m": found[0]})
-                # **The seat's preferences go with it** (owner 「刪掉」, 2026-10-08, on the
-                # reviewer's report: kept preferences of a left seat would otherwise sit stored for
-                # ever while counting nowhere). Two kinds stay, because a round's story needs them:
-                # a version a closed round's contribution pinned (D24/D25 — the foreign key refuses
-                # the delete anyway), and every preference of a seat an OPEN round has pinned, whose
-                # roll will still read them. Only this member's rows; nobody else's are touched.
-                await session.execute(
-                    text("delete from preference p where p.member_id = :m "
-                         "and not exists (select 1 from weight_contribution w "
-                         "                 where w.preference_id = p.id) "
-                         "and not exists (select 1 from round r where r.circle_id = :c "
-                         "                 and r.status = 'open' and :m = any(r.seat_ids))"),
-                    {"m": found[0], "c": circle_id})
+                await release_seat(session, circle_id, found[0], "seat_left")
                 await session.commit()
     return Response(status_code=204)
+
+
+async def release_seat(session, circle_id: int, member_id: int, event: str) -> None:
+    """A seat leaves the circle — on its own (`seat_left`) or removed by the host (`seat_removed`).
+
+    **The open round is locked first**, the same row a submit locks, so a leave and a last submit
+    cannot both read «one missing». Then the seat goes, the event names it — its own stream ends on
+    that event (`live.stream`), because a stream authorised at connect would otherwise keep
+    delivering the circle to a seat that is no longer in it — and the count is re-read: if every
+    pinned seat still here has submitted, the round closes in this request (owner's game room,
+    2026-10-09). An empty pool at that moment keeps the round open and the leave still lands.
+    """
+    open_round = (
+        await session.execute(
+            text("select id from round where circle_id = :c and status = 'open'"),
+            {"c": circle_id},
+        )
+    ).scalar_one_or_none()
+    round_row = None
+    if open_round is not None:
+        round_row = (
+            await session.execute(text(ROUND_FOR_CLOSE), {"r": open_round})
+        ).one_or_none()
+    await session.execute(
+        text("update member set has_left = true where id = :m"), {"m": member_id})
+    # **The seat's preferences go with it** (owner 「刪掉」, 2026-10-08, on the
+    # reviewer's report: kept preferences of a left seat would otherwise sit stored for
+    # ever while counting nowhere). Two kinds stay, because a round's story needs them:
+    # a version a closed round's contribution pinned (D24/D25 — the foreign key refuses
+    # the delete anyway), and every preference of a seat an OPEN round has pinned, whose
+    # roll will still read them. Only this member's rows; nobody else's are touched.
+    await session.execute(
+        text("delete from preference p where p.member_id = :m "
+             "and not exists (select 1 from weight_contribution w "
+             "                 where w.preference_id = p.id) "
+             "and not exists (select 1 from round r where r.circle_id = :c "
+             "                 and r.status = 'open' and :m = any(r.seat_ids))"),
+        {"m": member_id, "c": circle_id})
+    await publish(session, circle_id, {"type": event, "member_id": member_id})
+    if round_row is None or round_row.status != "open" or member_id not in (round_row.seat_ids or []):
+        return
+    submitted, required = await submit_state(session, open_round, circle_id, round_row.seat_ids)
+    await publish(session, circle_id,
+                  {"type": "submitted", "round_id": open_round, "submitted": submitted,
+                   "required": required})
+    if required and len(submitted) == required:
+        try:
+            async with session.begin_nested():
+                await close_round(session, open_round, round_row, None)
+        except PoolSwept:
+            pass
 
 
 @router.get("/{circle_id}/members")

@@ -595,7 +595,18 @@ async def scenario(test_url: str) -> None:
                     json={"place_id": place_id},
                     headers=auth,
                 )
-            rolled = await client.post("/rounds/{}/roll".format(round_id), headers=auth)
+            # **The four extra seats submit by row, not by request** (提交, 2026-10-09): they hold
+            # no key — they exist to be counted — and the round now waits for every pinned seat,
+            # so their submissions are written directly and this member's submit completes the set.
+            async with Session() as session:
+                await session.execute(
+                    text("insert into member_roll (round_id, circle_id, member_id) "
+                         "select :r, :c, m.id from member m "
+                         "where m.circle_id = :c and m.nickname in ('Bo', 'Cai', 'Ding', 'Er')"),
+                    {"r": round_id, "c": circle},
+                )
+                await session.commit()
+            rolled = await client.post("/rounds/{}/submit".format(round_id), headers=auth)
             if rolled.status_code != 200:
                 check("the roll succeeded", False,
                       "{} {}".format(rolled.status_code, rolled.text[:200]))

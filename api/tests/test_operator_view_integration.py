@@ -141,12 +141,19 @@ async def scenario(test_url: str, base_url: str) -> None:
         for place in (avoided, other):
             await client.post("/rounds/{}/proposals".format(round_id), headers=P,
                               json={"place_id": place})
-        rolled_member = await client.post("/rounds/{}/roll".format(round_id), headers=P)
+        # **Two seats, so the round waits for both** (提交, 2026-10-09). P and O are Kevin's two
+        # devices on one seat; Amy is the other. Amy submits and the round stays open; Kevin's
+        # member device completes the set and closes it.
+        waiting = await client.post("/rounds/{}/submit".format(round_id),
+                                    headers={"Authorization": "Bearer " + amy_token})
+        check("the first seat's submit leaves the round open", waiting.status_code == 200
+              and waiting.json().get("status") == "open", waiting.text)
+        rolled_member = await client.post("/rounds/{}/submit".format(round_id), headers=P)
         check("the roll lands", rolled_member.status_code == 200, rolled_member.text)
         member_body = rolled_member.json()
 
         # The same closed round, asked again on the other device (D69's retry path).
-        rolled_op = await client.post("/rounds/{}/roll".format(round_id), headers=O)
+        rolled_op = await client.post("/rounds/{}/submit".format(round_id), headers=O)
         check("the operator device is answered too", rolled_op.status_code == 200, rolled_op.text)
         operator_body = rolled_op.json()
 
@@ -216,7 +223,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         # if she ever did, and an operator who *is* the represented member sees theirs. Asserting
         # only the withholding would pass on a payload that withheld every reason from everyone,
         # which is a different and wrong rule.
-        amy_view = await client.post("/rounds/{}/roll".format(round_id),
+        amy_view = await client.post("/rounds/{}/submit".format(round_id),
                                      headers={"Authorization": "Bearer " + amy_token})
         check("Amy's own device is answered", amy_view.status_code == 200, amy_view.text)
         check("and it is the member shape — she is not an operator",
@@ -224,7 +231,7 @@ async def scenario(test_url: str, base_url: str) -> None:
 
         # ---- an operator-ish parameter changes nothing -----------------------------------
         for attempt in ("?operator=true", "?operator=1&shape=operator"):
-            probe = await client.post("/rounds/{}/roll{}".format(round_id, attempt), headers=P)
+            probe = await client.post("/rounds/{}/submit{}".format(round_id, attempt), headers=P)
             body = probe.json()
             check("a request asking to be an operator is not one ({})".format(attempt),
                   all(f not in body for f in ARITHMETIC), sorted(body))
@@ -269,10 +276,10 @@ async def scenario(test_url: str, base_url: str) -> None:
                 {"h": sha256(op.encode()).hexdigest()},
             )
             await session.commit()
-        gone = await client.post("/rounds/{}/roll".format(round_id), headers=O)
+        gone = await client.post("/rounds/{}/submit".format(round_id), headers=O)
         check("the revoked operator device no longer authenticates", gone.status_code == 401,
               gone.status_code)
-        still = await client.post("/rounds/{}/roll".format(round_id), headers=P)
+        still = await client.post("/rounds/{}/submit".format(round_id), headers=P)
         check("and the seat is untouched — the ordinary device still works",
               still.status_code == 200, still.status_code)
         check("in the member shape", all(f not in still.json() for f in ARITHMETIC))
@@ -310,7 +317,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         for label, tok, expect_table in (("invite-only", invite_only, False),
                                          ("audit-only", audit_only, True),
                                          ("a row written without the column", legacy, False)):
-            body = (await client.post("/rounds/{}/roll".format(round_id),
+            body = (await client.post("/rounds/{}/submit".format(round_id),
                                       headers={"Authorization": "Bearer " + tok})).json()
             has = all(field in body for field in ARITHMETIC)
             check("{}: the evidence table is {}".format(label, "present" if expect_table else "withheld"),
