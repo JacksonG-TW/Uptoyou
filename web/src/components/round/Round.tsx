@@ -476,6 +476,10 @@ export default function Round() {
           <p className="roundNote" data-part="leave-explain">離開後，這一輪不再等這個人；其他人都提交了，就會開獎。</p>
           {error && <p className="roundErr" data-part="round-error" role="alert">{error}</p>}
           <div className="confirmRow">
+            {/* 取消 first: the primary's label grows from 請人離開 to 請{nickname}離開 when a seat is
+                chosen, and on its left 取消 would have moved with it (the evaluator, on b802c64). */}
+            <button type="button" className="secondary" data-part="leave-cancel"
+              onClick={() => { setLeaving(false); setChosen(null); setError('') }}>取消</button>
             <button type="button" className="act" data-part="leave-go" data-primary
               disabled={target === null || busy}
               onClick={() => {
@@ -489,8 +493,6 @@ export default function Round() {
             >
               {target ? `請${seatName(target, rolls.indexOf(target))}離開` : '請人離開'}
             </button>
-            <button type="button" className="secondary" data-part="leave-cancel"
-              onClick={() => { setLeaving(false); setChosen(null); setError('') }}>取消</button>
           </div>
         </div>
       </main>
