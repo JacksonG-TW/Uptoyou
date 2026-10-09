@@ -301,12 +301,15 @@ async def issue(circle_id: int, nickname: str, principal_id: int | None,
             # **Two flags since revision 0047** (owner 「拆」, 2026-09-16): `operator` is the invite
             # power, `evidence` is D105's evidence table. They are issued together or apart, and
             # `--operator` alone no longer carries the table.
+            #
+            # **`evidence` is written here too** (found 2026-10-09): from 0047 until then this
+            # insert named `operator` only, so `--evidence` printed «+ evidence» and stored false.
             await session.execute(
                 text(
-                    "insert into device_secret (principal_id, secret_sha256, operator) "
-                    "values (:p, :h, :operator)"
+                    "insert into device_secret (principal_id, secret_sha256, operator, evidence) "
+                    "values (:p, :h, :operator, :evidence)"
                 ),
-                {"p": principal_id, "h": digest, "operator": operator},
+                {"p": principal_id, "h": digest, "operator": operator, "evidence": evidence},
             )
             try:
                 member_id = (
