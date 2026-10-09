@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 /**
  * Roof C, 整片屋頂 — the temple roof across the top of the inner screens (owner 「照建議做」,
@@ -13,14 +13,21 @@ import { useEffect, useState } from 'react'
  * the upturned corners and the round tile ends out of shape at every width but one. The geometry
  * is the preview's own, so what ships is what was judged.
  */
-function useWidth() {
+/** **The roof's own box decides its width, not the window.** A scrollbar that appears after first
+ *  paint (the page grew tall enough to scroll) narrows the box by its width with no `resize` event,
+ *  and a width read from the window then drew the right-hand corner past the edge, where
+ *  `overflow: hidden` cut its upturned tip off (the reviewer's check on 3d1c796). */
+function useBoxWidth() {
+  const ref = useRef<HTMLDivElement>(null)
   const [w, setW] = useState(() => document.documentElement.clientWidth)
   useEffect(() => {
-    const on = () => setW(document.documentElement.clientWidth)
-    window.addEventListener('resize', on)
-    return () => window.removeEventListener('resize', on)
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setW(Math.round(el.getBoundingClientRect().width)))
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
-  return w
+  return [ref, w] as const
 }
 
 /** **The scale is decided by the SAME media query that sets `--eaves-h`** (`switcher.css`). A
@@ -39,7 +46,7 @@ function useNarrow() {
 }
 
 export default function Eaves() {
-  const W = useWidth()
+  const [box, W] = useBoxWidth()
   const s = useNarrow() ? 0.7 : 1
   const H = Math.round(118 * s)
   const top = 30 * s, eaveY = H - 26 * s, lip = 46 * s, rx = lip + 40 * s
@@ -54,7 +61,7 @@ export default function Eaves() {
   const ends = Array.from({ length: Math.max(0, Math.floor((W - 2 * lip - 40 * s) / (22 * s))) }, (_, i) => lip + 30 * s + i * 22 * s)
 
   return (
-    <div className="eaves" data-part="eaves" aria-hidden="true">
+    <div ref={box} className="eaves" data-part="eaves" aria-hidden="true">
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} focusable="false">
         <defs><clipPath id="eaves-roof"><path d={roof} /></clipPath></defs>
         <path d={roof} fill="var(--color-ink)" />
