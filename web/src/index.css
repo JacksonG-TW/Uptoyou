@@ -531,3 +531,12 @@ body {
    subset from this copy alone (`tools/subset_fonts.py` derives it from the classes that ask for it),
    so a name set in it would mix two faces inside one word. */
 .dSerif { font-family: "UpTo Serif", "Noto Serif TC", serif; }
+
+/* **The 房主 tag** (owner, 2026-10-09): one small seal-red word after the host's name, on 這一餐's
+   seat groups and on /circle's seat list, the same for every viewer. Shared here because both
+   screens draw it. */
+.hostTag {
+  display: inline-block; margin-left: 10px; padding: 1px 8px;
+  border: 1.5px solid var(--color-hot); color: var(--color-hot-ink);
+  font-size: 13px; line-height: 1.5; font-weight: 700; vertical-align: 2px;
+}

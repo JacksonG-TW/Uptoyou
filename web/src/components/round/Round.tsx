@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import {
-  openRound, propose, roll, searchPlaces, materialise, subscribe,
+  openRound, propose, submit, unsubmit, searchPlaces, materialise, subscribe,
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { device, noteLastRound, type Device } from '@/lib/device'
 import { fetchReveal } from '@/lib/reveal'
+import { removeSeat } from '@/lib/selfserve'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { arrive } from '@/lib/motion'
@@ -153,6 +154,17 @@ export default function Round() {
    *  whenever the event was a beat late, which is the timing a fast local stack never produces and
    *  a phone on a train does. */
   const [rollError, setRollError] = useState<{ round: number; message: string } | null>(null)
+  /** **The waiting room** (`spec-round-waiting-room-2026-10-09.md`). Who this device is and who the
+   *  host is, from the snapshot (backend, 2026-10-09); a ref beside `me` so the stream's handler,
+   *  set up once, can tell an event about this seat from one about another. */
+  const [me, setMe] = useState<number | null>(null)
+  const meRef = useRef<number | null>(null)
+  const [host, setHost] = useState<number | null>(null)
+  /** The host's 請人離開 screen, and the seat chosen on it — nothing chosen when it opens. */
+  const [leaving, setLeaving] = useState(false)
+  const [chosen, setChosen] = useState<number | null>(null)
+  /** This seat was asked to leave: one line, then home. */
+  const [removed, setRemoved] = useState(false)
 
   useEffect(() => {
     if (!dev) return
@@ -172,6 +184,9 @@ export default function Round() {
         setRollError(null)
       }
       if (e.type === 'snapshot') {
+        meRef.current = e.me ?? null
+        setMe(e.me ?? null)
+        setHost(e.host ?? null)
         const last = e.last_result?.round_id ?? null
         // Only the newest snapshot's answer may land: two snapshots close together (a reconnect)
         // start two reads, and the older one must not overwrite the newer (reviewer 2026-10-08).
@@ -226,6 +241,24 @@ export default function Round() {
         setSwept(e.round_id)
       } else if (e.type === 'closed') {
         window.location.href = `/reveal?round=${e.result.round_id}`
+      } else if (e.type === 'submitted') {
+        // Who has submitted, out of the seats the round waits for. Names only ever move between the
+        // two groups; nobody's proposals travel with them (owner: submitted / not only).
+        if (e.round_id !== openId.current) return
+        const done = new Set(e.submitted)
+        setRolls((rs) => rs.map((r) => ({ ...r, submitted: done.has(r.member_id) })))
+      } else if (e.type === 'voided') {
+        // Everyone who was there at the open has left: no reveal follows, the screen has no round.
+        if (e.round_id === openId.current) take(null)
+      } else if (e.type === 'seat_left' || e.type === 'seat_removed') {
+        if (e.type === 'seat_removed' && e.member_id === meRef.current) {
+          setRemoved(true)
+          window.setTimeout(() => { window.location.href = '/' }, 2500)
+          return
+        }
+        setRolls((rs) => rs.map((r) => (r.member_id === e.member_id ? { ...r, left: true } : r)))
+      } else if (e.type === 'host_changed') {
+        setHost(e.member_id)
       }
     }, setStreamDown)
   }, [dev])
@@ -372,6 +405,79 @@ export default function Round() {
    *  the same source the chips draw from, so the label and the chips cannot disagree. */
   const anyCount = CATEGORIES.filter(chipOn).length
 
+  /* **The waiting room** (spec): this seat, the two groups, and whether the host control shows. A
+     seat that has left is in neither group — the round does not wait for it. */
+  const mine = rolls.find((r) => r.member_id === me)
+  const submitted = !!mine?.submitted && !mine.left
+  const doneSeats = rolls.filter((r) => r.submitted && !r.left)
+  const waitingSeats = rolls.filter((r) => !r.submitted && !r.left)
+  const isHost = me !== null && me === host
+  /** The seats the host may ask to leave: not yet submitted, and never the host's own. */
+  const leavable = isHost ? waitingSeats.filter((r) => r.member_id !== me) : []
+  const seatName = (r: Roll, i: number) => r.nickname || `座位 ${i + 1}`
+  /** One seat row, in either group. Its index is its place in the round's seats, so a seat keeps
+   *  the number it had when it moves from 還沒提交 to 已提交. */
+  const seatRow = (r: Roll) => {
+    const i = rolls.indexOf(r)
+    return (
+      <li key={r.member_id} className="seat" data-roll-seat={i + 1}
+        data-roll-state={r.submitted ? 'submitted' : 'waiting'} data-counts={r.counts ? 'yes' : 'no'}>
+        <span className="seatName" data-user-content>{seatName(r, i)}</span>
+        {r.member_id === host && <span className="hostTag" data-part="host-tag">房主</span>}
+      </li>
+    )
+  }
+
+  if (removed) {
+    return (
+      <main className="round roundSingle" data-screen="round">
+        <p className="waitSlot" data-part="removed">房主請你離開了這個圈子。</p>
+      </main>
+    )
+  }
+
+  if (leaving) {
+    const target = leavable.find((r) => r.member_id === chosen) ?? null
+    return (
+      <main className="round roundSingle" data-screen="round">
+        {/* **One screen: choose, then a primary that names the person** (spec §Host). Nothing is
+            chosen when it opens, so one tap can never remove someone the host did not pick; the
+            effect is stated (D20), because removing the last waiting seat starts everyone's reveal. */}
+        <div className="confirmCard" data-part="leave-confirm">
+          <h1 className="roundTitle dSerif">請誰離開這個圈子？</h1>
+          <div className="choices" role="radiogroup" aria-label="請誰離開" data-part="leave-choices">
+            {leavable.map((r, i) => (
+              <label key={r.member_id} className="choice" data-user-content>
+                <input type="radio" name="leave-who" checked={chosen === r.member_id}
+                  onChange={() => setChosen(r.member_id)} />
+                <span>{seatName(r, i)}</span>
+              </label>
+            ))}
+          </div>
+          <p className="roundNote" data-part="leave-explain">離開後，這一輪不再等這個人；其他人都提交了，就會開獎。</p>
+          {error && <p className="roundErr" data-part="round-error" role="alert">{error}</p>}
+          <div className="confirmRow">
+            <button type="button" className="act" data-part="leave-go" data-primary
+              disabled={target === null || busy}
+              onClick={() => {
+                if (!dev || target === null) return
+                setBusy(true)
+                void removeSeat(dev, target.member_id)
+                  .then(() => { setLeaving(false); setChosen(null); setError('') })
+                  .catch((x: Error) => setError(x.message))
+                  .finally(() => setBusy(false))
+              }}
+            >
+              {target ? `請${target.nickname}離開` : '請人離開'}
+            </button>
+            <button type="button" className="secondary" data-part="leave-cancel"
+              onClick={() => { setLeaving(false); setChosen(null); setError('') }}>取消</button>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
 
   return (
     <main className="round" data-screen="round">
@@ -406,6 +512,12 @@ export default function Round() {
           It states the mechanism and stops (D20) — 「請不要重複提」 was rejected for advising.
           The cap's old separate line (A5's walkthrough asserted it by text) is folded in here, so
           that assert reads this part now. */}
+      {/* **After submitting, the rule and the search give way to one line** set in their place, so
+          the act button below keeps its position (owner: 「取消提交跟提交為何不用同一個位置就好」). The
+          list is locked until the seat takes its submission back. */}
+      {submitted ? (
+        <p className="waitSlot" data-part="wait-line">你已經提交了。大家都提交就開獎。</p>
+      ) : (<>
       <p className="roundNote" data-part="round-pool-rule">
         每人最多提三家。同一家不管幾個人提，都只算一份。
       </p>
@@ -423,6 +535,7 @@ export default function Round() {
           autoComplete="off"
         />
       </label>
+      </>)}
 
       {/* **The refusal sits directly under the control that was refused, above the results.**
           Driven on 2026-08-19 with the error below the list: a four-place proposal answered 409,
@@ -525,37 +638,43 @@ export default function Round() {
           as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
           dashed box as an offender, so it is a bordered paper block instead. */}
       <div className="act-row">
+        {/* **One button, one place, two states** (owner, spec §after). 提交 and its take-back are the
+            same element with the same box; only the colours change, so the submitted state reads as
+            done rather than as a second red call. No navigation on either response: `closed` moves
+            every device to the reveal at once, and `submitted` moves names between the groups. */}
         <button
           type="button"
-          className="act"
-          data-part="roll"
+          className={submitted ? 'act actDone' : 'act'}
+          data-part={submitted ? 'unsubmit' : 'submit'}
           data-primary
-          disabled={roundId === null || pool.length < 2 || busy}
+          disabled={submitted ? busy : roundId === null || pool.length < 2 || busy}
           onClick={() => {
             if (!dev || roundId === null) return
             setBusy(true)
-            // No navigation here on purpose — the `closed` event moves every device at once.
-            /* **The roller sees one line, not two** (spec §2). The refusal arrives twice for this
-               one case — as this device's 409 `detail` and as the `pool_swept` event every seat
-               gets — and the screen must show one. **The 409's text is suppressed rather than made
-               identical to the event's:** the detail is the API's string and lives under
-               `tools/server_copy.py`, the sentence is browser copy and lives here, and making them
-               the same string would put one sentence under two owners. That is the drift this
-               project has fixed twice this week (擲不到／抽不到, and 一人提一家). One condition
-               here keeps one owner per string.
-
-               **Suppressed only when the event actually arrived for THIS round.** The event is
-               published before the 409 returns, but if it ever did not arrive the person would be
-               left with a refusal and no reason, so the fallback is the API's own sentence. */
-            void roll(dev, roundId).catch((e: Error) => {
-              setRollError({ round: roundId, message: e.message })
-              setBusy(false)
-            })
+            if (submitted) {
+              void unsubmit(dev, roundId)
+                .then(() => setError(''))
+                .catch((x: Error) => setError(x.message))
+                .finally(() => setBusy(false))
+              return
+            }
+            /* **The submitter sees one line, not two** (spec §2, carried over from the roll). When
+               the last submission finds every weight at zero, the refusal arrives as this device's
+               409 and as `pool_swept` to every seat; the 409's text is held and suppressed while
+               the event explains it, so one sentence has one owner. */
+            void submit(dev, roundId)
+              .then(() => setQ(''))
+              .catch((x: Error) => setRollError({ round: roundId, message: x.message }))
+              .finally(() => setBusy(false))
           }}
         >
-          {/* Says what pressing does (N2): the dice roll and the result shows. Never 「決定」 —
-              the line beside it says the result was fixed at the open (D108). */}
-          擲骰子，看結果
+          {submitted ? (<>
+            <svg className="tick" viewBox="0 0 22 22" aria-hidden="true">
+              <circle cx="11" cy="11" r="11" />
+              <path d="M6 11.5l3.2 3.2L16 8" fill="none" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            已提交（按這裡收回）
+          </>) : '提交'}
         </button>
 
       </div>
@@ -640,35 +759,24 @@ export default function Round() {
             2026-10-09, when the round came to end in 提交.) */}
         {rolls.length > 0 && (
           <section className="seats" data-part="roll-list">
-            <h2 className="roundH dSerif">這一輪的人</h2>
-            <ul className="seatRows">
-              {rolls.map((r, i) => (
-                <li
-                  key={r.member_id}
-                  className="seat"
-                  data-roll-seat={i + 1}
-                  data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
-                  data-counts={r.counts ? 'yes' : 'no'}
-                >
-                  {/* A missing nickname renders as the seat rather than as `undefined`. Not a guess
-                      at the D55 ruling — insurance against the one bug I have already shipped on this
-                      surface, where a field read from the wrong level of a payload put an empty name
-                      on screen with no error anywhere. */}
-                  <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
-                  {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
-                      「—」 until the 2026-10-08 label gate: two of two readers took the dash for
-                      「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
-                      looks there is nothing to show; a seat that has looked shows its pair. One
-                      「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
-                      attributes are untouched. */}
-                  {r.die1 !== null && r.die2 !== null ? (
-                    <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
-                  ) : (
-                    <span className="seatDice" role="img" aria-label="還沒看結果" />
-                  )}
-                </li>
-              ))}
-            </ul>
+            {/* **Two groups, each a heading over names** (spec): the list costs two text nodes at any
+                size, where a label per seat would cost one per person. Names only, never anyone's
+                shops (owner: submitted / not only). The 房主 tag reads the same for every viewer. */}
+            {/* The headings are written out, not mapped from an array: the display face is subset from
+                the literal copy in elements set in it (`subset_fonts.py`), and an expression hides
+                its characters from that derivation. */}
+            <div className="seatGroup" data-part="seats-done">
+              <h2 className="roundH dSerif">已提交</h2>
+              <ul className="seatRows">{doneSeats.map(seatRow)}</ul>
+            </div>
+            <div className="seatGroup" data-part="seats-waiting">
+              <h2 className="roundH dSerif">還沒提交</h2>
+              <ul className="seatRows">{waitingSeats.map(seatRow)}</ul>
+              {leavable.length > 0 && (
+                <button type="button" className="secondary" data-part="ask-leave"
+                  onClick={() => { setChosen(null); setError(''); setLeaving(true) }}>請人離開</button>
+              )}
+            </div>
           </section>
         )}
       </div>
@@ -676,7 +784,7 @@ export default function Round() {
       {/* The tonight menu and its warning: input, so the left column at ≥ 900, but AFTER the list in
           the DOM, which keeps the one-column order below 900 exactly as it was (the list before the
           menu). The grid places it under the input wrapper. */}
-      <div className="roundTonight" data-part="round-tonight">
+      <div className="roundTonight" data-part="round-tonight" hidden={submitted}>
         {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
             `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
             甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
