@@ -33,11 +33,13 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from .api_common import resolve_credential
+from .api_common import resolve_credential, submit_state
 from .auth import credential_for
 from .db import session_factory
 from .issue import SEAT_CAP, SeatRefused, grow_seat
 from .issue import DEFAULT_PUBLIC_ORIGIN, PUBLIC_ORIGIN_VAR
+from .rounds import ROUND_FOR_CLOSE, PoolSwept, close_round
+from .stream import publish
 
 router = APIRouter(prefix="/circles", tags=["circles"])
 
@@ -219,6 +221,10 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
             # rather than a member's mistake — 500 rather than a member-facing sentence that would
             # be a lie about whose fault it is.
             raise HTTPException(status_code=500, detail=refused.reason) from None
+        # **The creator is the host (房主)** (owner 「A」, 2026-10-09, revision 0049): stored on the
+        # circle, so the role can pass to another seat without touching anyone's key.
+        await session.execute(text("update circle set host_member_id = :m where id = :c"),
+                              {"m": member_id, "c": circle_id})
         ticket = await _mint_ticket(session, circle_id)
         await session.commit()
 
@@ -346,6 +352,14 @@ async def preview_join(circle_id: int, body: TicketCheck, response: Response) ->
     return {"circle_name": row.name, "creator_nickname": creator}
 
 
+async def host_of(session, circle_id: int) -> int | None:
+    """The circle's host seat (revision 0049), or `None` — a CLI-made circle, or every seat gone."""
+    return (
+        await session.execute(text("select host_member_id from circle where id = :c"),
+                              {"c": circle_id})
+    ).scalar_one_or_none()
+
+
 async def creator_nickname(session, circle_id: int) -> str | None:
     """The real creator's nickname: the seat whose operator key was minted in the circle's own
     creating transaction, `None` once that seat has left or when there never was one (a circle made
@@ -372,10 +386,10 @@ async def reissue_ticket(circle_id: int, request: Request) -> dict:
     a data-deletion half (D42, H22) and is deliberately out of this candidate.
     """
     async with session_factory()() as session:
-        _, is_operator, _ = await resolve_credential(session, request, circle_id)
-        if not is_operator:
-            # D105's split: the role came from the presented secret, so this cannot be argued with.
-            raise HTTPException(status_code=403, detail="只有開圈子的人可以換連結。")
+        caller, is_operator, _ = await resolve_credential(session, request, circle_id)
+        if not (is_operator or await host_of(session, circle_id) == caller):
+            # The host, or a CLI operator credential (D105: that role rides the presented secret).
+            raise HTTPException(status_code=403, detail="只有房主可以換連結。")
         try:
             ticket = await _mint_ticket(session, circle_id)
             await session.commit()
@@ -406,9 +420,9 @@ async def ticket_status(circle_id: int, request: Request) -> dict:
     **Keyed on the creator's own credential**, which is the only thing they still have.
     """
     async with session_factory()() as session:
-        _, is_operator, _ = await resolve_credential(session, request, circle_id)
-        if not is_operator:
-            raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
+        caller, is_operator, _ = await resolve_credential(session, request, circle_id)
+        if not (is_operator or await host_of(session, circle_id) == caller):
+            raise HTTPException(status_code=403, detail="只有房主可以看連結。")
         row = (
             await session.execute(
                 text("select expires_at, (expires_at is not null and expires_at <= now()) "
@@ -460,9 +474,9 @@ async def check_ticket(circle_id: int, body: TicketCheck, request: Request) -> d
     creator's question and nobody else's.
     """
     async with session_factory()() as session:
-        _, is_operator, _ = await resolve_credential(session, request, circle_id)
-        if not is_operator:
-            raise HTTPException(status_code=403, detail="只有開圈子的人可以看連結。")
+        caller, is_operator, _ = await resolve_credential(session, request, circle_id)
+        if not (is_operator or await host_of(session, circle_id) == caller):
+            raise HTTPException(status_code=403, detail="只有房主可以看連結。")
         row = (
             await session.execute(
                 text("select circle_id, revoked_at, expires_at, "
@@ -507,22 +521,144 @@ async def leave_circle(circle_id: int, request: Request) -> Response:
         async with session_factory()() as session:
             found = await credential_for(session, header[7:].strip(), circle_id)
             if found is not None:
-                await session.execute(
-                    text("update member set has_left = true where id = :m"), {"m": found[0]})
-                # **The seat's preferences go with it** (owner 「刪掉」, 2026-10-08, on the
-                # reviewer's report: kept preferences of a left seat would otherwise sit stored for
-                # ever while counting nowhere). Two kinds stay, because a round's story needs them:
-                # a version a closed round's contribution pinned (D24/D25 — the foreign key refuses
-                # the delete anyway), and every preference of a seat an OPEN round has pinned, whose
-                # roll will still read them. Only this member's rows; nobody else's are touched.
-                await session.execute(
-                    text("delete from preference p where p.member_id = :m "
-                         "and not exists (select 1 from weight_contribution w "
-                         "                 where w.preference_id = p.id) "
-                         "and not exists (select 1 from round r where r.circle_id = :c "
-                         "                 and r.status = 'open' and :m = any(r.seat_ids))"),
-                    {"m": found[0], "c": circle_id})
+                await release_seat(session, circle_id, found[0], "seat_left")
                 await session.commit()
+    return Response(status_code=204)
+
+
+async def release_seat(session, circle_id: int, member_id: int, event: str) -> None:
+    """A seat leaves the circle — on its own (`seat_left`) or removed by the host (`seat_removed`).
+
+    **The open round is locked first**, the same row a submit locks, so a leave and a last submit
+    cannot both read «one missing». Then the seat goes, the event names it — its own stream ends on
+    that event (`live.stream`), because a stream authorised at connect would otherwise keep
+    delivering the circle to a seat that is no longer in it — and the count is re-read: if every
+    pinned seat still here has submitted, the round closes in this request (owner's game room,
+    2026-10-09). An empty pool at that moment keeps the round open and the leave still lands.
+
+    **A host who goes hands the role on** (owner, 2026-10-09): to the earliest-joined seat still
+    here — the lowest member id, because seats are numbered as they join — with a `host_changed`
+    event; `None` when nobody is left. The circle row is locked first, so two seats leaving at once
+    cannot both read themselves as the heir's predecessor.
+    """
+    host = (
+        await session.execute(
+            text("select host_member_id from circle where id = :c for update"), {"c": circle_id})
+    ).scalar_one_or_none()
+    open_round = (
+        await session.execute(
+            text("select id from round where circle_id = :c and status = 'open'"),
+            {"c": circle_id},
+        )
+    ).scalar_one_or_none()
+    round_row = None
+    if open_round is not None:
+        round_row = (
+            await session.execute(text(ROUND_FOR_CLOSE), {"r": open_round})
+        ).one_or_none()
+    await session.execute(
+        text("update member set has_left = true where id = :m"), {"m": member_id})
+    # **The seat's preferences go with it** (owner 「刪掉」, 2026-10-08, on the
+    # reviewer's report: kept preferences of a left seat would otherwise sit stored for
+    # ever while counting nowhere). Two kinds stay, because a round's story needs them:
+    # a version a closed round's contribution pinned (D24/D25 — the foreign key refuses
+    # the delete anyway), and every preference of a seat an OPEN round has pinned, whose
+    # roll will still read them. Only this member's rows; nobody else's are touched.
+    await session.execute(
+        text("delete from preference p where p.member_id = :m "
+             "and not exists (select 1 from weight_contribution w "
+             "                 where w.preference_id = p.id) "
+             "and not exists (select 1 from round r where r.circle_id = :c "
+             "                 and r.status = 'open' and :m = any(r.seat_ids))"),
+        {"m": member_id, "c": circle_id})
+    await publish(session, circle_id, {"type": event, "member_id": member_id})
+    if host == member_id:
+        heir = (
+            await session.execute(
+                text("select id from member where circle_id = :c and not has_left "
+                     "order by id limit 1"), {"c": circle_id})
+        ).scalar_one_or_none()
+        await session.execute(text("update circle set host_member_id = :h where id = :c"),
+                              {"h": heir, "c": circle_id})
+        await publish(session, circle_id, {"type": "host_changed", "member_id": heir})
+    if round_row is None or round_row.status != "open" or member_id not in (round_row.seat_ids or []):
+        return
+    submitted, required = await submit_state(session, open_round, circle_id, round_row.seat_ids)
+    await publish(session, circle_id,
+                  {"type": "submitted", "round_id": open_round, "submitted": submitted,
+                   "required": required})
+    if required == 0:
+        # **Every pinned seat has left: the round is void** (owner, 2026-10-09 — «the invitation
+        # lapsed»; revision 0050). Not closed — nobody invited to it is here to be shown a result —
+        # and not left open, because nothing could ever complete it and the circle could open no
+        # other round. The row and its seed commitment stay; there is no reveal.
+        await session.execute(
+            text("update round set status = 'void', closed_at = now() where id = :r"),
+            {"r": open_round})
+        # The left seats' preferences the open round was keeping for its roll: the roll will never
+        # come, so they go now, as the close would have removed them.
+        await session.execute(
+            text("delete from preference p where p.member_id = any(:seats) "
+                 "and exists (select 1 from member m where m.id = p.member_id and m.has_left) "
+                 "and not exists (select 1 from weight_contribution w where w.preference_id = p.id)"),
+            {"seats": list(round_row.seat_ids or [])})
+        await publish(session, circle_id, {"type": "voided", "round_id": open_round})
+    elif len(submitted) == required:
+        try:
+            async with session.begin_nested():
+                await close_round(session, open_round, round_row, None)
+        except PoolSwept:
+            pass
+
+
+@router.delete("/{circle_id}/members/{member_id}", status_code=204, response_class=Response)
+async def remove_member(circle_id: int, member_id: int, request: Request) -> Response:
+    """The host asks a seat to leave — for a seat that will never come back (owner 「A」, 2026-10-09).
+
+    A lost device cannot leave by itself, and the round waits for every pinned seat, so without
+    this one seat could hold a circle's round open for ever. The effect is exactly that seat
+    leaving (`release_seat`): the same flag, the same re-count and close, and `seat_removed` ends
+    the removed seat's own stream.
+
+    **Refused, each with its own sentence:** a caller who is not the host (403); the host's own
+    seat (409 — the host leaves through `leave`); a seat that has already submitted in the open
+    round (409 — it came back and chose, so it is not the seat this exists for). A seat that is
+    not in this circle, or has already left, answers 404 the same way.
+    """
+    async with session_factory()() as session:
+        caller, _is_operator, _ = await resolve_credential(session, request, circle_id)
+        host = (
+            await session.execute(
+                text("select host_member_id from circle where id = :c for update"),
+                {"c": circle_id})
+        ).scalar_one_or_none()
+        if host is None or caller != host:
+            raise HTTPException(status_code=403, detail="只有房主可以請人離開。")
+        if member_id == host:
+            raise HTTPException(status_code=409, detail="房主不能請自己離開。要離開，請用離開圈子。")
+        present = (
+            await session.execute(
+                text("select 1 from member where id = :m and circle_id = :c and not has_left"),
+                {"m": member_id, "c": circle_id})
+        ).scalar_one_or_none()
+        if present is None:
+            raise HTTPException(status_code=404, detail="這個人已經不在圈子裡了。")
+        # **The open round is locked before the «already submitted» read** (the reviewer's should,
+        # 2026-10-09): read unlocked, a submit could land between this check and the removal.
+        # Circle first, then round — the same order `release_seat` takes.
+        await session.execute(
+            text("select id from round where circle_id = :c and status = 'open' for update"),
+            {"c": circle_id})
+        submitted = (
+            await session.execute(
+                text("select 1 from member_roll mr join round r on r.id = mr.round_id "
+                     "where r.circle_id = :c and r.status = 'open' and mr.member_id = :m"),
+                {"c": circle_id, "m": member_id})
+        ).scalar_one_or_none()
+        if submitted is not None:
+            raise HTTPException(status_code=409, detail="這個人已經提交了，不能請對方離開。")
+        await release_seat(session, circle_id, member_id, "seat_removed")
+        await session.commit()
     return Response(status_code=204)
 
 
@@ -568,10 +704,15 @@ async def circle_members(circle_id: int, request: Request) -> dict:
         ).scalar_one()
         rows = (
             await session.execute(
-                text("select nickname from member where circle_id = :c and not has_left order by id"),
+                text("select id, nickname from member where circle_id = :c and not has_left order by id"),
                 {"c": circle_id},
             )
-        ).scalars().all()
+        ).all()
         creator = await creator_nickname(session, circle_id)
-    return {"name": name, "members": [{"nickname": n} for n in rows], "seats": len(rows),
-            "cap": SEAT_CAP, "creator_nickname": creator, "your_nickname": yours}
+        host = await host_of(session, circle_id)
+    # **`is_host` per row and `you_are_host`, never the host's id** (frontend, 2026-10-09): the list
+    # stays id-free, and a flag on the row marks the host even when two seats share a nickname.
+    return {"name": name,
+            "members": [{"nickname": r.nickname, "is_host": r.id == host} for r in rows],
+            "seats": len(rows), "cap": SEAT_CAP, "creator_nickname": creator,
+            "your_nickname": yours, "you_are_host": host is not None and host == member_id}

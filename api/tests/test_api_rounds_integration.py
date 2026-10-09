@@ -353,7 +353,7 @@ async def scenario(test_url: str) -> None:
         # the engine («round N is not an open round»; frontend's 10-device self-test, 2026-10-08).
         # The round row is now locked, so the losers wait and answer as D69's retry does.
         together = await asyncio.gather(
-            *(client.post(f"/rounds/{round_id}/roll", headers=auth) for _ in range(6)))
+            *(client.post(f"/rounds/{round_id}/submit", headers=auth) for _ in range(6)))
         assert [r.status_code for r in together] == [200] * 6, [
             (r.status_code, r.text[:120]) for r in together]
         assert len({json.dumps(r.json(), sort_keys=True) for r in together}) == 1, (
@@ -423,7 +423,7 @@ async def scenario(test_url: str) -> None:
         assert baseline.publication_id == weather_pub, baseline
 
         # D69: the retry gets the stored result, dice and all, in the same shape.
-        again = await client.post(f"/rounds/{round_id}/roll", headers=auth)
+        again = await client.post(f"/rounds/{round_id}/submit", headers=auth)
         assert again.status_code == 200
         assert again.json()["dice"] == result["dice"]
         assert again.json()["winning_place_id"] == result["winning_place_id"]
@@ -437,7 +437,7 @@ async def scenario(test_url: str) -> None:
         # is on the secret, so one person holding two devices sees two shapes — which is the whole
         # argument for putting it there rather than on the principal.
         as_member = await client.post(
-            "/rounds/{}/roll".format(round_id),
+            "/rounds/{}/submit".format(round_id),
             headers={"Authorization": "Bearer " + plain_token},
         )
         assert as_member.status_code == 200, as_member.text
@@ -520,7 +520,7 @@ async def scenario(test_url: str) -> None:
             assert (await client.post(
                 f"/rounds/{chain_round_id}/proposals", json={"place_id": place}, headers=auth
             )).status_code == 201
-        chain_rolled = await client.post(f"/rounds/{chain_round_id}/roll", headers=auth)
+        chain_rolled = await client.post(f"/rounds/{chain_round_id}/submit", headers=auth)
         assert chain_rolled.status_code == 200, (chain_rolled.status_code, chain_rolled.text)
         chain_result = chain_rolled.json()
         winner = chain_result["winning_place_id"]
@@ -541,7 +541,7 @@ async def scenario(test_url: str) -> None:
         # The member's copy comes back through D69's retry, the same door the operator's did —
         # so this also proves the retry carries both new fields, not just the first response.
         chain_member = (await client.post(
-            f"/rounds/{chain_round_id}/roll",
+            f"/rounds/{chain_round_id}/submit",
             headers={"Authorization": "Bearer " + plain_token},
         )).json()
         assert chain_member["winner_headline"] == "一階堂拉麵"

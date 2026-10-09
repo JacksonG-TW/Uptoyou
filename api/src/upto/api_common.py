@@ -389,9 +389,11 @@ async def seats_for(session, round_id: int, seat_ids: list | None, seed: bytes |
 
     **Two states, and the second is the owner's 「要」 (D108, `9765a0d`).**
 
-    * **Open** — a seat shows dice only if that member has tapped. In practice no seat ever fills here,
-      because the first tap closes the round; the frontend measured that and it is the deadlock fix
-      working rather than a defect.
+    * **Open** — **no seat shows dice, submitted or not** (提交, owner 2026-10-09). While the first
+      tap closed the round, a tapped seat's pair could be shown because the round was already over.
+      Now the round waits for every seat, and the decider's pair beside the visible pool is the
+      winner: shown early, it lets a member compute the result and then un-submit to change their
+      list. So an open seat carries only `submitted`, and every pair appears at the close.
     * **Closed** — **every** seat's pair is filled, for everyone, regardless of who tapped. A static
       list of all the pairs with the decider marked, beside the commitment. That is what makes a tap
       after close record nothing (D69 stands): there is no seat left for it to fill.
@@ -416,32 +418,79 @@ async def seats_for(session, round_id: int, seat_ids: list | None, seed: bytes |
             )
         ).all()
     )
-    tapped = (
-        set()
-        if closed
-        else set(
-            (
-                await session.execute(
-                    text("select member_id from member_roll where round_id = :r"), {"r": round_id}
-                )
+    submitted = set(
+        (
+            await session.execute(
+                text("select member_id from member_roll where round_id = :r"), {"r": round_id}
             )
-            .scalars()
-            .all()
         )
+        .scalars()
+        .all()
+    )
+    # **`left` rides beside `submitted`** so the waiting room can tell «還沒» from «gone»: a pinned
+    # seat that left is not waited for (`submit_state`), and listing it as 還沒 would be a lie.
+    left = set(
+        (
+            await session.execute(
+                text("select id from member where id = any(:ids) and has_left"),
+                {"ids": list(seat_ids)},
+            )
+        )
+        .scalars()
+        .all()
     )
     decider = draw.deciding_member(seed, list(seat_ids))
     seats = []
     for member_id in sorted(seat_ids):
-        show = closed or member_id in tapped
-        pair = draw.pair_for_member(seed, member_id) if show else (None, None)
+        pair = draw.pair_for_member(seed, member_id) if closed else (None, None)
         seats.append({
             "member_id": member_id,
             "nickname": names.get(member_id),
             "die1": pair[0],
             "die2": pair[1],
             "counts": member_id == decider,
+            "submitted": member_id in submitted,
+            "left": member_id in left,
         })
     return seats
+
+
+async def refuse_if_submitted(session, round_id: int, member: int) -> None:
+    """409 when this seat has submitted in this round: its proposals and preferences are locked.
+
+    A submitted seat's list is what the others are waiting on, so changing it means un-submitting
+    first (owner's game room, 2026-10-09). The literal stays inside `detail=` for `server_copy`.
+    """
+    done = (
+        await session.execute(
+            text("select 1 from member_roll where round_id = :r and member_id = :m"),
+            {"r": round_id, "m": member},
+        )
+    ).scalar_one_or_none()
+    if done is not None:
+        raise HTTPException(status_code=409, detail="你已經提交了。要改清單，先收回提交。")
+
+
+async def submit_state(session, round_id: int, circle_id: int,
+                       seat_ids: list | None) -> tuple[list, int]:
+    """`(submitted member ids, required count)` for an open round — the one count the close obeys.
+
+    **Required is the seats pinned at open minus the ones that have left** (owner's game room,
+    2026-10-09). A seat that joined after the open was never pinned and is not waited for; a pinned
+    seat that left — on its own, or removed by the host — can never submit, so waiting for it would
+    hold the round for ever. A round predating 0027 pinned nothing and falls back to the circle's
+    current seats, as the close itself does.
+    """
+    pinned = "m.id = any(:ids)" if seat_ids else "m.circle_id = :c"
+    rows = (
+        await session.execute(
+            text("select m.id, (r.member_id is not null) as submitted from member m "
+                 "left join member_roll r on r.member_id = m.id and r.round_id = :r "
+                 f"where {pinned} and not m.has_left order by m.id"),
+            {"r": round_id, "ids": list(seat_ids or []), "c": circle_id},
+        )
+    ).all()
+    return [row.id for row in rows if row.submitted], len(rows)
 
 
 def deciding_member_for(seats: list) -> dict | None:

@@ -112,7 +112,9 @@ async def scenario(test_url: str, base_url: str) -> None:
         early = await client.post("/rounds/{}/trip".format(round_id), headers=K)
         check("an open round cannot be signed", early.status_code == 409, early.text)
 
-        rolled = await client.post("/rounds/{}/roll".format(round_id), headers=K)
+        # Both seats submit (提交, 2026-10-09); Amy first, so Kevin's completes the set and closes.
+        await client.post("/rounds/{}/submit".format(round_id), headers=A)
+        rolled = await client.post("/rounds/{}/submit".format(round_id), headers=K)
         check("the round rolls", rolled.status_code == 200, rolled.text)
         result = rolled.json()
         check("and its reveal carries `trip: null` before anyone signs",
@@ -188,7 +190,8 @@ async def scenario(test_url: str, base_url: str) -> None:
         for place in places[:2]:
             await client.post("/rounds/{}/proposals".format(round2), headers=K,
                               json={"place_id": place})
-        rolled2 = await client.post("/rounds/{}/roll".format(round2), headers=K)
+        await client.post("/rounds/{}/submit".format(round2), headers=A)
+        rolled2 = await client.post("/rounds/{}/submit".format(round2), headers=K)
         check("the second round rolled, so there is a closed round to sign",
               rolled2.status_code == 200, rolled2.status_code)
 

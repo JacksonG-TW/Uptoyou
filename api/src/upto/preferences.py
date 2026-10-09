@@ -40,7 +40,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import text
 
-from .api_common import resolve_member
+from .api_common import refuse_if_submitted, resolve_member
 from .db import session_factory
 
 # D38's ten and §4C-2's two bands, mirrored from revision 0022's CHECKs. **Two copies on purpose,
@@ -483,8 +483,10 @@ async def record_preference(circle_id: int, body: PreferenceBody, request: Reque
     reader adding one "for consistency" would undo §3.0. The integration test asserts the stream
     stays quiet across a write.
 
-    No 409: a second write is not a conflict, it is the next version. That is D70's quiet-success
-    shape applied to a table that appends.
+    No 409 for a repeat: a second write is not a conflict, it is the next version. That is D70's
+    quiet-success shape applied to a table that appends. **The one 409 is a submitted seat**
+    (owner's game room, 2026-10-09): while this seat has submitted in the circle's open round, the
+    others are waiting on its list as it stands, so it un-submits first.
     """
     # **The credential first, the body second, and the order is a rule rather than a style.** A
     # request with no token must read 401 whatever it carries: validating first told an anonymous
@@ -494,6 +496,16 @@ async def record_preference(circle_id: int, body: PreferenceBody, request: Reque
     async with session_factory()() as session:
         member_id = await _resolve_member(session, request, circle_id)
         _validate(body)
+        # `for share` queues behind a submit's `for update` on the round row, so a preference
+        # cannot land between a seat submitting and the count that may close the round.
+        open_round = (
+            await session.execute(
+                text("select id from round where circle_id = :c and status = 'open' for share"),
+                {"c": circle_id},
+            )
+        ).scalar_one_or_none()
+        if open_round is not None:
+            await refuse_if_submitted(session, open_round, member_id)
         await session.execute(
             text(INSERT),
             {

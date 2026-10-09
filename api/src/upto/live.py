@@ -61,7 +61,17 @@ router = APIRouter()
 
 
 async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False) -> dict:
-    """The circle's current state: an open round with its pool, else the last result (D54)."""
+    """The circle's current state: an open round with its pool, else the last result (D54).
+
+    **`me` and `host` ride on the snapshot, never on a broadcast event** (2026-10-09): the snapshot
+    is built per connection for one credential, so `me` names only the reader's own seat; `host`
+    is the circle's host seat (revision 0049), which every member may know — the waiting room
+    shows the remove control only when the two are equal.
+    """
+    host = (
+        await session.execute(text("select host_member_id from circle where id = :c"),
+                              {"c": circle_id})
+    ).scalar_one_or_none()
     open_row = (
         await session.execute(
             text(
@@ -116,6 +126,8 @@ async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False
         }
         return {
             "type": "snapshot",
+            "me": viewer,
+            "host": host,
             "open_round": open_round,
             "last_result": None,
         }
@@ -170,7 +182,7 @@ async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False
         # member shape; a snapshot is built for the credential that opened *this* stream, so an
         # operator's reconnect restores the evidence table rather than losing it.
         last_result = for_credential(last_result, evidence=evidence)
-    return {"type": "snapshot", "open_round": None, "last_result": last_result}
+    return {"type": "snapshot", "me": viewer, "host": host, "open_round": None, "last_result": last_result}
 
 
 @router.get("/circles/{circle_id}/stream")
@@ -213,6 +225,13 @@ async def stream(circle_id: int, request: Request) -> StreamingResponse:
                     yield ": ping\n\n"
                     continue
                 yield "data: " + json.dumps(event, ensure_ascii=False) + "\n\n"
+                # **A seat that is no longer in the circle stops hearing it** (found while scoping
+                # the host's remove, 2026-10-09). The credential is checked once, at connect, so a
+                # stream outlived its seat: a left or removed device kept receiving who submitted
+                # until it reconnected. Its own event is the last thing it gets; a reconnect then
+                # meets the dead key like any other request.
+                if event.get("type") in ("seat_left", "seat_removed") and event.get("member_id") == viewer:
+                    return
 
     return StreamingResponse(events(), media_type="text/event-stream")
 

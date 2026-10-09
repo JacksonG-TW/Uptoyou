@@ -227,7 +227,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         assert opened_event["round"]["revealed_seed"] is None
         assert {p["name"] for p in mid["open_round"]["pool"]} == {"雨中的店", "巷口麵店"}
 
-        rolled = await client.post(f"/rounds/{round_id}/roll", headers=auth)
+        rolled = await client.post(f"/rounds/{round_id}/submit", headers=auth)
         assert rolled.status_code == 200, rolled.text
         await asyncio.wait_for(done.wait(), timeout=10)
         task.cancel()
@@ -351,7 +351,7 @@ async def scenario(test_url: str, base_url: str) -> None:
 
         swept_task = asyncio.create_task(swept_reader())
         await asyncio.sleep(0.5)
-        swept_roll = await client.post(f"/rounds/{swept_id}/roll", headers=auth)
+        swept_roll = await client.post(f"/rounds/{swept_id}/submit", headers=auth)
         assert swept_roll.status_code == 409, (
             "the swept round rolled {} — the fixture no longer produces an all-vetoed pool and "
             "this case is testing nothing".format(swept_roll.status_code))

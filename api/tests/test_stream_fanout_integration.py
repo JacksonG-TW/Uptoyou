@@ -114,11 +114,14 @@ async def scenario(test_url: str, a: str, b: str) -> None:
                 rid = opened.json()["round_id"]
                 await actor.post(f"/rounds/{rid}/proposals", headers=K, json={"place_id": place})
                 await actor.post(f"/rounds/{rid}/proposals", headers=K, json={"place_id": place2})
-                rolled = await actor.post(f"/rounds/{rid}/roll", headers=K)
-                check("and rolls it there", rolled.status_code == 200, rolled.status_code)
+                # Two seats, so both submit (提交, 2026-10-09); Amy's completes the set and closes.
+                await actor.post(f"/rounds/{rid}/submit", headers=K)
+                rolled = await actor.post(f"/rounds/{rid}/submit", headers=A)
+                check("and both seats' submits close it there", rolled.status_code == 200
+                      and rolled.json().get("winning_place_id") is not None, rolled.status_code)
 
             for _ in range(60):
-                if len(heard) > snapshot_count + 1:
+                if any(e.get("type") == "closed" for e in heard[snapshot_count:]):
                     break
                 await asyncio.sleep(0.1)
             reader.cancel()

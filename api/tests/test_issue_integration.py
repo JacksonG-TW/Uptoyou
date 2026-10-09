@@ -24,7 +24,7 @@ sys.path.insert(0, SRC)
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
-from upto.auth import member_for  # noqa: E402
+from upto.auth import credential_for, member_for  # noqa: E402
 
 TEST_DB = "upto_issue_check"
 
@@ -218,6 +218,22 @@ async def scenario(test_url: str) -> None:
     moved_link = printed(moved.stdout, "link")
     assert moved_link.startswith("https://upto.example.tw/device#"), (
         "the origin is configuration and the trailing slash must not double", moved_link)
+
+    # **The two powers land as asked** (found 2026-10-09: from 0047 the CLI printed «+ evidence»
+    # and stored `evidence = false`, so an auditing operator key carried no table).
+    async with Session() as session:
+        powers_circle = (
+            await session.execute(text("insert into circle (name) values ('權限') returning id"))
+        ).scalar_one()
+        await session.commit()
+    for flags, expected in ((["--operator", "--evidence"], (True, True)),
+                            (["--operator"], (True, False)),
+                            (["--evidence"], (False, True))):
+        made = run_issue(test_url, str(powers_circle), "權限" + "".join(f[2] for f in flags), *flags)
+        assert made.returncode == 0, made.stderr
+        async with Session() as session:
+            found = await credential_for(session, printed(made.stdout, "token"), powers_circle)
+        assert found is not None and found[1:] == expected, (flags, found)
 
     print(
         "ticket 18: the printed token is a working credential, --principal seats without a "
