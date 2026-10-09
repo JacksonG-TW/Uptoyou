@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { createCircle, leaveCircle, type Created } from '@/lib/selfserve'
 import { device, remember } from '@/lib/device'
@@ -36,6 +36,10 @@ export default function Create() {
   const [circleName, setCircleName] = useState('')
   const [nickname, setNickname] = useState('')
   const [busy, setBusy] = useState(false)
+  /** **The lock is a ref, not `busy`.** Two clicks delivered before React re-renders both read
+   *  `busy` as false from the same closure and sent two requests (measured 2026-10-09); a ref is
+   *  set the instant the first click runs. `busy` stays for the disabled look. */
+  const inFlight = useRef(false)
   const [error, setError] = useState('')
   const [made, setMade] = useState<Created | null>(null)
   /** §5's re-issue replaces the link in place. Held separately from `made` so the original is not
@@ -44,7 +48,8 @@ export default function Create() {
   const [link, setLink] = useState('')
 
   const create = async () => {
-    if (busy) return
+    if (inFlight.current) return
+    inFlight.current = true
     setBusy(true)
     setError('')
     try {
@@ -67,6 +72,7 @@ export default function Create() {
          arrival** — 乙 §1a rule 5, a refusal that fades in has not refused anything yet. */
       setError((e as Error).message)
     } finally {
+      inFlight.current = false
       setBusy(false)
     }
   }
@@ -79,10 +85,14 @@ export default function Create() {
           <h1 className="ssTitle dSerif"><span>取個名字</span><span className="lit">就可以開始</span></h1>
           <p className="ssLead">{NO_ACCOUNT}</p>
 
-          {/* §2a — two fields and nothing else on the screen. */}
+          {/* §2a — two fields and nothing else on the screen. **Enter creates nothing; only a click
+              on 建立 does** (owner-ruled 2026-10-09): a stray Enter in either box made a circle the
+              person did not mean to make. The form holds no submit button, so the browser's
+              implicit submission has nothing to press, and `onSubmit` is a second guard. No key
+              handler on the boxes, so IME composition stays the browser's alone. */}
           <form
             className="ssForm"
-            onSubmit={(e) => { e.preventDefault(); void create() }}
+            onSubmit={(e) => e.preventDefault()}
           >
             <label className="ssField">
               <span className="ssLabel">圈子的名字</span>
@@ -116,7 +126,8 @@ export default function Create() {
               <p className="ssNote" data-part="replace-notice">{REPLACE_NOTICE}</p>
             )}
             <button
-              type="submit"
+              type="button"
+              onClick={() => void create()}
               className="act"
               data-part="create-submit"
               data-primary

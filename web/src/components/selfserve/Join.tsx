@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { joinCircle, leaveCircle, previewJoin, type JoinPreview } from '@/lib/selfserve'
 import { device, remember } from '@/lib/device'
@@ -37,6 +37,10 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
    *  already is and links to it. Read once at mount, like `seated`. */
   const [here] = useState(() => device()?.circle === circle)
   const [busy, setBusy] = useState(false)
+  /** **The lock is a ref, not `busy`.** Two clicks delivered before React re-renders both read
+   *  `busy` as false from the same closure and sent two requests (measured 2026-10-09); a ref is
+   *  set the instant the first click runs. `busy` stays for the disabled look. */
+  const inFlight = useRef(false)
   const [error, setError] = useState('')
   /** `null` while the preview is in flight: the form waits for it, so a dead link is said before
    *  anyone types a nickname into it (walk item 8). */
@@ -49,7 +53,8 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
   }, [circle, ticket])
 
   const join = async () => {
-    if (busy) return
+    if (inFlight.current) return
+    inFlight.current = true
     setBusy(true)
     setError('')
     try {
@@ -78,6 +83,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
          rule wrongly and refuse a legal join. */
       setError((e as Error).message)
     } finally {
+      inFlight.current = false
       setBusy(false)
     }
   }
@@ -114,7 +120,11 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
             <p className="ssErr" data-part="join-dead" role="alert">{preview.message}</p>
           )}
           {!here && preview !== null && preview.kind !== 'dead' && (
-          <form className="ssForm" onSubmit={(e) => { e.preventDefault(); void join() }}>
+          /* **Enter joins nothing; only a click on 加入 does** (owner-ruled 2026-10-09, with
+             `/create`). With one text box the browser still fires `submit` on Enter even though
+             the form holds no submit button, so `onSubmit` here is the guard itself, not a
+             spare. No key handler on the box: IME composition stays the browser's alone. */
+          <form className="ssForm" onSubmit={(e) => e.preventDefault()}>
             <label className="ssField">
               <span className="ssLabel">你的暱稱</span>
               {/* **No uniqueness check** (§7): two friends both typing 小明 is legal, the server
@@ -133,7 +143,8 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
               <p className="ssNote" data-part="replace-notice">{REPLACE_NOTICE}</p>
             )}
             <button
-              type="submit"
+              type="button"
+              onClick={() => void join()}
               className="act"
               data-part="join-submit"
               data-primary
