@@ -4,7 +4,6 @@ import {
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { device, noteLastRound, type Device } from '@/lib/device'
-import { fetchMembers } from '@/lib/selfserve'
 import { fetchReveal } from '@/lib/reveal'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -92,14 +91,9 @@ export default function Round() {
   const [dev] = useState<Device | null>(device)
   const [roundId, setRoundId] = useState<number | null>(null)
   const [pool, setPool] = useState<Pooled[]>([])
-  /** D108's seats and the commitment, both read from the snapshot so they are on the first painted
-   *  frame rather than arriving. */
+  /** D108's seats, read from the snapshot so they are on the first painted frame rather than
+   *  arriving. */
   const [rolls, setRolls] = useState<Roll[]>([])
-  /** The decider, from `counts` and never from `deciding_member`, though both are on the wire:
-   *  one fact, one source, so the rule line cannot name somebody the marked row does not mark. */
-  const decidingSeat = rolls.find((r) => r.counts)
-  const decider = decidingSeat ? (decidingSeat.nickname || '這個座位') : null
-  const [commit, setCommit] = useState('')
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Candidate[]>([])
   /** The query the server has actually answered, or `null` if nothing has come back for what is in
@@ -115,10 +109,6 @@ export default function Round() {
   /** The stream's own state, apart from `error`: a reconnect clears this line and must not clear
    *  a refused proposal's sentence that happens to be showing beside it. */
   const [streamDown, setStreamDown] = useState<string | null>(null)
-  /** UX batch U5e — who is in this circle, by nickname only (`GET …/members`, any member may
-   *  read it; it carries no member id by rule). Empty until it answers, and on a failure: the line
-   *  is context, not the screen's job, so it goes rather than showing an error. */
-  const [people, setPeople] = useState<string[]>([])
   /** UX batch U7 — the last closed round, for 「上一餐」. The snapshot names it (`last_result`);
    *  its name comes from the same read the reveal uses (`GET …/result`), so this line and the
    *  reveal can never name two different places. Names nobody: not who rolled, not who proposed. */
@@ -174,7 +164,6 @@ export default function Round() {
         setRoundId(r?.round_id ?? null)
         setPool(r?.pool ?? [])
         setRolls(r?.rolls ?? [])
-        setCommit(r?.seed_commit ?? '')
         // A new round, or a reconnect: the sweep belonged to the round that is being replaced.
         // **The snapshot does not carry the state and must not be made to** — it is the answer to
         // a roll, not a property of the round, so a reconnecting device is told by the next roll
@@ -310,15 +299,6 @@ export default function Round() {
      before the tree it belongs to is committed. One blank frame is the price and it is the right
      one — the alternative is a screen that flashes content the person is not entitled to. */
   useEffect(() => {
-    if (!dev) return
-    let live = true
-    fetchMembers(dev)
-      .then((m) => { if (live) setPeople(m.members.map((x) => x.nickname)) })
-      .catch(() => { if (live) setPeople([]) })
-    return () => { live = false }
-  }, [dev])
-
-  useEffect(() => {
     if (dev) return
     /* **Home, never `/device`** (UX batch U1). The key screen is the operator's back door since
        2026-09-16; a person with no seat needs to hear that this device has no circle and where
@@ -395,19 +375,18 @@ export default function Round() {
 
   return (
     <main className="round" data-screen="round">
-      {/* **One column at every width** (`spec-round-diet-circle-2026-10-08.md` A1). The two-column
-          layout existed to keep the act above the fold beside thirteen chips; the chips now fold
-          behind one disclosure below the roll, so the right column would be an empty 600 px that
-          reads as something failed to load. The act is first in the DOM and on screen. */}
+      {/* **Two columns from 900 wide** (`spec-round-two-column-2026-10-09.md`, owner 「左邊輸入右邊顯示
+          清單」, 49ade4e, built per the v7b preview, 44ac714). It reverses A1's one column, and A1's
+          reason is answered rather than ignored: the right column is not an empty 600 px any more,
+          it holds the list this round is made of. Three wrappers in the one-column order (input,
+          list, tonight menu); the grid puts the first and the last on the left. */}
+      <div className="roundInput" data-part="round-input">
       {lastMeal && (
         <p className="roundNote lastMeal" data-part="last-meal">
           上一餐：<span data-user-content>{lastMeal.name}</span> · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
         </p>
       )}
       <h1 className="roundTitle dSerif">這一餐</h1>
-      {people.length > 0 && (
-        <p className="roundNote" data-part="circle-people">這個圈子：<span data-user-content>{people.join('、')}</span></p>
-      )}
       {/* **「一人提一家」 was false and D110 made it checkably so** — the cap is three per person,
           stated on the home page and enforced at propose, and this line said one. Corrected to the
           ruled number rather than to a vaguer phrasing: a screen that softens a limit into 「幾家」
@@ -578,320 +557,299 @@ export default function Round() {
               the line beside it says the result was fixed at the open (D108). */}
           擲骰子，看結果
         </button>
-        {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
-            seat list could not carry: anyone may press, nothing about the pair depends on who
-            does, and whose pair it is. Present from the round's first frame because `counts` is
-            (D108). Revealing, not throwing: the line credits nobody's tap with the number. */}
-        {decider !== null && (
-          <p className="roundNote" data-part="deciding">
-            {/* One string, so the sentence is one piece of text: the nickname is inside a sentence
-                that reads as one (`spec-round-diet-circle-2026-10-08.md`; the budget counts text
-                nodes, and three nodes for one sentence would count three). */}
-            {`誰先按都可以。結果開局時就定了，用 ${decider} 的骰子。`}
-          </p>
-        )}
 
       </div>
 
-      {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
-          row is a loading spinner wearing a costume (the spec's words). It takes the step after
-          the menu's cap, because it is the last thing on the screen in reading order. */}
-      <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
-        <h2 className="roundH dSerif">這一輪的名單</h2>
-        {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
-            (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
-            「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
-            one person's, and at five people a sentence that narrowed it would be one guess from a
-            name (§3.0).
 
-            D20: the first sentence states what happened, the second states the condition for the
-            next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
+      </div>
 
-            **Browser copy, one owner.** The event carries a type and a round id and no text, so
-            `tools/server_copy.py` has nothing new to cover and `test_web_surface`'s word list is
-            this string's gate.
+      {/* The list column: what this round is made of. Sticky beside the input column, so it stays in
+          view while a long search result list scrolls past on the left. */}
+      <div className="roundList" data-part="round-list">
+        {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
+            row is a loading spinner wearing a costume (the spec's words). It takes the step after
+            the menu's cap, because it is the last thing on the screen in reading order. */}
+        <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
+          <h2 className="roundH dSerif">這一輪的名單</h2>
+          {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
+              (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
+              「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
+              one person's, and at five people a sentence that narrowed it would be one guess from a
+              name (§3.0).
 
-            At the top of the pool block, so it is read before the list it is about; 擲骰 stays
-            enabled, because the fix is proposing another place and the act is not what is
-            broken. */}
-        {swept !== null && swept === roundId && (
-          <p className="roundWarn" data-part="pool-vetoed">
-            大家目前的偏好加起來，池子裡每一家都抽不到。要多幾家才擲得成。
-          </p>
-        )}
-        {pool.length === 0 ? (
-          <p className="roundNote">還沒有人提。</p>
-        ) : pool.length === 1 ? (
-          // **The reason lives beside the list, not behind a press.** The API refuses a one-place
-          // roll with 「一家店不是決定，是通知。」 and that sentence teaches something; but a
-          // control that is pressable only to be refused teaches it by wasting a tap. So the bar
-          // disables below two and the arithmetic is stated here, where a person reading the list
-          // is already looking. States, never advises (D20) — it says what the round needs, not
-          // what anyone should do about it.
-          <>
+              D20: the first sentence states what happened, the second states the condition for the
+              next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
+
+              **Browser copy, one owner.** The event carries a type and a round id and no text, so
+              `tools/server_copy.py` has nothing new to cover and `test_web_surface`'s word list is
+              this string's gate.
+
+              At the top of the pool block, so it is read before the list it is about; 擲骰 stays
+              enabled, because the fix is proposing another place and the act is not what is
+              broken. */}
+          {swept !== null && swept === roundId && (
+            <p className="roundWarn" data-part="pool-vetoed">
+              大家目前的偏好加起來，池子裡每一家都抽不到。要多幾家才擲得成。
+            </p>
+          )}
+          {pool.length === 0 ? (
+            <p className="roundNote">還沒有人提。</p>
+          ) : pool.length === 1 ? (
+            // **The reason lives beside the list, not behind a press.** The API refuses a one-place
+            // roll with 「一家店不是決定，是通知。」 and that sentence teaches something; but a
+            // control that is pressable only to be refused teaches it by wasting a tap. So the bar
+            // disables below two and the arithmetic is stated here, where a person reading the list
+            // is already looking. States, never advises (D20) — it says what the round needs, not
+            // what anyone should do about it.
+            <>
+              <ul className="rows">
+                {pool.map((p) => (
+                  <li key={p.place_id} className="row" data-part="pool-row">
+                    <span className="rowName" data-user-content>{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="roundNote" data-part="need-two">
+                一輪至少要兩家店。一家店不是決定，是通知。
+              </p>
+            </>
+          ) : (
             <ul className="rows">
               {pool.map((p) => (
+                // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
+                // else, and the reveal is where numbers are allowed to exist at all.
                 <li key={p.place_id} className="row" data-part="pool-row">
                   <span className="rowName" data-user-content>{p.name}</span>
                 </li>
               ))}
             </ul>
-            <p className="roundNote" data-part="need-two">
-              一輪至少要兩家店。一家店不是決定，是通知。
-            </p>
-          </>
-        ) : (
-          <ul className="rows">
-            {pool.map((p) => (
-              // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
-              // else, and the reveal is where numbers are allowed to exist at all.
-              <li key={p.place_id} className="row" data-part="pool-row">
-                <span className="rowName" data-user-content>{p.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-
-      {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
-          **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
-          one rather than adding one. That is the evaluator's `RL-4`/`RL-5` requirement and it is
-          also the honest shape: the people in this round are known, the outcome is already fixed,
-          and the only thing missing is somebody looking.
-
-          **「翻開」 and never 「擲」.** D108's copy constraint is that the dice are *revealed*, not
-          thrown — the seed was drawn at open and every pair derives from it, so a member's tap
-          discloses a number that already existed. Wording that credits the tap with producing it
-          would be the animation problem in prose. For the same reason the decider's line reads
-          「以 … 的骰子為準」 rather than anything that gives them agency they did not have. */}
-      {rolls.length > 0 && (
-        <section className="seats" data-part="roll-list">
-          <h2 className="roundH dSerif">這一輪的人</h2>
-          <ul className="seatRows">
-            {rolls.map((r, i) => (
-              <li
-                key={r.member_id}
-                className="seat"
-                data-roll-seat={i + 1}
-                data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
-                data-counts={r.counts ? 'yes' : 'no'}
-              >
-                {/* A missing nickname renders as the seat rather than as `undefined`. Not a guess
-                    at the D55 ruling — insurance against the one bug I have already shipped on this
-                    surface, where a field read from the wrong level of a payload put an empty name
-                    on screen with no error anywhere. */}
-                <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
-                {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
-                    「—」 until the 2026-10-08 label gate: two of two readers took the dash for
-                    「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
-                    looks there is nothing to show; a seat that has looked shows its pair. One
-                    「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
-                    attributes are untouched. */}
-                {r.die1 !== null && r.die2 !== null ? (
-                  <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
-                ) : (
-                  <span className="seatDice" role="img" aria-label="還沒看結果" />
-                )}
-              </li>
-            ))}
-          </ul>
+          )}
         </section>
-      )}
 
-      {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
-          `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
-          甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
-          types moved here, **before the search in reading order** — before a person looks for a place
-          they say what tonight is not, so the stance is set while it is still cheap. **Since
-          2026-09-16 that is expressed by the right column rather than by sitting above the search**
-          (owner-ruled axis 1): the thirteen chips were pushing the screen's own act past the fold,
-          so they stand beside it instead of before it. **Since 2026-10-08 the whole menu folds behind
-          one button below 這一輪的人** (`spec-round-diet-circle-2026-10-08.md` A1): optional, and most
-          rounds never touch it. Nothing inside it changed.
 
-          **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
-          `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
-          old page still sees it on; tapping it off posts `allow` and ends it. That is the whole
-          migration — nothing backfills and nothing is deleted.
+        {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
+            **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
+            one rather than adding one. That is the evaluator's `RL-4`/`RL-5` requirement and it is
+            also the honest shape: the people in this round are known, the outcome is already fixed,
+            and the only thing missing is somebody looking.
 
-          **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
-          1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
-      <button
-        type="button"
-        className="tonightToggle"
-        data-part="tonight-toggle"
-        aria-expanded={tonightOpen}
-        aria-controls="tonight-block"
-        onClick={() => setTonightOpen((o) => !o)}
-      >
-        {anyCount > 0 ? `這次不想吃的類別（已勾 ${anyCount}）` : '這次不想吃的類別'}
-      </button>
-      {/* Always mounted, hidden while closed, so `aria-controls` names an element that exists
-          (reviewer, d92b978). The chips render only when open, as before. */}
-      <section className="tonightBlock" id="tonight-block" hidden={!tonightOpen}>
-      {tonightOpen && (<>
-        {/* UX batch U5a — who it binds and what it does, the two questions the walk found a member
-            could not answer. True to D103: one member's stance, a discount of that kind's places
-            for this round, and never a removal (the place stays proposable and in the pool). */}
-        <p className="roundNote" data-part="tonight-explain">
-          只算你自己的選擇。勾了的類別，這一輪抽中的機會會變小，店還是留在名單上。
-        </p>
-        {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
-            帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
-            leader dots · count, grouped under three section marks (sec. 2, 密度一).
-
-            **The leader dots are the whole signature.** Without them each row is a list item and
-            the page is a settings sheet; with them it is a menu, which is the thing this screen
-            is pretending to be. They are `aria-hidden` and empty on purpose — a decorative span
-            that a screen reader must not read out as anything.
-
-            **Order is `CATEGORIES` and is never re-sorted.** Each section's list is a filter of
-            it, so the API's closed order is the reading order and 其他 stays last. **Sorting by
-            count would be advice** (D20) and is the one thing a menu of this shape invites. */}
-        {MENU_SECTIONS.map(({ heading, Icon, values }) => (
-          <Fragment key={heading}>
-            {/* The icon is decorative and says nothing the heading beside it does not already say,
-                so it is `aria-hidden` with no label — a labelled one reads the same thing twice.
-                `strokeWidth` is lucide's own prop (1.7); `absoluteStrokeWidth` is deliberately not
-                passed, and the colour is inherited from the heading rather than set here. */}
-            <h3 className="menuSection" data-part="tonight-section">
-              <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
-              {heading}
-            </h3>
-            <ul className="menu" data-part="tonight-avoid">
-              {values.map((c) => {
-                const on = chipOn(c)
-                return (
-                  <li key={c}>
-                    <button
-                      type="button"
-                      /* 乙 §2 — the row arrives at its own place in the menu's reading order.
-                         **On the row, not on the `<li>`**: the row is what a person sees arrive,
-                         and `.chip` is the box whose transform the gate measures. Once per mount,
-                         so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
-                         press in the first frame, because opacity does not intercept clicks
-                         (`YI-6`). */
-                      className="chip arrive"
-                      style={arrive(CHIP_STEP[c] ?? ARRIVE_CAP)}
-                      data-part="tonight-chip"
-                      data-on={on ? 'yes' : 'no'}
-                      aria-pressed={on}
-                      onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
-                    >
-                      {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
-                          owner's critique. The on-state was an ink fill plus a 500→700 weight: a
-                          fill inversion is a lightness change and survives colour-blindness, but
-                          neither is a shape a person can name, and the product already has one —
-                          the 偏好 rows' square. The same part, so a row reads as selected in the
-                          vocabulary of the sheet the person just left (WCAG 1.4.1, and 1.4.11 for
-                          the 3:1). **It is not replaced by an icon and it does not move**: 密度一
-                          took the icon off the row, so this square is the row's only mark.
-
-                          `aria-hidden`: `aria-pressed` on the button is the accessible state, and
-                          a screen reader announcing a decorative box beside it would say the same
-                          thing twice in two vocabularies. */}
-                      <span className="mark" aria-hidden="true" />
-                      <span className="n" data-part="tonight-chip-name">{c}</span>
-                      <span className="lead" aria-hidden="true" />
-                      {/* **Nothing follows the dots, and that is the ruling** — the owner
-                          2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
-                          資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
-                          So `tonight-stat` is gone — with it the count, the percentage, and the
-                          `data-shape` fork that chose between them. **The dots now run to the row's
-                          end**, which is what they did before the menu spec folded a number into
-                          them; `.lead`'s `flex: 1` needs no change to do it.
-
-                          **What that fork protected is not lost, and this is the one thing to
-                          check before reviving anything here.** A category no place carries yet
-                          would have printed 「0 家會比較少中（0.0%）」, and a zero count reads as a
-                          RESULT — *we looked and nothing needed excluding* — rather than as *we
-                          have not measured this yet* (A2-G8-zero). With no count on the row there
-                          is no zero to misread, and the honest bound is stated once for the whole
-                          menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
-                          **A count coming back here brings that defect back with it.**
-
-                          The numbers themselves are not deleted from the payload (§5) — they move
-                          to the operator's reveal as bars, §3/§3a, which is the second commit. */}
-                    </button>
-                  </li>
-                )
-              })}
+            **「翻開」 and never 「擲」.** D108's copy constraint is that the dice are *revealed*, not
+            thrown — the seed was drawn at open and every pair derives from it, so a member's tap
+            discloses a number that already existed. Wording that credits the tap with producing it
+            would be the animation problem in prose. (The decider's own line left /round on
+            2026-10-09, when the round came to end in 提交.) */}
+        {rolls.length > 0 && (
+          <section className="seats" data-part="roll-list">
+            <h2 className="roundH dSerif">這一輪的人</h2>
+            <ul className="seatRows">
+              {rolls.map((r, i) => (
+                <li
+                  key={r.member_id}
+                  className="seat"
+                  data-roll-seat={i + 1}
+                  data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
+                  data-counts={r.counts ? 'yes' : 'no'}
+                >
+                  {/* A missing nickname renders as the seat rather than as `undefined`. Not a guess
+                      at the D55 ruling — insurance against the one bug I have already shipped on this
+                      surface, where a field read from the wrong level of a payload put an empty name
+                      on screen with no error anywhere. */}
+                  <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
+                  {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
+                      「—」 until the 2026-10-08 label gate: two of two readers took the dash for
+                      「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
+                      looks there is nothing to show; a seat that has looked shows its pair. One
+                      「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
+                      attributes are untouched. */}
+                  {r.die1 !== null && r.die2 !== null ? (
+                    <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
+                  ) : (
+                    <span className="seatDice" role="img" aria-label="還沒看結果" />
+                  )}
+                </li>
+              ))}
             </ul>
-          </Fragment>
-        ))}
+          </section>
+        )}
+      </div>
 
-        {/* §4's honesty requirement, moved with the types it describes. The number is the
-            payload's and is never written here — it moved from about 6% to nearly 13% in one day,
-            and a constant would have been false by the afternoon while still rendering. Shown once
-            and only while something is on: with no stance set there is nothing for it to qualify. */}
-        {anyOn && (
-          <p className="roundNote" data-part="pref-category-coverage">
-            沒有分類的店，避開讀不到。
+      {/* The tonight menu and its warning: input, so the left column at ≥ 900, but AFTER the list in
+          the DOM, which keeps the one-column order below 900 exactly as it was (the list before the
+          menu). The grid places it under the input wrapper. */}
+      <div className="roundTonight" data-part="round-tonight">
+        {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
+            `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
+            甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
+            types moved here, **before the search in reading order** — before a person looks for a place
+            they say what tonight is not, so the stance is set while it is still cheap. **Since
+            2026-09-16 that is expressed by the right column rather than by sitting above the search**
+            (owner-ruled axis 1): the thirteen chips were pushing the screen's own act past the fold,
+            so they stand beside it instead of before it. **Since 2026-10-08 the whole menu folds behind
+            one button below 這一輪的人** (`spec-round-diet-circle-2026-10-08.md` A1): optional, and most
+            rounds never touch it. Nothing inside it changed.
+
+            **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
+            `persist: false`, so a type lapses at the nightly erasure. A member who kept one under the
+            old page still sees it on; tapping it off posts `allow` and ends it. That is the whole
+            migration — nothing backfills and nothing is deleted.
+
+            **Same wire, same numbers.** No new `kind`, no per-round expiry, no engine change: D103's
+            1/N discount reads exactly the row this row writes. Only where a hand lands moved. */}
+        <button
+          type="button"
+          className="tonightToggle"
+          data-part="tonight-toggle"
+          aria-expanded={tonightOpen}
+          aria-controls="tonight-block"
+          onClick={() => setTonightOpen((o) => !o)}
+        >
+          {anyCount > 0 ? `這次不想吃的類別（已勾 ${anyCount}）` : '這次不想吃的類別'}
+        </button>
+        {/* Always mounted, hidden while closed, so `aria-controls` names an element that exists
+            (reviewer, d92b978). The chips render only when open, as before. */}
+        <section className="tonightBlock" id="tonight-block" hidden={!tonightOpen}>
+        {tonightOpen && (<>
+          {/* UX batch U5a — who it binds and what it does, the two questions the walk found a member
+              could not answer. True to D103: one member's stance, a discount of that kind's places
+              for this round, and never a removal (the place stays proposable and in the pool). */}
+          <p className="roundNote" data-part="tonight-explain">
+            只算你自己的選擇。勾了的類別，這一輪抽中的機會會變小，店還是留在名單上。
+          </p>
+          {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
+              帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
+              leader dots · count, grouped under three section marks (sec. 2, 密度一).
+
+              **The leader dots are the whole signature.** Without them each row is a list item and
+              the page is a settings sheet; with them it is a menu, which is the thing this screen
+              is pretending to be. They are `aria-hidden` and empty on purpose — a decorative span
+              that a screen reader must not read out as anything.
+
+              **Order is `CATEGORIES` and is never re-sorted.** Each section's list is a filter of
+              it, so the API's closed order is the reading order and 其他 stays last. **Sorting by
+              count would be advice** (D20) and is the one thing a menu of this shape invites. */}
+          {MENU_SECTIONS.map(({ heading, Icon, values }) => (
+            <Fragment key={heading}>
+              {/* The icon is decorative and says nothing the heading beside it does not already say,
+                  so it is `aria-hidden` with no label — a labelled one reads the same thing twice.
+                  `strokeWidth` is lucide's own prop (1.7); `absoluteStrokeWidth` is deliberately not
+                  passed, and the colour is inherited from the heading rather than set here. */}
+              <h3 className="menuSection" data-part="tonight-section">
+                <Icon size={18} strokeWidth={1.7} aria-hidden="true" />
+                {heading}
+              </h3>
+              <ul className="menu" data-part="tonight-avoid">
+                {values.map((c) => {
+                  const on = chipOn(c)
+                  return (
+                    <li key={c}>
+                      <button
+                        type="button"
+                        /* 乙 §2 — the row arrives at its own place in the menu's reading order.
+                           **On the row, not on the `<li>`**: the row is what a person sees arrive,
+                           and `.chip` is the box whose transform the gate measures. Once per mount,
+                           so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
+                           press in the first frame, because opacity does not intercept clicks
+                           (`YI-6`). */
+                        className="chip arrive"
+                        style={arrive(CHIP_STEP[c] ?? ARRIVE_CAP)}
+                        data-part="tonight-chip"
+                        data-on={on ? 'yes' : 'no'}
+                        aria-pressed={on}
+                        onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
+                      >
+                        {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
+                            owner's critique. The on-state was an ink fill plus a 500→700 weight: a
+                            fill inversion is a lightness change and survives colour-blindness, but
+                            neither is a shape a person can name, and the product already has one —
+                            the 偏好 rows' square. The same part, so a row reads as selected in the
+                            vocabulary of the sheet the person just left (WCAG 1.4.1, and 1.4.11 for
+                            the 3:1). **It is not replaced by an icon and it does not move**: 密度一
+                            took the icon off the row, so this square is the row's only mark.
+
+                            `aria-hidden`: `aria-pressed` on the button is the accessible state, and
+                            a screen reader announcing a decorative box beside it would say the same
+                            thing twice in two vocabularies. */}
+                        <span className="mark" aria-hidden="true" />
+                        <span className="n" data-part="tonight-chip-name">{c}</span>
+                        <span className="lead" aria-hidden="true" />
+                        {/* **Nothing follows the dots, and that is the ruling** — the owner
+                            2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
+                            資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
+                            So `tonight-stat` is gone — with it the count, the percentage, and the
+                            `data-shape` fork that chose between them. **The dots now run to the row's
+                            end**, which is what they did before the menu spec folded a number into
+                            them; `.lead`'s `flex: 1` needs no change to do it.
+
+                            **What that fork protected is not lost, and this is the one thing to
+                            check before reviving anything here.** A category no place carries yet
+                            would have printed 「0 家會比較少中（0.0%）」, and a zero count reads as a
+                            RESULT — *we looked and nothing needed excluding* — rather than as *we
+                            have not measured this yet* (A2-G8-zero). With no count on the row there
+                            is no zero to misread, and the honest bound is stated once for the whole
+                            menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
+                            **A count coming back here brings that defect back with it.**
+
+                            The numbers themselves are not deleted from the payload (§5) — they move
+                            to the operator's reveal as bars, §3/§3a, which is the second commit. */}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </Fragment>
+          ))}
+
+          {/* §4's honesty requirement, moved with the types it describes. The number is the
+              payload's and is never written here — it moved from about 6% to nearly 13% in one day,
+              and a constant would have been false by the afternoon while still rendering. Shown once
+              and only while something is on: with no stance set there is nothing for it to qualify. */}
+          {anyOn && (
+            <p className="roundNote" data-part="pref-category-coverage">
+              沒有分類的店，避開讀不到。
+            </p>
+          )}
+
+          {/* **A13's sentence, verbatim from the ruling (AD-9).** Everything else here reports
+              numbers; this reports what the numbers MEAN, once, and says the part a member would
+              otherwise have to infer — that the effect shrinks as the table fills. D20 holds: it
+              states, it does not advise. */}
+          {anyOn && (
+            <p className="roundNote" data-part="pref-category-discount">
+              避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
+            </p>
+          )}
+
+          {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
+              states, it does not reassure, and an empty row already says it. */}
+        </>)}
+        </section>
+        {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
+            `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
+            half is not warned, and a surface that computed it could compute it wrong.
+
+            **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
+            is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
+            half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
+            to make it appear (A2-G8b stays n/a).
+
+            **The count left this sentence on 2026-09-11 and the warning did not**
+            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
+            this screen; the evaluator's reading is that the denominator was the number and the
+            warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
+            everything that makes it a caution. Same trigger, same `crossed` read, no figure —
+            **removing the sentence itself would remove a protection, and that is the owner's word
+            to give.** Every character is in the shipped body subset, so no font rebuild.
+
+        **It sits outside the fold on purpose** (`spec-round-diet-circle-2026-10-08.md` A1): a caution
+        that is protection must not be hidden by a closed disclosure. */}
+        {prefs?.breadth.crossed && (
+          <p className="roundWarn" data-part="tonight-breadth">
+            你目前的選擇，已經讓超過一半的選項受影響。
           </p>
         )}
-
-        {/* **A13's sentence, verbatim from the ruling (AD-9).** Everything else here reports
-            numbers; this reports what the numbers MEAN, once, and says the part a member would
-            otherwise have to infer — that the effect shrinks as the table fills. D20 holds: it
-            states, it does not advise. */}
-        {anyOn && (
-          <p className="roundNote" data-part="pref-category-discount">
-            避開的類型不會完全抽不到，只是比較少中；桌上人越多，影響越小。
-          </p>
-        )}
-
-        {/* **Nothing renders when no chip is on.** No 「目前沒有避開任何類型」 — D20: the surface
-            states, it does not reassure, and an empty row already says it. */}
-      </>)}
-      </section>
-      {/* **D22's warning, and it is the only thing on this screen that reads as a caution.**
-          `crossed` is READ, never computed: the server decides with `>`, so a member exactly on
-          half is not warned, and a surface that computed it could compute it wrong.
-
-          **It cannot fire at today's coverage and that is expected, not a bug** — `breadth.share`
-          is capped by categorised coverage, so 0.5 is unreachable until the classifier passes
-          half. Its never-rendering is not evidence that it works, and nothing here fakes coverage
-          to make it appear (A2-G8b stays n/a).
-
-          **The count left this sentence on 2026-09-11 and the warning did not**
-          (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
-          this screen; the evaluator's reading is that the denominator was the number and the
-          warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
-          everything that makes it a caution. Same trigger, same `crossed` read, no figure —
-          **removing the sentence itself would remove a protection, and that is the owner's word
-          to give.** Every character is in the shipped body subset, so no font rebuild.
-
-      **It sits outside the fold on purpose** (`spec-round-diet-circle-2026-10-08.md` A1): a caution
-      that is protection must not be hidden by a closed disclosure. */}
-      {prefs?.breadth.crossed && (
-        <p className="roundWarn" data-part="tonight-breadth">
-          你目前的選擇，已經讓超過一半的選項受影響。
-        </p>
-      )}
+      </div>
 
 
-      {/* The commitment, in the provenance register this surface already uses for the weather's
-          source — small, muted, factual, and never asked to reassure. It states when the number was
-          fixed; it does not tell anyone what to conclude from that (D20).
-
-          Shown in full rather than truncated. A hash exists to be compared against another hash,
-          and half of one cannot be. */}
-      {/* **UX batch U3 — the claim in words, the proof one tap away** (walk item 9). A friend read
-          the bare 64-character hash as an error message. The commitment is unchanged and still
-          shown in full — half a hash cannot be compared — it just waits behind 「怎麼驗證？」.
-          `seed_commit` is `sha256(seed)` over the seed's 32 raw bytes (`engine/draw.py`), and the
-          seed is published as hex at close, so the how-to says to turn the hex back into bytes. */}
-      {commit && (
-        <div className="commit" data-part="seed-commit">
-          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
-          <details className="verify">
-            <summary>怎麼驗證？</summary>
-            <p>開局時公開的指紋：<span className="commitHash">{commit}</span></p>
-            <p>開獎後會公開這一輪的種子（十六進位）。把它轉回位元組，算一次 SHA-256，會得到上面這串指紋。</p>
-          </details>
-        </div>
-      )}
 
 
     </main>

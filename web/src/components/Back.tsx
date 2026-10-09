@@ -39,6 +39,7 @@ export default function Back() {
         type="button"
         className="backLink"
         data-part="back"
+        data-budget-exempt="nav"
         onClick={() => window.history.back()}
       >
         <span aria-hidden="true">←</span> 返回
@@ -46,7 +47,7 @@ export default function Back() {
     )
   }
   return (
-    <a className="backLink" data-part="back" href="/">
+    <a className="backLink" data-part="back" data-budget-exempt="nav" href="/">
       <span aria-hidden="true">←</span> 返回
     </a>
   )

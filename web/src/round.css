@@ -288,30 +288,8 @@
    bar on one row read as 「可能代表目前使用者」 to both readers; the line under the roll already names
    whose dice count, in words. `data-counts` stays on the row for the gates. */
 
-/* The commitment. The weather line's register: small, muted, and it states a fact rather than
-   asking anyone to feel safer about it. `break-all` because a 64-character hash has no break
-   opportunity and would otherwise run out of its column. */
-.round .commit {
-  margin-top: 24px; font-size: var(--text-note); color: var(--color-muted);
-  font-variant-numeric: tabular-nums;
-}
-.round .commit p { margin: 0; }
-/* UX batch U3: the proof behind 「怎麼驗證？」. A native `<details>`, so it opens with the keyboard
-   and a screen reader announces its state with no script. The summary is the one control here and
-   reads as a link-sized act, underlined, never a button-sized one: the claim above it is the
-   message, this is the way to check it. `break-all` moved onto the hash alone — the only text
-   here with no break opportunity. */
-.round .verify { margin-top: 4px; }
-.round .verify summary { cursor: pointer; width: fit-content; text-decoration: underline; text-underline-offset: 3px; }
-.round .verify p { margin-top: 4px; }
-.round .commitHash { word-break: break-all; }
-/* **The hash wraps as one piece, so its last characters never sit alone on a line** (the evaluator's
-   B-4, 2026-09-15). The sentence plus a 64-character hash runs a few characters past the 720 px
-   column, and `break-all` let the browser break anywhere — measured with a wide hash, a 72 px tail
-   at 1440 and an 8 px one at 1100. `text-wrap: pretty` only moved that to 16 px. As an inline block
-   the separator and hash drop to their own line whenever they fit on one, and still break inside
-   when a column is narrower than the hash, because an inline block is never wider than its line. */
-.round .commitHash { display: inline-block; max-width: 100%; }
+/* The commitment and its 「怎麼驗證？」 fold left /round on 2026-10-09 (17f2098): the reveal keeps its
+   own folded proof, and this screen ends in the list. */
 
 
 /* ═══ the depth vocabulary · LIFT ═══════════════════════════════════════════════════════════
@@ -522,22 +500,11 @@
    is only a louder one, and a modifier class would invite a third. */
 .round [data-part="pool-vetoed"] { font-size: var(--text-lead); font-weight: 400; }
 
-/* ═══ 這一餐 is one column — `spec-round-diet-circle-2026-10-08.md` A1 ══════════════════════════
-   The two-column layout (owner-ruled axis 1, 2026-09-16) kept the act above the fold beside thirteen
-   chips. The chips now fold behind one disclosure under 這一輪的人, so the right column is gone: an
-   empty 600 px beside the act would read as something failed to load.
-
-   **1200 and up keeps the old 1100 outer width and the old left edge** (D107's gated width is 1440),
-   so the screen does not shift sideways against its neighbours; the content is held to the 680 the
-   left column always had. */
+/* ═══ 1200 and up ═══════════════════════════════════════════════════════════════════════════
+   A1's one-column widths (1100 outer, 680 content) and its 290 px pool floor went with the one
+   column on 2026-10-09: the floor existed to keep 這次不想吃的類別 below the fold under the list, and
+   the disclosure now sits in the input column. The two columns are set at the end of this file. */
 @media (min-width: 1200px) {
-  .round { width: 1100px; }
-  .round > * { max-width: 680px; }
-  /* **A floor that holds the disclosure below the 900 px fold with a short pool**
-     (`spec-round-diet-circle-2026-10-08.md` A, «target first view»): a two-place pool is about
-     195 px tall and put 這次不想吃的類別 at y 849, a fourth control in the first view. 290 puts it
-     past 900 and stays a floor, so a longer pool still grows the block. */
-  .round .poolBlock { min-height: 290px; }
   .round .act-row { margin-top: 32px; }
   /* One column of chips, each the column's full width. */
   .round .menu { columns: 1; }
@@ -593,3 +560,33 @@ main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-
 .device input, .round input { border-width: 2px; background: var(--color-paper); }
 .roundTitle { border-bottom: 3px solid var(--color-ink); padding-bottom: 10px; }
 .round .roundH { border-bottom: 1.5px solid rgb(43 23 19 / .45); padding-bottom: 6px; }
+
+/* ═══ Two columns from 900 wide — `spec-round-two-column-2026-10-09.md` ═══════════════════════
+   Owner 「左邊輸入右邊顯示清單」 (49ade4e), built per the v7b preview (44ac714). Input on the left,
+   this round's list on the right. **Last in the file and on `main.round`**, because the paper rule
+   above (`main.round, main.device`) sets a 680 width and `display: block`, and it must win over
+   both. Below 900 the three wrappers are plain blocks in the one-column order (input, list,
+   tonight menu), so a phone reads exactly what it read before. The list sticks under the bars, so a long result list on the left never pushes it out of
+   view. */
+@media (min-width: 900px) {
+  main.round {
+    width: min(1200px, 90vw);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* Row 2 takes whatever height the list adds beyond the input, so the tonight menu sits straight
+       under the input wrapper rather than under a gap. */
+    grid-template-rows: auto 1fr;
+    column-gap: 72px;
+    align-items: start;
+  }
+  .round .roundInput { grid-column: 1; grid-row: 1; }
+  .round .roundTonight { grid-column: 1; grid-row: 2; }
+  .round .roundInput .roundSearch { max-width: none; }
+  .round .roundList {
+    grid-column: 2; grid-row: 1 / 3;
+    align-self: start;
+    position: sticky;
+    top: calc(var(--bar-h) + var(--eaves-h, 0px) + 24px);
+  }
+  .round .roundList > .poolBlock:first-child { margin-top: 6px; }
+}
