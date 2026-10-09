@@ -4,7 +4,6 @@ import {
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
 import { device, noteLastRound, type Device } from '@/lib/device'
-import { fetchMembers } from '@/lib/selfserve'
 import { fetchReveal } from '@/lib/reveal'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -92,14 +91,9 @@ export default function Round() {
   const [dev] = useState<Device | null>(device)
   const [roundId, setRoundId] = useState<number | null>(null)
   const [pool, setPool] = useState<Pooled[]>([])
-  /** D108's seats and the commitment, both read from the snapshot so they are on the first painted
-   *  frame rather than arriving. */
+  /** D108's seats, read from the snapshot so they are on the first painted frame rather than
+   *  arriving. */
   const [rolls, setRolls] = useState<Roll[]>([])
-  /** The decider, from `counts` and never from `deciding_member`, though both are on the wire:
-   *  one fact, one source, so the rule line cannot name somebody the marked row does not mark. */
-  const decidingSeat = rolls.find((r) => r.counts)
-  const decider = decidingSeat ? (decidingSeat.nickname || '這個座位') : null
-  const [commit, setCommit] = useState('')
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Candidate[]>([])
   /** The query the server has actually answered, or `null` if nothing has come back for what is in
@@ -115,10 +109,6 @@ export default function Round() {
   /** The stream's own state, apart from `error`: a reconnect clears this line and must not clear
    *  a refused proposal's sentence that happens to be showing beside it. */
   const [streamDown, setStreamDown] = useState<string | null>(null)
-  /** UX batch U5e — who is in this circle, by nickname only (`GET …/members`, any member may
-   *  read it; it carries no member id by rule). Empty until it answers, and on a failure: the line
-   *  is context, not the screen's job, so it goes rather than showing an error. */
-  const [people, setPeople] = useState<string[]>([])
   /** UX batch U7 — the last closed round, for 「上一餐」. The snapshot names it (`last_result`);
    *  its name comes from the same read the reveal uses (`GET …/result`), so this line and the
    *  reveal can never name two different places. Names nobody: not who rolled, not who proposed. */
@@ -174,7 +164,6 @@ export default function Round() {
         setRoundId(r?.round_id ?? null)
         setPool(r?.pool ?? [])
         setRolls(r?.rolls ?? [])
-        setCommit(r?.seed_commit ?? '')
         // A new round, or a reconnect: the sweep belonged to the round that is being replaced.
         // **The snapshot does not carry the state and must not be made to** — it is the answer to
         // a roll, not a property of the round, so a reconnecting device is told by the next roll
@@ -310,15 +299,6 @@ export default function Round() {
      before the tree it belongs to is committed. One blank frame is the price and it is the right
      one — the alternative is a screen that flashes content the person is not entitled to. */
   useEffect(() => {
-    if (!dev) return
-    let live = true
-    fetchMembers(dev)
-      .then((m) => { if (live) setPeople(m.members.map((x) => x.nickname)) })
-      .catch(() => { if (live) setPeople([]) })
-    return () => { live = false }
-  }, [dev])
-
-  useEffect(() => {
     if (dev) return
     /* **Home, never `/device`** (UX batch U1). The key screen is the operator's back door since
        2026-09-16; a person with no seat needs to hear that this device has no circle and where
@@ -395,19 +375,18 @@ export default function Round() {
 
   return (
     <main className="round" data-screen="round">
-      {/* **One column at every width** (`spec-round-diet-circle-2026-10-08.md` A1). The two-column
-          layout existed to keep the act above the fold beside thirteen chips; the chips now fold
-          behind one disclosure below the roll, so the right column would be an empty 600 px that
-          reads as something failed to load. The act is first in the DOM and on screen. */}
+      {/* **Two columns from 900 wide** (`spec-round-two-column-2026-10-09.md`, owner 「左邊輸入右邊顯示
+          清單」, 49ade4e, built per the v7b preview, 44ac714). It reverses A1's one column, and A1's
+          reason is answered rather than ignored: the right column is not an empty 600 px any more,
+          it holds the list this round is made of. The input column comes first in the DOM, so below
+          900 the reading order is the one-column order. */}
+      <div className="roundInput" data-part="round-input">
       {lastMeal && (
         <p className="roundNote lastMeal" data-part="last-meal">
           上一餐：<span data-user-content>{lastMeal.name}</span> · <a href={`/reveal?round=${lastMeal.round}`}>看開獎 →</a>
         </p>
       )}
       <h1 className="roundTitle dSerif">這一餐</h1>
-      {people.length > 0 && (
-        <p className="roundNote" data-part="circle-people">這個圈子：<span data-user-content>{people.join('、')}</span></p>
-      )}
       {/* **「一人提一家」 was false and D110 made it checkably so** — the cap is three per person,
           stated on the home page and enforced at propose, and this line said one. Corrected to the
           ruled number rather than to a vaguer phrasing: a screen that softens a limit into 「幾家」
@@ -578,126 +557,9 @@ export default function Round() {
               the line beside it says the result was fixed at the open (D108). */}
           擲骰子，看結果
         </button>
-        {/* **UX batch U2 — the rule, said before anyone presses** (walk item 5). Three facts the
-            seat list could not carry: anyone may press, nothing about the pair depends on who
-            does, and whose pair it is. Present from the round's first frame because `counts` is
-            (D108). Revealing, not throwing: the line credits nobody's tap with the number. */}
-        {decider !== null && (
-          <p className="roundNote" data-part="deciding">
-            {/* One string, so the sentence is one piece of text: the nickname is inside a sentence
-                that reads as one (`spec-round-diet-circle-2026-10-08.md`; the budget counts text
-                nodes, and three nodes for one sentence would count three). */}
-            {`誰先按都可以。結果開局時就定了，用 ${decider} 的骰子。`}
-          </p>
-        )}
 
       </div>
 
-      {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
-          row is a loading spinner wearing a costume (the spec's words). It takes the step after
-          the menu's cap, because it is the last thing on the screen in reading order. */}
-      <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
-        <h2 className="roundH dSerif">這一輪的名單</h2>
-        {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
-            (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
-            「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
-            one person's, and at five people a sentence that narrowed it would be one guess from a
-            name (§3.0).
-
-            D20: the first sentence states what happened, the second states the condition for the
-            next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
-
-            **Browser copy, one owner.** The event carries a type and a round id and no text, so
-            `tools/server_copy.py` has nothing new to cover and `test_web_surface`'s word list is
-            this string's gate.
-
-            At the top of the pool block, so it is read before the list it is about; 擲骰 stays
-            enabled, because the fix is proposing another place and the act is not what is
-            broken. */}
-        {swept !== null && swept === roundId && (
-          <p className="roundWarn" data-part="pool-vetoed">
-            大家目前的偏好加起來，池子裡每一家都抽不到。要多幾家才擲得成。
-          </p>
-        )}
-        {pool.length === 0 ? (
-          <p className="roundNote">還沒有人提。</p>
-        ) : pool.length === 1 ? (
-          // **The reason lives beside the list, not behind a press.** The API refuses a one-place
-          // roll with 「一家店不是決定，是通知。」 and that sentence teaches something; but a
-          // control that is pressable only to be refused teaches it by wasting a tap. So the bar
-          // disables below two and the arithmetic is stated here, where a person reading the list
-          // is already looking. States, never advises (D20) — it says what the round needs, not
-          // what anyone should do about it.
-          <>
-            <ul className="rows">
-              {pool.map((p) => (
-                <li key={p.place_id} className="row" data-part="pool-row">
-                  <span className="rowName" data-user-content>{p.name}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="roundNote" data-part="need-two">
-              一輪至少要兩家店。一家店不是決定，是通知。
-            </p>
-          </>
-        ) : (
-          <ul className="rows">
-            {pool.map((p) => (
-              // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
-              // else, and the reveal is where numbers are allowed to exist at all.
-              <li key={p.place_id} className="row" data-part="pool-row">
-                <span className="rowName" data-user-content>{p.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-
-      {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
-          **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
-          one rather than adding one. That is the evaluator's `RL-4`/`RL-5` requirement and it is
-          also the honest shape: the people in this round are known, the outcome is already fixed,
-          and the only thing missing is somebody looking.
-
-          **「翻開」 and never 「擲」.** D108's copy constraint is that the dice are *revealed*, not
-          thrown — the seed was drawn at open and every pair derives from it, so a member's tap
-          discloses a number that already existed. Wording that credits the tap with producing it
-          would be the animation problem in prose. For the same reason the decider's line reads
-          「以 … 的骰子為準」 rather than anything that gives them agency they did not have. */}
-      {rolls.length > 0 && (
-        <section className="seats" data-part="roll-list">
-          <h2 className="roundH dSerif">這一輪的人</h2>
-          <ul className="seatRows">
-            {rolls.map((r, i) => (
-              <li
-                key={r.member_id}
-                className="seat"
-                data-roll-seat={i + 1}
-                data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
-                data-counts={r.counts ? 'yes' : 'no'}
-              >
-                {/* A missing nickname renders as the seat rather than as `undefined`. Not a guess
-                    at the D55 ruling — insurance against the one bug I have already shipped on this
-                    surface, where a field read from the wrong level of a payload put an empty name
-                    on screen with no error anywhere. */}
-                <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
-                {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
-                    「—」 until the 2026-10-08 label gate: two of two readers took the dash for
-                    「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
-                    looks there is nothing to show; a seat that has looked shows its pair. One
-                    「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
-                    attributes are untouched. */}
-                {r.die1 !== null && r.die2 !== null ? (
-                  <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
-                ) : (
-                  <span className="seatDice" role="img" aria-label="還沒看結果" />
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
           `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
@@ -869,29 +731,119 @@ export default function Round() {
           你目前的選擇，已經讓超過一半的選項受影響。
         </p>
       )}
+      </div>
+
+      {/* The list column: what this round is made of. Sticky beside the input column, so it stays in
+          view while a long search result list scrolls past on the left. */}
+      <div className="roundList" data-part="round-list">
+        {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
+            row is a loading spinner wearing a costume (the spec's words). It takes the step after
+            the menu's cap, because it is the last thing on the screen in reading order. */}
+        <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
+          <h2 className="roundH dSerif">這一輪的名單</h2>
+          {/* **The whole table is told, and the sentence names nobody** — owner-ruled 2026-08-30
+              (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
+              「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
+              one person's, and at five people a sentence that narrowed it would be one guess from a
+              name (§3.0).
+
+              D20: the first sentence states what happened, the second states the condition for the
+              next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
+
+              **Browser copy, one owner.** The event carries a type and a round id and no text, so
+              `tools/server_copy.py` has nothing new to cover and `test_web_surface`'s word list is
+              this string's gate.
+
+              At the top of the pool block, so it is read before the list it is about; 擲骰 stays
+              enabled, because the fix is proposing another place and the act is not what is
+              broken. */}
+          {swept !== null && swept === roundId && (
+            <p className="roundWarn" data-part="pool-vetoed">
+              大家目前的偏好加起來，池子裡每一家都抽不到。要多幾家才擲得成。
+            </p>
+          )}
+          {pool.length === 0 ? (
+            <p className="roundNote">還沒有人提。</p>
+          ) : pool.length === 1 ? (
+            // **The reason lives beside the list, not behind a press.** The API refuses a one-place
+            // roll with 「一家店不是決定，是通知。」 and that sentence teaches something; but a
+            // control that is pressable only to be refused teaches it by wasting a tap. So the bar
+            // disables below two and the arithmetic is stated here, where a person reading the list
+            // is already looking. States, never advises (D20) — it says what the round needs, not
+            // what anyone should do about it.
+            <>
+              <ul className="rows">
+                {pool.map((p) => (
+                  <li key={p.place_id} className="row" data-part="pool-row">
+                    <span className="rowName" data-user-content>{p.name}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="roundNote" data-part="need-two">
+                一輪至少要兩家店。一家店不是決定，是通知。
+              </p>
+            </>
+          ) : (
+            <ul className="rows">
+              {pool.map((p) => (
+                // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
+                // else, and the reveal is where numbers are allowed to exist at all.
+                <li key={p.place_id} className="row" data-part="pool-row">
+                  <span className="rowName" data-user-content>{p.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
 
-      {/* The commitment, in the provenance register this surface already uses for the weather's
-          source — small, muted, factual, and never asked to reassure. It states when the number was
-          fixed; it does not tell anyone what to conclude from that (D20).
+        {/* ── D108 · the seats, and who the round is settled on ─────────────────────────────
+            **Every seat is painted from the first frame, before anyone has tapped**, and a tap fills
+            one rather than adding one. That is the evaluator's `RL-4`/`RL-5` requirement and it is
+            also the honest shape: the people in this round are known, the outcome is already fixed,
+            and the only thing missing is somebody looking.
 
-          Shown in full rather than truncated. A hash exists to be compared against another hash,
-          and half of one cannot be. */}
-      {/* **UX batch U3 — the claim in words, the proof one tap away** (walk item 9). A friend read
-          the bare 64-character hash as an error message. The commitment is unchanged and still
-          shown in full — half a hash cannot be compared — it just waits behind 「怎麼驗證？」.
-          `seed_commit` is `sha256(seed)` over the seed's 32 raw bytes (`engine/draw.py`), and the
-          seed is published as hex at close, so the how-to says to turn the hex back into bytes. */}
-      {commit && (
-        <div className="commit" data-part="seed-commit">
-          <p className="commitClaim">結果開局就固定了，事後改不了。</p>
-          <details className="verify">
-            <summary>怎麼驗證？</summary>
-            <p>開局時公開的指紋：<span className="commitHash">{commit}</span></p>
-            <p>開獎後會公開這一輪的種子（十六進位）。把它轉回位元組，算一次 SHA-256，會得到上面這串指紋。</p>
-          </details>
-        </div>
-      )}
+            **「翻開」 and never 「擲」.** D108's copy constraint is that the dice are *revealed*, not
+            thrown — the seed was drawn at open and every pair derives from it, so a member's tap
+            discloses a number that already existed. Wording that credits the tap with producing it
+            would be the animation problem in prose. For the same reason the decider's line reads
+            「以 … 的骰子為準」 rather than anything that gives them agency they did not have. */}
+        {rolls.length > 0 && (
+          <section className="seats" data-part="roll-list">
+            <h2 className="roundH dSerif">這一輪的人</h2>
+            <ul className="seatRows">
+              {rolls.map((r, i) => (
+                <li
+                  key={r.member_id}
+                  className="seat"
+                  data-roll-seat={i + 1}
+                  data-roll-state={r.die1 !== null && r.die2 !== null ? 'rolled' : 'waiting'}
+                  data-counts={r.counts ? 'yes' : 'no'}
+                >
+                  {/* A missing nickname renders as the seat rather than as `undefined`. Not a guess
+                      at the D55 ruling — insurance against the one bug I have already shipped on this
+                      surface, where a field read from the wrong level of a payload put an empty name
+                      on screen with no error anywhere. */}
+                  <span className="seatName" data-user-content>{r.nickname || `座位 ${i + 1}`}</span>
+                  {/* A waiting seat shows NOTHING and keeps its words for assistive tech. It showed
+                      「—」 until the 2026-10-08 label gate: two of two readers took the dash for
+                      「還沒提店名」, because its meaning lived only in the aria-label. Before anyone
+                      looks there is nothing to show; a seat that has looked shows its pair. One
+                      「還沒看結果」 per seat stays off screen for the budget (spec A4). The seat's
+                      attributes are untouched. */}
+                  {r.die1 !== null && r.die2 !== null ? (
+                    <span className="seatDice">{`${r.die1} · ${r.die2}`}</span>
+                  ) : (
+                    <span className="seatDice" role="img" aria-label="還沒看結果" />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+
+
 
 
     </main>

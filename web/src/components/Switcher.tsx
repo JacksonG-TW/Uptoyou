@@ -84,6 +84,9 @@ export default function Switcher() {
           key={s.href}
           href={s.href}
           data-here={s.href.split('?')[0] === here ? 'yes' : 'no'}
+          /* **返回 and 首頁 sit outside the attention budget, and only those two** (owner, 17f2098). The
+             harness reports a nav mark on any other label, so 選這一餐 and 上一餐結果 still count. */
+          data-budget-exempt={s.href === '/' ? 'nav' : undefined}
           // A full page load, deliberately. There is no router and no history handling here —
           // the ruling said no routing library, and for three static destinations the browser's
           // own navigation is the whole feature.
