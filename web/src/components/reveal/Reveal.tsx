@@ -144,8 +144,10 @@ const WATCHDOG_MS = 2000
 /**
  * The dice group's two places, as transforms from its resting CSS position.
  *
- * `STAGED` is the identity — the read position, the left column at `--stage-pad`, which is what
- * the stylesheet says and what the final frame must not depend on an animation for.
+ * `STAGED` is the read position, the left column at `--stage-pad`: x and y are the stylesheet's,
+ * and the scale (0.42) is the one transform the resting dice keep. **Reduced motion goes straight
+ * to `STAGED`, never to scale 1** — scale 1 is the tumbling size, and a reduced reveal left at it
+ * covered the answer and the 定 card (found 2026-10-09).
  *
  * **`ROLLING`'s x is MEASURED, not typed** (甲改, evaluator 2026-08-26: the tumbling group sits on
  * the viewport's true centre). It used to be the constant 288, which is right only because
@@ -730,7 +732,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
         className="group"
         data-part="dice-group"
         style={rollX === null && !reduce ? { visibility: 'hidden' } : undefined}
-        animate={reduce ? { x: 0, y: 0, scale: 1 } : staged ? STAGED : { x: rollX ?? 0, y: 0, scale: 1 }}
+        animate={reduce || staged ? STAGED : { x: rollX ?? 0, y: 0, scale: 1 }}
         /* **The spring is for the retreat only.** Before `staged` the group's x changes only when it
            is measured (on arrival, on resize), and that is a correction to be applied, not a move to
            be watched — so it lands in one frame. */
