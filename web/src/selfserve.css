@@ -9,7 +9,7 @@
 .selfserve {
   width: var(--col);
   margin: 0 auto;
-  padding-block: calc(var(--bar-h) + 24px) 32px;
+  padding-block: calc(var(--bar-h) + var(--eaves-h) + 24px) 32px;
 }
 /* **One top for every self-serve step, not a centred column** (evaluator-ruled 2026-09-15). Centring
    put each step's eyebrow wherever its own height left it: at 1440 /create's two-field form sat at
@@ -21,7 +21,7 @@
 @media (min-width: 900px) {
   .selfserve {
     min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start;
-    padding-block: calc(var(--bar-h) + 93px) 60px;
+    padding-block: calc(var(--bar-h) + var(--eaves-h) + 93px) 60px;
   }
 }
 
@@ -183,13 +183,13 @@
    that clears the gold rule. The one fixed top of the steps (2026-09-15) is kept as a fixed margin. */
 main.selfserve {
   width: min(680px, calc(100vw - 32px));
-  margin: calc(var(--bar-h) + 24px) auto 56px;
+  margin: calc(var(--bar-h) + var(--eaves-h) + 24px) auto 56px;
   padding: 36px 22px 44px;
   min-height: 0;
   display: block;
 }
 @media (min-width: 900px) {
-  main.selfserve { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + 40px); }
+  main.selfserve { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + var(--eaves-h) + 40px); }
 }
 .selfserve .act {
   border: 3px solid var(--color-ink);

@@ -57,6 +57,16 @@
  */
 :root { --bar-h: calc(1.6 * var(--text-note) + 18px); }   /* 8+8 padding · 2 bottom border */
 
+/* **Roof C's room** (spec-roof-inner-screens-2026-10-09). Zero unless `main.tsx` set `data-eaves`
+   for a ruled screen; then the roof's height minus its 10 px overlap with the content below. The
+   roof draws at 0.7 scale under 700 px (`Eaves.tsx`), so the room switches at the same width. */
+:root { --eaves-h: 0px; }
+:root[data-eaves] { --eaves-h: 108px; }
+@media (max-width: 699px) { :root[data-eaves] { --eaves-h: 73px; } }
+.eaves { position: absolute; top: var(--bar-h); left: 0; width: 100%; overflow: hidden;
+         pointer-events: none; filter: drop-shadow(0 4px 0 rgb(43 23 19 / .35)); }
+.eaves svg { display: block; }
+
 .switcher a {
   padding: 8px 14px;
   font-size: var(--text-note);

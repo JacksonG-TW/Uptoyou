@@ -14,7 +14,7 @@
 .round {
   width: min(720px, 88vw);
   margin: 0 auto;
-  padding-block: calc(var(--bar-h) + 24px) 32px;
+  padding-block: calc(var(--bar-h) + var(--eaves-h) + 24px) 32px;
   padding-bottom: 56px;
 }
 
@@ -25,7 +25,7 @@
 
    `.round` keeps its own 720 — the spec is written on `.device` alone, and the selector the two
    shared is split here rather than widened. */
-.device { width: var(--col); margin: 0 auto; padding-block: calc(var(--bar-h) + 24px) 32px; }
+.device { width: var(--col); margin: 0 auto; padding-block: calc(var(--bar-h) + var(--eaves-h) + 24px) 32px; }
 
 @media (min-width: 900px) {
   /* **Vertically centred, like the home's hero.** The spec asks for `padding-block: 60px`; the top
@@ -34,7 +34,7 @@
      intent (breathing room) is met and IH-1 still holds. Flagged rather than chosen quietly. */
   .device {
     min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
-    padding-block: calc(var(--bar-h) + 24px) 60px;
+    padding-block: calc(var(--bar-h) + var(--eaves-h) + 24px) 60px;
   }
 }
 
@@ -560,13 +560,13 @@
    place below the fixed bars, and padding that clears the gold rule (outline at -10px). */
 main.round, main.device {
   width: min(680px, calc(100vw - 32px));
-  margin: calc(var(--bar-h) + 24px) auto 56px;
+  margin: calc(var(--bar-h) + var(--eaves-h) + 24px) auto 56px;
   padding: 36px 22px 44px;
   min-height: 0;
   display: block;
 }
 @media (min-width: 900px) {
-  main.round, main.device { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + 40px); }
+  main.round, main.device { padding: 48px 48px 56px; margin-top: calc(var(--bar-h) + var(--eaves-h) + 40px); }
 }
 /* the device screen sits on a column of its own; the flex centring of the bare page is retired */
 main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-ink); }
