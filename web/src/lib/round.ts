@@ -250,6 +250,10 @@ export function subscribe(
   d: Device,
   onEvent: (e: StreamEvent) => void,
   onStatus?: (m: string | null) => void,
+  /** The key no longer opens this circle (401, 403 or 404 on connect): the seat was removed while
+   *  this device was away, or is otherwise gone. Given, the screen decides what to say; without it,
+   *  the status line says the code as before. */
+  onDead?: () => void,
 ): () => void {
   const ac = new AbortController()
   let wait: ReturnType<typeof setTimeout> | undefined
@@ -260,7 +264,8 @@ export function subscribe(
         signal: ac.signal,
       })
       if (r.status === 401 || r.status === 403 || r.status === 404) {
-        onStatus?.(`連不上即時更新（${r.status}）`)
+        if (onDead) onDead()
+        else onStatus?.(`連不上即時更新（${r.status}）`)
         return
       }
       if (!r.ok || !r.body) throw new Error()

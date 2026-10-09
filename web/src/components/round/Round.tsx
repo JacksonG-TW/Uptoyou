@@ -3,7 +3,7 @@ import {
   openRound, propose, submit, unsubmit, searchPlaces, materialise, subscribe,
   type Candidate, type OpenRound, type Pooled, type Roll,
 } from '@/lib/round'
-import { device, noteLastRound, type Device } from '@/lib/device'
+import { device, forget, noteLastRound, type Device } from '@/lib/device'
 import { fetchReveal } from '@/lib/reveal'
 import { removeSeat } from '@/lib/selfserve'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
@@ -163,8 +163,17 @@ export default function Round() {
   /** The host's 請人離開 screen, and the seat chosen on it — nothing chosen when it opens. */
   const [leaving, setLeaving] = useState(false)
   const [chosen, setChosen] = useState<number | null>(null)
-  /** This seat was asked to leave: one line, then home. */
-  const [removed, setRemoved] = useState(false)
+  /** This seat is gone: `removed` when the host asked it to leave (the event), `dead` when the key no
+   *  longer opens the circle (a device that was away when it happened reconnects to a 401). Either
+   *  way the circle is forgotten, one line shows, then home. */
+  const [removed, setRemoved] = useState<null | 'removed' | 'dead'>(null)
+
+  /** Forget the circle, say one line, go home (spec §The device that was asked to leave). */
+  const gone = (why: 'removed' | 'dead') => {
+    forget()
+    setRemoved(why)
+    window.setTimeout(() => { window.location.href = '/' }, 2500)
+  }
 
   useEffect(() => {
     if (!dev) return
@@ -252,15 +261,14 @@ export default function Round() {
         if (e.round_id === openId.current) take(null)
       } else if (e.type === 'seat_left' || e.type === 'seat_removed') {
         if (e.type === 'seat_removed' && e.member_id === meRef.current) {
-          setRemoved(true)
-          window.setTimeout(() => { window.location.href = '/' }, 2500)
+          gone('removed')
           return
         }
         setRolls((rs) => rs.map((r) => (r.member_id === e.member_id ? { ...r, left: true } : r)))
       } else if (e.type === 'host_changed') {
         setHost(e.member_id)
       }
-    }, setStreamDown)
+    }, setStreamDown, () => gone('dead'))
   }, [dev])
 
   // The typeahead. Every keystroke carries a sequence number and a late response for an older
@@ -431,7 +439,12 @@ export default function Round() {
   if (removed) {
     return (
       <main className="round roundSingle" data-screen="round">
-        <p className="waitSlot" data-part="removed">房主請你離開了這個圈子。</p>
+        {/* **Two lines, because a 401 cannot say why** (the reviewer's should on 4a54d82): the event
+            knows the host asked; a dead key on reconnect could be that or anything else that ended
+            the seat, so its line states only what is true in every case. */}
+        {removed === 'removed'
+          ? <p className="waitSlot" data-part="removed">房主請你離開了這個圈子。</p>
+          : <p className="waitSlot" data-part="removed">這台裝置在這個圈子的座位已經不能用了。</p>}
       </main>
     )
   }
@@ -446,11 +459,11 @@ export default function Round() {
         <div className="confirmCard" data-part="leave-confirm">
           <h1 className="roundTitle dSerif">請誰離開這個圈子？</h1>
           <div className="choices" role="radiogroup" aria-label="請誰離開" data-part="leave-choices">
-            {leavable.map((r, i) => (
+            {leavable.map((r) => (
               <label key={r.member_id} className="choice" data-user-content>
                 <input type="radio" name="leave-who" checked={chosen === r.member_id}
                   onChange={() => setChosen(r.member_id)} />
-                <span>{seatName(r, i)}</span>
+                <span>{seatName(r, rolls.indexOf(r))}</span>
               </label>
             ))}
           </div>
@@ -468,7 +481,7 @@ export default function Round() {
                   .finally(() => setBusy(false))
               }}
             >
-              {target ? `請${target.nickname}離開` : '請人離開'}
+              {target ? `請${seatName(target, rolls.indexOf(target))}離開` : '請人離開'}
             </button>
             <button type="button" className="secondary" data-part="leave-cancel"
               onClick={() => { setLeaving(false); setChosen(null); setError('') }}>取消</button>
