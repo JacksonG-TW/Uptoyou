@@ -169,12 +169,15 @@ async def scenario(test_url: str) -> None:
               [m["nickname"] for m in payload["members"]] == ["小美", "小明", "小明"],
               str(payload["members"]))
         check("and carries NO member id — §3.0, H3: an identifier a screen never needs",
-              all(set(m) == {"nickname"} for m in payload["members"]), str(payload["members"]))
+              all(set(m) == {"nickname", "is_host"} for m in payload["members"]), str(payload["members"]))
+        check("the host is marked on its row, and only there (2026-10-09)",
+              [m["is_host"] for m in payload["members"]] == [True, False, False], str(payload["members"]))
         check("the cap travels in the payload so no screen hard-codes ten",
               payload["cap"] == 10 and payload["seats"] == 3, str(payload))
         check("the circle's own name travels too, so the home can say which circle this is",
               payload["name"] == "週三午餐"
-              and set(payload) == {"name", "members", "seats", "cap", "creator_nickname", "your_nickname"},
+              and set(payload) == {"name", "members", "seats", "cap", "creator_nickname", "your_nickname",
+                                   "you_are_host"},
               str(payload))
         check("and the creator by nickname, so a member who did not create it knows who can invite",
               payload["creator_nickname"] == "小美", str(payload))

@@ -61,7 +61,17 @@ router = APIRouter()
 
 
 async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False) -> dict:
-    """The circle's current state: an open round with its pool, else the last result (D54)."""
+    """The circle's current state: an open round with its pool, else the last result (D54).
+
+    **`me` and `host` ride on the snapshot, never on a broadcast event** (2026-10-09): the snapshot
+    is built per connection for one credential, so `me` names only the reader's own seat; `host`
+    is the circle's host seat (revision 0049), which every member may know — the waiting room
+    shows the remove control only when the two are equal.
+    """
+    host = (
+        await session.execute(text("select host_member_id from circle where id = :c"),
+                              {"c": circle_id})
+    ).scalar_one_or_none()
     open_row = (
         await session.execute(
             text(
@@ -117,6 +127,7 @@ async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False
         return {
             "type": "snapshot",
             "me": viewer,
+            "host": host,
             "open_round": open_round,
             "last_result": None,
         }
@@ -171,7 +182,7 @@ async def _snapshot(session, circle_id: int, viewer=None, evidence: bool = False
         # member shape; a snapshot is built for the credential that opened *this* stream, so an
         # operator's reconnect restores the evidence table rather than losing it.
         last_result = for_credential(last_result, evidence=evidence)
-    return {"type": "snapshot", "me": viewer, "open_round": None, "last_result": last_result}
+    return {"type": "snapshot", "me": viewer, "host": host, "open_round": None, "last_result": last_result}
 
 
 @router.get("/circles/{circle_id}/stream")
