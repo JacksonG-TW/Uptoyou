@@ -629,7 +629,10 @@ main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-
   .round .roundInput .roundSearch { max-width: none; }
   .round .roundList {
     grid-column: 2; grid-row: 1 / 3;
-    align-self: start;
+    /* Stretched to the whole grid area, not `start`: a sticky box travels only inside its parent,
+       so the column must be as tall as the page's longest column or the 名單 leaves as soon as the
+       input column (results, the open tonight menu) outgrows it (the reviewer, on 5b57fe9). */
+    align-self: stretch;
   }
   /* **Only the 名單 sticks** (the evaluator's re-gate of the combined head): with ten seats the
      column (名單 + both seat groups) grew past the viewport and a sticky box taller than the room
