@@ -1,8 +1,9 @@
 """MVP item 14 — where a reading came from, answered over stored rows only.
 
 The reveal panel answers *why this place?* for a person. This answers it for a model, over the
-same records. At this point the pipeline has written ingest rows only, so this covers ingest —
-there are no weight contributions yet.
+same records: ingest runs and publications, and a round's commitment, seats, rain baseline and
+last trip. Weight contributions exist (the engine has written them since August) and are
+deliberately outside what it reads — see the boundary below.
 
 **H20 is designed in here rather than added later, and that is the whole reason this module is
 narrow.** The hazard is that a lineage tool is built to be *useful*, and the most useful answer
@@ -11,15 +12,19 @@ carry a member and a reason its owner was promised nobody would see (D13, §3.0)
 completely, *"why did this place lose?"* is H3 firing through a door nobody watches — it is not
 a browser payload, so the network tab that would catch H3 never sees it.
 
-**So the boundary is structural, not a filter applied at the end.** These functions can only
-read four tables — publications, readings, runs and the township map. **There is no query here
-that mentions a member, a channel, or a weight**, and a test asserts the tool refuses rather
-than relying on nothing having asked. When the weight engine lands, the aggregate-only rule
-H20 states is a new function with its own test, not a widened one of these.
+**So the boundary is structural, not a filter applied at the end.** These functions read only
+the tables in `READABLE_TABLES`, each listed with its reason, and a test asserts no query reaches
+past them. Member **ids** are read, as inputs to a round's arithmetic (the seats pinned at open,
+the deciding seat); **no preference, contribution, reason, channel or nickname is read**, because
+`weight_contribution` is not in that list and `trip.member_id` is never selected. A question
+about any of those is refused rather than left to nothing having asked. The aggregate-only answer
+H20 permits for the private channel is **not built**; if it is, it is a new function with its own
+test, not a widened one of these.
 
-**Nothing is computed and presented as recorded.** Every field returned is a column. Where a
-number would have to be derived, the answer says so instead — which is why a publication's
-reading count is queried rather than remembered.
+**Nothing is computed and presented as recorded.** Answers carry stored columns, counts taken at
+query time, and values recomputed from them, each named as such — `explain_round`'s
+`deciding_member_id`, `pair_derived_from_seed`, its equality checks and `verdict` are derived and
+say so. That is why a publication's reading count is queried rather than remembered.
 
 **A forecast's timestamp is a detection time** (D42): CWA never says when a forecast was
 published, so every answer carries the label with the value and never the value alone.
@@ -420,16 +425,16 @@ def refuse(subject: str) -> None:
 
     The tool answers over `contextual` and `commercial` in full and over `private` **only in
     aggregate** — that a private contribution applied and its numeric effect, never whose or
-    why. None of that is reachable from here at all: the weight engine is unbuilt and this
-    module reads no table that carries a member or a channel. Until it does, the honest answer
-    to a question about one is a refusal that says why.
+    why. The contribution rows exist, and this module cannot reach them: `weight_contribution`
+    is outside `READABLE_TABLES`, and `trip.member_id` is never selected. The aggregate answer is
+    not built, so the honest answer to a question about one is a refusal that says why.
     """
     raise LineageRefused(
-        "this tool answers lineage over ingested rows and cannot answer about {}. The private "
-        "weight channel is answerable only in aggregate — that a contribution applied and its "
-        "numeric effect, never whose or why (H20, D13) — and the weight engine is not built, so "
-        "no such row exists to aggregate. Asking a person's reason out of a lineage tool is the "
-        "leak this boundary exists to stop.".format(subject)
+        "this tool cannot answer about {}. Weight contributions are stored, but this tool is not "
+        "allowed to read them: the private weight channel may be answered only in aggregate — "
+        "that a contribution applied and its numeric effect, never whose or why (H20, D13) — and "
+        "that aggregate answer is not built. Asking a person's reason out of a lineage tool is "
+        "the leak this boundary exists to stop.".format(subject)
     )
 
 

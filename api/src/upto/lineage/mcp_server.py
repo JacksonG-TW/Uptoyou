@@ -13,14 +13,15 @@ reading it. **The cost is admitted:** a client using a part of MCP this does not
 a clean `-32601`, and protocol drift is now this project's problem rather than a library's.
 Nothing here is a reason to avoid the SDK later; it is a reason not to need it yet.
 
-**H20 is why the tool list is short.** Every question the weight engine will make possible —
+**H20 is why the tool list is short.** Every question the weight engine's rows could answer —
 whose preference, which channel, why a place lost — is refused with a stated reason rather than
 absent, because a tool that simply lacks the feature today gains it the day somebody finds it
-useful. `explain_place_loss` exists **only** to refuse, and a test asserts the refusal.
+useful. The engine has written those rows since August; the aggregate-only answer H20 permits is
+not built. `explain_place_loss` exists **only** to refuse, and a test asserts the refusal.
 
-**Nothing is computed and presented as recorded.** Every field in every answer is a stored
-column or a count taken at query time, and the answers say which timestamps are detection
-times (D42).
+**Nothing is computed and presented as recorded.** Answers carry stored columns, counts taken at
+query time, and values recomputed from them, each named as such (`explain_round`'s verdict and
+derived pair are derived and say so); they also say which timestamps are detection times (D42).
 """
 
 from __future__ import annotations
@@ -89,13 +90,17 @@ TOOLS: Dict[str, Dict[str, Any]] = {
             "close, whether sha256 of the DECODED seed equals that commitment, the deciding member "
             "id, every member's derived pair, and whether the pair stored on the round equals the "
             "pair the seed produces. Member ids only, never nicknames. An open round reveals no seed "
-            "and says so. The seed is 32 bytes written as hex — decode before hashing. "
+            "and says so; a void round (every seat pinned at its open left) has no result and says "
+            "so. The seed is 32 bytes written as hex — decode before hashing. "
             "It also names the rain baseline (A12/D71): the reading every rain factor in the round "
-            "was measured against, its township and probability, and whether every factor came from "
-            "the same publication. That reading has no contribution row of its own — the driest "
+            "was measured against, with its township and probability. It does not check whether "
+            "every factor came from one publication. That reading has no contribution row of its own — the driest "
             "township produces none (D43) — so without it a round's rain arithmetic could not be "
             "reconstructed from its own rows. `rain_baseline: null` means no comparison happened, "
-            "which is not the same as a comparison that found no difference."
+            "which is not the same as a comparison that found no difference. "
+            "Last, it names the circle's last signed trip as of the close (D114: that place counts "
+            "×0.5 in a pool that contains it) — the trip and its place, never who signed it — or says "
+            "none had been signed."
         ),
         "inputSchema": {
             "type": "object",
@@ -162,9 +167,9 @@ TOOLS: Dict[str, Dict[str, Any]] = {
         "description": (
             "REFUSES, by design. Why a place lost a roll runs through the weight channels, and "
             "the private channel carries a member and a reason its owner was promised nobody "
-            "would see. This tool answers lineage over ingested rows only; the private channel "
-            "is answerable in aggregate at most, and the weight engine does not exist yet. The "
-            "tool is listed rather than omitted so the refusal is discoverable (H20)."
+            "would see. Those contribution rows exist, and this tool is not allowed to read them; "
+            "the private channel is answerable in aggregate at most, and that aggregate answer is "
+            "not built. The tool is listed rather than omitted so the refusal is discoverable (H20)."
         ),
         "inputSchema": {
             "type": "object",
