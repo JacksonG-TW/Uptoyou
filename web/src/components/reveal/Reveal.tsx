@@ -99,6 +99,22 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const ran = useRef(false)
 
   const anim = rollAnimFor(roundId)
+  const mounted = useRef(true)
+  const runTimers = useRef<number[]>([])
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; runTimers.current.forEach((h) => window.clearTimeout(h)) }
+  }, [])
+
+  /* **If frames stop, the screen still lands** — one failsafe per reveal, keyed on the payload alone,
+     so no re-measure can clear it. Never sooner than either run. */
+  useEffect(() => {
+    if (!data) return
+    const h = window.setTimeout(() => {
+      setLandedBy((b) => b ?? 'fallback'); setPhase('answered')
+    }, FAILSAFE_MS)
+    return () => window.clearTimeout(h)
+  }, [data])
 
   /* §3a's fetch, keyed on `evidence` so a member never makes it. A failure is swallowed: the
      counts are a footnote to the operator's table, and a 500 on the footnote must not cost it. */
@@ -250,20 +266,17 @@ export default function Reveal({ roundId }: { roundId: number }) {
         { transform: REST },
       ], { duration: T, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'both' })
     })
-    let live = true
-    const timers: number[] = []
-    const failsafe = window.setTimeout(() => {
-      if (!live) return
-      setLandedBy('fallback'); setPhase('answered')
-    }, FAILSAFE_MS)
+    // **The run's timers outlive this effect's re-runs.** The slip arriving at `lit` changes the
+    // column's height, which re-measures `rest` and re-runs this effect; clearing the timers then
+    // left a narrow screen stuck at `lit` (found by g_multi_device at 430). They are cleared on
+    // unmount only (`runTimers`).
     void Promise.all(flights.map((f) => f.finished)).then(() => {
-      if (!live) return
+      if (!mounted.current) return
       setLandedBy('animation'); setPhase('landed')
       camera([{ transform: `scale(${PUSH})` }, { transform: `scale(${PUSH - 0.015})` }, { transform: `scale(${PUSH - 0.008})` }], DICE_MS.settle, 'ease-out')
-      timers.push(window.setTimeout(toLit, DICE_MS.hold1))
-      timers.push(window.setTimeout(() => { window.clearTimeout(failsafe); toAnswered() }, DICE_MS.hold1 + DICE_MS.hold2))
+      runTimers.current.push(window.setTimeout(toLit, DICE_MS.hold1))
+      runTimers.current.push(window.setTimeout(toAnswered, DICE_MS.hold1 + DICE_MS.hold2))
     }).catch(() => { /* cancelled on unmount */ })
-    return () => { live = false; window.clearTimeout(failsafe); timers.forEach((t) => window.clearTimeout(t)) }
   }, [data, rest, reduce, anim, camera, toLit, toAnswered])
 
   /** The 籤筒 run's camera: in during the shake, back out as the stick leaves the tube. Its own
@@ -274,8 +287,6 @@ export default function Reveal({ roundId }: { roundId: number }) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     tubeMounted.current = true
     camera([{ transform: 'scale(1)' }, { transform: `scale(${PUSH})` }], TUBE_MS.shake * TUBE_MS.shakes)
-    const failsafe = window.setTimeout(() => { setLandedBy('fallback'); setPhase('answered') }, FAILSAFE_MS)
-    return () => window.clearTimeout(failsafe)
   }, [data, reduce, anim, camera])
   const tubeStick = useCallback(() => camera([{ transform: `scale(${PUSH})` }, { transform: 'scale(1)' }], 600), [camera])
   const tubeLit = useCallback(() => { setLandedBy('animation'); toLit() }, [toLit])
