@@ -304,6 +304,9 @@ async def scenario(test_url: str) -> None:
         late_back = await client.delete(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
         check("taking a submission back from it says it is void too",
               late_back.status_code == 409 and "作廢" in late_back.text, late_back.text)
+        late_trip = await client.post(f"{BASE}/rounds/{lone_rid}/trip", headers=bearer(B))
+        check("signing a trip for it reads 410 and void, never «not yet»",
+              late_trip.status_code == 410 and "作廢" in late_trip.text, late_trip.text)
         late_propose = await client.post(f"{BASE}/rounds/{lone_rid}/proposals",
                                          json={"place_id": lone_place}, headers=bearer(B))
         check("and so does proposing to it", late_propose.status_code == 409

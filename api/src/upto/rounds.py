@@ -611,6 +611,9 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
         member = await _resolve_member(session, request, round_row.circle_id)
         # A trip needs somewhere to have gone. An open round has no winner, so signing one would
         # record an outing to a place nobody has chosen yet.
+        if round_row.status == "void":
+            # Gone, not «not yet»: the result route's sentence and status (revision 0050).
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         if round_row.status != "closed" or round_row.winning_place_id is None:
             raise HTTPException(status_code=409, detail="這一輪還沒擲出結果。")
         try:
