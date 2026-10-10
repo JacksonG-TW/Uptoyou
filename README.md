@@ -311,7 +311,7 @@ search, so there is no second service to run and back up for the vectors.
 | **Database** | PostgreSQL 17 with pgvector. Seven login roles, one per job: the API, the ingests, the erasure, the backup, the lineage tool, the value checks, and the owner, held only by the one-shot migration container. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. |
 | **Models** | Ollama on an 8 GB card at home, used in nightly batches; production runs no model. |
-| **Deployment** | EC2 in Tokyo behind Cloudflare (Full strict). The server pulls published images and builds nothing; nothing pushes into it. An API process that finds the database at the wrong schema version exits at startup instead of serving. |
+| **Deployment** | AWS EC2 behind Cloudflare (Full strict). The server pulls published images and builds nothing; nothing pushes into it. An API process that finds the database at the wrong schema version exits at startup instead of serving. |
 
 ### Tests and CI
 

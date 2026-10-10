@@ -252,7 +252,7 @@
 | **資料庫** | PostgreSQL 17 + pgvector。七個登入角色，一個工作一個：API、匯入、清除、備份、血緣工具、數值檢查，以及只有一次性 migration 容器會用到的 owner。 |
 | **排程** | Apache Airflow 3，LocalExecutor，在同一個 compose 裡。 |
 | **模型** | 家裡一張 8 GB 顯示卡上的 Ollama，只跑夜間批次；正式站不跑模型。 |
-| **部署** | 東京的 EC2，前面接 Cloudflare（Full strict）。主機只拉已發布的映像檔，自己不建置，也沒有人能推東西進去。API 啟動時發現資料庫版本不對，就直接退出，不會帶著錯的版本上線。 |
+| **部署** | AWS 的 EC2，前面接 Cloudflare（Full strict）。主機只拉已發布的映像檔，自己不建置，也沒有人能推東西進去。API 啟動時發現資料庫版本不對，就直接退出，不會帶著錯的版本上線。 |
 
 ### 測試與 CI
 
