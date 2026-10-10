@@ -63,8 +63,10 @@ DAILY_CIRCLE_CEILING = int(os.environ.get("UPTO_DAILY_CIRCLE_CEILING", "200"))
 # a day per address — so one address could spend the whole ceiling above and lock creation for
 # everyone. This counts creations per address per Taipei day:
 # - **the address is never stored or logged**: the key is an HMAC under a random key made at process
-#   start and never written anywhere, so a key in memory cannot be turned back into an address, and
-#   a restart forgets every count (the owner accepted the reset);
+#   start and never written anywhere. The protection is that nothing is written and a restart
+#   forgets every count (the owner accepted the reset). The table alone cannot be turned back into
+#   addresses; a reader of this process's whole memory holds the key too and could test every IPv4
+#   address against it (2^32 HMACs), though not IPv6;
 # - **per process**: with N api instances an address gets N × the cap, still far under the ceiling;
 # - **counted only behind the proxy**: the address is the LAST `X-Forwarded-For` entry, the one nginx
 #   appends from its own `$remote_addr` (after realip). A request with no such header did not come

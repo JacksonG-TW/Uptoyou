@@ -785,22 +785,43 @@ async def scenario(test_url: str) -> None:
         check("a request that did not come through the proxy (no header) is not counted",
               direct.status_code == 201, direct.status_code)
 
-        # The count is of circles MADE: a creation that fails after the reservation gives it back.
-        # Driven on the module itself (the global ceiling cannot be reached cheaply over HTTP).
-        from upto import circles as circles_module
-
-        class Asked:
-            headers = {"x-forwarded-for": "192.0.2.1"}
-        for _ in range(circles_module.PER_ADDRESS_DAILY):
-            circles_module._refund_address_day(circles_module._spend_address_day(Asked()))
-        try:
-            circles_module._spend_address_day(Asked())
-            refunded = True
-        except Exception:  # noqa: BLE001 — the 429 would mean the refunds did not land
-            refunded = False
-        check("failed creations give their reservation back, so they never use up the five", refunded)
 
         await engine.dispose()
+
+
+async def refunds_on_failure(environment: dict) -> None:
+    """The per-address count is of circles MADE, driven through the route (the reviewer's should).
+
+    A second server whose global ceiling is 0 refuses every creation AFTER the per-address
+    reservation. Six attempts from one address must each meet the ceiling's sentence; without the
+    route's refund the sixth would meet the per-address one instead."""
+    import httpx  # noqa: PLC0415
+
+    port = PORT - 1
+    server = subprocess.Popen(
+        ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(port)],
+        cwd="/srv/src", env=dict(environment, UPTO_DAILY_CIRCLE_CEILING="0"),
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    try:
+        async with httpx.AsyncClient() as client:
+            for _ in range(60):
+                try:
+                    if (await client.get(f"http://127.0.0.1:{port}/health")).status_code == 200:
+                        break
+                except httpx.TransportError:
+                    await asyncio.sleep(0.2)
+            sentences = []
+            for i in range(6):
+                refused = await client.post(f"http://127.0.0.1:{port}/circles",
+                                            json={"name": f"滿了{i}", "nickname": "小周"},
+                                            headers={"X-Forwarded-For": "192.0.2.44"})
+                sentences.append((refused.status_code, refused.json().get("detail")))
+        check("a creation the ceiling refuses gives its count back: six tries, six ceiling refusals",
+              sentences == [(429, "今天開的圈子太多了，明天再來。")] * 6, sentences)
+    finally:
+        server.terminate()
+        server.wait(timeout=10)
 
 
 async def with_temporary_database() -> int:
@@ -840,6 +861,7 @@ async def with_temporary_database() -> int:
                 return 2
 
         await scenario(test_url)
+        await refunds_on_failure(environment)
     finally:
         if server is not None:
             server.terminate()
