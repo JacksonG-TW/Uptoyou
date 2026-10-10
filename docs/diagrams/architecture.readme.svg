@@ -40,7 +40,7 @@
 <text x="720.0" y="249.0" text-anchor="middle" font-size="15" font-weight="700" fill="#111111" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">pull-deploy</text>
 <text x="720.0" y="266.0" text-anchor="middle" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">timer, by full sha</text>
 <path d="M640,286 L332,286 L332,296" fill="none" stroke="#111111" stroke-width="1.8" marker-end="url(#a)"/>
-<text x="520" y="280" text-anchor="middle" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">compose up</text>
+<text x="480" y="280" text-anchor="middle" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">compose up (all services)</text>
 <path d="M746,132 L746,224" fill="none" stroke="#111111" stroke-width="1.8" marker-end="url(#a)"/>
 <text x="740" y="180" text-anchor="end" font-size="13" font-weight="400" fill="#5A5C63" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">pulls</text>
 <path d="M289,132 L289,146 L690,146 L690,224" fill="none" stroke="#111111" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#a)"/>
