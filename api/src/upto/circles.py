@@ -14,11 +14,14 @@ response and nowhere else — not in a log, not in a query string. The client pu
 extracted from the CLI for this file so that the count happens in one place; a second door with its
 own copy of «ten» would be the boundary spelled twice.
 
-**What a leaked ticket can do, because it decides the shapes below.** A tap grows a seat; a seat
-reads nicknames, proposals and reveals, and cannot read another member's preferences. The radius is
-`SEAT_CAP - seats` strangers and it is a **total, not a rate** — there is no leave, no seat reuse
-and no churn, so a circle of five can absorb at most five before the ticket is dead of its own
-accord. That bound is why re-issue exists and why expiry does not (A24's research paragraph).
+**What a leaked ticket can do, and what bounds it (owner 「A」, 2026-10-10).** A tap grows a seat; a
+seat reads nicknames, proposals and reveals, and cannot read another member's preferences. Since a
+seat can be given back (`leave_circle`, revision 0048), the radius is a **rate, not a total**: while
+a ticket lives, strangers can join, leave and join again, never more than `SEAT_CAP` seated at once.
+The bounds are four: the ticket's hour (`TICKET_LIFETIME`), the seat
+cap, the host's 「換一條新的連結」 (re-issue; the old ticket answers 410 at once) and 「請人離開」
+(`remove_member`). A single-use ticket and a per-ticket join count were weighed and rejected: one
+link shared by a whole group is the product.
 """
 
 from __future__ import annotations
