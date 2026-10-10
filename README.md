@@ -2,33 +2,62 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#system-architecture)
-
 **When friends can't agree where to eat, a pair of weighted dice makes the call, so nobody has to.**
 
 *You said «anywhere is fine». Did you mean it, or did you just not want to be the one who picked?*
 
-### The work, in three numbers
-
-| | Before → after | What was measured |
-|---|---|---|
-| **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
-| **AI classification** | Cuisine labels: **51.5% → 61.0% correct** by adding retrieval | A local 2-billion-parameter model labels each restaurant, scored on 200 frozen hand-labelled names. Retrieving five labelled look-alikes first gave the jump. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
-| **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
-
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
+
+## Why this exists
+
+A few friends want dinner. Everybody has a mild preference. Twenty minutes later nobody has chosen,
+or the loudest voice did.
+
+Choosing where a group eats goes wrong in three familiar ways:
+
+1. **Nobody wants to own the choice.** Whoever picks carries «we should never have come here», so
+   everyone says «anywhere is fine» and the decision stalls.
+2. **The usual fixes move the argument instead of ending it.** A ranking makes the group argue about
+   the ranking, and someone still has to pick from it. A vote settles it by majority, so the same
+   person loses every time.
+3. **What the group knows gets lost.** It is raining over one district, you ate at one place last
+   week, someone cannot eat a whole kind of food tonight. A coin toss ignores all of it; a debate
+   lets whoever speaks loudest decide which facts count.
+
+Up to you hands the choice to a draw nobody owns, and lets those facts change each place's chances in
+the open:
+
+- every proposed place can be drawn, and what the group knows lowers its chances by written rules,
+  never by someone's say-so;
+- the draw is fixed before anyone proposes, so nobody can steer it;
+- what each person would rather skip tonight stays theirs: it moves the chances and is never shown
+  to the others;
+- it never says a place is good, only facts about it.
+
+## How the dice decide
+
+Two dice have 36 outcomes, one per drawer of the 籤詩櫃 (a temple's cabinet of fortune slips). Each proposed place holds some of them, and the group's facts change how
+many:
+
+| Factor | Effect on a place's odds | Why |
+|---|---|---|
+| Rain over its district | lowered, relative to the driest district in tonight's pool | walking in the rain is a real cost |
+| The circle went there last time | halved | variety, without removing the option |
+| Someone avoids its category | lowered by 1/N, N = seats at the table | one objection among five weighs less than among two |
+| Nothing applies | unchanged | every place starts at 1 |
+
+These are **weighted dice, not a ranking**. An avoided category is **a discount, not a veto**: with five
+at the table it loses a fifth and stays reachable. The constants are written policy (×0.5, 1/N, ×0.8);
+with no record of what real groups chose, there is nothing to train a scorer on, and a stated rule can
+be checked.
+
+## How to use it
 
 > **Try this in 30 seconds.** Open the site and create a circle (a group deciding one meal). Copy the invite link and open it in a
 > private window: that is your second friend. Each of you proposes a place and presses 提交 (submit); when everyone is in, the reveal opens.
 >
 > *What the live demo holds:* Taipei's restaurants only, on one small server sized for a few groups at
 > once. No account, no email.
-
-**Where to read next:** [The data pipeline →](#the-data-pipeline) ·
-[The classifier →](#the-classifier-and-its-evaluation) ·
-[How the dice decide →](#how-the-dice-decide) · [Run it yourself →](#quick-start)
-
-### How to use it
 
 1. **Open the home page**: today's weather, and 開一個圈子 to start.
 
@@ -54,25 +83,27 @@
 
    ![Waiting for everyone](docs/tutorial/5-waiting.png)
 
-7. **The reveal**: dice or the 籤筒, picked per round, then the drawer and the slip.
+7. **The reveal**: dice or the 籤筒, picked per round, then the drawer and its fortune slip.
 
    ![The reveal](docs/tutorial/6-reveal.png)
 
-## Why this exists
-
-A few friends want dinner. Everybody has a mild preference, and nobody wants to own the decision. So
-the group follows the loudest voice, or spends twenty minutes not choosing.
-
-The usual software answer is a ranking. That only moves the argument: now the group argues about the
-ranking, and whoever picks from it still owns the choice. Dice take the choice off everyone's hands.
-Weighting them lets the group's facts count: rain, where you went last week, what someone can't eat
-tonight.
-
-**It is not** a food-recommendation site (it never says a place is good, only facts about it), a vote
-(a majority leaves the same person losing every time), or a blind draw (every place's odds have a
-stated reason, and the draw is fixed before anyone proposes).
+---
 
 *Everything below is how it's built.*
+
+[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#system-architecture)
+
+**Where to read next:** [The data pipeline →](#the-data-pipeline) ·
+[The classifier →](#the-classifier-and-its-evaluation) ·
+[The draw and privacy →](#the-draw-and-privacy-in-the-database) · [Run it yourself →](#quick-start)
+
+## The work, in three numbers
+
+| | Before → after | What was measured |
+|---|---|---|
+| **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
+| **AI classification** | Cuisine labels: **51.5% → 61.0% correct** by adding retrieval | A local 2-billion-parameter model labels each restaurant, scored on 200 frozen hand-labelled names. Retrieving five labelled look-alikes first gave the jump. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
+| **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
 
 ## The data pipeline
 
@@ -252,24 +283,7 @@ as its own database role with read access to twelve tables. A seventh tool, `exp
 exists only to refuse: why a place lost runs through members' private preferences, so the boundary is
 listed where an agent can see it.
 
-## How the dice decide
-
-Two dice have 36 outcomes, one per drawer of the 籤詩櫃. Each proposed place holds some of them, and the group's facts change how
-many:
-
-| Factor | Effect on a place's odds | Why |
-|---|---|---|
-| Rain over its district | lowered, relative to the driest district in tonight's pool | walking in the rain is a real cost |
-| The circle went there last time | halved | variety, without removing the option |
-| Someone avoids its category | lowered by 1/N, N = seats at the table | one objection among five weighs less than among two |
-| Nothing applies | unchanged | every place starts at 1 |
-
-These are **weighted dice, not a ranking**. An avoided category is **a discount, not a veto**: with five
-at the table it loses a fifth and stays reachable. The constants are written policy (×0.5, 1/N, ×0.8);
-with no record of what real groups chose, there is nothing to train a scorer on, and a stated rule can
-be checked.
-
-![The reveal: the drawn drawer in the 籤詩櫃, and the slip naming tonight's place](docs/tutorial/6-reveal.png)
+## The draw and privacy, in the database
 
 **The draw is fixed before the first proposal**: a seed is committed when the round opens and revealed
 when it closes, and both travel with the result, so anyone in the circle can check the draw against what

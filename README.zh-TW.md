@@ -2,31 +2,48 @@
 
 [English](README.md) | [繁體中文](README.zh-TW.md)
 
-[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
-
 **朋友吵不出要吃什麼的時候，讓加權骰子幫大家做決定，沒有人需要當壞人。**
 
 *你說「隨便」，真的是隨便嗎？還是只是不想當那個選錯的人？*
 
-### 三個數字看這個專案的成果
-
-| 成果 | 量測內容 |
-|---|---|
-| **資料管線**：當晚沒有新資料，**15.0 秒 → 1.6 秒** | 七個政府開放資料來源（六個排程，其中氣象排程一次抓兩種資料），每晚更新臺北 35,965 家餐廳。用雜湊值判斷檔案有沒有變，沒變就直接跳過解析。 |
-| **AI 分類**：料理類別正確率 **51.5% → 61.0%**（加入檢索） | 家裡的顯示卡跑二十億參數的模型，幫每家店分類，用同一份 200 筆人工標註、固定不變的測試集評分。先檢索五筆相似的已標註店名當範例，正確率就跳上來。之後測試集改成十三個類別、重新標註 19 筆，在新測試集上是 71.0%（測試集不同，兩個數字不互相比較）。另有一個 [MCP 工具](#給-ai-agent-用的工具透過-mcp-查資料血緣)，讓 AI agent 不用寫 SQL 就能查任何數字的來源（哪一份政府檔案、哪一晚的排程）。 |
-| **正式上線**：API 與資料庫的即時連線被切斷，`/health` **0.18 秒內回報，1.23 秒重新連上** | 跑在一台 EC2 上，前面接 Cloudflare。排程失敗會傳手機通知；每晚的備份 9.4 秒就能還原到全新的資料庫。 |
-
 **直接試用：[uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
+
+## 為什麼做這個
+
+朋友問要吃什麼，大家都回「都可以」。二十分鐘過去，還是沒人決定，不然就是最大聲的那個人說了算。
+
+一群人決定去哪吃飯，常卡在三個地方：
+
+1. **沒有人想負責。** 挑的人要承擔那一句「早知道就不要吃這家」，所以大家都說「都可以」，事情就卡住。
+2. **常見的解法只是換個地方吵。** 排行榜讓大家改吵排行榜準不準，最後還是要有人挑；投票用多數決，少數的那個人每次都吃虧。
+3. **大家知道的事實被丟掉。** 某一區在下雨、上週才吃過某家、有人今天整類食物都不能吃。擲銅板全部不管；吵一吵，就變成誰大聲誰說了算。
+
+「由你決定」把選擇交給一次沒有人能控制的抽籤，再讓這些事實照規則影響每家店被抽中的機會：
+
+- 每家被提名的店都有機會被抽中；下雨、上次去過、有人不想吃，會照寫好的規則讓它的機會變小，不是看誰比較大聲；
+- 抽籤在大家提店之前就已經固定，沒有人能動手腳；
+- 你這次不想吃的類別只有你自己知道：它會影響機會，但不會讓別人看到；
+- 不說哪家好吃，只呈現關於這家店的事實。
+
+## 骰子怎麼決定
+
+兩顆骰子有 36 種結果，每一種對應籤詩櫃的一格。每家被提名的店分到其中幾種，大家知道的事實會改變它分到多少：
+
+| 因素 | 對機會的影響 | 原因 |
+|---|---|---|
+| 那一區在下雨 | 降低，跟這次候選裡最乾的那一區比 | 下雨天走路是真的麻煩 |
+| 這個圈子上次去過 | 減半 | 換換口味，但不排除 |
+| 有人避開這個類別 | 降低 1/N，N 是同桌人數 | 五個人裡一個人反對，比兩個人裡一個人反對輕 |
+| 都沒有 | 不變 | 每家店都從 1 開始 |
+
+這是**加權骰子，不是排行榜**。有人避開的類別是**打折，不是否決**：五個人同桌時只少五分之一，還是有機會中。這些係數是寫死的規則（×0.5、1/N、×0.8）：沒有真實的團體選擇紀錄可以拿來訓練模型，而寫明的規則可以被檢查。
+
+## 怎麼用
 
 > **30 秒試玩。** 打開網站，建立一個圈子（一起決定一餐的一群人）。複製邀請連結，用無痕視窗打開，這個視窗就當作第二位朋友。
 > 兩邊各提一家店，按「提交」；大家都提交了，就開獎。
 >
 > *試用版的範圍：* 只有臺北的餐廳，跑在一台小主機上，同時容納幾組人。不用註冊、不用 email。
-
-**接著看：** [資料管線 →](#資料管線) · [分類模型 →](#分類模型與評估) ·
-[骰子怎麼決定 →](#骰子怎麼決定) · [自己架起來 →](#快速開始)
-
-### 怎麼用
 
 1. **打開首頁**：今天的天氣，和「開一個圈子」。
 
@@ -56,21 +73,22 @@
 
    ![開獎](docs/tutorial/6-reveal.png)
 
-## 為什麼做這個
-
-朋友問要吃什麼，大家都回「都可以」。可是真的都可以嗎？我們怕的，往往是選錯之後那一句「早知道就不要吃這家」。
-
-沒有人不想吃好吃的，只是沒有人想承擔選擇的責任。常見的做法是給一份排行榜，但這只是把爭論搬家：大家改吵排行榜準不準，最後挑的人還是要負責。
-
-所以我們把責任交給骰子。骰子擲一次就定案，結果不是誰硬要的。骰子再加權，讓大家知道的事實也算數：會不會下雨、上次去過哪、今天誰不能吃什麼。
-
-**這個專案不做的事：**
-
-- 不是美食推薦網站：我們不說哪家好吃，只呈現事實。
-- 不是投票：多數決會讓少數人每次都吃虧。
-- 不是隨便亂抽：每家店的機會都有根據，抽籤用的種子開局時就固定，事後誰都改不了。
+---
 
 *以下是它怎麼做出來的。*
+
+[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
+
+**接著看：** [資料管線 →](#資料管線) · [分類模型 →](#分類模型與評估) ·
+[抽籤與隱私 →](#資料庫裡的抽籤與隱私) · [自己架起來 →](#快速開始)
+
+## 三個數字看成果
+
+| 成果 | 量測內容 |
+|---|---|
+| **資料管線**：當晚沒有新資料，**15.0 秒 → 1.6 秒** | 七個政府開放資料來源（六個排程，其中氣象排程一次抓兩種資料），每晚更新臺北 35,965 家餐廳。用雜湊值判斷檔案有沒有變，沒變就直接跳過解析。 |
+| **AI 分類**：料理類別正確率 **51.5% → 61.0%**（加入檢索） | 家裡的顯示卡跑二十億參數的模型，幫每家店分類，用同一份 200 筆人工標註、固定不變的測試集評分。先檢索五筆相似的已標註店名當範例，正確率就跳上來。之後測試集改成十三個類別、重新標註 19 筆，在新測試集上是 71.0%（測試集不同，兩個數字不互相比較）。另有一個 [MCP 工具](#給-ai-agent-用的工具透過-mcp-查資料血緣)，讓 AI agent 不用寫 SQL 就能查任何數字的來源（哪一份政府檔案、哪一晚的排程）。 |
+| **正式上線**：API 與資料庫的即時連線被切斷，`/health` **0.18 秒內回報，1.23 秒重新連上** | 跑在一台 EC2 上，前面接 Cloudflare。排程失敗會傳手機通知；每晚的備份 9.4 秒就能還原到全新的資料庫。 |
 
 ## 資料管線
 
@@ -213,22 +231,9 @@
 
 一個走 stdio 的 MCP server，讓 agent 不用寫 SQL 就能問「這個數字從哪來」。六個工具會回答：某筆預報在哪裡發布、某筆觀測從哪來、一次擲骰的每個權重讀了哪些資料、某次匯入做了什麼、某個來源的歷史、某次發布的細節。它用自己的資料庫角色連線，只能讀十二張表。第七個工具 `explain_place_loss` 存在的目的就是拒絕：一家店為什麼輸，牽涉到成員的私人偏好，所以這條界線直接列出來，讓 agent 看得到。
 
-## 骰子怎麼決定
+## 資料庫裡的抽籤與隱私
 
-兩顆骰子有 36 種結果，每一種對應籤詩櫃的一格。每家被提名的店分到其中幾種，大家知道的事實會改變它分到多少：
-
-| 因素 | 對機會的影響 | 原因 |
-|---|---|---|
-| 那一區在下雨 | 降低，跟這次候選裡最乾的那一區比 | 下雨天走路是真的麻煩 |
-| 這個圈子上次去過 | 減半 | 換換口味，但不排除 |
-| 有人避開這個類別 | 降低 1/N，N 是同桌人數 | 五個人裡一個人反對，比兩個人裡一個人反對輕 |
-| 都沒有 | 不變 | 每家店都從 1 開始 |
-
-這是**加權骰子，不是排行榜**。有人避開的類別是**打折，不是否決**：五個人同桌時只少五分之一，還是有機會中。這些係數是寫死的規則（×0.5、1/N、×0.8）：沒有真實的團體選擇紀錄可以拿來訓練模型，而寫明的規則可以被檢查。
-
-![開獎畫面：籤詩櫃裡抽中的那一格，和寫著今晚去哪的籤](docs/tutorial/6-reveal.png)
-
-**抽籤結果在第一個人提案前就固定了**：開局時先公開種子的承諾，結束時公開種子本身，兩者都跟著結果一起回傳，圈子裡任何人都能對照開局時固定的內容檢查。每個因素在這一輪結束時寫成一列；操作者的收據直接讀回這些列，不重算。
+**抽籤結果在第一個人提案前就固定了**：開局時先公開種子的雜湊值，結束時公開種子本身，兩者都跟著結果一起回傳，圈子裡任何人都能對照開局時固定的內容檢查。每個因素在這一輪結束時寫成一列；操作者的收據直接讀回這些列，不重算。
 
 **隱私在資料庫層把關。** 一輪結束時，觸發器會在儲存結果的同一個交易裡，抹掉「誰提了哪家」。寫入偏好不發出任何事件，因為人少的時候，從事件發生的時間點就能猜出是誰。每晚的清除工作用一個只能動那張表的角色，刪掉沒用到的偏好。
 
