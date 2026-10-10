@@ -1,0 +1,91 @@
+# Builds the three images the box runs and puts them in the registry, tagged with this commit.
+#
+# The box pulls them on its own timer; nothing here reaches the box. A tag is the full commit sha and
+# is never overwritten: a commit that already has its images skips the build, so the images a check
+# was run against are the images that ship. `candidate` is where a release is built and checked
+# before `main` moves to the same commit; `latest` moves only on `main`.
+#
+# No pull_request trigger: a fork's pull request never runs with a write token. The only credential
+# is this run's own GITHUB_TOKEN, with `packages: write` and nothing else, and no third-party action
+# runs beside it — only the runner's docker CLI and a pinned checkout.
+
+name: cd
+
+on:
+  push:
+    branches: [candidate, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io/jacksong-tw
+  SOURCE_LABEL: org.opencontainers.image.source=https://github.com/JacksonG-TW/Uptoyou
+
+jobs:
+  build:
+    name: Build and push the images for this commit
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Log in to the registry with this run's token
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and push, never over an existing tag
+        run: |
+          set -eu
+          build() {
+            img=$1; shift
+            ref="$REGISTRY/upto-$img:$GITHUB_SHA"
+            if docker manifest inspect "$ref" >/dev/null 2>&1; then
+              echo "upto-$img:$GITHUB_SHA already exists — not rebuilt, not overwritten"
+              return 0
+            fi
+            docker build --label "$SOURCE_LABEL" -t "$ref" "$@"
+            docker push --quiet "$ref"
+            echo "pushed upto-$img:$GITHUB_SHA"
+          }
+          build api --target api ./api
+          build airflow -f airflow/Dockerfile .
+          build proxy -f proxy/Dockerfile .
+
+  verify:
+    name: Verify, read as the box does, move latest on main
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Every image is in the registry, and readable with no credential at all
+        run: |
+          set -eu
+          anon=$(mktemp -d)
+          for img in api airflow proxy; do
+            ref="$REGISTRY/upto-$img:$GITHUB_SHA"
+            digest=$(DOCKER_CONFIG="$anon" docker buildx imagetools inspect "$ref" --format '{{json .Manifest}}' | jq -r .digest)
+            [ -n "$digest" ] && [ "$digest" != null ] || { echo "upto-$img:$GITHUB_SHA is not readable anonymously"; exit 1; }
+            echo "upto-$img:$GITHUB_SHA $digest"
+          done
+      - name: Move latest (main only, after all three are verified)
+        if: github.ref == 'refs/heads/main'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          printf '%s' "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for img in api airflow proxy; do
+            docker buildx imagetools create -t "$REGISTRY/upto-$img:latest" "$REGISTRY/upto-$img:$GITHUB_SHA"
+          done
