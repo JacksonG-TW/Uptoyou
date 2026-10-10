@@ -133,9 +133,17 @@ validated for crossings, label clearance and readability before it is exported t
 size. A README column is about 840 pixels wide, and archify's fixed text sizes left its labels
 at 4–9 px there; drawn at the column's own width, every word in these five is 13 px or larger.
 Their facts are the archify specifications' (`architecture.json`, `etl-flow.json`,
-`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. The charts deliberately do **not**
-use the product's own palette: they are engineering documents, meant to look like a different
-kind of artifact from the app.
+`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. They are one engineers' set, not the
+product's look (owner, 2026-10-10: «給工程師看…這是 github 不是產品畫面»): a white ground, black lines
+and arrows, and a few colours that each mean one thing, the same thing in every chart — blue for
+public open data and its reference copy, green for weather, vermilion for the product, slate for the
+database and what it stores, purple for the scheduled pipeline (Okabe–Ito hues, which stay apart for
+the common colour-vision deficiencies), and pale yellow with a heavy black border for alerts and
+models — told from vermilion by lightness, since a darker amber looked the same as vermilion to
+protan and deutan readers. A box takes a light tint of its
+colour with the full colour as its border; a group's outline takes the colour, dashed. Every text
+clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` keeps black on white until it
+is redrawn in the same idiom.
 
 **Each file is one file.** No stylesheet, no webfont, no CDN script, no remote image — the
 upstream skill's Google Fonts link and its two CDN export scripts were removed for exactly this
@@ -151,6 +159,15 @@ page under Playwright makes **zero** non-`file://` requests and logs no console 
 
 Chinese labels (店名 · 品牌名稱 · 登記名稱 · 統編 · 法人 · 行業代號) resolve through the local
 font stack, with *Noto Sans TC* in it.
+
+### Re-shooting the five README pictures
+
+Each `*.readme.svg` is shot at twice its own size (1680 px wide) by headless chromium. Its text asks
+for Helvetica and then `sans-serif`; map both to Noto Sans TC, or the Latin falls back to DejaVu and
+every width changes. A fontconfig file with `<alias binding="strong">` entries preferring
+`Noto Sans TC` for `sans-serif`, `Helvetica Neue`, `Helvetica` and `Arial` (and `<dir>~/.fonts</dir>`)
+does it: load each SVG with `FONTCONFIG_FILE` pointing at it, a viewport of the SVG's own
+`width × height` and `deviceScaleFactor: 2`, and screenshot it to the `.png` beside it.
 
 ### Re-shooting the PNGs
 

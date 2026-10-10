@@ -111,6 +111,8 @@ be checked.
 
 ![The ETL pipeline: seven sources into one store with a run log](docs/diagrams/etl-flow.png)
 
+*Colours in the charts: blue public data · green weather · vermilion the product · grey stored · purple the scheduled pipeline · yellow alerts and models.*
+
 Seven sources in six ingest jobs: the CWA weather job brings in both the forecast and the station observations. Every source is published open data, used inside its licence. Sources are joined on the registry
 numbers they share (統編, 登錄字號), never on fuzzy name matching.
 
