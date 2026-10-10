@@ -111,6 +111,8 @@ be checked.
 
 ![The ETL pipeline: seven sources into one store with a run log](docs/diagrams/etl-flow.png)
 
+*Colours in the charts: blue public data · green weather · vermilion the product · grey stored · purple the scheduled pipeline · yellow alerts and models.*
+
 Seven sources in six ingest jobs: the CWA weather job brings in both the forecast and the station observations. Every source is published open data, used inside its licence. Sources are joined on the registry
 numbers they share (統編, 登錄字號), never on fuzzy name matching.
 
@@ -304,12 +306,12 @@ search, so there is no second service to run and back up for the vectors.
 
 | Layer | What runs |
 |---|---|
-| **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN and no runtime fetch; two fonts cut down to the characters the pages use. |
+| **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. Nothing is loaded from a third-party CDN at runtime; Cloudflare caches the built files at its edge. Two fonts cut down to the characters the pages use. |
 | **API** | Python, FastAPI, SQLAlchemy, async end to end; 50 hand-written Alembic migrations (triggers, grants and CHECK constraints). |
 | **Database** | PostgreSQL 17 with pgvector. Seven login roles, one per job: the API, the ingests, the erasure, the backup, the lineage tool, the value checks, and the owner, held only by the one-shot migration container. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. |
 | **Models** | Ollama on an 8 GB card at home, used in nightly batches; production runs no model. |
-| **Deployment** | EC2 in Tokyo behind Cloudflare (Full strict). The server pulls published images and builds nothing; nothing pushes into it. An API process that finds the database at the wrong schema version exits at startup instead of serving. |
+| **Deployment** | AWS EC2 behind Cloudflare (Full strict). The server pulls published images and builds nothing; nothing pushes into it. An API process that finds the database at the wrong schema version exits at startup instead of serving. |
 
 ### Tests and CI
 

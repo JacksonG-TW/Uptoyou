@@ -4,7 +4,7 @@
 
 **朋友吵不出要吃什麼的時候，讓加權骰子幫大家做決定，沒有人需要當壞人。**
 
-*你說「隨便」，真的是隨便嗎？還是只是不想當那個選錯的人？*
+你說「隨便」，真的是隨便嗎？還是只是不想當那個選錯的人？
 
 **直接試用：[uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
@@ -43,7 +43,7 @@
 > **30 秒試玩。** 打開網站，建立一個圈子（一起決定一餐的一群人）。複製邀請連結，用無痕視窗打開，這個視窗就當作第二位朋友。
 > 兩邊各提一家店，按「提交」；大家都提交了，就開獎。
 >
-> *試用版的範圍：* 只有臺北的餐廳，跑在一台小主機上，同時容納幾組人。不用註冊、不用 email。
+> **試用版的範圍：** 只有臺北的餐廳，跑在一台小主機上，同時容納幾組人。不用註冊、不用 email。
 
 1. **打開首頁**：今天的天氣，和「開一個圈子」。
 
@@ -75,7 +75,7 @@
 
 ---
 
-*以下是它怎麼做出來的。*
+**以下是它怎麼做出來的。**
 
 [![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
 
@@ -95,6 +95,8 @@
 ### 七個來源，一張排程表
 
 ![ETL 流程：七個來源匯入同一個資料庫，每次執行都留紀錄](docs/diagrams/etl-flow.png)
+
+圖表顏色：藍＝公開資料、綠＝天氣、朱紅＝產品、灰＝資料庫與儲存的檔案、紫＝排程管線、黃＝通知與模型。
 
 七個來源分成六個匯入排程：中央氣象署的排程同時抓預報和測站觀測。全部是政府開放資料，都在授權範圍內使用。來源之間用統編、登錄字號這類編號串接，不用店名模糊比對。
 
@@ -245,12 +247,12 @@
 
 | 層 | 用什麼 |
 |---|---|
-| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy 映像檔裡建置。不用 CDN、執行時不抓外部資源；兩套字型只保留頁面用到的字。 |
+| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy 映像檔裡建置。執行時不從第三方 CDN 抓任何東西；建置好的檔案由 Cloudflare 在各地快取。兩套字型只保留頁面用到的字。 |
 | **API** | Python、FastAPI、SQLAlchemy，全程 async；50 個手寫的 Alembic migration（觸發器、權限、CHECK 約束）。 |
 | **資料庫** | PostgreSQL 17 + pgvector。七個登入角色，一個工作一個：API、匯入、清除、備份、血緣工具、數值檢查，以及只有一次性 migration 容器會用到的 owner。 |
 | **排程** | Apache Airflow 3，LocalExecutor，在同一個 compose 裡。 |
 | **模型** | 家裡一張 8 GB 顯示卡上的 Ollama，只跑夜間批次；正式站不跑模型。 |
-| **部署** | 東京的 EC2，前面接 Cloudflare（Full strict）。主機只拉已發布的映像檔，自己不建置，也沒有人能推東西進去。API 啟動時發現資料庫版本不對，就直接退出，不會帶著錯的版本上線。 |
+| **部署** | AWS 的 EC2，前面接 Cloudflare（Full strict）。主機只拉已發布的映像檔，自己不建置，也沒有人能推東西進去。API 啟動時發現資料庫版本不對，就直接退出，不會帶著錯的版本上線。 |
 
 ### 測試與 CI
 
