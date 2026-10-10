@@ -11,6 +11,7 @@ import { arrive } from './lib/motion'
 import { dateline } from './lib/dateline'
 import { fetchPlaceCount, type PlaceCount } from './lib/places'
 import { fetchMembers, readInviteRole, type Members } from './lib/selfserve'
+import { SEAT_GONE, SeatGone } from './lib/http'
 
 /**
  * The home entry — appetite, per the owner's ruling that the 36-cell mechanism does not belong
@@ -73,11 +74,16 @@ export default function App() {
      so the three acts read as acts on that circle. Any failure renders nothing: a key that no
      longer opens the circle is the round screen's to explain, not this line's. */
   const [circle, setCircle] = useState<Members | null>(null)
+  /** **The key no longer holds a seat** (owner 「A」 on audit item 4: every screen forgets it and
+   *  says so). The mapper has already forgotten it; home stays home and says the shared line where
+   *  the 圈子 line would be, so the circle is not lost without a word. */
+  const [seatGone, setSeatGone] = useState(false)
+  const onRefused = (e: unknown) => { if (e instanceof SeatGone) setSeatGone(true) }
   useEffect(() => {
     const d = device()
     if (!d) return
     let live = true
-    fetchMembers(d).then((m) => { if (live) setCircle(m) }).catch(() => {})
+    fetchMembers(d).then((m) => { if (live) setCircle(m) }).catch((e) => { if (live) onRefused(e) })
     return () => { live = false }
   }, [])
 
@@ -91,7 +97,7 @@ export default function App() {
     const d = device()
     if (!d) return
     let live = true
-    readInviteRole(d).then((r) => { if (live) setIsCreator(r.role === 'creator') }).catch(() => {})
+    readInviteRole(d).then((r) => { if (live) setIsCreator(r.role === 'creator') }).catch((e) => { if (live) onRefused(e) })
     return () => { live = false }
   }, [])
 
@@ -206,9 +212,11 @@ export default function App() {
             {/* What a 圈子 is — the word the cold reader could only guess (N2). After a bounce from
                 `/round` the same place says where circles come from instead (U1). */}
             {!hasDevice && (
-              noSeat
-                ? <p className="circleLine" data-part="no-seat" role="status">{NO_SEAT}</p>
-                : <p className="circleLine" data-part="circle-line">{CIRCLE_LINE}</p>
+              seatGone
+                ? <p className="circleLine" data-part="seat-gone" role="status">{SEAT_GONE}</p>
+                : noSeat
+                  ? <p className="circleLine" data-part="no-seat" role="status">{NO_SEAT}</p>
+                  : <p className="circleLine" data-part="circle-line">{CIRCLE_LINE}</p>
             )}
           </div>
           <div className="heroR arrive" style={arrive(2)}><Collage /></div>
