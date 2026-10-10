@@ -39,6 +39,9 @@ export default function App() {
 
   useEffect(() => {
     let live = true
+    // A new district shows 「讀取中」 until its own reading arrives, never the old district's
+    // numbers under the new name (the reviewer, on 9f7e999).
+    setWeather(null); setError('')
     const load = () => fetchWeather(township)
       .then((w) => { if (live) { setWeather(w); setError('') } })
       // the API's own detail, never a sentence invented here: a wrong reason on screen is worse
@@ -101,8 +104,10 @@ export default function App() {
       {/* **Home's first view holds one act and six pieces of our own text** — the attention
           principle the owner ruled on 2026-10-08 and the budget agreed with the evaluator
           (`idea & img/frontend/specs/spec-nav-labels-home-2026-10-08.md` N3). Everything a person
-          does not need to start — the weather, the date, the sources — sits below the first view,
-          still on this page and still this page's alone (D20). No bar here: the doors are the
+          does not need to start sits below the first view — except the weather strip under the
+          masthead (owner 「1-4」 and 「A」, 2026-10-09: date, today's weather with its picker, the
+          reading and the detail, reported apart from the budget); the sources stay below. Still
+          this page's alone (D20). No bar here: the doors are the
           navigation, and a bar repeated 這一餐 beside the door that said it. */}
       <div className="col">
         <header className="mast" data-part="masthead">
@@ -210,7 +215,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* ── below the first view: today's conditions, then where every fact came from ────── */}
+      {/* ── below the first view: where every fact came from (the conditions moved into the strip) ── */}
       <section className="today" data-part="today">
         <div className="wx">
           {/* provenance is kept and demoted, never removed — it is the claim itself */}

@@ -80,9 +80,9 @@
      outside `.col` entirely, in ordinary flow below it. All the slack collected in two places and
      the act ended up 1,365 px down a 1,440 viewport.
 
-     Now: `min-height: 100vh` (the `- 180px` was the retired BAR's reservation), the hero takes
-     `margin-top: auto`, the foot takes `margin-bottom: auto`, and the two autos SPLIT the slack —
-     masthead stays at the top, hero and foot centre together as one object. */
+     Then: `min-height: 100vh` (the `- 180px` was the retired BAR's reservation), and two auto
+     margins split the slack. **Now** (2026-10-10) the weather strip fills the band under the
+     masthead, so the hero sits a fixed step below it and only its bottom margin is auto. */
   .col   { min-height: 100vh; display: flex; flex-direction: column; }
   /* The weather strip now fills the band under the masthead (owner, 2026-10-09: he scrolled to
      find the weather), so the hero follows it at a fixed step instead of splitting the slack —
@@ -340,6 +340,106 @@ h1.headline .lit { color: var(--color-hot-ink); }
 .wxsDetail .k { color: color-mix(in srgb, var(--color-on-hot) 80%, var(--color-ground)); }
 .wxsDetail .u { white-space: nowrap; }
 
+
+/* ═══ 甲 · at ≥1920 the whole composition scales as ONE object ═══════════════════════════════
+   **Owner-ruled 2026-08-20 night** from the rendered three-way (`home-w-a/b/c.html`);
+   `spec-home-wide.md` carries the value table and the diagnosis. The complaint was a 27-inch
+   screenshot: the 1440 design floating in paper rather than printed larger. 乙 (rhythm only) and
+   丙 (right-bleed collage) are the rejected branches — 丙 because bigger photographs move the
+   measured chroma, which is also why 甲 raises the hero cap only where the column grew with it.
+
+   **The chroma ceiling holds by construction, not by re-measurement** (spec §2): the 480 cap at
+   1440 exists because growing the food photography grew page saturation past 0.20 / 20% (swept,
+   break between 510 and 540). At ≥1920 a 640-cap hero sits in a 1680 column, so the photo's share
+   of the viewport is at or below the 1440 share. **Widen any of these values and the sweep re-runs
+   — the ceiling is a measurement, not a margin.**
+
+   The type ladder's tier 3 is in `index.css` beside tiers 1 and 2, not here: it is the ladder's
+   own table and splitting it across two files is how a tier comes to be edited in one place.
+
+   **No `margin` on `.hero` in this block.** Its top margin is the fixed step under the weather
+   strip (≥ 900 rule above) and its bottom margin is auto; restating either here would change the
+   composition at ≥ 1920 alone.
+
+   **The act's SINK shadow stays 4px.** `--lift-d` is the ambient hard offset on images and the
+   count tag; the act's depth is the ruled command recipe (`design.md` ⑤) and does not scale with
+   the composition — a command that grew its shadow with the window would be a second recipe. */
+@media (min-width: 1920px) {
+  :root    { --col: min(1680px, 76vw); --lift-d: 8px; }
+  h1.headline { font-size: 86px; }
+  .hero    { max-height: 640px; gap: 60px; }
+  .wxicon  { width: 58px; height: 58px; }
+  .collage { gap: 22px 26px; }
+  .mast    { padding: 18px 26px; margin-top: 26px; }
+  .eyebrow { padding: 9px 16px; }
+  .homeAct .act { padding: 16px 52px; }
+  .tag     { padding: 13px 24px; right: 42px; bottom: -18px; }
+}
+
+/* ── 甲・日報 · the colophon ─────────────────────────────────────────────────
+   `spec-home-dateline.md` §2. The foot of a printed sheet, naming its sources.
+
+   **The 3px rule is the sheet's heaviest stroke** and it is the whole reason this reads as a
+   colophon rather than as a fourth paragraph — everything above it is 2px (`.mast`, `.eyebrow`)
+   or 1.5px (table rules), so the eye takes this line as the bottom of the object.
+
+   It sits outside `.homeFoot` on purpose: `.homeFoot { margin-bottom: auto }` splits the column's
+   slack with the hero and centres the two as one group (甲's change 1a), and a colophon inside
+   that group would be centred with them instead of sitting at the foot. `white-space: nowrap` on
+   each unit is what makes the wrap happen BETWEEN units — a label torn from its source is the one
+   wrap this line must not make. */
+.colophon {
+  border-top: 3px solid var(--color-ink); margin-top: 8px; padding: 12px 0 18px;
+  display: flex; flex-wrap: wrap; gap: 6px 28px;
+  font-size: var(--text-note); color: var(--color-muted);
+}
+.colophon b { color: var(--color-ink); font-weight: 700; margin-right: 6px; }
+.colophon .u { white-space: nowrap; }
+
+/* UX batch U1 — the one line home says after `/round` bounced a device with no seat. The
+   provenance register (`.wxsrc`'s size and weight), not an error colour: it is a fact about this
+   device, not a refusal. Under the doors, so it reads as the answer to the door just tried. */
+.noSeat {
+  margin: 12px 0 0;
+  font-size: var(--text-note);
+  max-width: 36em;
+}
+
+/* ── 2026-10-08 · home's first view to the attention budget ───────────────────────────────
+   `spec-nav-labels-home-2026-10-08.md` N3: the first view holds the wordmark, the headline, the
+   doors and one line; the weather, the date and the sources sit below it in `.today`.
+
+   **The hero now closes the first view on its own.** `.homeFoot` (the shape line and the act)
+   is gone — the act moved up into `.heroL` — so the hero takes BOTH auto margins at ≥900 and
+   centres alone between the masthead and the fold, which is the job the pair used to share. */
+@media (min-width: 900px) {
+  .hero { margin-bottom: auto; }
+}
+/* **Below 900 the first view also ends where the hero ends** (`spec-round-diet-circle-2026-10-08.md`
+   B). A member who is not the circle's creator has two doors, not three, so the doors fit one row
+   at 430 and the date line under the hero rose into the 760 px first view. The column is held to
+   the viewport the way ≥900 already holds it, so the date starts below the fold at any door count. */
+@media (max-width: 899px) {
+  .col { min-height: 100svh; }
+}
+/* The doors wrap as one row; three of them for a seated member. */
+.homeAct { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* What a 圈子 is, under the door — the provenance register (`.wxsrc`'s size and colour): an
+   answer to a question, not a second headline. Also carries the no-seat line after a bounce. */
+.circleLine {
+  margin-top: 14px; max-width: 30em; line-height: 1.7;
+  font-size: var(--text-note); color: var(--color-muted);
+}
+
+/* A member's circle, ABOVE the doors (item-1 gate, 2026-10-08): the three acts are acts on this
+   circle, so it is read first and in ink, not in the provenance register. The circle's name is the
+   one bold word; the nicknames wrap rather than run past the column. */
+.yourCircle {
+  margin: 0 0 16px; font-size: var(--text-body); color: var(--color-ink); max-width: 32em;
+}
+.yourCircle b { font-weight: 700; }
+
 /* ── below the first view ─────────────────────────────────────────────────────────────────
    Today's conditions, then the sources. One ink rule above, in the masthead's own weight, so the
    page reads as a sheet that continues rather than a second page stapled on. */
@@ -347,6 +447,9 @@ h1.headline .lit { color: var(--color-hot-ink); }
   width: var(--col); margin: 0 auto; padding: 40px 0 48px;
   border-top: 2px solid var(--color-ink);
 }
+.today .dateline { order: 0; }
+.wxHead { display: flex; align-items: center; gap: 16px; margin-top: 10px; }
+.todayH { margin: 0; font-size: var(--text-lead); font-weight: 900; }
 .today .colophon { margin-top: 32px; }
 
 /* The how-line keeps its last clause whole («沒有人要當／壞人» split at 22em, 1440). */
