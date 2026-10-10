@@ -5,6 +5,7 @@ import {
 } from '@/lib/round'
 import { device, forget, noteLastRound, type Device } from '@/lib/device'
 import { fetchReveal } from '@/lib/reveal'
+import { Reread, RoundVoid, SEAT_GONE, SeatGone } from '@/lib/http'
 import { removeSeat } from '@/lib/selfserve'
 import { Coffee, Ellipsis, Soup } from 'lucide-react'
 import { Input } from '@/components/ui/input'
@@ -186,6 +187,26 @@ export default function Round() {
     window.setTimeout(() => { window.location.href = '/' }, 2500)
   }
 
+  /** **A void round: drop it.** The screen goes to the no-round state; the sentence is the API's. */
+  const dropRound = () => {
+    openId.current = null
+    setRoundId(null)
+    setPool([])
+    setRolls([])
+    setSwept(null)
+    setRollError(null)
+  }
+  /** **One reader for a refused call**, by the table's action (`lib/http.ts`), never by status:
+   *  the seat is gone → forget and go home (the mapper already dropped the key); the round is void →
+   *  drop it and say the API's sentence; the state moved → no error line, the stream carries it;
+   *  anything else → the sentence. */
+  const refused = (x: unknown, say: (m: string) => void) => {
+    if (x instanceof SeatGone) gone('dead')
+    else if (x instanceof RoundVoid) { dropRound(); setLeaving(false); setChosen(null); say(x.message) }
+    else if (x instanceof Reread) { setLeaving(false); setChosen(null); say('') }
+    else say((x as Error).message)
+  }
+
   useEffect(() => {
     if (!dev) return
     return subscribe(dev, (e) => {
@@ -225,7 +246,10 @@ export default function Round() {
                 : null
               setLastMeal(name ? { round: last, name } : null)
             })
-            .catch(() => { if (lastAsked.current === last) setLastMeal(null) })
+            .catch((x) => {
+              if (x instanceof SeatGone) gone('dead')
+              else if (lastAsked.current === last) setLastMeal(null)
+            })
         } else {
           setLastMeal(null)
         }
@@ -306,7 +330,8 @@ export default function Round() {
         // zero-result line was built to close, surviving on the branch nobody drove. `hits` is
         // emptied too, so a failure cannot leave the previous query's rows on screen under a
         // sentence saying the search did not answer.
-        .catch(() => {
+        .catch((x) => {
+          if (x instanceof SeatGone) { gone('dead'); return }
           if (mine !== seq.current) return
           setHits([])
           setFailed(query)
@@ -330,7 +355,7 @@ export default function Round() {
       setHits([])
       setError('')
     } catch (e) {
-      setError((e as Error).message)
+      refused(e, setError)
     } finally {
       setBusy(false)
     }
@@ -369,7 +394,7 @@ export default function Round() {
     try {
       setPrefs(await fetchPreferences(d))
     } catch (e) {
-      setError((e as Error).message || '讀取失敗')
+      refused(e, setError)
     }
   }, [])
 
@@ -407,7 +432,7 @@ export default function Round() {
       })
       await readPrefs(dev)
     } catch (e) {
-      setError((e as Error).message || '寫入失敗')
+      refused(e, setError)
     } finally {
       setPending((p) => { const { [value]: _drop, ...rest } = p; return rest })
     }
@@ -480,7 +505,7 @@ export default function Round() {
             the seat, so its line states only what is true in every case. */}
         {removed === 'removed'
           ? <p className="waitSlot" data-part="removed">房主請你離開了這個圈子。</p>
-          : <p className="waitSlot" data-part="removed">這台裝置在這個圈子的座位已經不能用了。</p>}
+          : <p className="waitSlot" data-part="removed">{SEAT_GONE}</p>}
       </main>
     )
   }
@@ -517,7 +542,7 @@ export default function Round() {
                 setBusy(true)
                 void removeSeat(dev, target.member_id)
                   .then(() => { setLeaving(false); setChosen(null); setError('') })
-                  .catch((x: Error) => setError(x.message))
+                  .catch((x: unknown) => refused(x, setError))
                   .finally(() => setBusy(false))
               }}
             >
@@ -705,7 +730,7 @@ export default function Round() {
             if (submitted) {
               void unsubmit(dev, roundId)
                 .then(() => setError(''))
-                .catch((x: Error) => setError(x.message))
+                .catch((x: unknown) => refused(x, setError))
                 .finally(() => setBusy(false))
               return
             }
@@ -715,7 +740,9 @@ export default function Round() {
                the event explains it, so one sentence has one owner. */
             void submit(dev, roundId)
               .then(() => setQ(''))
-              .catch((x: Error) => setRollError({ round: roundId, message: x.message }))
+              .catch((x: unknown) => refused(x, (m) => (x instanceof RoundVoid
+                ? setError(m)
+                : setRollError(m ? { round: roundId, message: m } : null))))
               .finally(() => setBusy(false))
           }}
         >

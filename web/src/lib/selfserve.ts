@@ -1,5 +1,5 @@
 import { auth, type Device } from './device'
-import { detailOr } from './detail'
+import { must, send } from './http'
 
 /**
  * A24 — self-serve circles: the data layer `Create`, `Join` and `InvitePanel` are built on.
@@ -32,7 +32,8 @@ export type Joined = {
 }
 
 /**
- * **The refusal's words come from the API, and that is a rule rather than laziness here.**
+ * **The refusal's words come from the API, and that is a rule rather than laziness here** (the
+ * table's `show_detail`; `lib/http.ts` decides, `must` raises it).
  *
  * `round.ts`'s `verify` and `preferences.ts`'s `said` answer **401 and 404 in the surface's own
  * words** because those are about the credential the person just pasted, and keep the API's
@@ -56,18 +57,12 @@ export type Joined = {
  * sent no `detail` at all, which is a defect rather than a state, and a status code is the thing
  * that makes such a report actionable.
  */
-async function refusal(r: Response, fallback: string): Promise<Error> {
-  const body = await r.json().catch(() => ({}))
-  return new Error(detailOr(body, fallback, r.status))
-}
 
 /** Ruling ②: a stranger creates a circle and gets one link to paste into the group chat. 429 is
  *  the proxy's daily ceiling on **creation** — never on joining, because five friends at one table
  *  share one address and a per-IP join cap would refuse the fourth friend at dinner. */
 export async function createCircle(name: string, nickname: string): Promise<Created> {
-  const r = await fetch('/api/circles', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
+  const r = must(await send('POST', '/api/circles', {
     /* **Both fields are required**, and the second one is here because the endpoint was driven
        rather than read. A24 documented `{name}` alone until 2026-09-13; the live endpoint answered
        422 `{"loc": ["body","nickname"], "msg": "Field required"}`, so a client built from the page
@@ -75,10 +70,9 @@ export async function createCircle(name: string, nickname: string): Promise<Crea
        gets a seat and a seat has a nickname. **The ticket now says `{name, nickname}`** (backend,
        `96873f8`), so this note records why the field is trusted, not a discrepancy to go looking
        for: there is none left. */
-    body: JSON.stringify({ name, nickname }),
-  })
-  if (r.status !== 201) throw await refusal(r, '開不了圈子')
-  const body = await r.json()
+    json: { name, nickname },
+  }), '開不了圈子')
+  const body = await r.json<{ circle_id: unknown; member_id: number; key: string; join_link: string }>()
   return {
     circleId: String(body.circle_id),
     memberId: body.member_id,
@@ -95,13 +89,10 @@ export async function createCircle(name: string, nickname: string): Promise<Crea
 export async function joinCircle(
   circleId: string, ticket: string, nickname: string,
 ): Promise<Joined> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(circleId)}/join`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ ticket, nickname }),
-  })
-  if (r.status !== 201) throw await refusal(r, '進不去')
-  const body = await r.json()
+  const r = must(await send('POST', `/api/circles/${encodeURIComponent(circleId)}/join`, {
+    json: { ticket, nickname },
+  }), '進不去')
+  const body = await r.json<{ member_id: number; key: string }>()
   return { memberId: body.member_id, key: body.key }
 }
 
@@ -117,13 +108,10 @@ export async function joinCircle(
  * wrong reason, which is worse than the button not existing.
  */
 export async function reissueJoinLink(d: Device): Promise<string> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
-    method: 'POST',
+  const r = must(await send('POST', `/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
     headers: auth(d),
-  })
-  if (r.status !== 201) throw await refusal(r, '換不了連結')
-  const body = await r.json()
-  return body.join_link
+  }), '換不了連結')
+  return (await r.json<{ join_link: string }>()).join_link
 }
 
 /**
@@ -154,22 +142,19 @@ export type InviteRole =
   | { role: 'unknown' }
 
 export async function readInviteRole(d: Device): Promise<InviteRole> {
-  let r: Response
-  try {
-    r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
-      headers: auth(d),
-      cache: 'no-store',
-    })
-  } catch {
-    return { role: 'unknown' }
-  }
-  if (r.status === 403) return { role: 'member' }
-  if (r.status !== 200) return { role: 'unknown' }
-  /* **A 200 whose body will not parse is still the creator.** The role is the status code's answer;
+  const r = await send('GET', `/api/circles/${encodeURIComponent(d.circle)}/join-ticket`, {
+    headers: auth(d),
+    cache: 'no-store',
+  })
+  // The seat is gone: forget it and let the screen say so (`SeatGone`), never `unknown`.
+  if (r.action === 'forget_seat') must(r, '')
+  // The table's one refusal on this read is the member's 403 (`show_detail`).
+  if (r.action === 'show_detail') return { role: 'member' }
+  if (r.action !== 'success') return { role: 'unknown' }
+  /* **A 200 whose body will not parse is still the creator.** The role is the table's answer;
      the status line is extra, so a malformed body loses the line and keeps the control. */
-  const body = await r.json().catch(() => null) as
-    { active?: boolean; expired?: boolean; expires_at?: string | null } | null
-  if (!body) return { role: 'creator', status: null }
+  const body = await r.json<{ active?: boolean; expired?: boolean; expires_at?: string | null } | null>()
+  if (!body || Object.keys(body).length === 0) return { role: 'creator', status: null }
   const at = body.expires_at ? new Date(body.expires_at) : null
   return {
     role: 'creator',
@@ -215,12 +200,11 @@ export type Members = {
 }
 
 export async function fetchMembers(d: Device): Promise<Members> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members`, {
+  const r = must(await send('GET', `/api/circles/${encodeURIComponent(d.circle)}/members`, {
     headers: auth(d),
     cache: 'no-store',
-  })
-  if (!r.ok) throw await refusal(r, '看不到座位')
-  const body = await r.json()
+  }), '看不到座位')
+  const body = await r.json<Record<string, unknown>>()
   // `name` is the circle's own name, asked of backend on 2026-10-08 for the member's home (the
   // evaluator's item-1 red: the home never said which circle you are in). Absent until that lands,
   // and the home then says 這個圈子 with the nicknames alone.
@@ -228,7 +212,7 @@ export async function fetchMembers(d: Device): Promise<Members> {
     name: typeof body.name === 'string' && body.name ? body.name : null,
     members: ((body.members ?? []) as { nickname: string; is_host?: boolean }[])
       .map((m) => ({ nickname: m.nickname, isHost: m.is_host === true })),
-    seats: body.seats, cap: body.cap,
+    seats: body.seats as number, cap: body.cap as number,
     creatorNickname: typeof body.creator_nickname === 'string' && body.creator_nickname ? body.creator_nickname : null,
     yourNickname: typeof body.your_nickname === 'string' && body.your_nickname ? body.your_nickname : null,
     youAreHost: body.you_are_host === true,
@@ -240,12 +224,9 @@ export async function fetchMembers(d: Device): Promise<Members> {
  *  the host, for the host's own seat, and for a seat that has already submitted; the sentences are
  *  the API's. */
 export async function removeSeat(d: Device, memberId: number): Promise<void> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/members/${memberId}`, {
-    method: 'DELETE',
+  must(await send('DELETE', `/api/circles/${encodeURIComponent(d.circle)}/members/${memberId}`, {
     headers: auth(d),
-  })
-  if (r.ok) return
-  throw await refusal(r, '請不走')
+  }), '請不走')
 }
 
 /**
@@ -267,28 +248,24 @@ export type JoinPreview =
   | { kind: 'unknown' }
 
 export async function previewJoin(circleId: string, ticket: string): Promise<JoinPreview> {
-  try {
-    const r = await fetch(`/api/circles/${encodeURIComponent(circleId)}/join/preview`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ticket }),
-      cache: 'no-store',
-    })
-    const body = await r.json().catch(() => ({}))
-    if (r.ok && typeof body.circle_name === 'string') {
+  const r = await send('POST', `/api/circles/${encodeURIComponent(circleId)}/join/preview`, {
+    json: { ticket },
+    cache: 'no-store',
+  })
+  if (r.action === 'success') {
+    const body = await r.json<{ circle_name?: unknown; creator_nickname?: string | null }>()
+    if (typeof body.circle_name === 'string') {
       return { kind: 'live', circleName: body.circle_name, creator: body.creator_nickname ?? null }
     }
-    // **An api without the preview answers its framework's own 404, `{"detail": "Not Found"}`**
-    // (FastAPI's unknown route), and that must not read as a dead link: every invite would open
-    // dead and nobody could join (the reviewer's catch, 2026-10-08 — production's candidate 24
-    // has no preview). It is `unknown`, which keeps the old form working.
-    if (r.status === 404 && typeof body.detail === 'string' && body.detail !== 'Not Found') {
-      return { kind: 'dead', message: body.detail }
-    }
-    return { kind: 'unknown' }
-  } catch {
     return { kind: 'unknown' }
   }
+  // **An api without the preview answers its framework's own 404, `{"detail": "Not Found"}`**
+  // (FastAPI's unknown route), and that must not read as a dead link: every invite would open
+  // dead and nobody could join (the reviewer's catch, 2026-10-08 — production's candidate 24
+  // has no preview). The table's dead-link row is matched by its exact sentence, so the framework's
+  // 404 falls through to `retry_later`, which is `unknown`: the old form keeps working.
+  if (r.action === 'show_detail' && r.sentence) return { kind: 'dead', message: r.sentence }
+  return { kind: 'unknown' }
 }
 
 /**
@@ -304,11 +281,10 @@ export async function previewJoin(circleId: string, ticket: string): Promise<Joi
  * existed — the one-circle notice's claim degrades to 「留在原圈子」, which was true until now.
  */
 export function leaveCircle(old: Device): void {
-  try {
-    void fetch(`/api/circles/${encodeURIComponent(old.circle)}/leave`, {
-      method: 'POST',
-      headers: auth(old),
-      keepalive: true,
-    }).catch(() => {})
-  } catch { /* nothing to recover */ }
+  // `send` never throws and applies no side effect: a 401 here must not forget the NEW seat that
+  // was just remembered.
+  void send('POST', `/api/circles/${encodeURIComponent(old.circle)}/leave`, {
+    headers: auth(old),
+    keepalive: true,
+  })
 }

@@ -14,7 +14,7 @@
  */
 
 import { auth, type Device } from './device'
-import { detailOr } from './detail'
+import { must, Reread, send } from './http'
 
 /** `place_id` → the name the API composed (D92's three layers). Keys are strings on the wire. */
 /**
@@ -187,8 +187,9 @@ export function markOf(places: Places, placeId: number | null): number | null {
   return seat < 0 ? null : seat + 1
 }
 
-/** The round asked about is still open: there is no result to show yet. */
-export class RoundStillOpen extends Error {}
+/** The round asked about is still open: there is no result to show yet. The table's `reread` for
+ *  `GET /rounds/{id}/result` (409); the reveal sends the person back to the open round. */
+export class RoundStillOpen extends Reread {}
 
 /**
  * Read a round's result — **a read that cannot roll** (`GET /rounds/{id}/result`, backend
@@ -205,16 +206,11 @@ export async function fetchReveal(d: Device, roundId: number): Promise<MemberRev
  *  for an operator credential, the accounting the server chose to send with them — so it is asked
  *  for once. */
 export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
-  const r = await fetch(`/api/rounds/${roundId}/result`, {
-    headers: auth(d),
-    cache: 'no-store',
-  })
-  if (!r.ok) {
-    const body = await r.json().catch(() => ({}))
-    const message = detailOr(body, '讀取失敗', r.status)
-    throw r.status === 409 ? new RoundStillOpen(message) : new Error(message)
-  }
-  return r.json()
+  const r = await send('GET', `/api/rounds/${roundId}/result`, { headers: auth(d), cache: 'no-store' })
+  if (r.action === 'reread') throw new RoundStillOpen(r.sentence, r.status)
+  // A void round is 410: `must` raises `RoundVoid` with the API's sentence. A key with no seat
+  // is `SeatGone`, already forgotten.
+  return must(r, '讀取失敗').json()
 }
 
 /**
@@ -256,15 +252,12 @@ export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
 export async function signTrip(
   d: Device, roundId: number,
 ): Promise<{ trip: Trip; created: boolean }> {
-  const r = await fetch(`/api/rounds/${roundId}/trip`, {
-    method: 'POST',
-    headers: auth(d),
-  })
-  if (r.status === 201 || r.status === 200) {
-    const body = await r.json().catch(() => ({}))
-    return { trip: body.trip ?? null, created: true }
-  }
-  if (r.status === 409) return { trip: (await fetchReveal(d, roundId)).trip, created: false }
-  const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '簽不上', r.status))
+  const r = await send('POST', `/api/rounds/${roundId}/trip`, { headers: auth(d) })
+  // The table says which 409 this is: `reread` (somebody else signed first, or the round has no
+  // result yet) is a state to read again. A void round is 410 and `must` raises `RoundVoid`;
+  // it is never «already signed».
+  if (r.action === 'reread') return { trip: (await fetchReveal(d, roundId)).trip, created: false }
+  must(r, '簽不上')
+  const body = await r.json<{ trip?: Trip }>()
+  return { trip: body.trip ?? null, created: true }
 }

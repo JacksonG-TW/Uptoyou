@@ -4,6 +4,7 @@ import type { Device } from '@/lib/device'
 import CopyRow from './CopyRow'
 import { LINK_EXPIRED, LINK_LIFE, MEMBER_INVITE, linkLive } from './copy'
 import { doorHref } from '@/lib/round'
+import { SEAT_GONE, SeatGone } from '@/lib/http'
 
 /**
  * The package's **step 3** — the invite screen: the link, the seat list, re-issue. **Never the
@@ -53,6 +54,7 @@ export default function InvitePanel({
   onLink,
   inCreateFlow = false,
   onRole,
+  onGone,
 }: {
   device: Device
   /** The current join link, or `''` when this screen cannot read one — see `Circle`. Passed in
@@ -69,8 +71,22 @@ export default function InvitePanel({
    *  the page for what this seat can do there (the evaluator's 2026-10-08 red), and title nothing
    *  before it knows (the reviewer's note: a member saw 邀朋友加入 flip to the circle's name). */
   onRole?: (role: InviteRole['role'], seats: Members | null) => void
+  /** Told once when a call learns the key holds no seat here (the table's `forget_seat`): the key is
+   *  already forgotten, this panel shows the shared sentence, and the page goes home. */
+  onGone?: () => void
 }) {
   const [seats, setSeats] = useState<Members | null>(null)
+  /* **The key holds no seat here** (the table's `forget_seat`): `lib/http` has already dropped it.
+     One sentence, then home — the same line `/round` shows. */
+  const [gone, setGone] = useState(false)
+  const goneOnce = useRef(false)
+  const seatGone = useCallback(() => {
+    if (goneOnce.current) return
+    goneOnce.current = true
+    setGone(true)
+    onGone?.()
+    window.setTimeout(() => { window.location.href = '/' }, 2500)
+  }, [onGone])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   /* **`null` until the read answers, and the slot draws nothing while it is `null`** (Addendum 4,
@@ -103,10 +119,12 @@ export default function InvitePanel({
         const next = await readInviteRole(device)
         if (mounted.current && !again.current) setRole(next)
       } while (again.current && mounted.current)
+    } catch (e) {
+      if (e instanceof SeatGone) seatGone()
     } finally {
       reading.current = false
     }
-  }, [inCreateFlow, device])
+  }, [inCreateFlow, device, seatGone])
 
   /* A member's `/circle` is titled by its parent for what a member does there — told here, once the
      role read and the seat list have answered. */
@@ -136,12 +154,13 @@ export default function InvitePanel({
   const readSeats = useCallback(async () => {
     try {
       setSeats(await fetchMembers(device))
-    } catch {
+    } catch (e) {
+      if (e instanceof SeatGone) { seatGone(); return }
       /* **A seat list that fails to load renders nothing rather than an error.** The act of this
          screen is the link; the list is who is here so far. A refusal banner over a working invite
          would make a person think the link was broken. And on a poll it would flash. */
     }
-  }, [device])
+  }, [device, seatGone])
 
   useEffect(() => {
     void readSeats()
@@ -172,11 +191,14 @@ export default function InvitePanel({
       /* A re-issue gives a new `expires_at`, so the status line is re-read with the seats. */
       void readRole(true)
     } catch (e) {
-      setError((e as Error).message)
+      if (e instanceof SeatGone) seatGone()
+      else setError((e as Error).message)
     } finally {
       setBusy(false)
     }
   }
+
+  if (gone) return <p className="ssLead" data-part="removed">{SEAT_GONE}</p>
 
   return (
     <>

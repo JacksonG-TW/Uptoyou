@@ -1,4 +1,4 @@
-import { detailOr } from './detail'
+import { must, send } from './http'
 
 /** The weather endpoint's shape, as the API actually answers it. */
 export type Weather = {
@@ -47,15 +47,12 @@ export function currentTaipeiHour(now = new Date()): string {
 
 export async function fetchWeather(township: string): Promise<Weather> {
   const hour = currentTaipeiHour()
-  const r = await fetch(
+  const r = must(await send(
+    'GET',
     `/api/weather?township=${encodeURIComponent(township)}&hour=${encodeURIComponent(hour)}`,
     { cache: 'no-store' },
-  )
-  if (!r.ok) {
-    const body = await r.json().catch(() => ({}))
-    throw new Error(detailOr(body, '讀取失敗', r.status))
-  }
-  return r.json()
+  ), '讀取失敗')
+  return r.json<Weather>()
 }
 
 /**

@@ -51,6 +51,9 @@ export default function Circle({ device }: { device: Device }) {
   const [link, setLink] = useState('')
   /** `null` until the role read answers; then the role and the seat list (null while it loads). */
   const [known, setKnown] = useState<{ role: InviteRole['role']; seats: Members | null } | null>(null)
+  /** The key holds no seat here: the panel shows the shared sentence, and the title steps aside. */
+  const [gone, setGone] = useState(false)
+  const onGone = useCallback(() => setGone(true), [])
   const onRole = useCallback((role: InviteRole['role'], seats: Members | null) => setKnown({ role, seats }), [])
 
   return (
@@ -63,7 +66,7 @@ export default function Circle({ device }: { device: Device }) {
           because it is somebody's typing. **Until the role read answers the title is empty** (the
           reviewer, 37b16e0): showing 邀朋友加入 first and then the circle's name was the same
           mismatch, briefer, and a heading that changes under a screen reader. */}
-      {known === null ? (
+      {gone ? null : known === null ? (
         <h1 className="ssTitle" aria-busy="true">{'\u00a0'}</h1>
       ) : known.role === 'member' ? (
         <h1 className="ssInvite" data-part="circle-title">
@@ -72,7 +75,7 @@ export default function Circle({ device }: { device: Device }) {
       ) : (
         <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>
       )}
-      <InvitePanel device={device} link={link} onLink={setLink} onRole={onRole} />
+      <InvitePanel device={device} link={link} onLink={setLink} onRole={onRole} onGone={onGone} />
     </main>
   )
 }

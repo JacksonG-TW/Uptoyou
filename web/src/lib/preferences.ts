@@ -12,7 +12,7 @@
  */
 
 import { auth, type Device } from './device'
-import { detailOr } from './detail'
+import { must, send } from './http'
 
 /* **The budget's two bands went with the 偏好 screen** (`spec-return-choice.md`, 2026-08-30):
    nothing sets a budget any more and the API refuses the kind. The wire's words were
@@ -137,33 +137,14 @@ export type Preferences = {
      reference them and the nightly erasure runs unchanged — they are simply never returned. */
 }
 
-/**
- * **The API's `detail` is written for whoever is holding a terminal, and 401's is written in
- * English.** Driven on 2026-08-19 against a circle this credential does not hold: the preferences
- * screen rendered 「the token does not resolve to a member of this circle」 — a developer's sentence,
- * in the wrong language, on a screen whose whole promise is 「只有你看得到」.
- *
- * The same rule `round.ts` already follows, and it is a rule rather than a habit: **401 and 404 are
- * about the credential and are answered in the surface's own words; every other status keeps the
- * API's sentence**, because those are written for a person already and second-guessing them is how
- * a screen comes to state something the server did not.
- */
-async function said(r: Response, fallback: string): Promise<Error> {
-  if (r.status === 401) return new Error('這把鑰匙開不了這個圈子。回到裝置畫面重新貼一次。')
-  if (r.status === 404) return new Error('找不到這個圈子。')
-  const body = await r.json().catch(() => ({}))
-  return new Error(detailOr(body, fallback, r.status))
-}
-
 export async function fetchPreferences(d: Device): Promise<Preferences> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
+  const r = must(await send('GET', `/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
     headers: auth(d),
     // `no-store` is not politeness. G3 drives a NEW browser context and asserts the value came
     // from the GET; a cached read would pass that gate while proving nothing about the server.
     cache: 'no-store',
-  })
-  if (!r.ok) throw await said(r, '讀取失敗')
-  return r.json()
+  }), '讀取失敗')
+  return r.json<Preferences>()
 }
 
 /**
@@ -173,18 +154,18 @@ export async function fetchPreferences(d: Device): Promise<Preferences> {
  * `persist` is passed explicitly on every call. The endpoint defaults it to `false` (D17), and a
  * caller that relies on the default is one refactor away from sending `undefined` where it meant
  * `false` — same value, no record of a choice having been made.
+ *
+ * **A 401 is the table's `forget_seat`**: `must` drops the key and raises `SeatGone`, so the
+ * API's English «the token does not resolve…» never reaches the screen.
  */
 export async function postPreference(
   d: Device,
   body: { kind: Kind; value: string; persist: boolean; stance?: Stance },
 ): Promise<void> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
-    method: 'POST',
-    headers: { ...auth(d), 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (r.status === 204) return
-  throw await said(r, '寫入失敗')
+  must(await send('POST', `/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
+    headers: auth(d),
+    json: body,
+  }), '寫入失敗')
 }
 
 /** A whole-number percentage for a share the API already rounded. Rendered from the payload on

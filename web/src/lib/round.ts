@@ -9,7 +9,7 @@
  */
 
 import { auth, device, type Device } from './device'
-import { detailOr } from './detail'
+import { forgetSeat, must, send, SEAT_GONE } from './http'
 
 /** Where the door leads, from one local fact. No request, so it is safe to call during render —
  *  the home's act uses it for an `href`, which is what makes middle-click and the status bar tell
@@ -29,15 +29,14 @@ export function doorHref(): string {
  * other status keeps the API's sentence, because those are written for a person already.
  */
 export async function verify(d: Device): Promise<void> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
+  const r = await send('GET', `/api/circles/${encodeURIComponent(d.circle)}/preferences`, {
     headers: auth(d),
     cache: 'no-store',
   })
-  if (r.ok) return
-  if (r.status === 401) throw new Error('這把鑰匙開不了這個圈子。再確認一次貼上的內容。')
-  if (r.status === 404) throw new Error('找不到這個圈子。')
-  const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '連不上', r.status))
+  // The key was pasted a moment ago and is not remembered yet: a refusal must not drop whatever
+  // key this device already holds, so the seat is kept and the surface says the paste failed.
+  if (r.action === 'forget_seat') throw new Error('這把鑰匙開不了這個圈子。再確認一次貼上的內容。')
+  must(r, '連不上')
 }
 
 /**
@@ -71,80 +70,67 @@ export type Candidate = {
 }
 
 export async function searchPlaces(d: Device, q: string): Promise<Candidate[]> {
-  const r = await fetch(
-    `/api/circles/${encodeURIComponent(d.circle)}/places?q=${encodeURIComponent(q)}`,
+  const r = must(await send(
+    'GET', `/api/circles/${encodeURIComponent(d.circle)}/places?q=${encodeURIComponent(q)}`,
     { headers: auth(d), cache: 'no-store' },
-  )
-  if (!r.ok) return []
-  return (await r.json()).candidates ?? []
+  ), '讀取失敗')
+  return (await r.json<{ candidates?: Candidate[] }>()).candidates ?? []
 }
 
 /** A reference candidate the circle has never touched has **no `place`
  *  row yet** — D28's rule that a place is always a row of ours. This makes one, and the endpoint
  *  answers quietly if the row already exists, so calling it twice is not an error. */
 export async function materialise(d: Device, registryNo: string): Promise<number> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/places`, {
-    method: 'POST',
-    headers: { ...auth(d), 'content-type': 'application/json' },
-    body: JSON.stringify({ registry_no: registryNo }),
-  })
-  const body = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(detailOr(body, '加不進來', r.status))
-  return body.place_id ?? body.id
+  const r = must(await send('POST', `/api/circles/${encodeURIComponent(d.circle)}/places`, {
+    headers: auth(d),
+    json: { registry_no: registryNo },
+  }), '加不進來')
+  const body = await r.json<{ place_id?: number; id?: number }>()
+  return (body.place_id ?? body.id) as number
 }
 
 export async function openRound(d: Device): Promise<{ roundId: number; conflict: boolean }> {
-  const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/rounds`, {
-    method: 'POST',
-    headers: { ...auth(d), 'content-type': 'application/json' },
-    body: JSON.stringify({}),
+  const r = await send('POST', `/api/circles/${encodeURIComponent(d.circle)}/rounds`, {
+    headers: auth(d),
+    json: {},
   })
-  const body = await r.json().catch(() => ({}))
-  if (r.status === 201) return { roundId: body.round_id, conflict: false }
-  // **D68: a losing simultaneous open gets 409 carrying the WINNING round.** The person who lost
-  // the race wanted a round open; one is. Joining it is what they meant, so this is not an error
-  // to report — it is the same success by another path, and the flag exists only so the screen can
-  // say so rather than pretend nothing happened.
+  // **D68: a losing simultaneous open gets 409 carrying the WINNING round**, and the table calls that
+  // `reread`. The person who lost the race wanted a round open; one is. Joining it is what they
+  // meant, so this is not an error to report — it is the same success by another path, and the flag
+  // exists only so the screen can say so rather than pretend nothing happened.
   // The winner rides in `detail.open_round` (`rounds.py`'s IntegrityError branch). Reading
   // `detail.round_id` instead lost every race: ten devices proposing at once put eight shops in
   // the pool and showed the losers `[object Object]` (g_multi_device MD-3, 2026-10-08).
-  if (r.status === 409) {
-    const won = body.detail?.open_round?.round_id
+  if (r.action === 'reread') {
+    const won = (r.body.detail as { open_round?: { round_id?: number } } | undefined)?.open_round?.round_id
     if (won) return { roundId: won, conflict: true }
   }
-  throw new Error(detailOr(body, '開不了', r.status))
+  must(r, '開不了')
+  return { roundId: (await r.json<{ round_id: number }>()).round_id, conflict: false }
 }
 
 /** **D70: a repeat proposal succeeds quietly.** Proposal count is not a weight, so proposing the
- *  same place twice is not a conflict and must not be reported as one. */
+ *  same place twice is not a conflict and must not be reported as one (the table lists 200 and 201
+ *  alike as success). A void round answers 410, which `must` raises as `RoundVoid`. */
 export async function propose(d: Device, roundId: number, placeId: number): Promise<void> {
-  const r = await fetch(`/api/rounds/${roundId}/proposals`, {
-    method: 'POST',
-    headers: { ...auth(d), 'content-type': 'application/json' },
-    body: JSON.stringify({ place_id: placeId }),
-  })
-  if (r.status === 201 || r.status === 200) return
-  const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '提不進去', r.status))
+  must(await send('POST', `/api/rounds/${roundId}/proposals`, {
+    headers: auth(d),
+    json: { place_id: placeId },
+  }), '提不進去')
 }
 
 /** **提交** (owner, 2026-10-09): this seat is done. The round closes inside the request that brings
  *  the last seat in, and every device, this one included, learns it from `closed` on the stream.
  *  A repeat is the same submission. The refusals (fewer than two places, a seat that joined after
- *  the open, a void round) are the API's sentences. */
+ *  the open) are the API's sentences; a void round raises `RoundVoid`. */
 export async function submit(d: Device, roundId: number): Promise<void> {
-  const r = await fetch(`/api/rounds/${roundId}/submit`, { method: 'POST', headers: auth(d) })
-  if (r.ok) return
-  const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '提交不了', r.status))
+  must(await send('POST', `/api/rounds/${roundId}/submit`, { headers: auth(d) }), '提交不了')
 }
 
-/** **收回提交**: allowed until the last submission lands; after that the API says it is too late. */
+/** **收回提交**: allowed until the last submission lands; after that the table says `reread` (the
+ *  round has already closed) and the stream carries the reveal. */
 export async function unsubmit(d: Device, roundId: number): Promise<void> {
-  const r = await fetch(`/api/rounds/${roundId}/submit`, { method: 'DELETE', headers: auth(d) })
-  if (r.ok) return
-  const body = await r.json().catch(() => ({}))
-  throw new Error(detailOr(body, '收不回來', r.status))
+  must(await send('DELETE', `/api/rounds/${roundId}/submit`, { headers: auth(d) }), '收不回來')
 }
 
 /** A pooled place, as the snapshot and each `pooled` event carry it.
@@ -237,8 +223,8 @@ export type OpenRound = {
  * treating that as the end left a screen showing the last state as if it were live. Every drop
  * not caused by `abort` calls `onStatus` with a sentence, waits (1 s, doubling, capped at 30 s) and
  * connects again; the next snapshot calls `onStatus(null)` and replaces the screen's state whole.
- * **401, 403 and 404 do not retry** — the key or the circle is wrong, and asking again every
- * thirty seconds would only repeat the refusal.
+ * **A `forget_seat` reply does not retry** — the key holds no seat, and asking again every
+ * thirty seconds would only repeat the refusal. Every other failure is retried.
  *
  * Returns an abort function. The reader is deliberately tolerant of a partial frame: SSE arrives
  * as bytes and a `data:` line can be split across chunks, so the buffer is drained on blank lines
@@ -250,7 +236,7 @@ export function subscribe(
   d: Device,
   onEvent: (e: StreamEvent) => void,
   onStatus?: (m: string | null) => void,
-  /** The key no longer opens this circle (401, 403 or 404 on connect): the seat was removed while
+  /** The key no longer opens this circle (the table's `forget_seat` on connect): the seat was removed while
    *  this device was away, or is otherwise gone. Given, the screen decides what to say; without it,
    *  the status line says the code as before. */
   onDead?: () => void,
@@ -259,16 +245,18 @@ export function subscribe(
   let wait: ReturnType<typeof setTimeout> | undefined
   const connect = async (delay: number): Promise<void> => {
     try {
-      const r = await fetch(`/api/circles/${encodeURIComponent(d.circle)}/stream`, {
+      const reply = await send('GET', `/api/circles/${encodeURIComponent(d.circle)}/stream`, {
         headers: auth(d),
         signal: ac.signal,
       })
-      if (r.status === 401 || r.status === 403 || r.status === 404) {
+      if (reply.action === 'forget_seat') {
+        forgetSeat()
         if (onDead) onDead()
-        else onStatus?.(`連不上即時更新（${r.status}）`)
+        else onStatus?.(SEAT_GONE)
         return
       }
-      if (!r.ok || !r.body) throw new Error()
+      const r = reply.res
+      if (reply.action !== 'success' || !r?.body) throw new Error()
       const reader = r.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
