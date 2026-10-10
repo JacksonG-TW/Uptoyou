@@ -182,7 +182,7 @@ export default function Round() {
     // 「房主請你離開了這個圈子。」 with the neutral line mid-message (the reviewer, on 2241d86).
     if (goneOnce.current) return
     goneOnce.current = true
-    forget()
+    forget(dev?.token)
     setRemoved(why)
     window.setTimeout(() => { window.location.href = '/' }, 2500)
   }

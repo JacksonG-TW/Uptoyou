@@ -33,9 +33,13 @@ export function remember(d: Device): void {
 /** **Forget this device's circle**: its seat is gone (the host asked it to leave, or the server no
  *  longer accepts the key). Without this the home kept opening a circle the seat was no longer in
  *  (the reviewer's should on 4a54d82). */
-export function forget(): void {
+export function forget(onlyToken?: string | null): void {
   // Blocked storage throws; the line and the move home must still happen.
   try {
+    // **Only the key that was refused.** A stale tab still holding circle X gets X's 401 after
+    // another tab joined Y; dropping whatever is stored would delete Y's new seat (the reviewer's
+    // should on 9f7e999). When the caller knows which key it sent, a different stored key stays.
+    if (onlyToken != null && localStorage.getItem('upto_token') !== onlyToken) return
     localStorage.removeItem('upto_token')
     localStorage.removeItem('upto_circle')
     localStorage.removeItem('upto_last_round')

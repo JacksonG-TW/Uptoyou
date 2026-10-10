@@ -250,7 +250,7 @@ export function subscribe(
         signal: ac.signal,
       })
       if (reply.action === 'forget_seat') {
-        forgetSeat()
+        forgetSeat(reply.token)
         if (onDead) onDead()
         else onStatus?.(SEAT_GONE)
         return

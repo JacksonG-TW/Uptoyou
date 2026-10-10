@@ -84,6 +84,9 @@ export type Reply = {
   body: { detail?: unknown } & Record<string, unknown>
   /** The raw response, for a stream. `null` on a network failure. */
   res: Response | null
+  /** The device key this request carried (its `Authorization: Bearer`), or `null`. A refusal
+   *  forgets this key only, never a newer one another tab stored meanwhile. */
+  token: string | null
   json: <T = unknown>() => Promise<T>
 }
 
@@ -119,8 +122,10 @@ export async function send(method: string, url: string, init: Init = {}): Promis
   let body: Reply['body'] = {}
   if (res && !ok) body = await res.json().catch(() => ({}))
   const { action, sentence } = classify(method, url, status, body?.detail)
+  const bearer = headers.get('authorization')
+  const token = bearer && /^Bearer /i.test(bearer) ? bearer.slice(7) : null
   const reply: Reply = {
-    method, url, status, action, sentence, body, res,
+    method, url, status, action, sentence, body, res, token,
     json: async <T>() => (res ? await res.json().catch(() => ({})) : {}) as T,
   }
   return reply
@@ -153,8 +158,8 @@ export class Reread extends HttpError {
 
 /** `forget_seat`'s side effect: drop `upto_token` and `upto_circle` (and the last-round pointer).
  *  Exported so the screens that learn it another way (the stream) apply the same act. */
-export function forgetSeat(): void {
-  forget()
+export function forgetSeat(token?: string | null): void {
+  forget(token)
 }
 
 /**
@@ -167,7 +172,7 @@ export function must(reply: Reply, fallback: string, opts: { keepSeat?: boolean 
   switch (reply.action) {
     case 'success': return reply
     case 'forget_seat':
-      if (!opts.keepSeat) forgetSeat()
+      if (!opts.keepSeat) forgetSeat(reply.token)
       throw new SeatGone(reply.status)
     case 'void': throw new RoundVoid(reply.sentence, reply.status)
     case 'reread': throw new Reread(reply.sentence, reply.status)

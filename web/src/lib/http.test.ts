@@ -84,7 +84,10 @@ describe('classify — the table decides', () => {
   it('rows that share method, path and status are told apart by detail', () => {
     const room = '/api/circles/1/members/2'
     expect(classify('DELETE', room, 409, '房主不能請自己離開。要離開，請用離開圈子。').action).toBe('show_detail')
-    expect(classify('DELETE', room, 409, '這個人已經提交了，不能請對方離開。').action).toBe('reread')
+    // 80ad32b: the host's «already submitted» refusal is said, not silently re-read.
+    expect(classify('DELETE', room, 409, '這個人已經提交了，不能請對方離開。').action).toBe('show_detail')
+    expect(classify('POST', '/api/rounds/3/proposals', 409, '一個人最多提三家。').action).toBe('show_detail')
+    expect(classify('POST', '/api/rounds/3/proposals', 409, '這一輪已經擲過了。').action).toBe('reread')
     expect(classify('POST', '/api/circles/1/join', 410, '這個連結換過了，跟開圈子的人要新的。').action).toBe('show_detail')
   })
   it('a row with no detail stands for any sentence (a D68 object, the circle-full line)', () => {
@@ -189,6 +192,16 @@ describe('one test per action — send + must', () => {
     expect(store.getItem('upto_token')).toBeNull()
     expect(store.getItem('upto_circle')).toBeNull()
     expect(store.getItem('upto_last_round')).toBeNull()
+  })
+  it('forget_seat drops only the key that was refused: a stale tab cannot delete a newer seat', async () => {
+    // Tab A still holds circle 7's key; tab B joined circle 9 meanwhile and stored its own key.
+    store.setItem('upto_token', 'newer-token'); store.setItem('upto_circle', '9')
+    reply(401, { detail: 'the token does not resolve to a member of this circle' })
+    const r = await send('GET', '/api/circles/7/members', { headers: { authorization: 'Bearer fake-token' } })
+    expect(r.token).toBe('fake-token')
+    expect(() => must(r, '看不到座位')).toThrow(SeatGone)
+    expect(store.getItem('upto_token')).toBe('newer-token')
+    expect(store.getItem('upto_circle')).toBe('9')
   })
   it('forget_seat with keepSeat (a pasted key not yet remembered) keeps the stored key', async () => {
     reply(401, { detail: 'a bearer token is required (D67)' })
