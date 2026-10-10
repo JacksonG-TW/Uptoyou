@@ -10,8 +10,9 @@
 # is this run's own GITHUB_TOKEN, given `packages: write` only in the two jobs that write, and no
 # third-party action runs beside it — only the runner's docker CLI and a pinned checkout.
 #
-# The runner is pinned (ubuntu-24.04), not `ubuntu-latest`: the image build's own OS and tools move
-# only when a person moves them, never under an unchanged commit.
+# The runner is pinned (ubuntu-24.04), not `ubuntu-latest`: the operating system the images are
+# built on moves only when a person moves it. The runner's tools (docker, buildx, jq) still update
+# within 24.04 on GitHub's schedule.
 #
 # The packages must be public for the box to pull anonymously; the read-back below is the box's own
 # position and fails the run if one is not. A package created by a first push starts private.
