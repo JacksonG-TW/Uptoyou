@@ -191,10 +191,10 @@
   transition: background-color .45s ease-out, color .45s ease-out,
               border-color .45s ease-out, border-bottom-width .45s ease-out;
 }
-.navbar:has(~ .reveal[data-face="hot"])    { color: var(--color-on-hot); }
-.navbar:has(~ .reveal[data-face="cobalt"]) { color: var(--color-on-cobalt); }
-.navbar:has(~ .reveal[data-face="jade"])   { color: var(--color-on-jade); }
-.navbar:has(~ .reveal[data-face="sun"])    { color: var(--color-on-sun); }
+.navbar:has(~ .reveal[data-face="hot"])    { color: var(--color-onflood-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) { color: var(--color-onflood-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   { color: var(--color-onflood-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    { color: var(--color-onflood-sun); }
 
 /* **The bar takes the flood's own colour as its ground — not paper, and not nothing** (2026-09-15,
    frontend's /reveal pass). Transparent let the ground's tilted dice run straight through 裝置 and
@@ -249,15 +249,15 @@
 
    So both colours are named explicitly. Filling with the face's `on-*` and writing the flood's own
    colour is the measured pair the other way round: **7.98 · 6.56 · 6.14 · 11.74**. */
-.navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: var(--color-on-hot); color: var(--color-flood-hot); }
-.navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: var(--color-on-cobalt); color: var(--color-flood-cobalt); }
-.navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: var(--color-on-jade); color: var(--color-flood-jade); }
-.navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):active { background: var(--color-on-sun); color: var(--color-flood-sun); }
+.navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: var(--color-onflood-hot); color: var(--color-flood-hot); }
+.navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: var(--color-onflood-cobalt); color: var(--color-flood-cobalt); }
+.navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: var(--color-onflood-jade); color: var(--color-flood-jade); }
+.navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):active { background: var(--color-onflood-sun); color: var(--color-flood-sun); }
 @media (hover: hover) {
-  .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):hover { background: var(--color-on-hot); color: var(--color-flood-hot); }
-  .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):hover { background: var(--color-on-cobalt); color: var(--color-flood-cobalt); }
-  .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):hover { background: var(--color-on-jade); color: var(--color-flood-jade); }
-  .navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):hover { background: var(--color-on-sun); color: var(--color-flood-sun); }
+  .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):hover { background: var(--color-onflood-hot); color: var(--color-flood-hot); }
+  .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):hover { background: var(--color-onflood-cobalt); color: var(--color-flood-cobalt); }
+  .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):hover { background: var(--color-onflood-jade); color: var(--color-flood-jade); }
+  .navbar:has(~ .reveal[data-face="sun"])    :is(.switcher a, .backLink):hover { background: var(--color-onflood-sun); color: var(--color-flood-sun); }
 }
 @media (prefers-reduced-motion: reduce) {
   .navbar:has(~ .reveal[data-face]),

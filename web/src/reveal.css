@@ -41,10 +41,10 @@
   transition: background-color var(--t-flood) ease-out, color var(--t-flood) ease-out;
 }
 
-.reveal[data-face="hot"]    { background: var(--color-flood-hot);    color: var(--color-on-hot); }
-.reveal[data-face="cobalt"] { background: var(--color-flood-cobalt); color: var(--color-on-cobalt); }
-.reveal[data-face="jade"]   { background: var(--color-flood-jade);   color: var(--color-on-jade); }
-.reveal[data-face="sun"]    { background: var(--color-flood-sun);    color: var(--color-on-sun); }
+.reveal[data-face="hot"]    { background: var(--color-flood-hot);    color: var(--color-onflood-hot); }
+.reveal[data-face="cobalt"] { background: var(--color-flood-cobalt); color: var(--color-onflood-cobalt); }
+.reveal[data-face="jade"]   { background: var(--color-flood-jade);   color: var(--color-onflood-jade); }
+.reveal[data-face="sun"]    { background: var(--color-flood-sun);    color: var(--color-onflood-sun); }
 
 /* ── the dice ───────────────────────────────────────────────────────────────
    `R-D9`: dice ≥ 18% of viewport height at 430, and that binds BOTH states. `--die` is the one
