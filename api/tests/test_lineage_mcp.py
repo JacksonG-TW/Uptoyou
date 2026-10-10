@@ -265,6 +265,21 @@ class HourMustCarryAZone(unittest.TestCase):
         self.assertIn("offset", replies[0]["error"]["message"])
 
 
+class RoundIdMustBeANumber(unittest.TestCase):
+    def test_a_round_id_that_is_not_a_number_is_invalid_params(self):
+        """Checked before a session opens, like the hour: a caller's typo is the caller's to fix,
+        never an internal error (and so this runs with no database)."""
+        replies = exchange(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "explain_round", "arguments": {"round_id": "abc"}},
+            }
+        )
+        self.assertEqual(replies[0]["error"]["code"], server.INVALID_PARAMS)
+
+
 class TimeLabels(unittest.TestCase):
     def test_a_forecast_stamp_is_a_detection_time(self):
         """D42: CWA never says when a forecast was published, so the label is part of the answer."""
