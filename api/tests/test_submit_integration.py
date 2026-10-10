@@ -28,6 +28,8 @@ SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src")
 sys.path.insert(0, SRC)
 
 from sqlalchemy import text  # noqa: E402
+
+import _tempdb  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
 TEST_DB = "upto_submit_check"
@@ -41,12 +43,6 @@ CHECKS = []
 def check(label: str, condition: bool, detail: str = "") -> None:
     CHECKS.append((label, condition, detail))
     print(("  ok   " if condition else "  FAIL ") + label + (f" — {detail}" if detail else ""))
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 def ticket_of(link: str) -> str:
@@ -322,28 +318,14 @@ async def scenario(test_url: str) -> None:
     await engine.dispose()
 
 
-async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    server = None
+async def served(test_url: str, environment: dict) -> int:
+    """A real uvicorn on the migrated database for the scenario, stopped whatever happens."""
+    server = subprocess.Popen(
+        ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(PORT)],
+        cwd="/srv/src", env=environment,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
     try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv",
-                                 env=environment, capture_output=True)
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
-
-        server = subprocess.Popen(
-            ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(PORT)],
-            cwd="/srv/src", env=environment,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
         import httpx  # noqa: PLC0415
 
         async with httpx.AsyncClient() as probe:
@@ -356,18 +338,18 @@ async def with_temporary_database() -> int:
             else:
                 print("the test server never came up", file=sys.stderr)
                 return 2
-
         await scenario(test_url)
+        return 0
     finally:
-        if server is not None:
-            server.terminate()
-            server.wait(timeout=10)
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
+        server.terminate()
+        server.wait(timeout=10)
+
+
+async def with_temporary_database() -> int:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    started = await _tempdb.with_temporary_database(TEST_DB, served)
+    if started:
+        return started
 
     failed = [label for label, ok, _ in CHECKS if not ok]
     print()
