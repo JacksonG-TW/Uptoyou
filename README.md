@@ -91,7 +91,7 @@ be checked.
 
 *Everything below is how it's built.*
 
-[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#system-architecture)
+[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![CD](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/cd.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#system-architecture)
 
 **Where to read next:** [The data pipeline →](#the-data-pipeline) ·
 [The classifier →](#the-classifier-and-its-evaluation) ·
@@ -310,14 +310,14 @@ search, so there is no second service to run and back up for the vectors.
 | **API** | Python, FastAPI, SQLAlchemy, async end to end; 50 hand-written Alembic migrations (triggers, grants and CHECK constraints). |
 | **Database** | PostgreSQL 17 with pgvector. Seven login roles, one per job: the API, the ingests, the erasure, the backup, the lineage tool, the value checks, and the owner, held only by the one-shot migration container. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. |
-| **Models** | Ollama on an 8 GB card at home, used in batch passes started by hand; production runs no model. |
+| **Models** | Ollama on an 8 GB card at home, used in batch passes, started by hand or by an Airflow job when a new place publication lands; production runs no model. |
 | **Deployment** | AWS EC2 behind Cloudflare (Full strict). The server pulls published images and builds nothing; nothing pushes into it. An API process that finds the database at the wrong schema version exits at startup instead of serving. |
 
 ### Tests and CI
 
 The CI badge above runs on every public commit: **the tests that need no database** (standard
 library only), **the web build with its type check and lint**, and **the compose file read as a fresh
-clone would**. The full suite is 76 test files in two tempos: host-side tests with no network, and
+clone would**. The full suite is 77 test files in two tempos: host-side tests with no network, and
 tests that build and drop their own database. Seven local checks run before every commit (secrets,
 what may leave app/, fonts, the server's user-facing text and status table, staged Python).
 
@@ -362,7 +362,7 @@ curl -s localhost:8080/health
 
 **A fresh clone comes up empty, then fills itself.** Places arrive with the first reference ingest
 (overnight, or [by hand](docs/operations.md)). Categories need the classifier backfill, which needs a
-graphics card; without one you get every place with the category column empty.
+graphics card and `UPTO_CLASSIFY_HOST=1` in `.env` (off by default, so a server never classifies); without one you get every place with the category column empty.
 
 `localhost:8080` is the app. The weather ingest needs a free CWA Open Data key
 (opendata.cwa.gov.tw); the five open-data files need no credential. New scheduled jobs arrive paused.

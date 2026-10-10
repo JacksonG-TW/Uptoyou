@@ -77,7 +77,7 @@
 
 **以下是它怎麼做出來的。**
 
-[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
+[![ci](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml/badge.svg)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/ci.yml) [![CD](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/cd.yml/badge.svg?branch=main)](https://github.com/JacksonG-TW/Uptoyou/actions/workflows/cd.yml) [![frontend](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/) [![backend](https://img.shields.io/badge/backend-FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/) [![db](https://img.shields.io/badge/db-PostgreSQL%2017-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/) [![vector](https://img.shields.io/badge/vector-pgvector-4169E1?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector) [![orchestration](https://img.shields.io/badge/orchestration-Airflow-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/) [![AI](https://img.shields.io/badge/AI-gemma2%20(2B)%20%2B%20arctic--embed2-000000?logo=ollama&logoColor=white)](https://ollama.com/) [![deploy](https://img.shields.io/badge/deploy-EC2%20%2B%20Cloudflare-FF9900?logo=amazonaws&logoColor=white)](#系統架構)
 
 **接著看：** [資料管線 →](#資料管線) · [分類模型 →](#分類模型與評估) ·
 [抽籤與隱私 →](#資料庫裡的抽籤與隱私) · [自己架起來 →](#快速開始)
@@ -251,12 +251,12 @@
 | **API** | Python、FastAPI、SQLAlchemy，全程 async；50 個手寫的 Alembic migration（觸發器、權限、CHECK 約束）。 |
 | **資料庫** | PostgreSQL 17 + pgvector。七個登入角色，一個工作一個：API、匯入、清除、備份、血緣工具、數值檢查，以及只有一次性 migration 容器會用到的 owner。 |
 | **排程** | Apache Airflow 3，LocalExecutor，在同一個 compose 裡。 |
-| **模型** | 家裡一張 8 GB 顯示卡上的 Ollama，只在手動啟動的批次執行；正式站不跑模型。 |
+| **模型** | 家裡一張 8 GB 顯示卡上的 Ollama，以批次執行：手動啟動，或在新的店家名冊發布時由 Airflow 觸發；正式站不跑模型。 |
 | **部署** | AWS 的 EC2，前面接 Cloudflare（Full strict）。主機只拉已發布的映像檔，自己不建置，也沒有人能推東西進去。API 啟動時發現資料庫版本不對，就直接退出，不會帶著錯的版本上線。 |
 
 ### 測試與 CI
 
-上面的 CI 徽章在每次公開 commit 時執行：**不需要資料庫的測試**（只用標準函式庫）、**前端建置加型別檢查與 lint**、**用全新 clone 的角度讀 compose 檔**。完整測試共 76 個檔案，分兩種：不連網的主機端測試，以及自己建資料庫、測完就丟的測試。每次 commit 前還有七道本機檢查（密鑰、哪些檔案可以離開 app/、字型、使用者看得到的伺服器訊息與狀態表、Python 等）。
+上面的 CI 徽章在每次公開 commit 時執行：**不需要資料庫的測試**（只用標準函式庫）、**前端建置加型別檢查與 lint**、**用全新 clone 的角度讀 compose 檔**。完整測試共 77 個檔案，分兩種：不連網的主機端測試，以及自己建資料庫、測完就丟的測試。每次 commit 前還有七道本機檢查（密鑰、哪些檔案可以離開 app/、字型、使用者看得到的伺服器訊息與狀態表、Python 等）。
 
 ## 效能
 
@@ -292,7 +292,7 @@ curl -s localhost:8080/health
 #   {"status":"ok","database":"reachable","instance":"…","stream_listener":"up"}
 ```
 
-**剛 clone 下來是空的，之後會自己長出資料。** 店家在第一次主清單匯入後出現（半夜自動跑，或[手動執行](docs/operations.md)）。類別要等分類回填，需要顯示卡；沒有顯示卡的話，所有店家都在，只是類別欄位是空的。
+**剛 clone 下來是空的，之後會自己長出資料。** 店家在第一次主清單匯入後出現（半夜自動跑，或[手動執行](docs/operations.md)）。類別要等分類回填，需要顯示卡，並在 `.env` 設定 `UPTO_CLASSIFY_HOST=1`（預設關閉，所以伺服器永遠不會跑分類）；沒有顯示卡的話，所有店家都在，只是類別欄位是空的。
 
 `localhost:8080` 就是網站。氣象匯入需要免費的中央氣象署開放資料金鑰（opendata.cwa.gov.tw），其他五個開放資料檔不需要任何憑證。新的排程進來時預設是暫停的。
 
