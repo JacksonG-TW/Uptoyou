@@ -19,7 +19,7 @@
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
 > **Try this in 30 seconds.** Open the site and create a circle (a group deciding one meal). Copy the invite link and open it in a
-> private window: that is your second friend. Each of you proposes a place, then roll.
+> private window: that is your second friend. Each of you proposes a place and presses 提交; when everyone is in, the reveal opens.
 >
 > *What the live demo holds:* Taipei's restaurants only, on one small server sized for a few groups at
 > once. No account, no email.
@@ -222,7 +222,7 @@ listed where an agent can see it.
 
 ## How the dice decide
 
-Two dice have 36 outcomes. Each proposed place holds some of them, and the group's facts change how
+Two dice have 36 outcomes, one per drawer of the 籤詩櫃. Each proposed place holds some of them, and the group's facts change how
 many:
 
 | Factor | Effect on a place's odds | Why |
@@ -239,8 +239,10 @@ be checked.
 
 ![The reveal: the winner, and every factor that moved its odds](docs/reveal-panel.png)
 
-**The odds are fixed before the first proposal**: a seed is committed when the round opens, and every
-factor is written as a row at the roll. The reveal reads those same rows back and recomputes nothing.
+**The draw is fixed before the first proposal**: a seed is committed when the round opens and revealed
+when it closes, and both travel with the result, so anyone in the circle can check the draw against what
+was fixed at the start. Every factor is written as a row when the round closes; the operator's receipt
+reads those rows back and recomputes nothing.
 
 **Privacy is enforced in the database.** Closing a round fires a trigger that removes who proposed
 what, in the same transaction that saves the result. A preference write emits no event at all, because
@@ -268,8 +270,8 @@ search, so there is no second service to run and back up for the vectors.
 The CI badge above runs on every public commit: **the tests that need no database** (standard
 library only), **the web build with its type check and lint**, and **the compose file read as a fresh
 clone would**. The full suite is 76 test files in two tempos: host-side tests with no network, and
-tests that build and drop their own database. Six local checks run before every commit (secrets,
-staged Python, fonts, the server's user-facing text).
+tests that build and drop their own database. Seven local checks run before every commit (secrets,
+what may leave app/, fonts, the server's user-facing text and status table, staged Python).
 
 ## Performance
 
