@@ -306,7 +306,7 @@ search, so there is no second service to run and back up for the vectors.
 
 | Layer | What runs |
 |---|---|
-| **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN and no runtime fetch; two fonts cut down to the characters the pages use. |
+| **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. Nothing is loaded from a third-party CDN at runtime; Cloudflare caches the built files at its edge. Two fonts cut down to the characters the pages use. |
 | **API** | Python, FastAPI, SQLAlchemy, async end to end; 50 hand-written Alembic migrations (triggers, grants and CHECK constraints). |
 | **Database** | PostgreSQL 17 with pgvector. Seven login roles, one per job: the API, the ingests, the erasure, the backup, the lineage tool, the value checks, and the owner, held only by the one-shot migration container. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. |

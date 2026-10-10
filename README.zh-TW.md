@@ -247,7 +247,7 @@
 
 | 層 | 用什麼 |
 |---|---|
-| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy 映像檔裡建置。不用 CDN、執行時不抓外部資源；兩套字型只保留頁面用到的字。 |
+| **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy 映像檔裡建置。執行時不從第三方 CDN 抓任何東西；建置好的檔案由 Cloudflare 在各地快取。兩套字型只保留頁面用到的字。 |
 | **API** | Python、FastAPI、SQLAlchemy，全程 async；50 個手寫的 Alembic migration（觸發器、權限、CHECK 約束）。 |
 | **資料庫** | PostgreSQL 17 + pgvector。七個登入角色，一個工作一個：API、匯入、清除、備份、血緣工具、數值檢查，以及只有一次性 migration 容器會用到的 owner。 |
 | **排程** | Apache Airflow 3，LocalExecutor，在同一個 compose 裡。 |
