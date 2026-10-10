@@ -184,10 +184,19 @@ git --no-pager log --oneline "$deployed..$after" 2>/dev/null | sed 's/^/    /' |
 # pulled script with a bug takes out the deploy path itself, and D59 leaves this box no other way
 # in. A refusal keeps the box serving what it has and asks for a person; a bad re-exec leaves
 # nothing running and nobody able to reach it.
-if ! git diff --quiet "$deployed" "$after" -- deploy/; then
-    say "REFUSING: this deploy changes the deploy itself."
-    git --no-pager diff --stat "$deployed" "$after" -- deploy/ | sed 's/^/    /'
-    say "         The script that just ran is the one from before the pull — it cannot perform a"
+#
+# **`compose.yaml` is held the same way (owner 「A」, 2026-10-10).** It reaches the box without an
+# image: a pushed change to a mount, a privilege, an image name or the migrate command would be
+# applied by `pull`, `migrate` (as the database owner) and `up` below with no person looking — and
+# this service runs with Docker, which is root-equivalent. So its first deploy is by hand too.
+HELD="deploy/ compose.yaml"
+# shellcheck disable=SC2086  # HELD is a fixed list of pathspecs, split on purpose
+if ! git diff --quiet "$deployed" "$after" -- $HELD; then
+    say "REFUSING: this deploy changes the deploy itself (deploy/ or compose.yaml)."
+    # shellcheck disable=SC2086
+    git --no-pager diff --stat "$deployed" "$after" -- $HELD | sed 's/^/    /'
+    say "         A compose.yaml change reaches the box without an image, so a person looks first."
+    say "         A deploy/ change: the script that just ran is the one from before the pull — it cannot perform a"
     say "         step it does not have. Nothing was pulled into the stack and nothing was restarted,"
     say "         and every tick will say this until a person runs the new file's steps (H85):"
     say "             cd $APP && export UPTO_IMAGE_TAG=$after \\"
