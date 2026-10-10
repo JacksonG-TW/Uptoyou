@@ -60,7 +60,7 @@ jobs:
               return 0
             fi
             case "$answer" in
-              *"manifest unknown"*|*"not found"*|*"no such manifest"*) : ;;
+              *"manifest unknown"*|*"no such manifest"*) : ;;
               *) echo "the registry did not say whether upto-$img:$GITHUB_SHA exists: $answer"; exit 1 ;;
             esac
             docker build --label "$SOURCE_LABEL" -t "$ref" "$@"
