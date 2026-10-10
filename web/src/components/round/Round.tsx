@@ -167,6 +167,11 @@ export default function Round() {
    *  longer opens the circle (a device that was away when it happened reconnects to a 401). Either
    *  way the circle is forgotten, one line shows, then home. */
   const [removed, setRemoved] = useState<null | 'removed' | 'dead'>(null)
+  /** **Whether the list column fits the window** (the evaluator's round 2 on 40350e9). While it fits,
+   *  the whole column sticks and the names stay readable at any scroll; once it is taller than the
+   *  room under the bars (about ten seats), only the 名單 sticks and the seats scroll beneath it. */
+  const listRef = useRef<HTMLDivElement>(null)
+  const [listFits, setListFits] = useState(true)
 
   /** Forget the circle, say one line, go home (spec §The device that was asked to leave). */
   const goneOnce = useRef(false)
@@ -407,6 +412,27 @@ export default function Round() {
       setPending((p) => { const { [value]: _drop, ...rest } = p; return rest })
     }
   }, [dev, readPrefs])
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const check = () => {
+      // The content's own height (first child's top to last child's bottom), not the column's: the
+      // column is stretched to the grid area while it does not fit, and would never shrink back.
+      const kids = Array.from(el.children) as HTMLElement[]
+      if (kids.length === 0) return
+      const h = kids[kids.length - 1].getBoundingClientRect().bottom - kids[0].getBoundingClientRect().top
+      const stuck = el.classList.contains('listFits') ? el : kids[0]
+      const top = parseFloat(getComputedStyle(stuck).top) || 0
+      setListFits(h <= window.innerHeight - top)
+    }
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    for (const k of Array.from(el.children)) ro.observe(k)
+    window.addEventListener('resize', check)
+    check()
+    return () => { ro.disconnect(); window.removeEventListener('resize', check) }
+  }, [pool.length, rolls])
 
   if (!dev) return <main className="round" data-screen="round" />
 
@@ -705,7 +731,7 @@ export default function Round() {
 
       {/* The list column: what this round is made of. Sticky beside the input column, so it stays in
           view while a long search result list scrolls past on the left. */}
-      <div className="roundList" data-part="round-list">
+      <div ref={listRef} className={listFits ? 'roundList listFits' : 'roundList'} data-part="round-list">
         {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
             row is a loading spinner wearing a costume (the spec's words). It takes the step after
             the menu's cap, because it is the last thing on the screen in reading order. */}
