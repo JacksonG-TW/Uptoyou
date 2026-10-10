@@ -18,10 +18,9 @@ circle attaches their existing principal and gains a seat, not a second identity
 the silent double-mint the consequence easiest to get wrong precisely because nothing errors;
 here the default mints only when no principal is named, and naming one never mints.
 
-**Deliberately absent:** the invite flow — single-use links, the existing-principal attach on
-a device that already holds a secret. That is mid-September's work (D74), and until it lands
-this command is the only door, which D74 accepts for exactly as long as nobody but the
-operator needs one.
+**Not the only door any more:** since 2026-09-13 members create and join circles themselves
+(`circles.py`, through `grow_seat` below). This command stays the operator's door: fixture
+circles, the operator credential, and a seat attached to an existing principal.
 """
 
 from __future__ import annotations
@@ -72,9 +71,8 @@ def invite_link(circle_id: int, token: str) -> str:
 # proposals each, so 30 candidate places against D72's 36 dice outcomes — the apportionment has room
 # and D108's decider draw is nowhere near the byte boundary that H48 records.
 #
-# **Enforced here because this command is the only door.** D74's invite flow does not exist yet, and
-# this file's own docstring says so; when it lands, the member-facing refusal belongs there and must
-# read from this constant rather than restating the number.
+# **Enforced in `grow_seat`, the one place every door counts through** — this CLI and `circles.py`'s
+# create and join, whose member-facing refusal reads this constant rather than restating the number.
 #
 # **The cap refuses the next join and deletes nothing — D110's no-migration rule.** A circle that is
 # already over it stays exactly as it is: the fixture circle held 291 seats when this landed, every

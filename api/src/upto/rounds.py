@@ -1,5 +1,7 @@
-"""Ticket 19 — the write half's three endpoints: open, propose, roll — and the one read beside
-them, a round's result, which can never roll (reviewer's front-end finding 4, 2026-10-07).
+"""Ticket 19 — a round's endpoints: open, propose, submit and take a submission back, sign the
+trip, and the one read, a round's result, which can never close a round (reviewer's front-end
+finding 4, 2026-10-07). **There is no roll route since 2026-10-09** (提交, owner): the round closes
+when the last pinned seat submits, and `close_round` is the old roll's body, run by that request.
 
 Every endpoint resolves the caller to a member of the round's circle before anything else
 (D67), and the two halves of a failed resolution — an unknown token, a circle without a seat
@@ -11,13 +13,15 @@ The response shapes the entries already ruled:
   hour is never silently dropped;
 - a repeat proposal is a **quiet 200** (D70) — a proposal carries no input beyond which
   place, so two requests for the same place cannot disagree;
-- rolling a closed round answers **200 with the stored result** (D69) — the retry gets
-  exactly the answer it missed, in the same shape a first roll returns it;
+- submitting to a closed round answers **200 with the stored result** (D69), as reading its
+  result does — the retry gets exactly the answer it missed, in the shape a first close returns;
+- a void round (every pinned seat left; revision 0050) answers **409**, or **410** where a
+  result is asked for — gone, not «not yet»;
 - a swept or empty pool answers 409 out loud (D22's shape) rather than resolving to an
   arbitrary winner.
 
-The roll is the whole chain in one transaction: re-resolve a defaulted hour to the hour the
-roll stands in (D73, D41), load and pin (D43), fold (D45/D46), apportion 36 outcomes (D72),
+The close is the whole chain in one transaction: re-resolve a defaulted hour to the hour the
+round stands in (D73, D41), load and pin (D43), fold (D45/D46), apportion 36 outcomes (D72),
 two cryptographically random dice, and `write_roll` — which re-folds the records it stores
 and refuses the whole write on any mismatch (D15).
 """
