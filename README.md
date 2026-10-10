@@ -24,11 +24,15 @@
 > *What the live demo holds:* Taipei's restaurants only, on one small server sized for a few groups at
 > once. No account, no email.
 
-**Where to read next:** [Data engineering →](#for-data-engineers-the-pipeline) ·
-[AI and evaluation →](#for-ai-engineers-the-classifier-and-its-evaluation) ·
+**Where to read next:** [The data pipeline →](#the-data-pipeline) ·
+[The classifier →](#the-classifier-and-its-evaluation) ·
 [How the dice decide →](#how-the-dice-decide) · [Run it yourself →](#quick-start)
 
 ### How to use it
+
+1. **Open the home page**: today's weather, and 開一個圈子 to start.
+
+   ![The home page](docs/tutorial/0-home.png)
 
 1. **Create a circle**: name the group and yourself.
 
@@ -68,7 +72,7 @@ tonight.
 (a majority leaves the same person losing every time), or a blind draw (every place's odds have a
 stated reason, fixed before anyone proposes).
 
-## For data engineers: the pipeline
+## The data pipeline
 
 ### Seven sources, one schedule
 
@@ -173,7 +177,7 @@ The production database is **490 MB**: 35,965 places, 25,031 with a generated ca
 Every weight the dice use is a stored row linked to the reading it came from, and a lineage tool
 answers «where did this number come from» for an AI agent ([below](#a-tool-for-ai-agents-lineage-over-mcp)).
 
-## For AI engineers: the classifier and its evaluation
+## The classifier and its evaluation
 
 ### What the model does
 
@@ -275,7 +279,7 @@ what, in the same transaction that saves the result. A preference write emits no
 in a small group the moment of an event is one guess away from a name. A nightly job erases unused
 preferences under a role that can touch that one table and nothing else.
 
-## System Architecture
+## System architecture
 
 ![Architecture: the stack as it is served](docs/diagrams/architecture.png)
 
