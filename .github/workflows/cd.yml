@@ -10,6 +10,9 @@
 # is this run's own GITHUB_TOKEN, given `packages: write` only in the two jobs that write, and no
 # third-party action runs beside it — only the runner's docker CLI and a pinned checkout.
 #
+# The runner is pinned (ubuntu-24.04), not `ubuntu-latest`: the image build's own OS and tools move
+# only when a person moves them, never under an unchanged commit.
+#
 # The packages must be public for the box to pull anonymously; the read-back below is the box's own
 # position and fails the run if one is not. A package created by a first push starts private.
 
@@ -33,7 +36,7 @@ env:
 jobs:
   build:
     name: Build and push the images for this commit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
       contents: read
@@ -74,7 +77,7 @@ jobs:
   verify:
     name: Verify, reading as the box does
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -94,7 +97,7 @@ jobs:
     name: Move latest (main only, after all three are verified)
     needs: verify
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
