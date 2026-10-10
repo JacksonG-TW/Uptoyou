@@ -16,7 +16,7 @@ The response shapes the entries already ruled:
 - submitting to a closed round answers **200 with the stored result** (D69), as reading its
   result does — the retry gets exactly the answer it missed, in the shape a first close returns;
 - a void round (every pinned seat left; revision 0050) answers **409**, or **410** where a
-  result is asked for — gone, not «not yet»;
+  result or a trip is asked for — gone, not «not yet»;
 - a swept or empty pool answers 409 out loud (D22's shape) rather than resolving to an
   arbitrary winner.
 
