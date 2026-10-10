@@ -192,12 +192,17 @@ git --no-pager log --oneline "$deployed..$after" 2>/dev/null | sed 's/^/    /' |
 # **`airflow/init.sh` likewise (owner 「加」, 2026-10-10):** compose mounts it from this clone and
 # runs it as airflow-init's entrypoint on every `up`, with Airflow's database credentials — the same
 # reach, and no image in between. (db/init runs only on an empty volume; tls/ holds no file.)
-HELD="deploy/ compose.yaml airflow/init.sh"
-# shellcheck disable=SC2086  # HELD is a fixed list of pathspecs, split on purpose
-if ! git diff --quiet "$deployed" "$after" -- $HELD; then
-    say "REFUSING: this deploy changes the deploy itself (deploy/, compose.yaml or airflow/init.sh)."
-    # shellcheck disable=SC2086
-    git --no-pager diff --stat "$deployed" "$after" -- $HELD | sed 's/^/    /'
+# **Except `deploy/*.md` (owner 「改」, 2026-10-10).** Prose reaches the box as a file nothing runs, so
+# a README-only release deploys on its own; the first one cost a hand-run for a change of words. Any
+# other file in `deploy/` — the script, its units — is still held, and so is a release that changes
+# a README *and* one of them. The pathspecs are written out, quoted, rather than kept in a variable:
+# this is POSIX sh, and an unquoted `*.md` would be a filename glob before git ever saw it.
+held_diff() {
+    git "$@" "$deployed" "$after" -- deploy/ ':(exclude)deploy/*.md' compose.yaml airflow/init.sh
+}
+if ! held_diff diff --quiet; then
+    say "REFUSING: this deploy changes the deploy itself (deploy/ other than its .md files, compose.yaml or airflow/init.sh)."
+    held_diff --no-pager diff --stat | sed 's/^/    /'
     say "         A compose.yaml or airflow/init.sh change reaches the box without an image, so a person looks first."
     say "         A deploy/ change: the script that just ran is the one from before the pull — it cannot perform a"
     say "         step it does not have. Nothing was pulled into the stack and nothing was restarted,"
