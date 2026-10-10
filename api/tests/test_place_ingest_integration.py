@@ -38,13 +38,13 @@ The test builds its own database and drops it, so it never touches the stack's d
 import asyncio
 import io
 import os
-import subprocess
 import sys
 import zipfile
 from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+import _tempdb  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
@@ -95,12 +95,6 @@ def archive(rows, stamp, detected_at, raw=None):
     a second run.
     """
     return fda.read_archive(archive_bytes(rows, stamp) if raw is None else raw, detected_at)
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 async def counts(Session):
@@ -349,36 +343,20 @@ async def runlog_scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
 
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(
-            ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-        )
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
+    async def run(test_url: str, environment: dict) -> None:
         # The township reference table has to exist before a place can point at it — the
         # foreign key is D27's, and ticket 06's seed is where the twelve codes live.
-        from upto.seed.township_station import load
+        from upto.seed.township_station import load  # noqa: PLC0415
 
         await load(test_url)
         await scenario(test_url)
         # After the H14 scenario on purpose: it drives `ingest_archive` directly and so writes no
         # run rows at all, which leaves `ingest_run` empty for the one below to count from zero.
         await runlog_scenario(test_url)
-    finally:
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(text('drop database if exists "{}" with (force)'.format(TEST_DB)))
-        await admin.dispose()
-    return 0
+
+    return await _tempdb.with_temporary_database(TEST_DB, run)
 
 
 if __name__ == "__main__":

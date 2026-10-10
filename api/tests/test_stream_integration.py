@@ -27,15 +27,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_stream_check"
 TAIPEI = timezone(timedelta(hours=8))
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 async def scenario(test_url: str, base_url: str) -> None:
@@ -410,45 +405,23 @@ async def scenario(test_url: str, base_url: str) -> None:
     )
 
 
-async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    server = None
+async def served(test_url: str, environment: dict) -> int:
+    """A real uvicorn on the migrated database for the scenario, stopped whatever happens."""
+    # **A short heartbeat so it can be asserted in a test somebody will run.** The product's
+    # interval is 25 s, set by Cloudflare's ~100 s idle cut; asserting that directly would
+    # cost half a minute per assertion and the test would rot unrun. The behaviour under test
+    # — a comment arrives when the queue is quiet, and no event is lost to the timeout that
+    # produces it — does not depend on the number.
+    environment = dict(environment, UPTO_STREAM_HEARTBEAT_SECONDS="0.4")
+    port = 8901
+    server = subprocess.Popen(
+        ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(port)],
+        cwd="/srv/src",
+        env=environment,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     try:
-        # **A short heartbeat so it can be asserted in a test somebody will run.** The product's
-        # interval is 25 s, set by Cloudflare's ~100 s idle cut; asserting that directly would
-        # cost half a minute per assertion and the test would rot unrun. The behaviour under test
-        # — a comment arrives when the queue is quiet, and no event is lost to the timeout that
-        # produces it — does not depend on the number.
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url,
-                           UPTO_STREAM_HEARTBEAT_SECONDS="0.4")
-        for attempt in (1, 2):
-            migrate = subprocess.run(
-                ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-            )
-            if migrate.returncode != 0:
-                print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-                return 2
-            if attempt == 2:
-                noise = migrate.stdout.decode("utf-8", "replace") + migrate.stderr.decode(
-                    "utf-8", "replace"
-                )
-                assert "Running upgrade" not in noise, (
-                    "the second `alembic upgrade head` ran a migration:\n" + noise
-                )
-        port = 8901
-        server = subprocess.Popen(
-            ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(port)],
-            cwd="/srv/src",
-            env=environment,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
         import httpx  # noqa: PLC0415
 
         base_url = f"http://127.0.0.1:{port}"
@@ -460,20 +433,17 @@ async def with_temporary_database() -> int:
                 except httpx.TransportError:
                     await asyncio.sleep(0.2)
             else:
-                print("the test server never came up", file=sys.stderr)
-                return 2
+                raise _tempdb.CouldNotStart("the test server never came up")
         await scenario(test_url, base_url)
+        return 0
     finally:
-        if server is not None:
-            server.terminate()
-            server.wait(timeout=10)
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
-    return 0
+        server.terminate()
+        server.wait(timeout=10)
+
+
+async def with_temporary_database() -> int:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    return await _tempdb.with_temporary_database(TEST_DB, served)
 
 
 if __name__ == "__main__":

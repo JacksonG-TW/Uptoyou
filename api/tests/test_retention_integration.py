@@ -20,7 +20,6 @@ A job that aged rows by `slot_start` would delete tomorrow's forecast and keep l
 
 import asyncio
 import os
-import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -30,6 +29,7 @@ from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
 from upto import retention  # noqa: E402
+import _tempdb  # noqa: E402
 
 TAIPEI = timezone(timedelta(hours=8))
 TEST_DB = "upto_retention_check"
@@ -43,12 +43,6 @@ def check(name, condition, detail=""):
                              "" if condition else "  — {}".format(detail)))
     if not condition:
         FAILURES.append(name)
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 async def forecast_publication(session, sha: str, age_days: int) -> int:
@@ -150,29 +144,8 @@ async def scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(
-            ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-        )
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
-        await scenario(test_url)
-    finally:
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB)))
-        await admin.dispose()
-    return 0
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    return await _tempdb.with_temporary_database(TEST_DB, lambda url, _environment: scenario(url))
 
 
 if __name__ == "__main__":

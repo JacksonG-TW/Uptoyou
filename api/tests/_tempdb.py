@@ -24,6 +24,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 
+class CouldNotStart(Exception):
+    """Raised by a scenario that could not begin (its server never came up): the helper says so and
+    returns 2, the build-and-drop tests' «not run» code. A scenario's RETURN value is never read —
+    on 2026-10-10 a scenario that returned a publication id became the process's exit code."""
+
+
 def urls(test_db: str) -> tuple:
     """(the admin url, the test database's url), both from `UPTO_DATABASE_URL`."""
     live = os.environ["UPTO_DATABASE_URL"]
@@ -40,28 +46,32 @@ async def _admin(admin_url: str, statement: str) -> None:
         await admin.dispose()
 
 
-def migrate(environment: dict) -> Optional[str]:
-    """`alembic upgrade head` twice. None on success, else what to print."""
+def migrate(environment: dict) -> Optional[tuple]:
+    """`alembic upgrade head` twice. None on success, else `(exit code, what to print)`:
+    2 when alembic itself failed (the test could not run), **1 when the second run applied a
+    migration** — that is a defect the test found, not a test that could not run (the reviewer's
+    should, 2026-10-10: it was an assert's 1 in the copies that checked it)."""
     for attempt in (1, 2):
         done = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv", env=environment,
                               capture_output=True)
         said = done.stdout.decode("utf-8", "replace") + done.stderr.decode("utf-8", "replace")
         if done.returncode != 0:
-            return said
+            return 2, said
         if attempt == 2 and "Running upgrade" in said:
-            return "the second `alembic upgrade head` ran a migration — not idempotent:\n" + said
+            return 1, "the second `alembic upgrade head` ran a migration — not idempotent:\n" + said
     return None
 
 
 async def with_temporary_database(
     test_db: str,
-    scenario: Callable[[str, dict], Awaitable[Optional[int]]],
+    scenario: Callable[[str, dict], Awaitable[object]],
 ) -> int:
     """Make `test_db`, migrate it twice, run `scenario(test_url, environment)`, drop it.
 
-    Returns 2 when the database cannot be migrated, the scenario's own int when it returns one
-    (a test that could not start its server says so that way), else 0. A failing check inside the
-    scenario raises or prints as it always did; the drop happens either way.
+    Returns 1 when the second migration applies anything (not idempotent), 2 when the database
+    cannot be migrated or the scenario raises `CouldNotStart`, else 0.
+    What the scenario returns is ignored. A failing check inside it raises or prints as it always
+    did; the drop happens either way.
     """
     admin_url, test_url = urls(test_db)
     await _admin(admin_url, 'drop database if exists "{}" with (force)'.format(test_db))
@@ -70,9 +80,14 @@ async def with_temporary_database(
         environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
         failed = migrate(environment)
         if failed is not None:
-            print(failed, file=sys.stderr)
+            code, said = failed
+            print(said, file=sys.stderr)
+            return code
+        try:
+            await scenario(test_url, environment)
+        except CouldNotStart as reason:
+            print(reason, file=sys.stderr)
             return 2
-        result = await scenario(test_url, environment)
-        return result if isinstance(result, int) else 0
+        return 0
     finally:
         await _admin(admin_url, 'drop database if exists "{}" with (force)'.format(test_db))

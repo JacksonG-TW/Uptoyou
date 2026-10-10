@@ -26,13 +26,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_fanout_check"
 TAIPEI = timezone(timedelta(hours=8))
@@ -173,24 +173,10 @@ async def scenario(test_url: str, a: str, b: str) -> None:
     await dispose_all()
 
 
-async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text(f'drop database if exists "{TEST_DB}" with (force)'))
-        await connection.execute(text(f'create database "{TEST_DB}"'))
-    await admin.dispose()
-
+async def served(test_url: str, environment: dict) -> int:
+    """Two real uvicorns on the migrated database for the scenario, stopped whatever happens."""
     servers = []
     try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv",
-                                 env=environment, capture_output=True)
-        if migrate.returncode != 0:
-            sys.stderr.write(migrate.stderr.decode("utf-8", "replace"))
-            return 2
         import httpx  # noqa: PLC0415
         for port in PORTS:
             servers.append(subprocess.Popen(
@@ -208,17 +194,20 @@ async def with_temporary_database() -> int:
                         pass
                     await asyncio.sleep(0.25)
                 else:
-                    print(f"FAIL {url} never became healthy", file=sys.stderr)
-                    return 2
+                    raise _tempdb.CouldNotStart(f"FAIL {url} never became healthy")
         await scenario(test_url, *urls)
+        return 0
     finally:
         for server in servers:
             server.terminate()
             server.wait(timeout=10)
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(text(f'drop database if exists "{TEST_DB}" with (force)'))
-        await admin.dispose()
+
+
+async def with_temporary_database() -> int:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    started = await _tempdb.with_temporary_database(TEST_DB, served)
+    if started:
+        return started
 
     if FAILURES:
         print(f"\n{len(FAILURES)} failing: " + ", ".join(FAILURES), file=sys.stderr)

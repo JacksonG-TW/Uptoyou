@@ -29,6 +29,7 @@ sys.path.insert(0, SRC)
 
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_self_serve_check"
 PORT = 8907
@@ -43,12 +44,6 @@ CHECKS = []
 def check(label: str, condition: bool, detail: str = "") -> None:
     CHECKS.append((label, condition, detail))
     print(("  ok   " if condition else "  FAIL ") + label + (f" — {detail}" if detail else ""))
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 def ticket_of(link: str) -> str:
@@ -824,29 +819,15 @@ async def refunds_on_failure(environment: dict) -> None:
         server.wait(timeout=10)
 
 
-async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    server = None
+async def served(test_url: str, environment: dict) -> int:
+    """A real server, because a status code is only real at a process boundary; then the second
+    server `refunds_on_failure` starts for itself. Stopped whatever happens."""
+    server = subprocess.Popen(
+        ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(PORT)],
+        cwd="/srv/src", env=environment,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
     try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv",
-                                 env=environment, capture_output=True)
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
-
-        # A real server, because a status code is only real at a process boundary.
-        server = subprocess.Popen(
-            ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(PORT)],
-            cwd="/srv/src", env=environment,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
         import httpx  # noqa: PLC0415
 
         async with httpx.AsyncClient() as probe:
@@ -857,21 +838,21 @@ async def with_temporary_database() -> int:
                 except httpx.TransportError:
                     await asyncio.sleep(0.2)
             else:
-                print("the test server never came up", file=sys.stderr)
-                return 2
+                raise _tempdb.CouldNotStart("the test server never came up")
 
         await scenario(test_url)
         await refunds_on_failure(environment)
+        return 0
     finally:
-        if server is not None:
-            server.terminate()
-            server.wait(timeout=10)
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
+        server.terminate()
+        server.wait(timeout=10)
+
+
+async def with_temporary_database() -> int:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    started = await _tempdb.with_temporary_database(TEST_DB, served)
+    if started:
+        return started
 
     failed = [label for label, ok, _ in CHECKS if not ok]
     print()

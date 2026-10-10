@@ -29,22 +29,16 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import os
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+import _tempdb  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
 TEST_DB = "upto_harness_cleanup_test"
 TOOL_PATH = "/srv/tools/drop_harness_circles.py"
-
-
-def urls():
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    return head + "/postgres", head + "/" + TEST_DB
 
 
 def load_tool():
@@ -183,32 +177,12 @@ async def scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    admin_url, test_url = urls()
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text("drop database if exists {}".format(TEST_DB)))
-        await connection.execute(text("create database {}".format(TEST_DB)))
-    await admin.dispose()
-    environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-    subprocess.run(["alembic", "upgrade", "head"], cwd="/srv", env=environment, check=True)
-    try:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+
+    async def run(test_url: str, environment: dict) -> None:
         await scenario(test_url)
-        return 0
-    finally:
-        # **Terminate before dropping, and this is not tidiness.** The first version dropped
-        # straight away; when `scenario` raised, its engine's pool was still open and the drop
-        # failed with `ObjectInUseError` — which then became the traceback, **hiding the real
-        # failure completely**. A teardown that can fail is a teardown that can impersonate the
-        # bug it was cleaning up after.
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text("select pg_terminate_backend(pid) from pg_stat_activity "
-                     "where datname = :d and pid <> pg_backend_pid()"),
-                {"d": TEST_DB},
-            )
-            await connection.execute(text("drop database if exists {}".format(TEST_DB)))
-        await admin.dispose()
+
+    return await _tempdb.with_temporary_database(TEST_DB, run)
 
 
 if __name__ == "__main__":

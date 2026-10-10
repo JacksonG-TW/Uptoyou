@@ -23,6 +23,9 @@ as the cross-circle backstop, and H98.
 
 **Everything that matters is called as `upto_erasure`** (`set role`), because a definer function
 called as the owner proves the body and not the grant.
+
+Keeps its own temporary-database code rather than `_tempdb`: it downgrades to 0044 and upgrades again
+inside the test, which the shared helper does not express.
 """
 
 from __future__ import annotations

@@ -70,6 +70,7 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+import _tempdb  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
@@ -745,37 +746,17 @@ async def scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}" with (force)'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
 
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(
-            ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-        )
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
+    async def run(test_url: str, environment: dict) -> None:
         # A place points at its township through D27's foreign key, so the twelve codes have to
         # be present before item 11 writes a row. Ticket 06's seed is where they live.
         from upto.seed.township_station import load  # noqa: PLC0415
 
         await load(test_url)
         await scenario(test_url)
-    finally:
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
-    return 0
+
+    return await _tempdb.with_temporary_database(TEST_DB, run)
 
 
 if __name__ == "__main__":

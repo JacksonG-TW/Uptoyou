@@ -20,6 +20,9 @@ through a new read-only check role»):
 
 Nothing here needs Airflow: the statements and the rules are `upto.checks`; the task wrapper is a
 few lines of hook calls proved by `airflow tasks test` on the stack.
+
+Runs through `_tempdb`, so `UPTO_DATABASE_URL` must carry the `+asyncpg` driver (the tests service's does);
+the scenario itself is handed the plain asyncpg form.
 """
 
 from __future__ import annotations
@@ -27,7 +30,6 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import os
-import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -36,6 +38,7 @@ import asyncpg
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
 from upto import checks  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_value_check_test"
 FAILURES: list[str] = []
@@ -248,32 +251,21 @@ async def scenario(owner_url: str, check_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"].replace("+asyncpg", "")
     check_live = os.environ.get("UPTO_CHECK_DATABASE_URL", "").replace("+asyncpg", "")
     if not check_live:
         print("UPTO_CHECK_DATABASE_URL is not set in this container — the tests service carries it since A28; "
               "nothing checked", file=sys.stderr)
         return 2
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
     check_head, _, _ = check_live.rpartition("/")
     check_url = check_head + "/" + TEST_DB
-    admin = await asyncpg.connect(admin_url)
-    await admin.execute('drop database if exists "{}" with (force)'.format(TEST_DB))
-    await admin.execute('create database "{}"'.format(TEST_DB))
-    await admin.close()
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url.replace("postgresql://", "postgresql+asyncpg://"))
-        migrate = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv", env=environment,
-                                 capture_output=True, text=True)
-        if migrate.returncode != 0:
-            print(migrate.stderr[-2000:], file=sys.stderr)
-            return 2
-        await scenario(test_url, check_url)
-    finally:
-        admin = await asyncpg.connect(admin_url)
-        await admin.execute('drop database if exists "{}" with (force)'.format(TEST_DB))
-        await admin.close()
+
+    async def checked(test_url: str, environment: dict) -> None:
+        # the scenario speaks plain asyncpg urls; the helper's carry the SQLAlchemy driver name
+        await scenario(test_url.replace("+asyncpg", ""), check_url)
+
+    started = await _tempdb.with_temporary_database(TEST_DB, checked)
+    if started:
+        return started
     if FAILURES:
         print("\n{} failing: {}".format(len(FAILURES), ", ".join(FAILURES)))
         return 1

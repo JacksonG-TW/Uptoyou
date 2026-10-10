@@ -36,6 +36,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_dataset_check"
 FAILURES: list[str] = []
@@ -45,21 +46,6 @@ def check(label: str, ok: bool, detail=None) -> None:
     print(("ok   " if ok else "FAIL ") + label + ("" if ok or detail is None else f" {detail!r}"))
     if not ok:
         FAILURES.append(label)
-
-
-async def run_sql(url: str, statement: str, autocommit: bool = False):
-    engine = create_async_engine(url, **({"isolation_level": "AUTOCOMMIT"} if autocommit else {}))
-    try:
-        async with engine.connect() as connection:
-            result = await connection.execute(text(statement))
-            if not autocommit:
-                await connection.commit()
-            try:
-                return result.scalar()
-            except Exception:
-                return None
-    finally:
-        await engine.dispose()
 
 
 async def seed(session, publication_id: int) -> None:
@@ -251,24 +237,16 @@ async def scenario(test_url: str) -> None:
 
 async def with_temporary_database() -> int:
     live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-    await run_sql(admin_url, f'drop database if exists "{TEST_DB}" with (force)', True)
-    await run_sql(admin_url, f'create database "{TEST_DB}"', True)
-    try:
-        import subprocess  # noqa: PLC0415
 
-        migrated = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv",
-                                  capture_output=True,
-                                  env=dict(os.environ, UPTO_DATABASE_URL=test_url))
-        if migrated.returncode != 0:
-            sys.stderr.write(migrated.stdout.decode("utf-8", "replace"))
-            sys.stderr.write(migrated.stderr.decode("utf-8", "replace"))
-            return 2
-        await scenario(test_url)
-    finally:
-        os.environ["UPTO_DATABASE_URL"] = live
-        await run_sql(admin_url, f'drop database if exists "{TEST_DB}" with (force)', True)
+    async def served(test_url: str, environment: dict) -> None:
+        try:
+            await scenario(test_url)
+        finally:
+            os.environ["UPTO_DATABASE_URL"] = live
+
+    failed = await _tempdb.with_temporary_database(TEST_DB, served)
+    if failed:
+        return failed
 
     if FAILURES:
         print(f"\n{len(FAILURES)} failing: " + ", ".join(FAILURES), file=sys.stderr)

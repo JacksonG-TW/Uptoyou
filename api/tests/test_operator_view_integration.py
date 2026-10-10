@@ -25,6 +25,7 @@ from hashlib import sha256
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
+import _tempdb  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
@@ -344,30 +345,15 @@ async def scenario(test_url: str, base_url: str) -> None:
           "leaves the seat")
 
 
-async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    server = None
+async def served(test_url: str, environment: dict) -> int:
+    """A real uvicorn on the migrated database for the scenario, stopped whatever happens."""
+    port = 8903
+    server = subprocess.Popen(
+        ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(port)],
+        cwd="/srv/src", env=environment,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
     try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(["alembic", "upgrade", "head"], cwd="/srv", env=environment,
-                                 capture_output=True)
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
-        port = 8903
-        server = subprocess.Popen(
-            ["uvicorn", "upto.main:app", "--host", "127.0.0.1", "--port", str(port)],
-            cwd="/srv/src", env=environment,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
         import httpx  # noqa: PLC0415
 
         base_url = "http://127.0.0.1:{}".format(port)
@@ -379,20 +365,17 @@ async def with_temporary_database() -> int:
                 except httpx.TransportError:
                     await asyncio.sleep(0.2)
             else:
-                print("the test server never came up", file=sys.stderr)
-                return 2
+                raise _tempdb.CouldNotStart("the test server never came up")
         await scenario(test_url, base_url)
+        return 0
     finally:
-        if server is not None:
-            server.terminate()
-            server.wait(timeout=10)
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
-    return 0
+        server.terminate()
+        server.wait(timeout=10)
+
+
+async def with_temporary_database() -> int:
+    """The shared helper (`_tempdb`): migrated twice, dropped afterwards whatever happens."""
+    return await _tempdb.with_temporary_database(TEST_DB, served)
 
 
 if __name__ == "__main__":

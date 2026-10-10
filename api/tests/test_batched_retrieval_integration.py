@@ -46,7 +46,6 @@ similarity is distinct by about 1e-3 and the neighbour order is total.
 
 import asyncio
 import os
-import subprocess
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
@@ -57,6 +56,7 @@ from upto.classify import embed as embedding  # noqa: E402
 from upto.classify import examples as store  # noqa: E402
 from upto.classify import run as backfill  # noqa: E402
 from upto.evaluate.score import load_testset  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_batched_retrieval_check"
 STUB_MODEL = "stub-embed:test"
@@ -237,37 +237,10 @@ async def scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        from sqlalchemy import text
-
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        migrate = subprocess.run(
-            ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-        )
-        if migrate.returncode != 0:
-            print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-            return 2
+    async def served(test_url: str, environment: dict) -> None:
         await scenario(test_url)
-    finally:
-        from sqlalchemy import text
 
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
-    return 0
+    return await _tempdb.with_temporary_database(TEST_DB, served)
 
 
 if __name__ == "__main__":

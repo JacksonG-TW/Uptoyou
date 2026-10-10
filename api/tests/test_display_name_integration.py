@@ -17,7 +17,6 @@ bare name; the search payload carries `name_source` and B6's `district`; and the
 import asyncio
 import os
 import secrets as pysecrets
-import subprocess
 import sys
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -26,6 +25,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 
 from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
+import _tempdb  # noqa: E402
 
 TEST_DB = "upto_display_name_check"
 
@@ -236,40 +236,10 @@ async def scenario(test_url: str) -> None:
 
 
 async def with_temporary_database() -> int:
-    live = os.environ["UPTO_DATABASE_URL"]
-    head, _, _ = live.rpartition("/")
-    admin_url, test_url = head + "/postgres", head + "/" + TEST_DB
-    admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-    async with admin.connect() as connection:
-        await connection.execute(text('drop database if exists "{}"'.format(TEST_DB)))
-        await connection.execute(text('create database "{}"'.format(TEST_DB)))
-    await admin.dispose()
-
-    try:
-        environment = dict(os.environ, UPTO_DATABASE_URL=test_url)
-        for attempt in (1, 2):
-            migrate = subprocess.run(
-                ["alembic", "upgrade", "head"], cwd="/srv", env=environment, capture_output=True
-            )
-            if migrate.returncode != 0:
-                print(migrate.stderr.decode("utf-8", "replace"), file=sys.stderr)
-                return 2
-            if attempt == 2:
-                noise = migrate.stdout.decode("utf-8", "replace") + migrate.stderr.decode(
-                    "utf-8", "replace"
-                )
-                assert "Running upgrade" not in noise, (
-                    "the second `alembic upgrade head` ran a migration:\n" + noise
-                )
+    async def served(test_url: str, environment: dict) -> None:
         await scenario(test_url)
-    finally:
-        admin = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
-        async with admin.connect() as connection:
-            await connection.execute(
-                text('drop database if exists "{}" with (force)'.format(TEST_DB))
-            )
-        await admin.dispose()
-    return 0
+
+    return await _tempdb.with_temporary_database(TEST_DB, served)
 
 
 if __name__ == "__main__":

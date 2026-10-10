@@ -336,8 +336,7 @@ async def served(test_url: str, environment: dict) -> int:
                 except httpx.TransportError:
                     await asyncio.sleep(0.2)
             else:
-                print("the test server never came up", file=sys.stderr)
-                return 2
+                raise _tempdb.CouldNotStart("the test server never came up")
         await scenario(test_url)
         return 0
     finally:
