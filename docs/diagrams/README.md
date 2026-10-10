@@ -64,7 +64,7 @@ bodies each stop erdify's parser dead. What is kept is columns, types, nullabili
 and FOREIGN KEY, **inlined into the `CREATE TABLE`**: pg_dump emits keys as separate
 `ALTER TABLE … ADD CONSTRAINT` statements, and erdify reads those tables as having no keys at all.
 
-**What it projects away.** All 26 tables with all their columns is unreadable —
+**What it projects away.** All 33 tables with all their columns is unreadable —
 `business_tax_row` alone carries eight industry code/name columns. So every table shows its keys
 in full plus a short allowlist of story-carrying columns (`STORY` in `er_schema.py`). The
 allowlist is checked against the dump both ways: a table in the database and not in `STORY`
@@ -74,11 +74,11 @@ raises, and a column in `STORY` and not in the database raises. Neither is silen
 
 | File | Tables | Reads as |
 |---|---|---|
-| `er-overview` | all 26, **keys only** | the whole map, and where the clusters touch |
-| `er-reference` | 10 + 1 context | five open-data name sources: a publication row per fetched file, a data row per record |
+| `er-overview` | all 33 (plus Alembic's version table), **keys only** | the whole map, and where the clusters touch |
+| `er-reference` | 12 + 1 context | five open-data name sources: a publication row per fetched file, a data row per record |
 | `er-weather` | 5 | CWA forecast and observation, and the township→station table that joins them to a place |
-| `er-product` | 8 + 2 context | circle, round, submission, and the audit trail of every factor that moved a weight |
-| `er-ledger` | 2 + 7 context | `ingest_run` against the seven publication tables, and the pgvector retrieval crib |
+| `er-product` | 13 + 2 context | circle, round, submission, and the audit trail of every factor that moved a weight |
+| `er-ledger` | 3 + 7 context | `ingest_run` against the seven publication tables, the pgvector retrieval crib, and the value-check history |
 
 *Context tables* appear in a cluster they do not belong to, because hiding the parent of a
 foreign key would draw a column pointing at nothing. They are:
