@@ -92,8 +92,8 @@ fi
 cd "$APP"
 
 # **What is deployed, recorded — not inferred from whether a pull moved HEAD** (2026-10-08). Until
-# this file existed the script deployed «if `git pull` moved HEAD». Publishing is two pushes, the
-# code and then the images, so a tick landing between them pulled the commit, failed `compose pull`
+# this file existed the script deployed «if `git pull` moved HEAD». Publishing put the code first
+# and the images after it (since 2026-10-10 the repository's own workflow builds them on each push), so a tick landing between them pulled the commit, failed `compose pull`
 # («manifest unknown») and exited — and every later tick saw HEAD unmoved and said «no change» for
 # ever. A failed `migrate` stranded a commit the same way. H83's shape: the clone moved, the stack
 # did not, and nothing said so. Now the clone's position and the stack's position are two facts:
@@ -212,7 +212,8 @@ fi
 # **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the research is in
 # the private repository, `idea & img/orchestrator/research/ghcr-research.md`). It built its own images until then, and on
 # 2026-09-05 that wedged it for twelve hours — `npm ci` and a Vite build on a swapless 2 GB instance
-# with the stack running (H76's neighbour). The images are built on the development machine and
+# with the stack running (H76's neighbour). The images are built off the box — since
+# 2026-10-10 by this repository's own workflow (`.github/workflows/cd.yml`), on each push — and
 # pushed to GHCR as PUBLIC packages, so this pull needs **no credential**: «You can also access
 # public container images anonymously» (GitHub, read 2026-09-07). What arrives is named by the
 # extract's own commit, so «what is this running» is answerable from a repository anybody can fetch.
@@ -229,7 +230,7 @@ fi
 # 2026-09-07). The alternative shapes were: follow `:latest` and inherit H28 one layer up — a tag
 # that resolves to something different each day is the stale image that does not announce itself —
 # or pin a sha by hand in `.env`, which is a person editing a file on every deploy. This clone IS
-# the public extract, so the commit it is standing on is exactly what `publish_images.sh` tagged
+# the public extract, so the commit it is standing on is exactly the sha the workflow tagged
 # with. No edit, no moving tag, and **a missing image for this sha fails the pull loudly**, which is
 # the failure we want: the box refuses to start something nobody published rather than quietly
 # serving whatever `:latest` last pointed at. `:latest` still exists in the registry as a human
@@ -241,7 +242,7 @@ export UPTO_IMAGE_TAG
 # yet** (2026-10-08). The code reaches the public repository a minute or more before its images
 # reach the registry, so a tick in between finds a commit with no images. That is not a fault: it
 # exits 0 with the state untouched and the next tick asks again. The names are compose's own
-# (`config --images` with the tag set), the tag is the full commit — the string `publish_images.sh`
+# (`config --images` with the tag set), the tag is the full commit — the string the workflow
 # pushes (H103) — and the registry is asked anonymously, like the pull itself.
 anon=$(mktemp -d)
 missing=""
@@ -273,7 +274,7 @@ if [ -n "$missing" ]; then
     say "  nothing pulled, nothing restarted; the next tick asks again"
     limit=${DEPLOY_IMAGE_WAIT_LIMIT:-3600}
     if [ "$waited" -gt "$limit" ]; then
-        say "FAILED: still no images ${waited}s after this commit was first seen (limit ${limit}s) — was publish_images run?"
+        say "FAILED: still no images ${waited}s after this commit was first seen (limit ${limit}s) — did the repository's image workflow finish for it?"
         exit 9
     fi
     exit 0
