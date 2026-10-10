@@ -759,6 +759,32 @@ async def scenario(test_url: str) -> None:
         check("and the member list agrees: one query, so the two readers cannot name different people",
               seats_after.json().get("creator_nickname") is None, seats_after.text)
 
+        # ---- one address's day, in memory (owner 「A」 2026-10-10) -------------------------------
+        # The proxy appends its own `$remote_addr` LAST, so only the last entry is the address; an
+        # earlier one is whatever the visitor sent. Five creations, then a refusal, for that address.
+        def via(address, sent=None):
+            chain = ", ".join(([sent] if sent else []) + [address])
+            return {"X-Forwarded-For": chain}
+        codes = []
+        for i in range(5):
+            # A different forged first entry each time: it must not make a different address.
+            made = await client.post(BASE + "/circles", json={"name": f"同一處{i}", "nickname": "小林"},
+                                     headers=via("203.0.113.7", sent=f"198.51.100.{i}"))
+            codes.append(made.status_code)
+        check("one address makes its five circles", codes == [201] * 5, codes)
+        sixth = await client.post(BASE + "/circles", json={"name": "第六", "nickname": "小林"},
+                                  headers=via("203.0.113.7", sent="198.51.100.99"))
+        check("its sixth today is refused with a sentence, whatever it puts before the proxy's entry",
+              sixth.status_code == 429 and "明天" in sixth.text,
+              f"{sixth.status_code} {sixth.json().get('detail')}")   # a 201 body holds a key (H101)
+        neighbour = await client.post(BASE + "/circles", json={"name": "隔壁", "nickname": "阿德"},
+                                      headers=via("203.0.113.8"))
+        check("another address is untouched", neighbour.status_code == 201,  # never the body: it holds a key (H101)
+              neighbour.status_code)
+        direct = await client.post(BASE + "/circles", json={"name": "直連", "nickname": "測試"})
+        check("a request that did not come through the proxy (no header) is not counted",
+              direct.status_code == 201, direct.status_code)
+
         await engine.dispose()
 
 

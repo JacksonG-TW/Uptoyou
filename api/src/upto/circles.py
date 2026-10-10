@@ -23,7 +23,9 @@ accord. That bound is why re-issue exists and why expiry does not (A24's researc
 
 from __future__ import annotations
 
+import hmac
 import os
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 
 import secrets
@@ -54,6 +56,50 @@ router = APIRouter(prefix="/circles", tags=["circles"])
 #: of every day. Every cron and the stack's clock stay UTC. `test_self_serve_integration` evaluates
 #: the boundary at fixed instants either side of 16:00 UTC, where this day turns.
 DAILY_CIRCLE_CEILING = int(os.environ.get("UPTO_DAILY_CIRCLE_CEILING", "200"))
+
+# **The per-address half of the day, held in memory and nowhere else (owner 「A」, 2026-10-10).** nginx
+# cannot rate below one request a minute («If a rate of less than one request per second is desired,
+# it is specified in request per minute», nginx.org limit_req, read 2026-10-10), which is about 1,440
+# a day per address — so one address could spend the whole ceiling above and lock creation for
+# everyone. This counts creations per address per Taipei day:
+# - **the address is never stored or logged**: the key is an HMAC under a random key made at process
+#   start and never written anywhere, so a key in memory cannot be turned back into an address, and
+#   a restart forgets every count (the owner accepted the reset);
+# - **per process**: with N api instances an address gets N × the cap, still far under the ceiling;
+# - **counted only behind the proxy**: the address is the LAST `X-Forwarded-For` entry, the one nginx
+#   appends from its own `$remote_addr` (after realip). A request with no such header did not come
+#   through the proxy — on the box the api publishes no port, so that is only the dev machine's
+#   loopback fixture door, which the harnesses use precisely to skip the proxy's limits.
+PER_ADDRESS_DAILY = int(os.environ.get("UPTO_CIRCLES_PER_ADDRESS_DAY", "5"))
+_ADDRESS_KEY = secrets.token_bytes(32)
+_TAIPEI = timezone(timedelta(hours=8))   # no DST in Taiwan
+#: Bounded: past this many distinct addresses in one day the table is cleared rather than grown.
+#: An attacker holding that many addresses has already beaten any per-address rule.
+_ADDRESS_TABLE_MAX = 50_000
+_made_by_address: dict = {"day": None, "counts": {}}
+
+
+def _address_of(request: Request) -> bytes | None:
+    forwarded = request.headers.get("x-forwarded-for")
+    if not forwarded:
+        return None
+    last = forwarded.split(",")[-1].strip()
+    return hmac.new(_ADDRESS_KEY, last.encode(), sha256).digest() if last else None
+
+
+def _spend_address_day(request: Request) -> None:
+    """Refuse this address's next creation once it has made PER_ADDRESS_DAILY today; else count it."""
+    address = _address_of(request)
+    if address is None:
+        return
+    today = datetime.now(_TAIPEI).date()
+    table = _made_by_address
+    if table["day"] != today or len(table["counts"]) >= _ADDRESS_TABLE_MAX:
+        table["day"], table["counts"] = today, {}
+    made = table["counts"].get(address, 0)
+    if made >= PER_ADDRESS_DAILY:
+        raise HTTPException(status_code=429, detail="你今天開的圈子夠多了，明天再來。")
+    table["counts"][address] = made + 1
 
 #: The start of «today» in Taipei, as a timestamptz, for an instant `{now}`. One spelling for the
 #: query below and for the test that pins it at fixed instants — a boundary written twice is a
@@ -173,13 +219,15 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
 
     **No credential is required and that is the whole feature**: a stranger on the live site can do
     this. The bound on «a stranger can do this» is the ceiling below plus the proxy's per-address
-    rule, not authentication.
+    rule, plus the in-memory per-address day (`PER_ADDRESS_DAILY`), not authentication.
 
     **The creator's seat is an operator seat (D105).** The role rides the secret, so the person who
     made the circle is the one who can re-issue its link, and there is no parameter by which anyone
     else could ask to be.
     """
     _refuse_too_long(body.nickname, body.name)
+    # Before the database: no await between the read and the write, so one worker cannot race it.
+    _spend_address_day(request)
     async with session_factory()() as session:
         # **The ceiling is checked before anything is written**, the same arrangement `grow_seat`
         # uses for the cap: a refusal leaves no circle, no principal, no seat and no ticket.
