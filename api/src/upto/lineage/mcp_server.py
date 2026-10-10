@@ -179,6 +179,13 @@ TOOLS: Dict[str, Dict[str, Any]] = {
 }
 
 
+def _round_id(value: Any) -> int:
+    try:
+        return int(value)
+    except TypeError:
+        raise ValueError("round_id must be a whole number, got {!r}".format(value)) from None
+
+
 async def _call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     if name == "explain_place_loss":
         # Refused before anything is opened: the boundary is structural, not a filter over
@@ -190,8 +197,9 @@ async def _call(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     # internal error instead, which tells a caller nothing about what to fix, and it could not
     # be tested without a database.
     hour = _hour(arguments["hour"]) if "hour" in arguments else None
-    # The same for a round id: `int()` here turns «abc» into INVALID_PARAMS before any session.
-    round_id = int(arguments["round_id"]) if name == "explain_round" else None
+    # The same for a round id: «abc» and null are INVALID_PARAMS before any session. Only this
+    # argument's TypeError becomes a ValueError; one raised inside a query stays an internal error.
+    round_id = _round_id(arguments["round_id"]) if name == "explain_round" else None
 
     from ..db import lineage_session_factory
 

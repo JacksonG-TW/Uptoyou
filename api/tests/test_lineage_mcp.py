@@ -279,6 +279,17 @@ class RoundIdMustBeANumber(unittest.TestCase):
         )
         self.assertEqual(replies[0]["error"]["code"], server.INVALID_PARAMS)
 
+    def test_a_null_round_id_is_invalid_params_too(self):
+        replies = exchange(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "explain_round", "arguments": {"round_id": None}},
+            }
+        )
+        self.assertEqual(replies[0]["error"]["code"], server.INVALID_PARAMS)
+
 
 class TimeLabels(unittest.TestCase):
     def test_a_forecast_stamp_is_a_detection_time(self):

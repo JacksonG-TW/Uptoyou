@@ -590,6 +590,9 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
       (D68). A bare 409 would leave a screen saying "already signed" with no way to show by whom,
       and the nickname is circle-visible information: everyone in the circle knows who is in it.
 
+    Before any of them, a round with no result refuses: **410** for a void round (gone for good, the
+    result route's sentence), **409** «還沒擲出結果» for one still open.
+
     **The race is settled by `trip.round_id`'s UNIQUE and not by a `SELECT` first.** Two taps in the
     same instant both pass a check-then-insert; only one passes the index. So the insert is attempted
     and the conflict is *read* afterwards — which also means the 409's facts come from the row that
@@ -609,11 +612,11 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
         member = await _resolve_member(session, request, round_row.circle_id)
-        # A trip needs somewhere to have gone. An open round has no winner, so signing one would
-        # record an outing to a place nobody has chosen yet.
         if round_row.status == "void":
             # Gone, not «not yet»: the result route's sentence and status (revision 0050).
             raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+        # A trip needs somewhere to have gone. An open round has no winner, so signing one would
+        # record an outing to a place nobody has chosen yet.
         if round_row.status != "closed" or round_row.winning_place_id is None:
             raise HTTPException(status_code=409, detail="這一輪還沒擲出結果。")
         try:
