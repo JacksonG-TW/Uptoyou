@@ -1,8 +1,9 @@
 # Diagrams
 
-Four technical diagrams of this system, and the exact commands that produced them. Nothing
-here is hand-drawn from memory: the ER diagrams are generated from the live schema, and every
-label on the three drawn diagrams was read out of the source file named in its footer.
+Ten technical diagrams of this system — five generated entity-relationship diagrams and five drawn
+pictures — and the exact commands that produced them. Nothing here is drawn from memory: the ER
+diagrams are generated from the live schema, and every label on the drawn pictures was read out of
+the source file named in its footer.
 
 | Diagram | Files | How it was made |
 |---|---|---|
@@ -26,7 +27,7 @@ is added to any image in the stack, and no output arrives owned by root.
 
 ### Why it starts at the database rather than at model classes
 
-**This project has no ORM models.** The schema lives in 48 hand-written Alembic migrations that
+**This project has no ORM models.** The schema lives in 50 hand-written Alembic migrations that
 call `op.create_table`, and every query is SQL written through SQLAlchemy Core. There is no
 `DeclarativeBase`, no `Mapped[...]`, no `__tablename__` anywhere under `api/src`. An ERD
 generator that parses model classes therefore finds zero entities here — that is a fact about
@@ -76,7 +77,7 @@ raises, and a column in `STORY` and not in the database raises. Neither is silen
 | `er-overview` | all 26, **keys only** | the whole map, and where the clusters touch |
 | `er-reference` | 10 + 1 context | five open-data name sources: a publication row per fetched file, a data row per record |
 | `er-weather` | 5 | CWA forecast and observation, and the township→station table that joins them to a place |
-| `er-product` | 8 + 2 context | circle, round, roll, and the audit trail of every factor that moved a weight |
+| `er-product` | 8 + 2 context | circle, round, submission, and the audit trail of every factor that moved a weight |
 | `er-ledger` | 2 + 7 context | `ingest_run` against the seven publication tables, and the pgvector retrieval crib |
 
 *Context tables* appear in a cluster they do not belong to, because hiding the parent of a
@@ -133,8 +134,7 @@ validated for crossings, label clearance and readability before it is exported t
 size. A README column is about 840 pixels wide, and archify's fixed text sizes left its labels
 at 4–9 px there; drawn at the column's own width, every word in these five is 13 px or larger.
 Their facts are the archify specifications' (`architecture.json`, `etl-flow.json`,
-`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. They are one engineers' set, not the
-product's look (owner, 2026-10-10: «給工程師看…這是 github 不是產品畫面»): a white ground, black lines
+`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. They are one set drawn for engineers rather than in the product's look: a white ground, black lines
 and arrows, and a few colours that each mean one thing, the same thing in every chart — blue for
 public open data and its reference copy, green for weather, vermilion for the product, grey for the
 database and what it stores, purple for the scheduled pipeline (Okabe–Ito hues, which stay apart for
@@ -142,7 +142,7 @@ the common colour-vision deficiencies), and pale yellow with a heavy black borde
 models — told from vermilion by lightness, since a darker amber looked the same as vermilion to
 protan and deutan readers. A box takes a light tint of its
 colour with the full colour as its border; a group's outline takes the colour, dashed. Every text
-clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` is drawn in the same idiom with the vendors' own marks: a solid AWS frame with the AWS mark, a dashed AWS EC2 region, and Cloudflare, FastAPI, PostgreSQL, Airflow, Ollama and GitHub in their own colours (marks/NOTICE.md). nginx, the container registry and Telegram are labelled boxes.
+clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` is drawn in the same idiom with the vendors' own marks: a solid AWS frame with the AWS mark, a dashed AWS EC2 frame, and Cloudflare, FastAPI, PostgreSQL, Airflow, Ollama and GitHub in their own colours (marks/NOTICE.md). nginx, the container registry and Telegram are labelled boxes.
 
 **Each file is one file.** No stylesheet, no webfont, no CDN script, no remote image — the
 upstream skill's Google Fonts link and its two CDN export scripts were removed for exactly this
@@ -209,8 +209,8 @@ Every number and name was read out of the code or the database, not recalled:
   `app/api/src/upto/ingest/`, `app/api/src/upto/api_common.py` for the read-time name ladder,
   and the live `ingest_run` table for the outcome counts.
 - **evaluation-flow** — `app/api/src/upto/evaluate/run_round.py` and `score.py`,
-  `app/api/src/upto/classify/examples.py` and `embed.py`, the ten reports in
+  `app/api/src/upto/classify/examples.py` and `embed.py`, the reports in
   `app/evaluation/`, and `select embed_model, count(*) from example_embedding group by 1`.
 
-The accuracy figures come from the reports' own **Pooled** tables, and all ten carry the same
-test-set sha256 — which is the only reason they can be put in one table.
+The accuracy figures come from the reports' own **Pooled** tables, and each report carries the sha256
+of the test set it was scored on; only reports with the same sha share a table.

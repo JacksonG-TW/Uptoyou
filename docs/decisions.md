@@ -1,9 +1,9 @@
 # The long version
 
-The README states each decision in a paragraph. This page holds the measurements behind four of
-them — the ones where the first number was wrong, or where the same question was measured twice
-and the second answer replaced the first. It is here so the README can stay short without the
-working being thrown away.
+The README states its numbers in tables; this page holds the working behind them — above all the
+cases where the first number was wrong, or where the same question was measured twice and the second
+answer replaced the first. It is here so the README can stay short without the working being thrown
+away.
 
 Every figure names the date it was taken and the thing it was taken on. Where two figures for the
 same quantity disagree, both are here with the reason.
@@ -12,7 +12,7 @@ same quantity disagree, both are here with the reason.
 
 ## Industry codes: what a second measurement changed, and what it did not
 
-The README's decision 6 says the tax registry's official industry codes settle about one row in
+The tax registry's official industry codes settle about one row in
 ten, and that they sharpen the classifier rather than replacing it. That came from a city-wide
 join. It was then measured again on the 200-row evaluation set, which is the harder test: those
 rows are the ones actually scored.
@@ -111,8 +111,7 @@ figures moved with it — so nothing public quotes 36,499 any more.
 **The 532 between 36,497 and 35,965 is the source moving, not a failure.** On 2026-09-07 the
 instance's own publication no longer carried 532 of the registry numbers, and those rows were
 deleted there; the development database keeps its `place` rows across publications, so it still has
-them. It closes on the next city pass, or when the classifier's output ships nightly instead of by
-hand.
+them. It closes on the next city pass, or on the next by-hand carry of categories to the box.
 
 **The 411 between the instance's 36,376 and its 35,965 was an open measurement until 2026-09-12, and
 it is now answered.** The current publication holds 36,376 rows and **411 of them have no `place`
@@ -137,7 +136,7 @@ missing is that nothing said so.
 
 ## The memory week: a 2 GB instance and its own nightly work
 
-The README's decision 10 says the instance was too small for its nightly work and that the fix was
+The instance was too small for its own nightly work, and the fix was
 measured before it was chosen. The measurements arrived in this order, over **2026-09-04 to 09-07**,
 and the first one was wrong about the cause.
 
@@ -159,7 +158,8 @@ stack **1,131 → 1,009 MiB at rest**.
 start every 20 seconds, on two services.
 
 Afterwards every scheduled job ran one after another with the worst reading at **398 MB** free and
-the kernel's kill counter at zero. The instance stayed small.
+the kernel's kill counter at zero. The instance stayed a 2 GB machine through that week; it became a
+3.8 GB t3.medium later, once the account's plan allowed it.
 
 *Rejected along the way:* a bigger instance first (chosen, then refused by the account's plan);
 a swap file, which turns a crash into a twelve-hour crawl rather than preventing either; and tuning
@@ -169,14 +169,13 @@ without a table, which is how the first night blamed the ingest.
 
 ## Eight habits, each with one instance
 
-The code is one third of this repository. The other two are the reasoning behind each choice and the
-instruments that checked it.
+The code is one part of this repository; the rest is the measurement behind each choice.
 
 **One decision at a time, with a recommendation, its cost, and the branch turned down.** Every
-choice is written down once, with a date, and the README's eleven decisions are the digest.
+choice is written down once, with a date.
 *Instance:* the launch surface's structure was re-decided three times after a «final» build in early
-September — so a screen's structure is now settled once from a wireframe and a feature list, before
-anything is built.
+September — so a screen is now designed and built from a written spec, gated on the built page, and
+judged by the owner on the result.
 
 **Measure before deciding, and check the instrument before blaming the product.** A number beats an
 adjective. *Instance:* the memory week above — the first reading blamed the ingest and the cause was
@@ -184,9 +183,9 @@ Airflow's own footprint plus a health check that cold-started a CLI every 20 sec
 one day, seven of nine red findings were a test harness measuring itself, so each harness now writes
 down what would make it report a defect if the product were fine.
 
-**Checks run on the committer's machine, not in CI.** Six pre-commit gates, five of them
-standard-library only, so a fresh clone needs no toolchain to commit; CI re-runs the tests and
-decides nothing. *Instance:* the font-subset check refuses a commit whose member-facing copy needs a
+**Checks run on the committer's machine, not in CI.** Seven pre-commit gates, six of them
+standard-library only, so a fresh clone needs no toolchain to commit; public CI runs the tests that
+need no database, the web build and a compose check. *Instance:* the font-subset check refuses a commit whose member-facing copy needs a
 glyph the shipped fonts lack — a gap that is invisible on any machine with a system CJK fallback, so
 that check is the only place it shows.
 
@@ -198,8 +197,7 @@ two faults in a build that every test and the boot check had passed.
 
 **Licence-clean, or not used.** Every source and every model carries its licence before it is
 touched. *Instance:* `qwen2.5:3b-instruct` is research-licensed, so it may be asked in an evaluation
-round and can never be a pipeline's model. The same rule sorted the text-to-speech candidates — four
-usable, four refused, two uncertain and therefore out.
+round and can never be a pipeline's model.
 
 **Provenance over prediction.** Publications are content-addressed and never overwritten; each one
 records the shape of the file it came from; every weight that moved a place's odds is a row pinned
@@ -220,8 +218,8 @@ equivalent.
 
 ## The short entries in full, and the figures that left the page
 
-Two things live here. **The six decisions the README states in one line each** — it says «the long
-version has each of these in full», and this is that. And **the measurements that left the page
+Two things live here. **The short entries in full**, each behind a line the README states briefly.
+And **the measurements that left the page
 when it was reshaped for a reader deciding whether to read further**: none was withdrawn, they are
 here so that README + this page together still hold every figure the longer page carried.
 
@@ -281,8 +279,6 @@ one.
 
 ### Substring search: why the index was turned down
 
-*The README's «a trigram index changed the plan for 0 of 31 realistic queries».*
-
 The typeahead matches with `ILIKE '%q%'`. The obvious fix is `pg_trgm` + GIN on the three searched
 columns. Measured on 31 realistic queries, it **changed the plan for none of them** and left p50 at
 **311 → 324 ms** — slightly worse, within noise.
@@ -300,8 +296,6 @@ both ways over the whole publication).
 
 ### Why pgvector rather than a second service
 
-*The README's «the crib is 537 rows across three embedders».*
-
 The retrieval crib is **537 rows per embedder**, three embedders, thousands of vectors at the
 outside. A dedicated vector store (Pinecone, Milvus, Qdrant) buys nothing at that size and costs one
 more stateful service to run, back up, monitor and keep a version of. `pgvector` is an extension on
@@ -312,8 +306,6 @@ second backup story.
 memory becomes the constraint rather than the query. Nothing here is close.
 
 ### Why the evaluation set is frozen
-
-*The README's «it caught a prompt that read better and scored worse».*
 
 200 names, drawn once with a fixed seed, stratified over the three name rungs with a floor of 30 per
 stratum so the small sign and brand strata stay scorable. Labels drafted by a frontier model and
@@ -329,8 +321,6 @@ under a ruling; every report carries the set's sha256 so two scores compare only
 
 ### Why the live stream sends a heartbeat
 
-*The README's «a stream silent for 130 s was cut».*
-
 Through the proxy, a stream that said nothing for **130 seconds was cut**, and a real event
 afterwards was delivered to nobody. Direct to the origin the same stream stayed open and delivered —
 same code, same seconds, side by side, twice. With a comment line every **25 s** the same probe
@@ -342,8 +332,6 @@ which gives up the shield the domain exists for; and reconnect-and-hope, which c
 stream from a quiet one. The comment line carries no timing a member could read.
 
 ### The thirteen categories, and why a wrong answer is refused rather than repaired
-
-*The README's «the category is generated … from a closed list of thirteen».*
 
 麵食 · 飯食 · 小吃 · 火鍋 · 燒烤 · 日式 · 西式 · 早餐 · 咖啡飲料 · 便利商店 · 台菜 · 素食 · 其他
 
@@ -369,8 +357,8 @@ to twelve.
 
 ### What the name derivation actually produces
 
-*Measured 2026-09-11 by `probes/m6_ladder.py` against the publication of 2026-09-02, the same run
-that produced the README's reach figures.* Sign-less sites only, grouped by the registered company
+*Measured 2026-09-11 by a read-only probe against the publication of 2026-09-02, the same run that
+produced the README's reach figures.* Sign-less sites only, grouped by the registered company
 name — the collision key the read path uses — and run through the shipped `naming.derive_names`, so
 this is the product's rule rather than a query describing it.
 

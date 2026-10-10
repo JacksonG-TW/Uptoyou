@@ -6,7 +6,7 @@
 
 *You said «anywhere is fine». Did you mean it, or did you just not want to be the one who picked?*
 
-**Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
+**Try it in your browser, nothing to install: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
 ## Why this exists
 
@@ -29,7 +29,7 @@ the open:
 
 - every proposed place can be drawn, and what the group knows lowers its chances by written rules,
   never by someone's say-so;
-- the draw is fixed before anyone proposes, so nobody can steer it;
+- the draw's seed is fixed before anyone proposes, so nobody can steer it;
 - what each person would rather skip tonight stays theirs: it moves the chances and is never shown
   to the others;
 - it never says a place is good, only facts about it.
@@ -47,7 +47,7 @@ many:
 | Nothing applies | unchanged | every place starts at 1 |
 
 These are **weighted dice, not a ranking**. An avoided category is **a discount, not a veto**: with five
-at the table it loses a fifth and stays reachable. The constants are written policy (×0.5, 1/N, ×0.8);
+at the table it loses a fifth and stays reachable. The constants are written policy (last time ×0.5; one avoider takes 1/N off, so ×0.8 at a table of five; rain ×(1 − gap/120), never below ×0.5);
 with no record of what real groups chose, there is nothing to train a scorer on, and a stated rule can
 be checked.
 
@@ -95,7 +95,7 @@ be checked.
 
 **Where to read next:** [The data pipeline →](#the-data-pipeline) ·
 [The classifier →](#the-classifier-and-its-evaluation) ·
-[The draw and privacy →](#the-draw-and-privacy-in-the-database) · [Run it yourself →](#quick-start)
+[The draw and privacy →](#the-draw-and-privacy-in-the-database) · [Run it yourself →](#run-it-yourself)
 
 ## The work, in three numbers
 
@@ -125,8 +125,8 @@ numbers they share (統編, 登錄字號), never on fuzzy name matching.
 | 04:00 | 商業登記-餐館業 | which registrations are dead |
 | 04:20 | 財政部 全國營業(稅籍)登記 | tax name + industry code |
 | 04:30 | freshness check | names any source that stopped publishing, and for how many hours |
-| 05:00 | preference erasure | deletes per-meal preferences no roll used |
-| 05:40 | weather retention | deletes readings older than ninety days no roll used |
+| 05:00 | preference erasure | deletes per-meal preferences no draw used |
+| 05:40 | weather retention | deletes readings older than ninety days no draw used |
 | 06:00 | circle sweep | removes abandoned circles |
 | 06:20 | backup | `pg_dump` to S3, after both deletions; the last thirty kept |
 | 07:00 | dataset export | a Parquet file of every place, to S3 beside the dump |
@@ -233,7 +233,7 @@ Missing knowledge is added as labelled examples; the prompt and the model's weig
 **One frozen set of 200 names**, drawn once in proportion to the categories, labelled by hand, and
 never re-drawn between rounds. The metric is **accuracy**: the share of names where the model's
 category equals the hand label. Every candidate runs once on the same set, through the same pipeline
-the nightly job uses.
+a classification pass uses.
 
 | Model | Licence | Accuracy on the 200 |
 |---|---|---|
@@ -265,7 +265,7 @@ The embedder was screened the same way (nearest neighbour's label as the answer,
 - **Quota:** a hosted model's free tier allows 500 calls a day, so 3,300 places take a week; the
   local run takes one night.
 - **Data:** the names never leave the machine.
-- **Latency does not matter:** classification is a nightly batch nobody waits for.
+- **Latency does not matter:** classification is a batch pass nobody waits for.
 
 The whole city, **36,014 names in 10.5 hours** on one 8 GB graphics card (0.92 s a name; the same
 box's CPU takes 12–19 s). The production server runs no model.
@@ -280,14 +280,14 @@ the city) and the model takes the rest.
 
 An MCP server over stdio lets an agent ask where a number came from without writing SQL. Six tools
 answer: where a forecast reading was published, where an observation came from, which rows each factor
-of a roll read, what one ingest attempt did, a source's history, one publication's detail. It connects
+of a draw read, what one ingest attempt did, a source's history, one publication's detail. It connects
 as its own database role with read access to twelve tables. A seventh tool, `explain_place_loss`,
 exists only to refuse: why a place lost runs through members' private preferences, so the boundary is
 listed where an agent can see it.
 
 ## The draw and privacy, in the database
 
-**The draw is fixed before the first proposal**: a seed is committed when the round opens and revealed
+**The draw's seed is fixed before the first proposal**: it is committed when the round opens and revealed
 when it closes, and both travel with the result, so anyone in the circle can check the draw against what
 was fixed at the start. Every factor is written as a row when the round closes; the operator's receipt
 reads those rows back and recomputes nothing.
@@ -319,7 +319,7 @@ The CI badge above runs on every public commit: **the tests that need no databas
 library only), **the web build with its type check and lint**, and **the compose file read as a fresh
 clone would**. The full suite is 77 test files in two tempos: host-side tests with no network, and
 tests that build and drop their own database. Seven local checks run before every commit (secrets,
-what may leave app/, fonts, the server's user-facing text and status table, staged Python).
+what may leave app/, fonts, the server's user-facing text and status table, staged Python). The CD badge is the image build: GitHub Actions builds the three images for every commit to the release branches, tags them with the commit's full sha, and the server pulls exactly that sha on its timer.
 
 ## Performance
 
@@ -328,8 +328,8 @@ what may leave app/, fonts, the server's user-facing text and status table, stag
 | A night with no new file (reference source) | 15.0 s | **1.6 s** | the run log, 8 days |
 | Embedding one name | 0.481 s | **0.045 s** | 100 names, twice |
 | Classifying one name | 12–19 s on CPU | **0.92 s** on an 8 GB card | one district, 1,318 names |
-| The registry roster ingest's peak memory | 172 MB | **77 MB** | a 2 GB server |
-| The serving stack at rest | 1,131 MiB | **1,009 MiB** | a 2 GB server |
+| The registry roster ingest's peak memory | 172 MB | **77 MB** | the 2 GB server of September 2026 |
+| The serving stack at rest | 1,131 MiB | **1,009 MiB** | the 2 GB server of September 2026 |
 | A long classification pass, first vs last hour | 1.7× slower | **level** | 36,014 names in 10.5 h |
 
 **Name search has no index; it scans.** A trigram index was tried across 31 real queries and the
@@ -350,7 +350,7 @@ source is used inside its licence; there are no ratings, reviews or scraped page
 - **«Did you actually go?» from a transaction** (a POS or loyalty partner) would beat asking the group,
   but data like that moves under a commercial agreement and Taiwan's PDPA; none is approached.
 
-## Quick start
+## Run it yourself
 
 ```sh
 cp .env.example .env                # names only; the comments state the shape of every value
@@ -362,7 +362,7 @@ curl -s localhost:8080/health
 
 **A fresh clone comes up empty, then fills itself.** Places arrive with the first reference ingest
 (overnight, or [by hand](docs/operations.md)). Categories need the classifier backfill, which needs a
-graphics card and `UPTO_CLASSIFY_HOST=1` in `.env` (off by default, so a server never classifies); without one you get every place with the category column empty.
+graphics card; the scheduled pass also needs `UPTO_CLASSIFY_HOST=1` in `.env` (off by default, so a server's scheduler never starts one); without a card you get every place with the category column empty.
 
 `localhost:8080` is the app. The weather ingest needs a free CWA Open Data key
 (opendata.cwa.gov.tw); the five open-data files need no credential. New scheduled jobs arrive paused.

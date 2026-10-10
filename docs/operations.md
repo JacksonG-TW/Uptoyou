@@ -42,8 +42,8 @@ from, that file's content hash, and the run that wrote it:
 docker compose exec -T api python -m upto.lineage.mcp_server
 ```
 
-Five tools answer: `run_history`, `run_detail`, `publication_detail`, `forecast_reading_source` and
-`observation_reading_source`. A sixth, `explain_place_loss`, is listed **only in order to refuse** —
+Six tools answer: `run_history`, `run_detail`, `publication_detail`, `forecast_reading_source`,
+`observation_reading_source` and `explain_round`. A seventh, `explain_place_loss`, is listed **only in order to refuse** —
 the trail runs into private per-member choices, and a tool that merely lacks a feature today grows it
 the first time somebody finds it useful. A test asserts the refusal.
 
