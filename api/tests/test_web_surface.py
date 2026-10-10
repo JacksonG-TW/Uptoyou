@@ -591,8 +591,8 @@ class TheVendoredFaces(unittest.TestCase):
 
 
 class TheSecurityHeadersReachEveryResponse(unittest.TestCase):
-    """Owner 「A」 2026-10-10: CSP (frame-ancestors enforced, the rest Report-Only until every screen is
-    walked), nosniff, Referrer-Policy and HSTS, from the proxy, on every status (`always`).
+    """Owner 「A」 2026-10-10, the CSP enforced 2026-10-11: CSP, nosniff, Referrer-Policy and HSTS, from
+    the proxy, on every status (`always`).
 
     **nginx inherits server-level `add_header` only into a location with none of its own**, so the
     headers live in one snippet that the server block AND every location with an `add_header`
@@ -601,7 +601,6 @@ class TheSecurityHeadersReachEveryResponse(unittest.TestCase):
     PROXY = os.path.join(WEB, "..", "proxy")
     INCLUDE = "include /etc/nginx/upto-security-headers.conf;"
     WANT = {
-        "Content-Security-Policy": "frame-ancestors 'none'",
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "strict-origin-when-cross-origin",
         "Strict-Transport-Security": "max-age=31536000",
@@ -625,6 +624,13 @@ class TheSecurityHeadersReachEveryResponse(unittest.TestCase):
         for name, value in self.WANT.items():
             self.assertEqual(held.get(name), value, name)
 
+    def test_the_csp_is_enforced_and_sent_once(self):
+        """One enforced policy and no Report-Only twin: a second CSP header would be a second policy, and
+        the browser enforces both."""
+        names = [m.group(1) for m in re.finditer(r'^\s*add_header\s+(\S+)', self.read("security-headers.conf"), re.M)]
+        self.assertEqual(names.count("Content-Security-Policy"), 1)
+        self.assertNotIn("Content-Security-Policy-Report-Only", names)
+
     def test_hsts_names_no_other_host(self):
         """No includeSubDomains, no preload: other names under the domain are not this product's."""
         hsts = self.headers()["Strict-Transport-Security"]
@@ -632,7 +638,7 @@ class TheSecurityHeadersReachEveryResponse(unittest.TestCase):
         self.assertNotIn("preload", hsts)
 
     def test_the_policy_allows_no_inline_code_and_collects_nothing(self):
-        policy = self.headers()["Content-Security-Policy-Report-Only"]
+        policy = self.headers()["Content-Security-Policy"]
         self.assertNotIn("unsafe-inline", policy)
         self.assertNotIn("unsafe-eval", policy)
         self.assertNotIn("report-uri", policy)
