@@ -551,6 +551,10 @@
   font-size: var(--text-body); color: var(--color-ink);
 }
 .round .seatGroup + .seatGroup { margin-top: 22px; }
+/* 請人離開 shares the 還沒提交 heading's row, right-aligned like the 房主 tag (owner 「D」), at every width. */
+.round .seatHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.round .seatHead .roundH { flex: 1; }
+.round .seatHead .secondary { margin-top: 0; min-height: 44px; padding: 0 14px; }
 @media (max-width: 899px) { .round .waitSlot { --search-h: 46px; } }
 .round .seatGroup .secondary { margin-top: 14px; }
 /* The one-line removed screen and the confirm: a narrow slip, not the two-column page. */
@@ -633,7 +637,8 @@ main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-
      the bars (about ten seats), a sticky box that size cannot hold, so the column stretches to the
      whole grid area and only the 名單 sticks inside it, on its own paper, with the seats scrolling
      beneath (the reviewer, on 5b57fe9: the stretch gives the 名單 the page's full height). */
-  .round .roundList { grid-column: 2; grid-row: 1 / 3; align-self: stretch; }
+  /* Always positioned, so its children's offsetTop is measured from the column itself in both modes. */
+  .round .roundList { grid-column: 2; grid-row: 1 / 3; align-self: stretch; position: relative; }
   .round .roundList.listFits {
     align-self: start;
     position: sticky;

@@ -419,9 +419,13 @@ export default function Round() {
     const check = () => {
       // The content's own height (first child's top to last child's bottom), not the column's: the
       // column is stretched to the grid area while it does not fit, and would never shrink back.
+      // Layout boxes from the column's own top (offsetTop/offsetHeight): a transform such as the
+      // pool's arrival does not move them, and the pool's top margin and corner ornament count
+      // (the reviewer's note on 765f6e9). 4 px of slack covers the ornament's overhang.
       const kids = Array.from(el.children) as HTMLElement[]
       if (kids.length === 0) return
-      const h = kids[kids.length - 1].getBoundingClientRect().bottom - kids[0].getBoundingClientRect().top
+      const last = kids[kids.length - 1]
+      const h = last.offsetTop + last.offsetHeight + 4   // the column is always positioned, so this is from its own top
       const stuck = el.classList.contains('listFits') ? el : kids[0]
       const top = parseFloat(getComputedStyle(stuck).top) || 0
       setListFits(h <= window.innerHeight - top)
@@ -729,8 +733,8 @@ export default function Round() {
 
       </div>
 
-      {/* The list column: what this round is made of. Sticky beside the input column, so it stays in
-          view while a long search result list scrolls past on the left. */}
+      {/* The list column: what this round is made of. While it fits the window it sticks whole beside
+          the input column; when it is taller, only the 名單 sticks inside it (round.css). */}
       <div ref={listRef} className={listFits ? 'roundList listFits' : 'roundList'} data-part="round-list">
         {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
             row is a loading spinner wearing a costume (the spec's words). It takes the step after
@@ -812,17 +816,23 @@ export default function Round() {
             {/* The headings are written out, not mapped from an array: the display face is subset from
                 the literal copy in elements set in it (`subset_fonts.py`), and an expression hides
                 its characters from that derivation. */}
+            <div className="seatGroup" data-part="seats-waiting">
+              {/* **還沒提交 first, 請人離開 on its heading row** (owner 「D」, then 「A」 on the re-measure):
+                  under the list, or under a long 已提交 group, the host's control fell below the 1440
+                  fold (with the roof, 13 px past it at ten seats and six submitted). First, its place
+                  no longer depends on how many have submitted. */}
+              <div className="seatHead">
+                <h2 className="roundH dSerif">還沒提交</h2>
+                {leavable.length > 0 && (
+                  <button type="button" className="secondary" data-part="ask-leave"
+                    onClick={() => { setChosen(null); setError(''); setLeaving(true) }}>請人離開</button>
+                )}
+              </div>
+              <ul className="seatRows">{waitingSeats.map(seatRow)}</ul>
+            </div>
             <div className="seatGroup" data-part="seats-done">
               <h2 className="roundH dSerif">已提交</h2>
               <ul className="seatRows">{doneSeats.map(seatRow)}</ul>
-            </div>
-            <div className="seatGroup" data-part="seats-waiting">
-              <h2 className="roundH dSerif">還沒提交</h2>
-              <ul className="seatRows">{waitingSeats.map(seatRow)}</ul>
-              {leavable.length > 0 && (
-                <button type="button" className="secondary" data-part="ask-leave"
-                  onClick={() => { setChosen(null); setError(''); setLeaving(true) }}>請人離開</button>
-              )}
             </div>
           </section>
         )}
