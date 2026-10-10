@@ -209,7 +209,7 @@
 | 層 | 用什麼 |
 |---|---|
 | **前端** | Vite + React 19 + Tailwind 4 + shadcn/ui，在 proxy 映像檔裡建置。不用 CDN、執行時不抓外部資源；兩套字型只保留頁面用到的字。 |
-| **API** | Python、FastAPI、SQLAlchemy，全程 async；48 個手寫的 Alembic migration（觸發器、權限、CHECK 約束）。 |
+| **API** | Python、FastAPI、SQLAlchemy，全程 async；50 個手寫的 Alembic migration（觸發器、權限、CHECK 約束）。 |
 | **資料庫** | PostgreSQL 17 + pgvector。七個登入角色，一個工作一個：API、匯入、清除、備份、血緣工具、數值檢查，以及只有一次性 migration 容器會用到的 owner。 |
 | **排程** | Apache Airflow 3，LocalExecutor，在同一個 compose 裡。 |
 | **模型** | 家裡一張 8 GB 顯示卡上的 Ollama，只跑夜間批次；正式站不跑模型。 |
@@ -217,7 +217,7 @@
 
 ### 測試與 CI
 
-上面的 CI 徽章在每次公開 commit 時執行：**不需要資料庫的測試**（只用標準函式庫）、**前端建置加型別檢查與 lint**、**用全新 clone 的角度讀 compose 檔**。完整測試共 74 個檔案，分兩種：不連網的主機端測試，以及自己建資料庫、測完就丟的測試。每次 commit 前還有六道本機檢查（密鑰、Python、字型、使用者看得到的伺服器訊息等）。
+上面的 CI 徽章在每次公開 commit 時執行：**不需要資料庫的測試**（只用標準函式庫）、**前端建置加型別檢查與 lint**、**用全新 clone 的角度讀 compose 檔**。完整測試共 76 個檔案，分兩種：不連網的主機端測試，以及自己建資料庫、測完就丟的測試。每次 commit 前還有六道本機檢查（密鑰、Python、字型、使用者看得到的伺服器訊息等）。
 
 ## 效能
 

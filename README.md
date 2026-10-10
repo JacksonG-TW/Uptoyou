@@ -257,7 +257,7 @@ search, so there is no second service to run and back up for the vectors.
 | Layer | What runs |
 |---|---|
 | **Front end** | Vite + React 19 + Tailwind 4 + shadcn/ui, built inside the proxy image. No CDN and no runtime fetch; two fonts cut down to the characters the pages use. |
-| **API** | Python, FastAPI, SQLAlchemy, async end to end; 48 hand-written Alembic migrations (triggers, grants and CHECK constraints). |
+| **API** | Python, FastAPI, SQLAlchemy, async end to end; 50 hand-written Alembic migrations (triggers, grants and CHECK constraints). |
 | **Database** | PostgreSQL 17 with pgvector. Seven login roles, one per job: the API, the ingests, the erasure, the backup, the lineage tool, the value checks, and the owner, held only by the one-shot migration container. |
 | **Orchestration** | Apache Airflow 3, LocalExecutor, in the same compose stack. |
 | **Models** | Ollama on an 8 GB card at home, used in nightly batches; production runs no model. |
@@ -267,7 +267,7 @@ search, so there is no second service to run and back up for the vectors.
 
 The CI badge above runs on every public commit: **the tests that need no database** (standard
 library only), **the web build with its type check and lint**, and **the compose file read as a fresh
-clone would**. The full suite is 74 test files in two tempos: host-side tests with no network, and
+clone would**. The full suite is 76 test files in two tempos: host-side tests with no network, and
 tests that build and drop their own database. Six local checks run before every commit (secrets,
 staged Python, fonts, the server's user-facing text).
 
