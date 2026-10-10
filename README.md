@@ -8,7 +8,7 @@
 
 *You said «anywhere is fine». Did you mean it, or did you just not want to be the one who picked?*
 
-### What it does, in three numbers
+### The work, in three numbers
 
 | | Before → after | What was measured |
 |---|---|---|
@@ -19,7 +19,7 @@
 **Try it: [uptoyou.jacksong-tw.com](https://uptoyou.jacksong-tw.com)**
 
 > **Try this in 30 seconds.** Open the site and create a circle (a group deciding one meal). Copy the invite link and open it in a
-> private window: that is your second friend. Each of you proposes a place and presses 提交; when everyone is in, the reveal opens.
+> private window: that is your second friend. Each of you proposes a place and presses 提交 (submit); when everyone is in, the reveal opens.
 >
 > *What the live demo holds:* Taipei's restaurants only, on one small server sized for a few groups at
 > once. No account, no email.
@@ -34,27 +34,27 @@
 
    ![The home page](docs/tutorial/0-home.png)
 
-1. **Create a circle**: name the group and yourself.
+2. **Create a circle**: name the group and yourself.
 
    ![Create a circle](docs/tutorial/1-create.png)
 
-2. **Send the invite link** (the link itself is hidden in this picture; it opens a seat for whoever taps it).
+3. **Send the invite link** (the link itself is hidden in this picture; it opens a seat for whoever taps it).
 
    ![The invite panel](docs/tutorial/2-invite.png)
 
-3. **A friend joins** with a nickname.
+4. **A friend joins** with a nickname.
 
    ![A friend joins](docs/tutorial/3-join.png)
 
-4. **Propose places, and tick 這次不想吃的類別** (your own, never shown to others).
+5. **Propose places, and tick 這次不想吃的類別** (the categories you'd skip tonight; your own, never shown to others).
 
    ![Proposing places](docs/tutorial/4-propose.png)
 
-5. **Press 提交**; the round lists 還沒提交 and 已提交 until everyone is in.
+6. **Press 提交** (submit); the round lists 還沒提交 (not yet) and 已提交 (submitted) until everyone is in.
 
    ![Waiting for everyone](docs/tutorial/5-waiting.png)
 
-6. **The reveal**: dice or the 籤筒, picked per round, then the drawer and the slip.
+7. **The reveal**: dice or the 籤筒, picked per round, then the drawer and the slip.
 
    ![The reveal](docs/tutorial/6-reveal.png)
 
@@ -70,7 +70,9 @@ tonight.
 
 **It is not** a food-recommendation site (it never says a place is good, only facts about it), a vote
 (a majority leaves the same person losing every time), or a blind draw (every place's odds have a
-stated reason, fixed before anyone proposes).
+stated reason, and the draw is fixed before anyone proposes).
+
+*Everything below is how it's built.*
 
 ## The data pipeline
 
