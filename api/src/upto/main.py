@@ -1,7 +1,7 @@
-"""The API. One endpoint so far, and it is the one the stack's health depends on.
+"""The API: the app, its health check and two read endpoints (`/places/count`, `/weather`).
 
-Nothing about the product is here yet. The build order puts the pipeline first, so the
-first real endpoints arrive after the ingest tables exist.
+The product's routes live in their own modules and are mounted here — rounds, the live stream,
+preferences and circles. `/health` is the one the stack's health depends on.
 """
 
 import os

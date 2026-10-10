@@ -1,0 +1,972 @@
+{
+ "actions": [
+  "success",
+  "show_detail",
+  "reread",
+  "retry_later",
+  "forget_seat",
+  "void"
+ ],
+ "statuses": [
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 201,
+   "meaning": "the circle, the creator's key and the first join link",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 422,
+   "meaning": "the name is over 80 characters",
+   "detail": "圈子名稱太長了，最多80個字。一個表情符號可能算好幾個字。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 422,
+   "meaning": "the nickname is over 40 characters",
+   "detail": "暱稱太長了，最多40個字。一個表情符號可能算好幾個字。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 429,
+   "meaning": "the day's global ceiling is reached",
+   "detail": "今天開的圈子太多了，明天再來。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 429,
+   "meaning": "this address has made its circles for the day",
+   "detail": "你今天開的圈子夠多了，明天再來。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles",
+   "status": 500,
+   "meaning": "a brand-new circle refused its first seat: a bug",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 201,
+   "meaning": "a seat, its key",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 404,
+   "meaning": "the ticket is unknown",
+   "detail": "這個連結沒有用，跟朋友要一次。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 409,
+   "meaning": "the circle is full (the sentence names the cap)",
+   "detail": null,
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 410,
+   "meaning": "the ticket is past its hour",
+   "detail": "這個連結只能用一小時，過期了。跟開圈子的人要新的。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 410,
+   "meaning": "the ticket was replaced",
+   "detail": "這個連結換過了，跟開圈子的人要新的。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 422,
+   "meaning": "the name is over 80 characters",
+   "detail": "圈子名稱太長了，最多80個字。一個表情符號可能算好幾個字。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join",
+   "status": 422,
+   "meaning": "the nickname is over 40 characters",
+   "detail": "暱稱太長了，最多40個字。一個表情符號可能算好幾個字。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join/preview",
+   "status": 200,
+   "meaning": "the circle's name and creator",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join/preview",
+   "status": 404,
+   "meaning": "the ticket cannot be used, for any reason (not said which)",
+   "detail": "這條連結不能用了：可能已經過期（連結只有一小時）、被換掉，或沒有複製完整。開圈子的人可以給一條新的。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 201,
+   "meaning": "a new join link; the old one dies",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 403,
+   "meaning": "only the host may replace it",
+   "detail": "只有房主可以換連結。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 409,
+   "meaning": "replaced a moment ago by another tap",
+   "detail": "剛剛換過了，重新整理看看。",
+   "client_action": "reread"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 200,
+   "meaning": "the live link",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/join-ticket",
+   "status": 403,
+   "meaning": "only the host may see it",
+   "detail": "只有房主可以看連結。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket/check",
+   "status": 200,
+   "meaning": "whether a held link is live",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket/check",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket/check",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/join-ticket/check",
+   "status": 403,
+   "meaning": "only the host may ask",
+   "detail": "只有房主可以看連結。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/leave",
+   "status": 204,
+   "meaning": "left, or already gone: the same answer in every case, so it is not a probe",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 204,
+   "meaning": "the seat is removed",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 403,
+   "meaning": "only the host may remove a seat",
+   "detail": "只有房主可以請人離開。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 404,
+   "meaning": "that seat has already gone",
+   "detail": "這個人已經不在圈子裡了。",
+   "client_action": "reread"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 409,
+   "meaning": "the host cannot remove their own seat",
+   "detail": "房主不能請自己離開。要離開，請用離開圈子。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "DELETE",
+   "path": "/circles/{circle_id}/members/{member_id}",
+   "status": 409,
+   "meaning": "that seat has submitted in the open round",
+   "detail": "這個人已經提交了，不能請對方離開。",
+   "client_action": "reread"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/members",
+   "status": 200,
+   "meaning": "the seats",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/members",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/members",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/stream",
+   "status": 200,
+   "meaning": "the event stream opens",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/stream",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/stream",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/places",
+   "status": 200,
+   "meaning": "places matching the search",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/places",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/places",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 201,
+   "meaning": "a place added",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 200,
+   "meaning": "the place already existed; here it is",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 404,
+   "meaning": "no reference place with that number",
+   "detail": "no reference place with that 登錄字號",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 422,
+   "meaning": "send a name or a number, not both",
+   "detail": "exactly one of name or registry_no (D28's two doors)",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/places",
+   "status": 422,
+   "meaning": "a place needs a name",
+   "detail": "a place needs a name",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 204,
+   "meaning": "stored",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 400,
+   "meaning": "a kind, stance or category the server does not accept: a client bug",
+   "detail": null,
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 409,
+   "meaning": "this seat has submitted; take it back first",
+   "detail": "你已經提交了。要改清單，先收回提交。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 422,
+   "meaning": "a retired kind: a client bug",
+   "detail": null,
+   "client_action": "show_detail"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 200,
+   "meaning": "this seat's preferences",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/circles/{circle_id}/preferences",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/rounds",
+   "status": 201,
+   "meaning": "the round is open",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/rounds",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/rounds",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/rounds",
+   "status": 409,
+   "meaning": "another round is already open; the body carries the one that won",
+   "detail": null,
+   "client_action": "reread"
+  },
+  {
+   "method": "POST",
+   "path": "/circles/{circle_id}/rounds",
+   "status": 422,
+   "meaning": "the hour has no UTC offset",
+   "detail": "target_hour must carry a UTC offset (H17)",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 201,
+   "meaning": "the place is in the pool",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 200,
+   "meaning": "the place was already in the pool",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 404,
+   "meaning": "no such round",
+   "detail": "找不到這一輪。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 404,
+   "meaning": "no such place",
+   "detail": "找不到這家店。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 409,
+   "meaning": "this seat already proposed three",
+   "detail": "一個人最多提三家。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 409,
+   "meaning": "this seat has submitted; take it back first",
+   "detail": "你已經提交了。要改清單，先收回提交。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 409,
+   "meaning": "the round has closed",
+   "detail": "這一輪已經擲過了。",
+   "client_action": "reread"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/proposals",
+   "status": 410,
+   "meaning": "the round is void",
+   "detail": "這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。",
+   "client_action": "void"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 200,
+   "meaning": "the closed round's result",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 404,
+   "meaning": "no such round",
+   "detail": "找不到這一輪。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 409,
+   "meaning": "the round is still open",
+   "detail": "這一輪還沒擲出結果。",
+   "client_action": "reread"
+  },
+  {
+   "method": "GET",
+   "path": "/rounds/{round_id}/result",
+   "status": 410,
+   "meaning": "the round is void",
+   "detail": "這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。",
+   "client_action": "void"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 200,
+   "meaning": "submitted; or the round had already closed and this is its result (D69)",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 404,
+   "meaning": "no such round",
+   "detail": "找不到這一輪。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 409,
+   "meaning": "the pool has one place",
+   "detail": "一輪至少要兩家店。一家店不是決定，是通知。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 409,
+   "meaning": "this seat joined after the round opened",
+   "detail": "你是這一輪開始後才加入的，下一輪再一起選。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 409,
+   "meaning": "nothing in the pool can win",
+   "detail": "池子是空的，或每一家的機會都是零，擲不出結果。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/submit",
+   "status": 410,
+   "meaning": "the round is void",
+   "detail": "這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。",
+   "client_action": "void"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 200,
+   "meaning": "the submission is taken back",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 404,
+   "meaning": "no such round",
+   "detail": "找不到這一輪。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 409,
+   "meaning": "everyone submitted; the round closed",
+   "detail": "大家都提交了，已經開獎，收不回來了。",
+   "client_action": "reread"
+  },
+  {
+   "method": "DELETE",
+   "path": "/rounds/{round_id}/submit",
+   "status": 410,
+   "meaning": "the round is void",
+   "detail": "這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。",
+   "client_action": "void"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 201,
+   "meaning": "this seat signed the trip",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 200,
+   "meaning": "this seat had already signed it",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 401,
+   "meaning": "no Authorization header",
+   "detail": "a bearer token is required (D67)",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 401,
+   "meaning": "the key holds no seat in this circle",
+   "detail": "the token does not resolve to a member of this circle",
+   "client_action": "forget_seat"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 403,
+   "meaning": "the round is another circle's",
+   "detail": "這一輪不屬於你的圈子。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 404,
+   "meaning": "no such round",
+   "detail": "找不到這一輪。",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 409,
+   "meaning": "someone else signed first; the sentence names who and when",
+   "detail": null,
+   "client_action": "reread"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 409,
+   "meaning": "the round is still open",
+   "detail": "這一輪還沒擲出結果。",
+   "client_action": "reread"
+  },
+  {
+   "method": "POST",
+   "path": "/rounds/{round_id}/trip",
+   "status": 410,
+   "meaning": "the round is void",
+   "detail": "這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。",
+   "client_action": "void"
+  },
+  {
+   "method": "GET",
+   "path": "/health",
+   "status": 200,
+   "meaning": "serving",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/health",
+   "status": 503,
+   "meaning": "this instance cannot reach the database or the stream",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "GET",
+   "path": "/places/count",
+   "status": 200,
+   "meaning": "the registry's place count",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/places/count",
+   "status": 503,
+   "meaning": "no registry publication yet",
+   "detail": "no food-business registry publication yet",
+   "client_action": "retry_later"
+  },
+  {
+   "method": "GET",
+   "path": "/weather",
+   "status": 200,
+   "meaning": "the reading",
+   "detail": null,
+   "client_action": "success"
+  },
+  {
+   "method": "GET",
+   "path": "/weather",
+   "status": 404,
+   "meaning": "no such township or element",
+   "detail": null,
+   "client_action": "show_detail"
+  },
+  {
+   "method": "GET",
+   "path": "/weather",
+   "status": 422,
+   "meaning": "the hour has no UTC offset",
+   "detail": "hour must carry a UTC offset",
+   "client_action": "show_detail"
+  },
+  {
+   "method": "GET",
+   "path": "/weather",
+   "status": 500,
+   "meaning": "the stored reading is malformed",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 422,
+   "meaning": "the request body failed validation (FastAPI's own; detail is a list, not a sentence)",
+   "detail": null,
+   "client_action": "show_detail"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 429,
+   "meaning": "the proxy's per-address rate (no API sentence)",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 500,
+   "meaning": "an unexpected server error",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 502,
+   "meaning": "the proxy could not reach the API",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 503,
+   "meaning": "unavailable",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 504,
+   "meaning": "the proxy timed out",
+   "detail": null,
+   "client_action": "retry_later"
+  },
+  {
+   "method": "*",
+   "path": "*",
+   "status": 0,
+   "meaning": "no response at all: the network",
+   "detail": null,
+   "client_action": "retry_later"
+  }
+ ]
+}

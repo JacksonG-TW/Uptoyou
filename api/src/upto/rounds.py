@@ -1,5 +1,7 @@
-"""Ticket 19 — the write half's three endpoints: open, propose, roll — and the one read beside
-them, a round's result, which can never roll (reviewer's front-end finding 4, 2026-10-07).
+"""Ticket 19 — a round's endpoints: open, propose, submit and take a submission back, sign the
+trip, and the one read, a round's result, which can never close a round (reviewer's front-end
+finding 4, 2026-10-07). **There is no roll route since 2026-10-09** (提交, owner): the round closes
+when the last pinned seat submits, and `close_round` is the old roll's body, run by that request.
 
 Every endpoint resolves the caller to a member of the round's circle before anything else
 (D67), and the two halves of a failed resolution — an unknown token, a circle without a seat
@@ -11,13 +13,16 @@ The response shapes the entries already ruled:
   hour is never silently dropped;
 - a repeat proposal is a **quiet 200** (D70) — a proposal carries no input beyond which
   place, so two requests for the same place cannot disagree;
-- rolling a closed round answers **200 with the stored result** (D69) — the retry gets
-  exactly the answer it missed, in the same shape a first roll returns it;
+- submitting to a closed round answers **200 with the stored result** (D69), as reading its
+  result does — the retry gets exactly the answer it missed, in the shape a first close returns;
+- a void round (every pinned seat left; revision 0050) answers **410** on every round route —
+  gone for good, never «not yet» and never 409's «conflict, read again» (owner 「A」, 2026-10-10;
+  every route's statuses are in `statuses.py`);
 - a swept or empty pool answers 409 out loud (D22's shape) rather than resolving to an
   arbitrary winner.
 
-The roll is the whole chain in one transaction: re-resolve a defaulted hour to the hour the
-roll stands in (D73, D41), load and pin (D43), fold (D45/D46), apportion 36 outcomes (D72),
+The close is the whole chain in one transaction: re-resolve a defaulted hour to the hour the
+round stands in (D73, D41), load and pin (D43), fold (D45/D46), apportion 36 outcomes (D72),
 two cryptographically random dice, and `write_roll` — which re-folds the records it stores
 and refuses the whole write on any mismatch (D15).
 """
@@ -189,7 +194,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
             raise HTTPException(status_code=404, detail="找不到這一輪。")
         member = await _resolve_member(session, request, round_row.circle_id)
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         if round_row.status != "open":
             raise HTTPException(status_code=409, detail="這一輪已經擲過了。")
         await refuse_if_submitted(session, round_id, member)
@@ -490,7 +495,7 @@ async def submit(round_id: int, request: Request) -> dict:
             # D69: the retry gets the answer it missed, in the shape a first close returns.
             return await _stored_result(session, round_id, round_row, member, sees_evidence)
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
 
         if round_row.seat_ids and member not in round_row.seat_ids:
             raise HTTPException(status_code=409, detail="你是這一輪開始後才加入的，下一輪再一起選。")
@@ -552,7 +557,7 @@ async def unsubmit(round_id: int, request: Request) -> dict:
         if round_row.status == "closed":
             raise HTTPException(status_code=409, detail="大家都提交了，已經開獎，收不回來了。")
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         await session.execute(
             text("delete from member_roll where round_id = :r and member_id = :m"),
             {"r": round_id, "m": member},
@@ -590,6 +595,9 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
       (D68). A bare 409 would leave a screen saying "already signed" with no way to show by whom,
       and the nickname is circle-visible information: everyone in the circle knows who is in it.
 
+    Before any of them, a round with no result refuses: **410** for a void round (gone for good, the
+    result route's sentence), **409** «還沒擲出結果» for one still open.
+
     **The race is settled by `trip.round_id`'s UNIQUE and not by a `SELECT` first.** Two taps in the
     same instant both pass a check-then-insert; only one passes the index. So the insert is attempted
     and the conflict is *read* afterwards — which also means the 409's facts come from the row that
@@ -609,6 +617,9 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
         member = await _resolve_member(session, request, round_row.circle_id)
+        if round_row.status == "void":
+            # Gone, not «not yet»: the result route's sentence and status (revision 0050).
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         # A trip needs somewhere to have gone. An open round has no winner, so signing one would
         # record an outing to a place nobody has chosen yet.
         if round_row.status != "closed" or round_row.winning_place_id is None:

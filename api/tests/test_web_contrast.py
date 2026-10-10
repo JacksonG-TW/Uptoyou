@@ -23,17 +23,15 @@ arms itself as the palette grows.**
    declaration that these two meet, so a new hue with an `on-` companion is checked from the moment
    it is added.
 3. **If `--color-flood-X` differs from `--color-X`, an `--color-onflood-X` must exist and clear
-   4.5:1 on it.** Today the floods are exact aliases of their hues, so `on-X` serves and no
-   `onflood-*` token exists — measured, not assumed. **That stops being true the moment dark mode is
-   ported**, where the ruled design gives the floods four separate darker values so a landed flood
-   lifts the room about 11× rather than up to 96×. At that point `on-X` is no longer the right text
-   colour for `flood-X`, and this rule starts demanding the companion **without anyone remembering
-   to ask for it.**
+   4.5:1 on it.** Written when the floods were exact aliases of their hues and no `onflood-*` token
+   existed. **That is no longer true (measured 2026-10-10):** every flood is its own value and each
+   has an `onflood-*` companion, so this rule is load-bearing. Which floods differ is pinned in
+   `KNOWN_DIVERGED` below, so a palette change is a decision written in this file, not a stderr line.
 
-**Why that matters more than it sounds:** no single text colour works on all four floods today —
-`--color-ink` clears hot (7.98), jade (6.14) and sun (11.74) but fails cobalt (2.83), and
-`--color-paper` clears cobalt (6.56) and fails the other three (2.33, 3.02, 1.58). So the
-per-hue companion is not a nicety; a shared one cannot exist.
+**Why that matters more than it sounds:** when the floods were their hues, no single text colour
+worked on all four — `--color-ink` cleared hot (7.98), jade (6.14) and sun (11.74) but failed cobalt
+(2.83), and `--color-paper` cleared cobalt (6.56) and failed the other three (2.33, 3.02, 1.58). So
+the per-flood companion is not a nicety, whatever the floods hold at a given moment.
 
 **Decoration is deliberately held to no floor.** That principle came out of H30, where treating one
 decorative token as if it had a job was how the one-token mistake started, and it outlives the
@@ -139,6 +137,14 @@ class EveryOnTokenClearsItsHue(unittest.TestCase):
             )
 
 
+#: Every flood that is not an alias of a `--color-<hue>` (a `-deep` flood has no hue, so it is always
+#: here). Measured 2026-10-10: all eight.
+KNOWN_DIVERGED = frozenset({
+    "color-flood-cobalt", "color-flood-cobalt-deep", "color-flood-hot", "color-flood-hot-deep",
+    "color-flood-jade", "color-flood-jade-deep", "color-flood-sun", "color-flood-sun-deep",
+})
+
+
 class TheFloodsKeepAReadableTextColour(unittest.TestCase):
     """Rule 3 — the one that arms itself when dark mode lands. See the module docstring."""
 
@@ -163,15 +169,18 @@ class TheFloodsKeepAReadableTextColour(unittest.TestCase):
             self.assertGreaterEqual(round(ratio, 2), TEXT_FLOOR,
                                     "{} on {} is {:.2f}:1".format(companion, flood, ratio))
 
-    def test_today_they_are_aliases_and_that_is_measured_not_assumed(self):
-        """If this fails, the floods have diverged and the rule above has started doing work."""
+    def test_which_floods_differ_from_their_hue_is_pinned(self):
+        """It only printed to stderr until 2026-10-10, so it could not fail, and the divergence it
+        watched for had already happened unseen. Now a flood joining or leaving the set fails here;
+        the fix is to update `KNOWN_DIVERGED` in the same commit as the palette change."""
         held = tokens()
-        diverged = [name for name in sorted(held) if name.startswith("color-flood-")
+        diverged = {name for name in held if name.startswith("color-flood-")
                     and held.get("color-" + name[len("color-flood-"):], "").lower()
-                    != held[name].lower()]
-        if diverged:
-            print("\nweb contrast: {} no longer alias their hues — the onflood rule is now "
-                  "load-bearing.".format(", ".join(diverged)), file=sys.stderr)
+                    != held[name].lower()}
+        self.assertEqual(
+            sorted(diverged), sorted(KNOWN_DIVERGED),
+            "the floods that differ from their hue changed — update KNOWN_DIVERGED in this file "
+            "with the palette change, after the onflood rule above has passed for each")
 
 
 class TheLoadBearingBasics(unittest.TestCase):

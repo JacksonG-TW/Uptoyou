@@ -76,9 +76,9 @@ READABLE_TABLES = frozenset(
 )
 
 # Named so the refusal can quote them. **Narrowed 2026-08-19 from `member` to a member's private
-# facts** (owner, with D55's narrowing the same day): who rolled is a public act — everybody performs
-# it, visibly, in the same moment, on purpose — while what somebody *wants* is not. So a member id may
-# be read to verify a roll; a member's preference, contribution, reason or channel may not.
+# facts** (owner, with D55's narrowing the same day): who submitted is a public act — every seat's
+# submit is shown to the whole circle, on purpose — while what somebody *wants* is not. So a member id
+# may be read to verify a draw; a member's preference, contribution, reason or channel may not.
 FORBIDDEN_SUBJECTS = ("preference", "contribution", "reason", "private channel")
 
 
@@ -454,8 +454,8 @@ select b.township_code, b.publication_id, b.element, b.measure, b.slot_start,
 
 # A14 / LT-8 — the trip a round's D114 factor was measured against (revision 0031).
 #
-# **`signed_at <= closed_at`, which is what makes this reproducible.** The loader ran at roll time
-# and saw the circle's latest signature *then*; a trip signed afterwards — including the one signing
+# **`signed_at <= closed_at`, which is what makes this reproducible.** The loader ran when the round
+# closed and saw the circle's latest signature *then*; a trip signed afterwards — including the one signing
 # this very round — is not what the arithmetic used, and reporting it would be a verifier answering
 # a different question from the thing it verifies. That mistake has already been made once here, in
 # `explain_round`'s own decider (see below), and it is the reason this carries a bound at all.

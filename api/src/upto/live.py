@@ -46,7 +46,8 @@ from .stream import subscribe
 
 # No prefix — the proxy strips /api/ before forwarding, same as rounds.py explains.
 # **25 seconds, and the number is set by the shortest proxy timeout in front of us.** Cloudflare's
-# proxy cuts an idle connection at ~100 s; four heartbeats inside that window means three can be
+# proxy answers 524 after «the default 125 seconds» without a response (Cloudflare's error-524 page,
+# updated 2026-07-23; it read ~100 s when this was written); five heartbeats inside that window means four can be
 # lost to a slow moment and the connection still lives. It is deliberately not tuned to "how often
 # does a phone need to hear from us" — nothing on any screen reads it — but to the infrastructure,
 # so it moves when the infrastructure does and not before.
@@ -203,9 +204,9 @@ async def stream(circle_id: int, request: Request) -> StreamingResponse:
                     # **The heartbeat, and it fixes three separate things.** Added 2026-09-04.
                     #
                     # 1. **A proxy cuts an idle connection.** Cloudflare's terminates with 524
-                    #    after ~100 s of silence from the origin, and this stream was silent by
+                    #    after 125 s of silence from the origin (~100 s when written), and this stream was silent by
                     #    construction — a circle between proposals sends nothing for minutes. The
-                    #    product's live moment (D8) would have died and reopened every 100 s the
+                    #    product's live moment (D8) would have died and reopened every two minutes the
                     #    moment it went behind a proxy.
                     # 2. **Nothing could detect a dead client.** Writing only on an event means a
                     #    phone that drops off wifi without closing its TCP connection is never

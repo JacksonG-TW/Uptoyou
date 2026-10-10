@@ -63,6 +63,7 @@ RUN npm run build
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 
 COPY proxy/upto.conf /etc/nginx/conf.d/default.conf
+COPY proxy/security-headers.conf /etc/nginx/upto-security-headers.conf
 
 # **`dist/` rather than `web/`.** `dist/fonts/` arrives verbatim from `web/public/fonts/`
 # because Vite copies `publicDir` without hashing or rewriting, so the served URLs stay

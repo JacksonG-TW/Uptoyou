@@ -590,6 +590,74 @@ class TheVendoredFaces(unittest.TestCase):
                                 "silently".format(url))
 
 
+class TheSecurityHeadersReachEveryResponse(unittest.TestCase):
+    """Owner 「A」 2026-10-10: CSP (frame-ancestors enforced, the rest Report-Only until every screen is
+    walked), nosniff, Referrer-Policy and HSTS, from the proxy, on every status (`always`).
+
+    **nginx inherits server-level `add_header` only into a location with none of its own**, so the
+    headers live in one snippet that the server block AND every location with an `add_header`
+    include. A location that adds a header and forgets the include would serve none of them."""
+
+    PROXY = os.path.join(WEB, "..", "proxy")
+    INCLUDE = "include /etc/nginx/upto-security-headers.conf;"
+    WANT = {
+        "Content-Security-Policy": "frame-ancestors 'none'",
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "strict-origin-when-cross-origin",
+        "Strict-Transport-Security": "max-age=31536000",
+    }
+
+    def read(self, name):
+        with open(os.path.join(self.PROXY, name), encoding="utf-8") as f:
+            return f.read()
+
+    def headers(self):
+        found = {}
+        for line in self.read("security-headers.conf").splitlines():
+            m = re.match(r'\s*add_header\s+(\S+)\s+"([^"]*)"\s+(always)?;', line)
+            if m:
+                self.assertEqual(m.group(3), "always", "{} must be sent on every status".format(m.group(1)))
+                found[m.group(1)] = m.group(2)
+        return found
+
+    def test_every_header_is_set_with_its_value(self):
+        held = self.headers()
+        for name, value in self.WANT.items():
+            self.assertEqual(held.get(name), value, name)
+
+    def test_hsts_names_no_other_host(self):
+        """No includeSubDomains, no preload: other names under the domain are not this product's."""
+        hsts = self.headers()["Strict-Transport-Security"]
+        self.assertNotIn("includeSubDomains", hsts)
+        self.assertNotIn("preload", hsts)
+
+    def test_the_policy_allows_no_inline_code_and_collects_nothing(self):
+        policy = self.headers()["Content-Security-Policy-Report-Only"]
+        self.assertNotIn("unsafe-inline", policy)
+        self.assertNotIn("unsafe-eval", policy)
+        self.assertNotIn("report-uri", policy)
+        self.assertNotIn("report-to", policy)
+        for directive in ("default-src 'self'", "script-src 'self'", "style-src 'self'",
+                          "connect-src 'self'", "object-src 'none'", "frame-ancestors 'none'"):
+            self.assertIn(directive, policy)
+
+    def test_the_server_and_every_location_that_adds_a_header_include_them(self):
+        # Comments out first: they say «location» and «include» in prose.
+        conf = re.sub(r"#[^\n]*", "", self.read("upto.conf"))
+        server = conf[conf.index("server {"):]
+        blocks = re.findall(r"location\s[^{]*\{(.*?)\n    \}", server, re.S)
+        self.assertGreaterEqual(len(blocks), 5, "the location blocks were not found")
+        for body in blocks:
+            if "add_header" in body:
+                self.assertIn(self.INCLUDE, body, body.strip()[:80])
+        outside = re.sub(r"location\s[^{]*\{.*?\n    \}", "", server, flags=re.S)
+        self.assertIn(self.INCLUDE, outside, "the server-level include is missing")
+
+    def test_the_image_carries_the_snippet_where_the_include_looks(self):
+        self.assertIn("COPY proxy/security-headers.conf /etc/nginx/upto-security-headers.conf",
+                      self.read("Dockerfile"))
+
+
 class TheScreenNeverOffersWhatTheApiRefuses(unittest.TestCase):
     """The screen's closed list must be a **subset** of the API's, never the other way round.
 

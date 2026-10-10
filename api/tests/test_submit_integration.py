@@ -299,14 +299,17 @@ async def scenario(test_url: str) -> None:
         check("its result reads 410 with a sentence, never «not yet»",
               read.status_code == 410 and "作廢" in read.text, read.text)
         late_submit = await client.post(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
-        check("a submit to it says it is void", late_submit.status_code == 409
+        check("a submit to it says it is void", late_submit.status_code == 410
               and "作廢" in late_submit.text, late_submit.text)
         late_back = await client.delete(f"{BASE}/rounds/{lone_rid}/submit", headers=bearer(B))
         check("taking a submission back from it says it is void too",
-              late_back.status_code == 409 and "作廢" in late_back.text, late_back.text)
+              late_back.status_code == 410 and "作廢" in late_back.text, late_back.text)
+        late_trip = await client.post(f"{BASE}/rounds/{lone_rid}/trip", headers=bearer(B))
+        check("signing a trip for it reads 410 and void, never «not yet»",
+              late_trip.status_code == 410 and "作廢" in late_trip.text, late_trip.text)
         late_propose = await client.post(f"{BASE}/rounds/{lone_rid}/proposals",
                                          json={"place_id": lone_place}, headers=bearer(B))
-        check("and so does proposing to it", late_propose.status_code == 409
+        check("and so does proposing to it", late_propose.status_code == 410
               and "作廢" in late_propose.text, late_propose.text)
         fresh_view = Listener(client, lone_circle, B)
         fresh = await fresh_view.wait_for("snapshot")
