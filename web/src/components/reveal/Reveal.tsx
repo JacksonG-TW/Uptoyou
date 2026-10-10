@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import Board from './Board'
+import Board, { drawable } from './Board'
 import Cabinet from './Cabinet'
 import Cube, { REST } from './Cube'
 import Evidence from './Evidence'
 import Field from './Field'
 import Pairs from './Pairs'
 import { TubeArt, TubeRun, TUBE_MS } from './Tube'
-import { drawerOf, ganzhi, litCell, rollAnimFor, woodBoard, zhNumeral } from '@/lib/board'
+import { drawerOf, ganzhi, litCell, rollAnimFor, woodPool, zhNumeral } from '@/lib/board'
 import { arrive, useReducedMotion } from '@/lib/motion'
 import {
   evidenceIn, faceOf, fetchRaw, RoundStillOpen, signTrip,
@@ -81,6 +81,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const [sealLanded, setSealLanded] = useState(false)
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>('rolling')
+  /** The phase as of the last render, for callbacks that outlive it (a flight finishing after the
+   *  failsafe answered must not send the screen back to `landed`). */
+  const phaseRef = useRef<Phase>('rolling')
+  phaseRef.current = phase
   const [landedBy, setLandedBy] = useState<'animation' | 'fallback' | 'reduced' | null>(null)
   /** Where each die rests, in the cabinet layer's coordinates, and the die's size — measured from
    *  the drawn cells, so the rest is the row's start and the column's top at every width. */
@@ -141,6 +145,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
         noteLastRound(roundId)
         if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
           setLandedBy('reduced'); setPhase('answered')
+        } else if (!drawable(d.board) || !litCell(d.dice)) {
+          // Nothing to play the roll on (a swept pool draws no board): land at once rather than
+          // waiting out the failsafe.
+          setLandedBy('animation'); setPhase('answered')
         } else if (evidenceIn(raw)) {
           // The operator's screen is an instrument: no cabinet to play the roll on, so it lands.
           setLandedBy('animation'); setPhase('answered')
@@ -195,6 +203,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
       r.style.setProperty('--cx', `${Math.round(gb.left + gb.width / 2 - pb.left)}px`)
       r.style.setProperty('--cy', `${Math.round(gb.top + gb.height / 2 - 20 - pb.top)}px`)
       if (boardSlot.current) r.style.setProperty('--board-h', `${Math.round(boardSlot.current.offsetHeight)}px`)
+      // The list column is absolute and adds nothing to the stage's height, so the stage is held open
+      // to its measured end — or the last rows of a ten-place list sit past a page that cannot scroll.
+      const list = r.querySelector<HTMLElement>('.right')
+      if (list) r.style.setProperty('--right-end', `${Math.round(list.offsetTop + list.offsetHeight)}px`)
       // Each cover panel's offset from the page's top-left, so the one painting lines up across them.
       const rb = r.getBoundingClientRect()
       for (const el of [boardSlot.current, r.querySelector<HTMLElement>('.right')]) {
@@ -208,6 +220,8 @@ export default function Reveal({ roundId }: { roundId: number }) {
     const ro = new ResizeObserver(measure)
     if (layer.current) ro.observe(layer.current)
     if (answerBox.current) ro.observe(answerBox.current)
+    const rl = root.current?.querySelector<HTMLElement>('.right')
+    if (rl) ro.observe(rl)
     return () => { window.removeEventListener('resize', measure); ro.disconnect() }
   }, [data])
 
@@ -221,6 +235,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
 
   const toLit = useCallback(() => setPhase((p) => (p === 'answered' ? p : 'lit')), [])
   const toAnswered = useCallback(() => {
+    if (phaseRef.current === 'answered') return
     setPhase('answered')
     // Back to the ruled framing, then no transform at all: a held `scale(1)` would still make the
     // group a transformed box, and its viewport-pinned light would stop lining up with the page's.
@@ -271,8 +286,8 @@ export default function Reveal({ roundId }: { roundId: number }) {
     // left a narrow screen stuck at `lit` (found by g_multi_device at 430). They are cleared on
     // unmount only (`runTimers`).
     void Promise.all(flights.map((f) => f.finished)).then(() => {
-      if (!mounted.current) return
-      setLandedBy('animation'); setPhase('landed')
+      if (!mounted.current || phaseRef.current !== 'rolling') return   // the failsafe already answered
+      setLandedBy((b) => b ?? 'animation'); setPhase((p) => (p === 'rolling' ? 'landed' : p))
       camera([{ transform: `scale(${PUSH})` }, { transform: `scale(${PUSH - 0.015})` }, { transform: `scale(${PUSH - 0.008})` }], DICE_MS.settle, 'ease-out')
       runTimers.current.push(window.setTimeout(toLit, DICE_MS.hold1))
       runTimers.current.push(window.setTimeout(toAnswered, DICE_MS.hold1 + DICE_MS.hold2))
@@ -289,7 +304,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
     camera([{ transform: 'scale(1)' }, { transform: `scale(${PUSH})` }], TUBE_MS.shake * TUBE_MS.shakes)
   }, [data, reduce, anim, camera])
   const tubeStick = useCallback(() => camera([{ transform: `scale(${PUSH})` }, { transform: 'scale(1)' }], 600), [camera])
-  const tubeLit = useCallback(() => { setLandedBy('animation'); toLit() }, [toLit])
+  const tubeLit = useCallback(() => { setLandedBy((b) => b ?? 'animation'); toLit() }, [toLit])
   const tubeNamed = useCallback(() => {
     setPhase('answered')
     boardSlot.current?.getAnimations().forEach((a) => a.cancel())
@@ -336,7 +351,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const qualifier = data?.winner_qualifier ?? null
   const n = drawerOf(data?.dice)
   const qian = n ? `第${zhNumeral(n)}籤 ${ganzhi(n)}` : ''
-  const wood = woodBoard(data?.board)
+  const wood = woodPool(data?.places)
   const member = !!data && !evidence
   const running = !reduce && landedBy !== 'reduced'
 
@@ -361,9 +376,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
 
       <div className="stage">
 
-      {/* The answer region holds its box from the first frame and only its opacity moves, so the
-          sequence shifts nothing. From `lit` the slip shows, carrying 「第N籤 干支」; the name and the
-          act wait for `answered`. */}
+      {/* The answer region holds its box from the first frame and only its opacity moves. From `lit`
+          the slip shows and 「第N籤 干支」 is added inside it (the one insertion: at ≥ 1100 it sits in the slip's
+          fixed height, so nothing outside the slip moves); the name and the act wait for
+          `answered`. */}
       <p className="sr-only" aria-live="polite">{answered && winner ? winner : ''}</p>
       <div
         ref={answerBox}

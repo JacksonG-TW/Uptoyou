@@ -48,10 +48,12 @@ export function ganzhi(n: number): string {
  *  from the fifth shop a colour repeats and stops naming a shop. */
 export const WOOD_FROM = 5
 
-/** Is this board's cabinet plain wood? Counted from the drawn board — the shops it actually holds. */
-export function woodBoard(board: readonly (readonly number[])[] | undefined | null): boolean {
-  if (!board) return false
-  return new Set(board.flat()).size >= WOOD_FROM
+/** Is this round's cabinet plain wood? **Counted from the POOL, not the drawn board** (the
+ *  reviewer's should on 9f7e999): colours are given by pool seat (`faceOf`, seat mod 4), so a
+ *  fifth pooled shop repeats a colour even when a veto left it no drawer — five pooled shops with
+ *  one vetoed drew four on the board and two of them shared hot, on the cabinet and in the list. */
+export function woodPool(places: Record<string, unknown> | undefined | null): boolean {
+  return !!places && Object.keys(places).length >= WOOD_FROM
 }
 
 /**

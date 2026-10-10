@@ -156,8 +156,8 @@ export default function Evidence({
       )}
 
       <table className="evTable" data-part="table">
-        {/* **A member's list has no header since item 2**: each row now leads with its shop's
-            board mark, and a column of marked names needs no 「提名」 over it. */}
+        {/* **A member's list has no header since item 2**: each row leads with its shop's colour
+            (none from five shops, when the cabinet is wood), and a column of names needs no 「提名」. */}
         {ev && <thead>
           <tr>
             <th scope="col" className="evPlace">提名</th>

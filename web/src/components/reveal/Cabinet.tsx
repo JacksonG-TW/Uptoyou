@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { faceOf, type Places } from '@/lib/reveal'
-import { ganzhi, litCell, woodBoard, zhNumeral } from '@/lib/board'
+import { ganzhi, litCell, woodPool, zhNumeral } from '@/lib/board'
 import { drawable } from './Board'
 
 /**
@@ -43,7 +43,7 @@ export default function Cabinet({
 }) {
   if (!drawable(board)) return null
   const cell = litCell(dice)
-  const wood = woodBoard(board)
+  const wood = woodPool(places)
   return (
     <section className="cabinet" data-part="board" data-wood={wood ? 'yes' : undefined} data-mark={mark}>
       {/* The mechanism, stated once — the dice run only. Under the 籤筒 no dice line is said and
@@ -53,6 +53,12 @@ export default function Cabinet({
       )}
       <div className="cabFrame">
         <div className="cabGrid" data-part="board-grid" aria-hidden="true">
+          {/* The drawn drawer's warm glow, laid UNDER the drawers: placed on the same grid cell and
+              first in the DOM, so every drawer paints over it and it shows only in the gaps. On top,
+              it washed the neighbours' labels to 2.9:1 (the evaluator's pixel scan on 9f7e999). */}
+          {lit && cell && (
+            <span className="cabGlow" style={{ gridRow: cell[0] + 1, gridColumn: cell[1] + 1 }} />
+          )}
           {board.map((row, r) =>
             row.map((placeId, c) => {
               const n = r * 6 + c + 1

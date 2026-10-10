@@ -247,8 +247,9 @@
    direction and inherited from the same misreading. The original was same-on-same on **all four**,
    and it never had a working press state at all.
 
-   So both colours are named explicitly. Filling with the face's `on-*` and writing the flood's own
-   colour is the measured pair the other way round: **7.98 · 6.56 · 6.14 · 11.74**. */
+   So both colours are named explicitly. Since look D every flood is one lacquer and its text the
+   on-flood paper, so the press fills with paper and writes the flood: **5.85 on every face**
+   (#F2E2A0 on #9C2A1B; the on-* ratios measured here before look D no longer apply). */
 .navbar:has(~ .reveal[data-face="hot"])    :is(.switcher a, .backLink):active { background: var(--color-onflood-hot); color: var(--color-flood-hot); }
 .navbar:has(~ .reveal[data-face="cobalt"]) :is(.switcher a, .backLink):active { background: var(--color-onflood-cobalt); color: var(--color-flood-cobalt); }
 .navbar:has(~ .reveal[data-face="jade"])   :is(.switcher a, .backLink):active { background: var(--color-onflood-jade); color: var(--color-flood-jade); }

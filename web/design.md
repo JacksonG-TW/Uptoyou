@@ -249,7 +249,7 @@ component to obtain a part in this column; write it.
 | `PRIMARY` | **shadcn `Button`** `variant="default"` | ink ground, paper text, radius 0. **Disabled drops the ground entirely** — transparent, muted label, **dashed** ink border, `cursor: not-allowed`. Fading a fill measured **2.75:1** and failed the floor. |
 | `TABLE` | **shadcn `Table`** | header `text-note` muted; rows `text-body`; `1.5px ink` row rules; numerals right-aligned `tabular-nums`; a `CHIP` in the first column. **Operator state only — see §4b.** |
 | `ALLOC36` | **custom** | the 36 cells in each place's face colour, drawn from the shares the evidence table prints. **It is the round's real allocation, not an illustration** — so it carries no 「示意」 caveat. **Operator state only — see §4b.** |
-| `PICKER` | **shadcn `Select`** | the district picker. Restyle the trigger to `FIELD`; radius 0 on the content panel too. |
+| `PICKER` | **native `<select>`** | the district picker, in the weather strip. A native select since 2026-10-10 (CSP `style-src 'self'`: the Radix Select injected a `<style>` on open); the closed face is styled, the open list is the browser's. |
 | `BADGE` | **shadcn `Badge`** | the home entry's eyebrow. `2px ink` border, radius 0, `text-note`. |
 | `BLOCK` | **custom** | full-bleed flat colour band, `width: 100vw`, no radius/shadow/border. Ground is one of the palette; text is that ground's `on-*`. Blocks stack edge to edge — **the colour change is the separation**. |
 | `BAR` | **custom** | pinned primary control, `fixed inset-x-0 bottom-0`, `3px ink` top rule, content box 56 + 10 padding, `--bar-h: calc(76px + env(safe-area-inset-bottom))`. **At most one per screen.** Every screen carrying one sets `main { padding-bottom: calc(var(--bar-h) + 16px) }`. |
@@ -292,8 +292,8 @@ stays); the keep guard goes with them; the switcher has four tabs (首頁 · 裝
 這一餐. The whole of preference is one row of **eleven** 「這次不吃」 chips on 這一餐 (D38 + 便利商店), tonight-only, `persist`
 always false, with the per-chip stat, the coverage sentence, the discount sentence, the cross-kind total (`tonight-total`,
 moved from the sheet) and D22's crossed warning under it. The ingredient marks (原料未公開／已公開) and the reveal's
-`my-reasons` block are removed. §4a below stays as the record of the sheet that was; the `AlertDialog` and `.mark` parts
-stay in the registry. The owner's frame: 「將選擇權還給使用者，我們專心做好分類」.
+`my-reasons` block are removed. §4a below stays as the record of the sheet that was; the `.mark` part stays in the registry (the
+`AlertDialog` left with Radix, 2026-10-10). The owner's frame: 「將選擇權還給使用者，我們專心做好分類」.
 
 ### §4a · Preferences by tempo — owner-ruled 2026-08-28 (`spec-preference-split.md`)
 

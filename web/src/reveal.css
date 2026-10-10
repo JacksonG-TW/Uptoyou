@@ -64,13 +64,6 @@
    return. */
 .reveal { --die: 140px; }
 
-/* **A7 — the tumble's length lives HERE and nowhere else.** The CSS animation uses it and
-   `Reveal.tsx` reads it back off the computed style, because the sweep across the list has to
-   divide exactly this number into equal parts. Two copies of one duration is how the sweep's last
-   cycle comes to be truncated — and a truncated cycle means one row was visited fewer times than
-   the others, which is the *unequal dwell* the ruling forbids, arriving as a rounding error rather
-   than as a decision. One number, read by both. */
-.reveal { --tumble: 1400ms; }
 @media (min-width: 900px)  { .reveal { --die: 180px; } }
 @media (min-width: 2100px) {
   .reveal { --die: 240px; }
@@ -593,64 +586,12 @@
 /* §5 rule 3 — reduced motion removes the tumble and both transitions, and **the end states still
    apply, instantly**. Not "no animation and no answer": the landed state is the state. */
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .reveal .answer, .reveal .cube, .reveal .right, .reveal .decider { transition: none; }
-  /* **All three of A7's moving parts, and the third is the one that would have been missed.** The
-     cube's spin and the camera's swing are obvious; the sweep across the list is JavaScript and
-     cannot be stopped from here, so `Reveal.tsx` asks the same media query before it schedules a
-     single step. A rule that silences two of three reads as complete precisely because the two it
-     silences are the loud ones. */
-  .reveal .evTable tr[data-sweep="on"] .evPlace { background: none; }
+  .reveal, .reveal .answer, .reveal .cube, .reveal .right { transition: none; }
 }
 
-/* ── A7 · the sweep across the list ──────────────────────────────────────────
-   **What it is allowed to mean: *these are the names in play*. What it must not mean: *this one is
-   being chosen*.** §0c's three constraints are what keep those apart, and two of the three are
-   enforced in `Reveal.tsx` where the schedule is built, not here.
 
-   **This rule's job is the third one: it may not move anything.** Background only — no border, no
-   padding, no `font-weight`. A weight change re-measures every glyph in the cell, so the row a
-   person is looking at would be the one that twitches, and `D91`'s zero-shift clause binds the
-   whole tumble→land sequence and not just its ends. The landed winner is marked by weight and
-   that is correct — it happens once, after the sequence, and it is the assertion.
-
-   Deliberately weaker than the winner's own mark, and drawn from the ink at low alpha rather than
-   from a face colour: a sweep wearing a place's face would be the animation claiming an identity
-   it has not been given. */
-.reveal .evTable tr[data-sweep="on"] .evPlace {
-  background: color-mix(in oklab, currentColor 12%, transparent);
-}
-
-/* ── A6 / D108 · the deciding seat and the commitment ────────────────────────
-   **`.decider` sits above the answer region and is visible through the whole tumble**, which is
-   what D108 requires and what `RV-16` had to be checked against — it names a person, never a place,
-   and reads identically whichever place wins.
-
-   It is `note`-sized and muted rather than emphasised. The fact is *who the round is settled on*,
-   not *who won*; giving it the answer's weight would make a reader look for a connection between a
-   person and a restaurant, which is the linkage §3.0 spends its whole budget preventing.
-
-   `.commit` takes the same provenance register as the round screen's and the home screen's weather
-   source — small, muted, factual, `break-all` because a 64-character hash has no break
-   opportunity. */
-/* **`currentColor` at reduced opacity, never `--color-muted`, and this was a real legibility
-   defect rather than a preference.** `--color-muted` is a grey chosen against the paper ground; the
-   reveal floods to one of four saturated colours, and grey-on-cobalt is the one combination in this
-   palette that disappears. Both lines were unreadable on a blue win and fine on every screenshot
-   taken before one happened. `currentColor` is the on-flood pair after the flood and ink before it,
-   so the contrast is whatever `design.md` measured for that pair, minus a fixed step. */
-.reveal .decider {
-  margin: 0; font-size: var(--text-note); color: inherit; opacity: .72;
-}
-.reveal .commit {
-  margin: 0; font-size: var(--text-note); color: inherit; opacity: .66;
-  font-variant-numeric: tabular-nums;
-  max-width: min(1200px, 88vw); text-align: center; line-height: 1.7;
-}
-.reveal .commit p { margin: 0; }
-/* UX batch U3 — the same `<details>` as the round screen's; see round.css for why. */
-.reveal .verify summary { cursor: pointer; width: fit-content; margin-inline: auto; text-decoration: underline; text-underline-offset: 3px; }
-.reveal .verify[open] summary { margin-bottom: 4px; }
-.reveal .commitHash { word-break: break-all; }
+/* The deciding-seat line, the commitment fold and the list's sweep left the reveal with the 籤詩櫃
+   rebuild (owner, 2026-10-09/10): no 「以 X 的骰子為準」, no proof link, no sweep. */
 
 /* The demo scaffolding over the flood — **the rules moved to `switcher.css` on 2026-09-04 and the
    move was forced by a gate, not by taste.** They used to live here because they led with
@@ -1190,22 +1131,9 @@
     padding: calc(238 * var(--k)) var(--stage-pad) calc(72 * var(--k));
   }
 
-  /* ── the dice group ───────────────────────────────────────────────────────
-     Anchored at its LANDED place. `transform-origin: top left` so the 42% shrink pulls it into the
-     column's left edge rather than toward its own centre — the decider and the name start at the
-     same 104, and a group that shrank about its centre would sit 190 px to the right of them and
-     read as a third column. */
-  .reveal .group {
-    position: absolute; left: var(--stage-pad); top: calc(96 * var(--k));
-    transform-origin: top left;
-    z-index: 2;
-  }
-  .reveal .dice { gap: calc(56 * var(--k)); min-height: var(--die); }
-
   /* ── the left column ─────────────────────────────────────────────────────── */
   /* The column's own width stops short of the right column and its gutter, so a long name wraps
      inside the composition rather than running under the list. */
-  .reveal .decider { margin: 0; max-width: 62ch; letter-spacing: .16em; opacity: .72; }
   .reveal .answer {
     margin-top: calc(40 * var(--k)); max-width: calc(100% - 460 * var(--k));
     display: block; --answer-gap: 0px; gap: var(--answer-gap); text-align: left;
@@ -1251,8 +1179,7 @@
      line's bottom, which is the rhythm the ruling said to keep. */
 
   /* ── the right column ─────────────────────────────────────────────────────
-     The list sits beside the dice from the first frame, which is what makes the sweep legible as
-     「these are the names in play」 while the mechanism is still running.
+     The list sits beside the cabinet from the first frame: the names in play while the roll runs.
 
      **`:has(.evNum)` widens it for the operator**, whose table carries two more columns. The
      column is as wide as its content needs and no CSS anywhere has to know which credential is
@@ -1313,16 +1240,6 @@
     border-top-color: color-mix(in oklab, currentColor 26%, transparent);
   }
   .reveal .evTable th { color: inherit; opacity: .6; }
-  .reveal .evTable tr[data-sweep="on"] .evPlace {
-    background: color-mix(in oklab, currentColor 16%, transparent);
-  }
-  /* **C · the light hands over to the weight.** The winner's row stays lit through the stop, the
-     hold and the entrance, and fades out over 600 ms exactly as the bold arrives at ③ — so the row
-     is never unmarked for a frame and never carries both marks for long. The transition is here
-     rather than on the lit rule so it applies to the CLEARING; during the sweep the light steps
-     from row to row in one frame, which is what a slot machine does. */
-  .reveal .evTable .evPlace { transition: background-color .6s ease-out; }
-  .reveal .evTable tr[data-sweep="on"] .evPlace { transition: none; }
 }
 
 /* **A19's two reveal rules are gone** (`spec-return-choice.md` §4): `.myReasons` held this
@@ -1346,21 +1263,9 @@
 @media (min-width: 1100px) {
   .reveal .die { perspective: calc(900 * var(--k)); }
 
-  /* Both readers since item 2: the pair's drawn left edge on the headline's left edge. */
-  .reveal .group { left: calc(var(--stage-pad) + 12.6 * var(--k)); }
 
 }
 
-/* **No ground die behind the settled pair.** The ground's cubes are placed in stage percentages and
-   one of them lies under the corner the operator's pair lands in. Moving that cube would move it
-   for every width and both readers; instead the pair's own box is painted the flood's colour, with
-   a spread wide enough to cover the 30-unit overhang, so whatever the ground draws there stops at
-   the pair's edge. Same colour as the page, so it draws no panel and no line. `--flood` exists only
-   once the flood has arrived, which is also when the ground's cubes first appear. */
-.reveal[data-face] .group {
-  background: var(--flood);
-  box-shadow: 0 0 0 calc(40 * var(--k)) var(--flood);
-}
 
 /* **The places list gets the flood as its ground** (2026-09-15, frontend's /reveal pass, for both
    readers). The ground's cubes sit under the text layer, and their 3 px outlines and pips ran
@@ -1434,8 +1339,6 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
   .reveal:not(:has(.evNum)) .winner { min-height: 0; }
   .reveal:not(:has(.evNum)) .act-row { margin-top: 24px; }
 }
-/* The decider is a centred caption on the pair. It was a bare left-aligned line at x 0 at 430. */
-.reveal:not(:has(.evNum)) .decider { text-align: center; }
 
 /* The list's marks are the board's swatches, sat in the row ahead of the name. */
 .reveal .evTable .rowMark { margin-right: 10px; vertical-align: 2px; }
@@ -1465,12 +1368,6 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
      its measured end — or the last rows of a ten-place list sit past a page that cannot scroll. */
   .reveal:not(:has(.evNum)) .stage {
     min-height: max(100vh, calc(var(--right-end, 0px) + 72 * var(--k)));
-  }
-  .reveal:not(:has(.evNum)) .decider { text-align: left; transition: transform .6s ease-out; }
-  /* While the pair tumbles at full size it covers the decider's resting line, so the caption sits
-     under the pair until the retreat (D108: on screen from the first frame, never faded in). */
-  .reveal:not(:has(.evNum))[data-stage="rolling"] .decider {
-    transform: translateY(calc(var(--die) - 124 * var(--k)));
   }
   /* **The receipt starts below the first view** (item 2 §6). At 1440 the pairs and the
      commitment began at y 695 and put five more text pieces in the first screen (10 against the
@@ -1623,6 +1520,10 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* Focus by dimming, never blur (cut C): the slip is quiet while the cabinet holds the eye. */
 .reveal .slip { transition: opacity .7s ease; }
 .reveal[data-focus="cabinet"]:not([data-landed-by="reduced"]) .slip { opacity: .55; }
+/* Reduced motion is the still end state: nothing fades in (the reviewer's should on 9f7e999). */
+@media (prefers-reduced-motion: reduce) {
+  .reveal .slip, .reveal .answer, .reveal .answer .winnerLine, .reveal .answer .answerSide { transition: none; }
+}
 
 /* ── the cabinet ── 36 drawers in a wooden frame, numeral centred, 干支 small top-left. */
 .reveal .cabinet { width: 100%; padding: 0; margin: 0; }
@@ -1640,7 +1541,8 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
   display: grid; place-items: center;
   border-radius: 2px;
   outline: 1.5px solid var(--color-ink); outline-offset: 0;
-  box-shadow: inset 0 -5px 0 rgb(0 0 0 / .18), inset 0 2px 0 rgb(255 255 255 / .18);
+  /* A bottom shade only: a top highlight sat under the 干支 and took paper on jade to 4.18. */
+  box-shadow: inset 0 -5px 0 rgb(0 0 0 / .18);
 }
 .reveal .cabNo { font-size: 16px; font-weight: 700; line-height: 1; letter-spacing: -.06em; white-space: nowrap; margin-top: 9px; }
 .reveal .cabGz { position: absolute; left: 4px; top: 3px; font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: -.04em; }
@@ -1660,19 +1562,14 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* The 籤筒 run: a gold frame inside the drawn drawer's edge with an ink ring; the numeral drops
    to 13 px so 三十三 clears it, and the 干支 moves 7 px in, off the gold (6.09 on wood). */
 .reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] {
-  z-index: 2; outline: 3px solid #F2C14E; outline-offset: -3px;
+  outline: 3px solid #F2C14E; outline-offset: -3px;
   box-shadow: inset 0 0 0 4.5px var(--color-ink), 0 0 0 1px var(--color-ink);
 }
 .reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] .cabNo { font-size: 13px; }
 .reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] .cabGz { left: 7px; top: 7px; }
-/* The lit drawer's glow: a box-shadow only, the fill unchanged (BD-4). */
-.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"],
-.reveal .cabinet[data-mark="lines"] .boardCell[data-lit="yes"] { filter: none; }
-.reveal .cabinet[data-mark="lines"] .boardCell[data-lit="yes"] { box-shadow: 0 0 22px 5px rgb(255 200 90 / .75); z-index: 2; }
-.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] {
-  box-shadow: 0 0 0 1px var(--color-ink), 0 0 22px 5px rgb(255 200 90 / .75), inset 0 0 0 4.5px var(--color-ink);
-}
-.reveal .cabTrace { box-shadow: 0 0 0 1px var(--color-ink), 0 0 12px rgb(255 200 90 / .5); }
+/* The lit drawer's glow lives on `.cabGlow`, under the drawers (see Cabinet.tsx); the drawer's fill
+   is unchanged (BD-4) and nothing paints over a neighbour's label. */
+.reveal .cabGlow { position: relative; pointer-events: none; box-shadow: 0 0 22px 7px rgb(255 200 90 / .8); border-radius: 2px; }
 
 /* ── the dice at rest ── a CSS cube placed by its centre, value on top, a cast shadow under it. */
 .reveal .cabLayer { position: absolute; inset: 0; pointer-events: none; }
@@ -1743,7 +1640,7 @@ body:has(.reveal[data-screen="reveal"] .stage) { background: #1c0907; }
   --ground: radial-gradient(120% 90% at var(--cx, 70%) var(--cy, 45%), #8a2416 0%, #45120c 50%, #1f0a07 100%);
 }
 /* The flood's cover panels take the same painting at their own offset, without a halo. */
-.reveal[data-face] :is(.right, .group, .boardSlot),
+.reveal[data-face] :is(.right, .boardSlot),
 .reveal[data-face]:not(:has(.evNum)) :is(.right, .boardSlot) {
   background-image: var(--key), var(--vignette), var(--grain), var(--ground);
   background-size: 100vw 100vh, 100vw 100vh, 220px 220px, 100vw 100vh;

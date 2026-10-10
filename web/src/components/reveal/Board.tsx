@@ -3,7 +3,12 @@ import { PIPS, RED } from './Die'
 import { litCell } from '@/lib/board'
 
 /**
- * The member's 36-cell board — `spec-board-2026-09-11.md`, the owner's three 「1」 of 2026-09-11.
+ * **The OPERATOR's 36-cell board** (`spec-board-2026-09-11.md`). Since the 籤詩櫃 rebuild
+ * (2026-10-10) the member's board is `Cabinet.tsx`: drawers numbered 一…三十六 with their 干支, no
+ * marks and no axes. The text below is this component's own history, and still true of it — the
+ * operator's instrument keeps the numbered cells, the pip axes and the legend. `drawable` is shared.
+ *
+ * Originally the member's board — the owner's three 「1」 of 2026-09-11.
  *
  * **What it is:** a 6×6 grid, one cell per outcome, each cell in its place's face colour **and
  * carrying its place's number**, with a legend of number → shop name beneath and one authored line

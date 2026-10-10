@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawerOf, ganzhi, litCell, rollAnimFor, woodBoard, WOOD_FROM, zhNumeral } from './board'
-
-/** A 6×6 board filled row by row from a list of (place id, cell count). */
-function board(...shares: [number, number][]): number[][] {
-  const flat = shares.flatMap(([id, n]) => Array<number>(n).fill(id))
-  if (flat.length !== 36) throw new Error(`a board has 36 cells, this one ${flat.length}`)
-  return Array.from({ length: 6 }, (_, r) => flat.slice(r * 6, r * 6 + 6))
-}
+import { drawerOf, ganzhi, litCell, rollAnimFor, woodPool, WOOD_FROM, zhNumeral } from './board'
 
 describe('litCell — the rolled cell is board[die1 - 1][die2 - 1], row then column', () => {
   it('takes the first die as the row and the second as the column', () => {
@@ -73,12 +66,17 @@ describe('ganzhi — each drawer’s own name, sixty-cycle order', () => {
   })
 })
 
-describe('woodBoard — plain wood from five shops', () => {
+describe('woodPool — plain wood from five POOLED shops', () => {
+  const pool = (n: number) => Object.fromEntries(Array.from({ length: n }, (_, i) => [String(100 + i), `店${i}`]))
   it('is coloured up to four shops and wood from five', () => {
     expect(WOOD_FROM).toBe(5)
-    expect(woodBoard(board([1, 9], [2, 9], [3, 9], [4, 9]))).toBe(false)
-    expect(woodBoard(board([1, 8], [2, 7], [3, 7], [4, 7], [5, 7]))).toBe(true)
-    expect(woodBoard(undefined)).toBe(false)
+    expect(woodPool(pool(4))).toBe(false)
+    expect(woodPool(pool(5))).toBe(true)
+    expect(woodPool(undefined)).toBe(false)
+  })
+  it('counts a vetoed shop with no drawer: five pooled, four on the board, still wood', () => {
+    // seat 0 and seat 4 share a face colour; the board holding only four shops does not change that.
+    expect(woodPool(pool(5))).toBe(true)
   })
 })
 
