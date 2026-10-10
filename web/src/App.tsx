@@ -4,9 +4,6 @@ import WeatherIcon from './components/home/WeatherIcon'
 import {
   TOWNSHIPS, fetchWeather, conditionCode, measure, fetchedLabel, type Weather,
 } from './lib/weather'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
 import { doorHref } from './lib/round'
 import { CIRCLE_LINE, NO_SEAT } from './components/selfserve/copy'
 import { device } from './lib/device'
@@ -111,6 +108,52 @@ export default function App() {
         <header className="mast" data-part="masthead">
           <div className="brand"><b>由你決定</b></div>
         </header>
+        {/* **The weather strip** (`spec-home-weather-strip-2026-10-10.md`): the card's items 1-4 on
+            one line under the masthead, no frame. Outside the first-view budget by the owner's 「A」
+            ruling, so it carries `data-budget-exempt="weather"`; nothing else on home does. */}
+        <div className="wxs" data-part="weather-strip" data-budget-exempt="weather">
+          <p className="wxsDate" data-part="dateline">
+            {sheet.date}{' · '}<b>{sheet.weekday}</b>
+            {sheet.term !== null && <>{' · '}{sheet.term}</>}
+          </p>
+          <div className="wxsHead">
+            <h2 className="wxsH">今天的天氣</h2>
+            {/* A native select: the closed face is styled in `home.css`, the open list is the
+                browser's own, so nothing is injected into the page (CSP `style-src 'self'`). */}
+            <select data-part="picker" aria-label="選擇天氣的行政區" value={township}
+                    onChange={(e) => setTownship(e.target.value)}>
+              {TOWNSHIPS.map((t) => (
+                <option key={t.code} value={t.code}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="wxsBody" data-part="weather">
+            {error ? (
+              <p className="wxsNow"><span className="c">{error}</span></p>
+            ) : weather?.kind === 'absent' ? (
+              /* UX batch U4 — no observation and no forecast for this hour: one sentence, not dashes. */
+              <p className="wxsNow" data-part="weather-absent"><span className="c">現在拿不到{name}的天氣。</span></p>
+            ) : weather === null ? (
+              <p className="wxsNow" data-part="weather-loading"><span className="c">讀取中</span></p>
+            ) : (
+              <>
+                <p className="wxsNow">
+                  <WeatherIcon code={conditionCode(weather)} />
+                  <span className="t">{measure(weather, 'temperature_c')}<span>°C</span></span>
+                  <span className="c">{measure(weather, 'weather_text')}</span>
+                </p>
+                <div className="wxsDetail">
+                  <span className="u"><span className="k">體感</span>{' '}
+                    <span className="v">{measure(weather, 'apparent_temperature_c')}°C</span></span>
+                  <span className="u"><span className="k">降雨機率</span>{' '}
+                    <span className="v">{measure(weather, 'rain_probability_pct')}%</span></span>
+                  <span className="u"><span className="k">相對濕度</span>{' '}
+                    <span className="v">{measure(weather, 'humidity_pct')}%</span></span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
         <div className="hero">
           <div className="heroL">
             <h1 className="headline arrive" style={arrive(1)} data-part="headline">
@@ -169,51 +212,7 @@ export default function App() {
 
       {/* ── below the first view: today's conditions, then where every fact came from ────── */}
       <section className="today" data-part="today">
-        {/* 甲's dateline, without its edition word (早報／午報／晚報 — noise to the cold reader, and
-            the brief's voice is a friend, not a paper). `dateline.ts` still owns the 節氣 rule: a
-            blank is true and a wrong term is not. */}
-        <p className="dateline" data-part="dateline">
-          {sheet.date}{' · '}<b>{sheet.weekday}</b>
-          {sheet.term !== null && <>{' · '}{sheet.term}</>}
-        </p>
-        <div className="wxHead">
-          <h2 className="todayH">今天的天氣</h2>
-          {/* Labelled as what it changes (the weather's district), which the cold reader could not
-              tell from 「中山區 ▾」 beside a collage of shops. */}
-          <Select value={township} onValueChange={setTownship}>
-            <SelectTrigger data-part="picker" aria-label="選擇天氣的行政區">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TOWNSHIPS.map((t) => (
-                <SelectItem key={t.code} value={t.code}>{t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="wx" data-part="weather">
-          {error ? (
-            <p className="wxnow"><span className="c">{error}</span></p>
-          ) : weather?.kind === 'absent' ? (
-            /* UX batch U4 — no observation and no forecast for this hour: one sentence, not dashes. */
-            <p className="wxnow" data-part="weather-absent"><span className="c">現在拿不到{name}的天氣。</span></p>
-          ) : (
-            <>
-              <p className="wxnow">
-                <WeatherIcon code={conditionCode(weather)} />
-                <span className="t">{measure(weather, 'temperature_c')}<span>°C</span></span>
-                <span className="c">{measure(weather, 'weather_text')}</span>
-              </p>
-              <div className="wxstrip">
-                <span className="u"><span className="k">體感</span>
-                  <span className="v">{measure(weather, 'apparent_temperature_c')}°C</span></span>
-                <span className="u"><span className="k">降雨機率</span>
-                  <span className="v">{measure(weather, 'rain_probability_pct')}%</span></span>
-                <span className="u"><span className="k">相對濕度</span>
-                  <span className="v">{measure(weather, 'humidity_pct')}%</span></span>
-              </div>
-            </>
-          )}
+        <div className="wx">
           {/* provenance is kept and demoted, never removed — it is the claim itself */}
           {weather?.kind !== 'absent' && <p className="wxsrc" data-part="weather-source">
             <span className="where">{name}{hour && ` ${hour}`} · </span>
