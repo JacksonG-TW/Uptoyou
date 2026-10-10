@@ -136,7 +136,7 @@ Their facts are the archify specifications' (`architecture.json`, `etl-flow.json
 `schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. They are one engineers' set, not the
 product's look (owner, 2026-10-10: «給工程師看…這是 github 不是產品畫面»): a white ground, black lines
 and arrows, and a few colours that each mean one thing, the same thing in every chart — blue for
-public open data and its reference copy, green for weather, vermilion for the product, slate for the
+public open data and its reference copy, green for weather, vermilion for the product, grey for the
 database and what it stores, purple for the scheduled pipeline (Okabe–Ito hues, which stay apart for
 the common colour-vision deficiencies), and pale yellow with a heavy black border for alerts and
 models — told from vermilion by lightness, since a darker amber looked the same as vermilion to
