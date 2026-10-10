@@ -12,6 +12,7 @@ Run: python3 app/api/tests/test_statuses.py
 """
 
 import ast
+import json
 import os
 import pathlib
 import re
@@ -132,6 +133,18 @@ class TheTableMatchesTheRoutes(unittest.TestCase):
                 if detail is None:
                     with self.subTest(route=route, status=status):
                         self.assertIn((status, None), self.rows[route])
+
+
+class TheScreensReadTheSameTable(unittest.TestCase):
+    def test_the_json_is_this_table(self):
+        """The screens read `web/src/lib/statuses.json`; a table edit without its export would leave
+        the two disagreeing about what a status means."""
+        exported = SRC.parent.parent.parent / "web" / "src" / "lib" / "statuses.json"
+        if not exported.is_file():
+            self.skipTest("no web/ beside this API (the tests image carries only api/)")
+        held = json.loads(exported.read_text(encoding="utf-8"))
+        self.assertEqual(held, {"actions": list(statuses.ACTIONS), "statuses": statuses.STATUSES},
+                         "statuses.json is not the table: re-export it with the table edit")
 
 
 class TheTableIsConsistent(unittest.TestCase):

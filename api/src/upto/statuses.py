@@ -16,9 +16,9 @@ Agreed with the front end before it was written: one row per (method, path, stat
 **The void is 410 on every round route** (propose, submit, take back, result, trip): gone for good,
 never «conflict, try again», which is what 409 means everywhere else here.
 
-`app/web/src/lib/statuses.json` is this table exported by `tools/statuses_export.py`, which the commit
-hook checks. `tests/test_statuses.py` derives every status each route can return from the routes'
-own code and fails when this table and the code disagree. Pure data, so it imports anywhere.
+`web/src/lib/statuses.json` is this table, exported for the screens. `tests/test_statuses.py` fails
+when the JSON is not this table, and when this table and the routes' own code disagree; it derives
+every status each route can return from that code. Pure data, so it imports anywhere.
 """
 
 from __future__ import annotations
