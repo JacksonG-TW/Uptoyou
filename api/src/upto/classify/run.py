@@ -66,7 +66,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import text
 
-from upto.api_common import SINGLE_BRAND, STOREFRONT
+from upto.name_sql import SINGLE_BRAND, STOREFRONT  # fastapi-free: this runs in the Airflow image
 from upto.classify.classify import Classified, NoSignal, classify_name, classify_name_rag
 from upto.classify.model import MODEL, available, ask, take_samples, unload_every
 from upto.classify.transport import reset_retries, retries_spent
