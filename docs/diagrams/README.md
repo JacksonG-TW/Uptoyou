@@ -142,8 +142,7 @@ the common colour-vision deficiencies), and pale yellow with a heavy black borde
 models — told from vermilion by lightness, since a darker amber looked the same as vermilion to
 protan and deutan readers. A box takes a light tint of its
 colour with the full colour as its border; a group's outline takes the colour, dashed. Every text
-clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` keeps black on white until it
-is redrawn in the same idiom.
+clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` is drawn in the same idiom with the vendors' own marks: a solid AWS frame with the AWS mark, a dashed AWS EC2 region, and Cloudflare, FastAPI, PostgreSQL, Airflow, Ollama and GitHub in their own colours (marks/NOTICE.md). nginx, the container registry and Telegram are labelled boxes.
 
 **Each file is one file.** No stylesheet, no webfont, no CDN script, no remote image — the
 upstream skill's Google Fonts link and its two CDN export scripts were removed for exactly this
