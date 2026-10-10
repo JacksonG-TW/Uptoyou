@@ -785,6 +785,21 @@ async def scenario(test_url: str) -> None:
         check("a request that did not come through the proxy (no header) is not counted",
               direct.status_code == 201, direct.status_code)
 
+        # The count is of circles MADE: a creation that fails after the reservation gives it back.
+        # Driven on the module itself (the global ceiling cannot be reached cheaply over HTTP).
+        from upto import circles as circles_module
+
+        class Asked:
+            headers = {"x-forwarded-for": "192.0.2.1"}
+        for _ in range(circles_module.PER_ADDRESS_DAILY):
+            circles_module._refund_address_day(circles_module._spend_address_day(Asked()))
+        try:
+            circles_module._spend_address_day(Asked())
+            refunded = True
+        except Exception:  # noqa: BLE001 — the 429 would mean the refunds did not land
+            refunded = False
+        check("failed creations give their reservation back, so they never use up the five", refunded)
+
         await engine.dispose()
 
 

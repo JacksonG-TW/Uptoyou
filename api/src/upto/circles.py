@@ -87,11 +87,14 @@ def _address_of(request: Request) -> bytes | None:
     return hmac.new(_ADDRESS_KEY, last.encode(), sha256).digest() if last else None
 
 
-def _spend_address_day(request: Request) -> None:
-    """Refuse this address's next creation once it has made PER_ADDRESS_DAILY today; else count it."""
+def _spend_address_day(request: Request) -> bytes | None:
+    """Refuse this address once it has made PER_ADDRESS_DAILY circles today; else reserve one.
+
+    Returns the reserved key, which `_refund_address_day` gives back when the creation then fails
+    (the global ceiling, a database error): the count is of circles made, not of attempts."""
     address = _address_of(request)
     if address is None:
-        return
+        return None
     today = datetime.now(_TAIPEI).date()
     table = _made_by_address
     if table["day"] != today or len(table["counts"]) >= _ADDRESS_TABLE_MAX:
@@ -100,6 +103,13 @@ def _spend_address_day(request: Request) -> None:
     if made >= PER_ADDRESS_DAILY:
         raise HTTPException(status_code=429, detail="你今天開的圈子夠多了，明天再來。")
     table["counts"][address] = made + 1
+    return address
+
+
+def _refund_address_day(address: bytes | None) -> None:
+    counts = _made_by_address["counts"]
+    if address is not None and counts.get(address, 0) > 0:
+        counts[address] -= 1
 
 #: The start of «today» in Taipei, as a timestamptz, for an instant `{now}`. One spelling for the
 #: query below and for the test that pins it at fixed instants — a boundary written twice is a
@@ -226,55 +236,60 @@ async def create_circle(body: CreateCircle, request: Request) -> dict:
     else could ask to be.
     """
     _refuse_too_long(body.nickname, body.name)
-    # Before the database: no await between the read and the write, so one worker cannot race it.
-    _spend_address_day(request)
-    async with session_factory()() as session:
-        # **The ceiling is checked before anything is written**, the same arrangement `grow_seat`
-        # uses for the cap: a refusal leaves no circle, no principal, no seat and no ticket.
-        # **The same check-then-act shape as the seat cap, and it is LEFT that way deliberately**
-        # (the reviewer's call, 2026-09-13, and I agree). Overshooting a flood ceiling by a handful
-        # of circles costs nothing; a lock here would serialise **every creation on the box** — the
-        # one request path that is meant to be reachable by a stranger. The seat cap got a lock
-        # because eleven seats breaks a ruling a leaked ticket is bounded by; 203 circles on a day
-        # capped at 200 breaks nothing.
-        made_today = (
-            await session.execute(
-                text("select count(*) from circle where created_at >= "
-                     + TAIPEI_DAY_START.format(now="now()"))
-            )
-        ).scalar_one()
-        if made_today >= DAILY_CIRCLE_CEILING:
-            raise HTTPException(status_code=429, detail="今天開的圈子太多了，明天再來。")
+    # Before the database: no await between the read and the reservation, so one worker cannot
+    # race it. A creation that then fails gives its reservation back (the count is of circles made).
+    reserved = _spend_address_day(request)
+    try:
+        async with session_factory()() as session:
+            # **The ceiling is checked before anything is written**, the same arrangement `grow_seat`
+            # uses for the cap: a refusal leaves no circle, no principal, no seat and no ticket.
+            # **The same check-then-act shape as the seat cap, and it is LEFT that way deliberately**
+            # (the reviewer's call, 2026-09-13, and I agree). Overshooting a flood ceiling by a handful
+            # of circles costs nothing; a lock here would serialise **every creation on the box** — the
+            # one request path that is meant to be reachable by a stranger. The seat cap got a lock
+            # because eleven seats breaks a ruling a leaked ticket is bounded by; 203 circles on a day
+            # capped at 200 breaks nothing.
+            made_today = (
+                await session.execute(
+                    text("select count(*) from circle where created_at >= "
+                         + TAIPEI_DAY_START.format(now="now()"))
+                )
+            ).scalar_one()
+            if made_today >= DAILY_CIRCLE_CEILING:
+                raise HTTPException(status_code=429, detail="今天開的圈子太多了，明天再來。")
 
-        name = body.name
-        # **`self_serve = true` is what makes this circle sweepable, and nothing else sets it**
-        # (revision 0045; owner 2026-09-14, «which circles the sweep may touch»). A circle an
-        # operator makes stays false and is never swept, so the nightly job cannot reach the
-        # owner's own circles or a fixture however long they sit untouched.
-        circle_id = (
-            await session.execute(
-                text("insert into circle (name, self_serve) values (:n, true) returning id"),
-                {"n": name},
-            )
-        ).scalar_one()
-        try:
-            # **The invite power, and not the evidence table** (owner 「拆」, 2026-09-16,
-            # revision 0047). The person who opened the circle keeps its link; D105's table
-            # identifies whose preference moved a place, and at two seats that is everyone.
-            member_id, _, key = await grow_seat(
-                session, circle_id, body.nickname, operator=True, evidence=False
-            )
-        except SeatRefused as refused:
-            # A brand-new circle cannot be full and cannot be missing, so anything here is a bug
-            # rather than a member's mistake — 500 rather than a member-facing sentence that would
-            # be a lie about whose fault it is.
-            raise HTTPException(status_code=500, detail=refused.reason) from None
-        # **The creator is the host (房主)** (owner 「A」, 2026-10-09, revision 0049): stored on the
-        # circle, so the role can pass to another seat without touching anyone's key.
-        await session.execute(text("update circle set host_member_id = :m where id = :c"),
-                              {"m": member_id, "c": circle_id})
-        ticket = await _mint_ticket(session, circle_id)
-        await session.commit()
+            name = body.name
+            # **`self_serve = true` is what makes this circle sweepable, and nothing else sets it**
+            # (revision 0045; owner 2026-09-14, «which circles the sweep may touch»). A circle an
+            # operator makes stays false and is never swept, so the nightly job cannot reach the
+            # owner's own circles or a fixture however long they sit untouched.
+            circle_id = (
+                await session.execute(
+                    text("insert into circle (name, self_serve) values (:n, true) returning id"),
+                    {"n": name},
+                )
+            ).scalar_one()
+            try:
+                # **The invite power, and not the evidence table** (owner 「拆」, 2026-09-16,
+                # revision 0047). The person who opened the circle keeps its link; D105's table
+                # identifies whose preference moved a place, and at two seats that is everyone.
+                member_id, _, key = await grow_seat(
+                    session, circle_id, body.nickname, operator=True, evidence=False
+                )
+            except SeatRefused as refused:
+                # A brand-new circle cannot be full and cannot be missing, so anything here is a bug
+                # rather than a member's mistake — 500 rather than a member-facing sentence that would
+                # be a lie about whose fault it is.
+                raise HTTPException(status_code=500, detail=refused.reason) from None
+            # **The creator is the host (房主)** (owner 「A」, 2026-10-09, revision 0049): stored on the
+            # circle, so the role can pass to another seat without touching anyone's key.
+            await session.execute(text("update circle set host_member_id = :m where id = :c"),
+                                  {"m": member_id, "c": circle_id})
+            ticket = await _mint_ticket(session, circle_id)
+            await session.commit()
+    except BaseException:
+        _refund_address_day(reserved)
+        raise
 
     return {
         "circle_id": circle_id,
