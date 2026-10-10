@@ -1,383 +1,107 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import Die, { SEQUENCE_MS } from './Die'
 import Board from './Board'
+import Cabinet from './Cabinet'
+import Cube, { REST } from './Cube'
 import Evidence from './Evidence'
 import Field from './Field'
 import Pairs from './Pairs'
-import { evenBoard } from '@/lib/board'
-import { arrive, m, useReducedMotion } from '@/lib/motion'
+import { TubeArt, TubeRun, TUBE_MS } from './Tube'
+import { drawerOf, ganzhi, litCell, rollAnimFor, woodBoard, zhNumeral } from '@/lib/board'
+import { arrive, useReducedMotion } from '@/lib/motion'
 import {
-  evidenceIn, faceOf, fetchRaw, markOf, RoundStillOpen, signTrip,
+  evidenceIn, faceOf, fetchRaw, RoundStillOpen, signTrip,
   type Evidence as EvidenceData, type MemberReveal, type Trip,
 } from '@/lib/reveal'
 import { device, noteLastRound, type Device } from '@/lib/device'
+import { SeatGone } from '@/lib/http'
 /* §3a only. The operator's counts come from the same endpoint the member's 這一餐 used to render
    them from, so there is one definition of each figure and no second arithmetic. */
 import { fetchPreferences, type Preferences } from '@/lib/preferences'
 
 /**
- * A3 — the reveal, **member state**, built to `spec-reveal-two-states.md` §1–§4 and `design.md` §4b.
+ * The reveal — **the 籤詩櫃 rebuild with the cinematic cut C** (`spec-reveal-qiantong-2026-10-09.md`,
+ * `spec-reveal-cinematic-2026-10-09.md` «C, as built»; owner 「電影版」 amended 「用C好了」).
  *
- * **This component cannot render the accounting, and that is structural rather than careful.** It is
- * typed on `MemberReveal`, whose fields are the API's own whitelist — `round_id · status · dice ·
- * sum · winning_place_id · places · trip`. There is no `weights`, no `allocation` and no `panel` in
- * the type, so there is nothing here to hide, gate or forget to gate. §8's order says member first
- * for exactly this reason: **build the operator state and subtract, and a field survives in the
- * member payload.** The operator state will be an addition in its own component.
+ * **The result is the payload's, decided by the committed seed before a frame animates** (D91,
+ * D108). Both roll animations — the dice and the 籤筒, one per round, seeded from the round id so
+ * every device in the circle plays the same one — read `dice`, `board` and `winning_place_id` and
+ * only show them.
  *
- * **What is deliberately absent from member state (§1a), each an assertion to test for rather than a
- * feature to omit:** no per-place share as a percentage or fraction, in any element, attribute,
- * `title` or `aria-label` — the ruled board, which is newer, shows each place's share only as its
- * cells (`spec-board-2026-09-11.md`); no reason and no channel label; no count of contributors; **no operator
- * affordance of any kind — no disabled control, no mode hint, because a disabled door is a door**;
- * and no promise of a member-verifiable audit, including any paraphrase of the removed line
- * 「每一個數字都查得到出處。」
+ * **One clock, four phases, published on the element for the gates** (`data-stage`):
+ *   `rolling`  the dice tumble and fly to their axis places, or the 籤筒 shakes and gives a stick;
+ *   `landed`   the dice are at rest on the cabinet (dice run): **a held pause** (cut C, 0.8 s);
+ *   `lit`      one frame: the drawn drawer is marked **and** 「第N籤 干支」 is on the slip (gate 5);
+ *              **a second held pause** (0.6 s dice, 0.7 s 籤筒);
+ *   `answered` the name, the flood, the list's bold row, the ground's poster dice and the act.
+ * **Nothing answers early:** no marked drawer, no bold row, no flood and no ground dice before
+ * their phase. The list's slot-machine sweep is gone (owner 「A」, 2026-10-10): its light landed on
+ * the winner at the dice stop, before the pause.
  *
- * **`D91` is honoured by construction:** the result is decided by the server before a frame animates,
- * the answer is genuinely absent from the screen mid-tumble via `opacity` while its box is held, and
- * nothing here changes a layout box at any point in the sequence.
+ * **Reduced motion is the end state from the first frame** (§5 rule 3): `answered`, lit and painted,
+ * no camera, no pause, no close-up. Light and grain are not motion, so they stay.
+ *
+ * **This component cannot render the accounting, and that is structural.** It is typed on
+ * `MemberReveal`, whose fields are the API's own whitelist; the operator's table and grid render only
+ * when `evidence` arrived (D105), below the answer.
  */
 
-/** How long one row should hold, near enough. The real dwell is derived from it and from the row
- *  count so that every row gets exactly the same number of visits of exactly the same length —
- *  this is the target the derivation rounds to, never a duration anything is scheduled on. */
-/**
- * **The hold, in milliseconds** — see `staged` below. A timer is right here and nowhere else on
- * this screen: it does not measure a thing that is happening, it *is* the thing that is happening,
- * and its whole content is that nothing else is.
- *
- * **1000 since the owner watched it — D109's amendment, evaluator's number (2026-08-26).** He
- * passed the tumble and asked for one thing: 「顯示最終骰子結果停頓一下再縮小」. The hold was not
- * missing, it was too short to read as a pause — 500 measured **386–468 ms on screen**, because the
- * timer runs from composed stillness and gives back whatever confirming stillness cost. So this is
- * a number that failed a person rather than an instrument, and the fix is the number, not the
- * mechanism: the constraints below are unchanged and the shrink's own spring is untouched (the ask
- * was the pause, ruled by the evaluator, not a slower retreat).
- *
- * **500 since `RV-20` (2026-08-20), and that history is still the point.** 700 was tuned against a
- * signal that fired 637 ms early, and then measured against an instrument that watched one cube
- * inside a group that could still be moving. **A number tuned twice against instruments that missed
- * a mover has no claim left**, so it was re-ruled from a corrected measurement rather than nudged —
- * and the same discipline applies now: 1000 comes from a measurement of what 500 actually put on
- * the screen, not from doubling a number that felt small. The paragraphs below are the original 700
- * argument, kept because the reasoning about the tail is still true and only the number has moved.
- *
- * **700 and not the prototype's 380, and the number came from frames rather than from taste.** The
- * die reports itself landed when `motion`'s animation resolves, and that resolution runs
- * **290–350 ms ahead of the element actually coming to rest** — measured four ways across four
- * builds, and not fixable from this side: rest thresholds shortened the tail, a zero-duration snap
- * was out-run by the animation still in flight, re-sequencing the springs did not close it, and
- * watching the computed transform for stillness sees style writes rather than paint.
- *
- * So the recording settled it. At 380 the whole-frame pixel diff went
- * `…13078 · 583 · 8350 · 8123 · 771 · 133754…` — **one still frame, then more movement, then the
- * flood.** The beat existed on paper and not on the screen. The tail is ~300 ms, so a beat a person
- * can see needs the hold to be that plus the beat.
- *
- * **What this does NOT paper over:** the retreat has never begun while the dice were settling — the
- * prohibition half of D111's rule held at 380 and holds now. What was missing was the positive
- * half, the visible pause, and that is what this buys.
- */
-const HOLD_MS = 1000
+type Phase = 'rolling' | 'landed' | 'lit' | 'answered'
 
-/**
- * **The stage arrives in three steps, not one — D109's second amendment (owner, 2026-08-26:
- * 「有點突兀，像是突然就出現結果」), evaluator's numbers under D101's delegation.**
- *
- * The complaint was not about any single movement. Everything downstream of `staged` fired on the
- * same frame — the retreat, the flood and the answer at once — so the screen changed completely
- * between two frames and gave the eye three things to follow and no order to follow them in.
- * **The fix is sequence, not slowness**: the same movements, in the order a person would read
- * them, each starting as the previous one finishes.
- *
- *   ① `staged`   +0 ms     the dice retreat to the read position (the existing spring, ~900 ms)
- *   ② `flooded`  +900 ms   the ground takes the winner's colour; the list settles into it
- *   ③ `answered` +1400 ms  decider · winner · sentence · act rise; the winning row goes bold
- *
- * **The offsets are from `staged`, and `staged` still flips at the hold's end** — `RV-20` measures
- * that edge and is untouched by everything here.
- *
- * **Why timers and not the retreat's own completion callback.** `motion` resolves a spring
- * **290–350 ms before the element is actually at rest** — measured four ways across four builds,
- * and it is what `HOLD_MS`'s note above is about. So `onAnimationComplete` would start the flood
- * while the dice were still visibly moving, which is precisely the constraint `RV-21` gates
- * (「group at rest before the colour begins」). A timer at the spring's *measured* rest is the
- * honest instrument here, and the dishonest-looking one would have been the callback.
- *
- * **Rejected: `transition-delay` in CSS.** Fewer moving parts, and it puts the sequence where the
- * durations already live. But then no DOM signal marks ② and ③, so the gate has to infer them from
- * paint, and reduced motion has to zero every delay separately — a rule that decays the first time
- * someone adds a fourth element. Explicit states cost two timers and give the evaluator two
- * attributes to read.
- */
-const FLOOD_AFTER_STAGED_MS = 900
-const ANSWER_AFTER_STAGED_MS = 1400
-/**
- * ④ and ⑤ — **since item 2, the OPERATOR's board only** (the member's is on screen from the first
- * frame and lights at `LIT_AFTER_STAGED_MS` below). The history, `spec-board-2026-09-11.md` §3:
- *
- * **Measured from `staged` like the two above, because this screen has one clock.** The file's own
- * rule: the offsets are from `staged` and nothing hangs off `landed`. Two more offsets in the same
- * family cost nothing to read; two timers chained off `answered` would be a second sequence whose
- * relationship to the first nobody could state.
- *
- * **The arithmetic, so neither number is a taste:** the answer rises at 1400 over its own 600 ms,
- * so the board begins at **2000** — as the answer finishes, never during it (D91: the animation
- * must not assert the result before the result exists). The board fades over `--t-flood` (450 ms),
- * so the cell lights at **2450**, after the board rather than with it — «a cell lighting while the
- * name is still arriving is the screen answering twice» (§3).
- */
-const BOARD_AFTER_STAGED_MS = 2000
-/** **The cell lights BEFORE the name since item 2** (`spec-reveal-board-first-2026-10-08.md` §2):
- *  the member's board is on screen from the first frame, so its cell is the first thing the stop
- *  answers — dice at rest, retreat, cell, flood, name. 500 ms is the retreat spring's visible
- *  settle; the flood follows at 900. The operator's board still enters at 2000, already lit. */
-const LIT_AFTER_STAGED_MS = 500
+/** The dice run's rhythm, cut C (ms): the tumble and flight, the pause after the dice settle, and
+ *  the pause between the drawer and the name. */
+const DICE_MS = { tumble: 3400, settle: 420, hold1: 800, hold2: 600 } as const
 
-/** **How long a total absence of animation frames means the sequence is not coming.** Not a guess
- *  at how long the dice take — that number is what `RV-19` forbids. Two seconds of *silence* is far
- *  past any frame gap a running browser produces (a 60 Hz tab pings every ~16 ms; even a heavily
- *  throttled one is well inside it), so reaching it means frames have stopped, which is the only
- *  condition this failsafe exists for. */
-const WATCHDOG_MS = 2000
+/** The camera: how far the proof group is pushed in, and how long it eases back at the name. */
+const PUSH = 1.06
+const PULL_MS = 900
 
-/**
- * The dice group's two places, as transforms from its resting CSS position.
- *
- * `STAGED` is the read position, the left column at `--stage-pad`: x and y are the stylesheet's,
- * and the scale (0.42) is the one transform the resting dice keep. **Reduced motion goes straight
- * to `STAGED`, never to scale 1** — scale 1 is the tumbling size, and a reduced reveal left at it
- * covered the answer and the 定 card (found 2026-10-09).
- *
- * **`ROLLING`'s x is MEASURED, not typed** (甲改, evaluator 2026-08-26: the tumbling group sits on
- * the viewport's true centre). It used to be the constant 288, which is right only because
- * 104 + 288 = 392 = (1440 − 656) / 2 — three numbers from three places agreeing at one width and
- * nowhere else. Now it is computed from the group's own `offsetWidth` (a transform does not change
- * it) and the viewport, so the tumble is centred at every width and a change to `--die` or the
- * dice gap cannot silently un-centre it. `RV-23` measures exactly that, ±2 px.
- *
- * y is 0: the group tumbles at the CSS `top` the composition gives it, no longer 114 px below it.
- *
- * **There is no fallback any more** (2026-09-15): the group is not drawn until it has been measured
- * — see `rollX` below.
- */
-
-/** The gutter between the answer block and the places list in the staged column, **in stage units,
- *  not pixels** (§0c amendment E). One number, used by the measurement below and by `.under`'s
- *  reservation in CSS, so the two cannot disagree; multiplied by `--k` at the point of use, so it
- *  is 72 px at 1440 and grows with everything else. */
-const LIST_GUTTER = 72
-const STAGED = { x: 0, y: 0, scale: 0.42 }
+/** **If frames stop, the screen still lands.** A background tab pauses animations; the person must
+ *  still get the answer they are holding. Longer than either run, so it never beats a healthy one. */
+const FAILSAFE_MS = 16000
 
 /** A name's width in em, for the headline's fit (item 2 §5): a CJK or full-width character is
- *  one em, everything else about 0.6. Never below 1, so a one-letter name cannot ask for an
- *  infinite size. */
+ *  one em, everything else about 0.6. Never below 1. */
 function nameEm(name: string): number {
   let em = 0
-  for (const ch of name) em += /[\u2e80-\u9fff\uf900-\ufaff\uff00-\uffef]/.test(ch) ? 1 : 0.6
+  for (const ch of name) em += /[\u2e80-\u9FFF\uF900-\uFAFF\uff00-\uffef]/.test(ch) ? 1 : 0.6
   return Math.max(1, Math.round(em * 10) / 10)
-}
-
-/**
- * **The slot machine — §0c amendment B, the owner reversing his own 08-19 rule** (「選取條可以減速
- * 停在贏家上，並且一開始就從最上面的店家開始往下滾動，像拉霸機一樣」).
- *
- * The light starts on the FIRST row and runs downward, cyclic, on the dice's own ease-out — fast,
- * then slowing — and its last and longest step lands on the stored winner and stays there.
- *
- * **Why this is not `D91`'s forbidden case.** The outcome is committed at open (`D108`) and stored
- * before a frame animates, so a light decelerating onto the winner *displays a decided result*.
- * §0c's old rule was written against a screen where the animation looked like the mechanism; since
- * the seed commit it visibly is not. The argument is in the spec and was adopted there — it is not
- * a licence taken here.
- *
- * **What still binds, and all three are built rather than hoped for:**
- *
- * 1. *The end is the stored result.* The last index is chosen so `steps − 1 ≡ winner (mod n)`. The
- *    schedule cannot end anywhere else, on any roll.
- * 2. *The timing may not leak the answer.* `total` is a constant and the curve is normalised over
- *    the step count, so a winner on row 0 and a winner on row 4 take **exactly the same time**. A
- *    sweep that stopped sooner for an early row would announce the answer before the light did,
- *    which is the D91 violation this rule is actually about. The step *count* does differ with the
- *    winner's row — and that is not a second channel: it is the position of the light itself, which
- *    a person can already see. What must not differ is the duration, and it does not.
- * 3. *One clock.* `total` is `SEQUENCE_MS`, the longer of the two throws, imported from `Die` —
- *    the same number the dice are animated on. Deriving it from `--tumble` (a CSS duration nothing
- *    animates on any more) or from a typed constant is how the light and the dice drift apart, and
- *    the gate allows 120 ms between them.
- *
- * **The cost, which the owner heard and reaffirmed:** the light now reads as choosing. The seed,
- * the commitment and the dice remain the truth, and the reveal prints all three.
- */
-const SWEEP_CYCLES = 3
-
-/** How much longer the last step is than the first. **8, and it is the deceleration a person
- *  actually sees**: at five places that is a light stepping every ~50 ms at the throw and every
- *  ~390 ms as it settles. The gate asks for the last ≥ 2× the first; this is well past it, because
- *  2× is the floor for *measuring* deceleration and not the point at which it reads as one. */
-const SWEEP_RAMP = 8
-
-/**
- * The whole schedule, as the start time of each step. **Pure and total** — no clock, no DOM, no
- * randomness — so the gate's questions about it can be answered by reading it rather than by
- * filming it. Step `i` lights row `i mod n`; the array's length is what makes the last one the
- * winner.
- *
- * **The intervals ramp linearly from `d0` to `8 × d0`, and the ramp is what makes the two hard
- * properties true by construction rather than by tuning:**
- *
- * - *Monotonic, always.* `d(k) = d0 + k × step` with a positive step is non-decreasing for every
- *   pool size and every winner. A curve evaluated at `i / steps` is not: it has to be checked.
- * - *The winner lights at `total`, whatever row it is.* The intervals are made to SUM to `total`,
- *   so the last step starts exactly when the dice stop — the same instant on every roll. This is
- *   the leak check, and it is the one thing here that has to be exact: a schedule whose last step
- *   lands at `ease((steps−1)/steps) × total` finishes sooner when the winner sits high in the list,
- *   which announces the answer in the timing before the light gets there. **Measured on the first
- *   build of this, which did exactly that: 3137–3224 ms across six rolls, and the spread tracked
- *   the winner's row.**
- *
- * **A note for whoever compares this to `reveal-o-a2.html`.** The mock's schedule is
- * `ease(i/steps) × total` with `ease = 1 − (1 − x)^2.6`, and its comment says 「early steps ~90 ms,
- * last ones ~500 ms」. That function's derivative is *largest at zero*, so it does the opposite: the
- * mock's light starts slow and ends fast. This build follows the ruling's words — 減速 — and not
- * the mock's arithmetic. Flagged to the evaluator rather than silently matched.
- */
-function slotSchedule(n: number, winnerIndex: number, total: number): number[] | null {
-  if (n < 2 || winnerIndex < 0 || winnerIndex >= n) return null
-  const steps = SWEEP_CYCLES * n + winnerIndex + 1
-  const gaps = steps - 1
-  // sum of a linear ramp d0 … R·d0 over `gaps` terms = gaps × d0 × (1 + R) / 2
-  const d0 = (2 * total) / (gaps * (1 + SWEEP_RAMP))
-  const grow = gaps > 1 ? (SWEEP_RAMP - 1) * d0 / (gaps - 1) : 0
-  const times = [0]
-  for (let k = 0; k < gaps; k++) times.push(times[k] + d0 + k * grow)
-  return times
 }
 
 export default function Reveal({ roundId }: { roundId: number }) {
   const [dev] = useState<Device | null>(device)
   const [data, setData] = useState<MemberReveal | null>(null)
-  const [landed, setLanded] = useState(false)
   const [error, setError] = useState('')
   const [trip, setTrip] = useState<Trip>(null)
-  /** `null` for a member, and for a member it is null because **nothing arrived** — not because
-   *  this component declined to read something that did. D105's whole point. */
+  /** `null` for a member because **nothing arrived** — D105's whole point. */
   const [evidence, setEvidence] = useState<EvidenceData | null>(null)
-  /**
-   * §3a — the counts that left the member's 這一餐 arrive here, on the operator's reveal.
-   *
-   * `spec-weights-picture-2026-09-11.md` §3a: the ruling's own logic, «SDE 需要知道的資訊», is
-   * that those figures have a reader — so they were given a home rather than deleted.
-   *
-   * **It is fetched only once `evidence` is non-null, and that guard is the whole of WP-8.** A
-   * member's response carries no accounting, so `evidence` stays null and this request is never
-   * made: no extra call on a member's wire, nothing new on a member's screen. The endpoint is
-   * member-scoped either way — `GET /preferences` answers for the credential that asks — so what
-   * an operator reads here is the operator's OWN avoided categories, never the table's (§3.0,
-   * D13: this view audits the arithmetic, not the people).
-   */
+  /** §3a — the operator's own avoided categories, fetched only once `evidence` is non-null (WP-8). */
   const [counts, setCounts] = useState<Preferences | null>(null)
   const [signing, setSigning] = useState(false)
-  /**
-   * 乙 §3 — **whether the seal LANDS, which is not the same question as whether it is signed.**
-   *
-   * Set only when this device's press returned 201. A 409 (someone else signed first, D106) and a
-   * trip that arrived in the payload both show the same signed seal with no landing: they are
-   * facts that are already true, and §1a rule 5 keeps motion off anything that answers what just
-   * happened. **Default false**, so every path that is not an act this person performed gets the
-   * still frame without having to remember to ask for it.
-   */
+  /** 乙 §3 — whether the seal LANDS: only this device's 201. A 409 re-read is a fact, not an act. */
   const [sealLanded, setSealLanded] = useState(false)
   const reduce = useReducedMotion()
-  /** Which row the sweep is lighting, or `null`. A place id, never an index — the row order is the
-   *  pool's and an index would silently re-point if it ever changed. */
-  const [sweep, setSweep] = useState<string | null>(null)
-  /** `animation` on the normal path, `fallback` if the failsafe below had to land the screen.
-   *  **Published on the element rather than kept private**: the two paths differ in timing, and a
-   *  measurement taken on the second one while believing it was the first is exactly the reading
-   *  that gets a defect reported against the wrong thing. */
+  const [phase, setPhase] = useState<Phase>('rolling')
   const [landedBy, setLandedBy] = useState<'animation' | 'fallback' | 'reduced' | null>(null)
-  /**
-   * **D111's second stage, and the gap between it and `landed` is the whole ruling.**
-   *
-   * `landed` means *the dice have stopped*. `staged` means *the screen has reacted to that*. They
-   * are separated by a deliberate beat, because a screen that begins rearranging while the dice are
-   * still settling has reacted before the answer was final — the animation asserting something it
-   * does not yet have, which is `D91` word for word.
-   *
-   * **So the flood, the retreat and the name all hang off `staged`, and nothing hangs off `landed`
-   * except the beat itself.** The owner's prototype makes the pause visible on purpose; the
-   * evaluator's instruction was not to tighten it away as dead time, and the reason it is not dead
-   * time is that it is the only moment on this screen where the result is settled and nothing has
-   * claimed it yet.
-   */
-  const [staged, setStaged] = useState(false)
-  /** ② and ③ of the staged sequence — see `FLOOD_AFTER_STAGED_MS`. Separate booleans rather than
-   *  one enum because each is read on its own by a different part of the tree, and a comparison
-   *  like `stage >= 'flooded'` on a string union is the kind of ordering nobody can see is wrong. */
-  const [flooded, setFlooded] = useState(false)
-  const [answered, setAnswered] = useState(false)
-  /** ④ the board is present, ⑤ its one cell is outlined. Separate booleans for the same reason
-   *  `flooded` and `answered` are: each gives the evaluator an attribute to read rather than a
-   *  paint to infer, and reduced motion sets both at once instead of zeroing two delays. */
-  const [boarded, setBoarded] = useState(false)
-  const [boardLit, setBoardLit] = useState(false)
-  /** Why the sweep did not run, when it did not. Published on the element for the same reason
-   *  `landedBy` is: an absent effect and a broken effect look identical in a recording. */
-  /** **`too-many-rows` is gone with the equal-dwell rule it belonged to.** The slot machine's
-   *  schedule is normalised over its own step count, so a large pool makes the steps shorter
-   *  rather than making the schedule impossible; there is no cap left to hit. `no-winner` replaces
-   *  it: a payload whose winner is not in its own places list is a broken payload, and a sweep that
-   *  quietly ran anyway would end on a row chosen by an accident. */
-  const [skipped, setSkipped] = useState<'one-row' | 'no-winner' | null>(null)
-  const timer = useRef<number | undefined>(undefined)
+  /** Where each die rests, in the cabinet layer's coordinates, and the die's size — measured from
+   *  the drawn cells, so the rest is the row's start and the column's top at every width. */
+  const [rest, setRest] = useState<{ size: number; row: [number, number]; col: [number, number]; tube: [number, number, number] } | null>(null)
+
   const root = useRef<HTMLElement | null>(null)
-  const group = useRef<HTMLDivElement | null>(null)
-  const list = useRef<HTMLDivElement | null>(null)
   const answerBox = useRef<HTMLDivElement | null>(null)
-  /** The member's board, beside the dice at ≥ 1100 and above the name below it (item 2). */
+  const slipRef = useRef<HTMLDivElement | null>(null)
   const boardSlot = useRef<HTMLDivElement | null>(null)
-  /** Where the tumbling group has to be so it is centred on the viewport — see `STAGED` above.
-   *  **`null` until measured, and the group is not drawn while it is `null`** (2026-09-15). The old
-   *  fallback, 288, was the right answer only for a group resting at x 104, and the spring then
-   *  carried the dice from that guess to the measured value — invisible at 1440 while the two
-   *  agreed, and a visible sideways slide at the start of the tumble the moment the member's pair
-   *  was centred (evaluator's ruling i) and the resting `left` moved. */
-  const [rollX, setRollX] = useState<number | null>(null)
+  const layer = useRef<HTMLDivElement | null>(null)
+  const tubeRest = useRef<HTMLDivElement | null>(null)
+  const rowDie = useRef<HTMLDivElement | null>(null)
+  const colDie = useRef<HTMLDivElement | null>(null)
+  const rowSpin = useRef<HTMLDivElement | null>(null)
+  const colSpin = useRef<HTMLDivElement | null>(null)
+  const ran = useRef(false)
 
-  /** **The dice landing is observed, not predicted.** `animationend` from the cube's own `tumble`
-   *  is the moment the tumble is over; a `setTimeout` matching the CSS duration is a second clock
-   *  that agrees until something makes it not — a throttled tab, a slower device, an edited
-   *  duration — and when it disagrees the answer appears over a die still moving. Both dice fire
-   *  it and the first one wins, because they run the same animation for the same length. */
-  /** Restart the watchdog. Called by every `Die` on every animation frame it is alive for; the
-   *  screen lands on `fallback` only if this stops being called entirely. */
-  const beat = useCallback(() => {
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => land('fallback'), WATCHDOG_MS)
-  }, [])
+  const anim = rollAnimFor(roundId)
 
-  /** When the composed image actually went still, in `performance.now()` terms. The beat is
-   *  measured from THIS, not from the moment the observation finished — confirming stillness costs
-   *  three frames, and a hold started at the confirmation is systematically ~120 ms long, which put
-   *  the measured beat at the top of its own tolerance by construction. */
-  const stillAt = useRef<number | null>(null)
-
-  const land = useCallback((by: 'animation' | 'fallback' | 'reduced', at?: number) => {
-    if (at != null && stillAt.current === null) stillAt.current = at
-    window.clearTimeout(timer.current)
-    setLanded((was) => {
-      if (!was) setLandedBy(by)
-      return true
-    })
-  }, [])
-
-  /* §3a's fetch. Keyed on `evidence` so a member never makes it — see `counts` above. It is
-     deliberately NOT folded into the reveal's own load: that one runs for every reader, and
-     adding a preferences call there would put a member's request on the wire to satisfy an
-     operator's block. A failure is swallowed on purpose — the accounting is the point of this
-     screen and the counts are a footnote to it, so a 500 on the footnote must not cost the
-     operator the bars. */
+  /* §3a's fetch, keyed on `evidence` so a member never makes it. A failure is swallowed: the
+     counts are a footnote to the operator's table, and a 500 on the footnote must not cost it. */
   useEffect(() => {
     if (!dev || !evidence) return
     let live = true
@@ -397,239 +121,168 @@ export default function Reveal({ roundId }: { roundId: number }) {
         setData(d)
         setTrip(d.trip)
         setEvidence(evidenceIn(raw))
-        // The bar's 上一餐結果 — forward only, so an older reveal from a chat link cannot pull it
-        // back (`noteLastRound`).
+        // The bar's 上一餐結果 — forward only (`noteLastRound`).
         noteLastRound(roundId)
-        // **Reduced motion lands instantly and still lands** (§5 rule 3: the end states apply, the
-        // transitions do not). Not "no animation and no reveal" — the person still gets the answer.
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) land('reduced')
-        // **The failsafe is a watchdog on the dice's own heartbeat, not a race against them
-        // (`RV-19`, ruled 2026-08-20).** If the sequence never runs — a background tab, an
-        // animation that never started, a chain that threw — the reveal would hang on a screen
-        // whose whole purpose is to show an answer it is already holding. So it still exists.
-        //
-        // **What it must never do is beat a healthy sequence, and the old one did on every run.**
-        // It fired at `--tumble + 250` = 1650 ms; since the springs the real sequence ends at
-        // ~2190 ms, so `land('animation')` never once spoke and the hold began 637 ms before the
-        // dice stopped. Measured from the DOM, twice. The comment above it asserted the opposite
-        // — true when `--tumble` described a CSS keyframe that really was the whole animation, and
-        // silently false from the moment the springs replaced it.
-        //
-        // **A bigger constant would be the same bug waiting for the next spring change.** This
-        // measures *silence* instead: each `Die` pings once per animation frame while its sequence
-        // is alive, every ping restarts the clock, and only `WATCHDOG_MS` with no ping at all can
-        // land the screen. That is derived from frames arriving, so no duration, spring or stage
-        // added later can outgrow it.
-        else beat()
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          setLandedBy('reduced'); setPhase('answered')
+        } else if (evidenceIn(raw)) {
+          // The operator's screen is an instrument: no cabinet to play the roll on, so it lands.
+          setLandedBy('animation'); setPhase('answered')
+        }
       })
       .catch((e: Error) => {
         if (!live) return
-        // Nothing to reveal yet: the round is still open, so the person belongs on 這一餐, where
-        // the stream will bring them back here when it closes.
+        // Nothing to reveal yet: the round is still open, so the person belongs on 這一餐.
         if (e instanceof RoundStillOpen) { window.location.replace('/round'); return }
+        // The key holds no seat here: lib/http has already dropped it; the message is the shared line.
+        if (e instanceof SeatGone) {
+          setError(e.message)
+          window.setTimeout(() => { window.location.href = '/' }, 2500)
+          return
+        }
+        // A void round's sentence is the API's own (RoundVoid), shown as it is.
         setError(e.message || '讀取失敗')
       })
-    return () => { live = false; window.clearTimeout(timer.current) }
+    return () => { live = false }
   }, [dev, roundId])
 
   /**
-   * The sweep — the slot machine. See `slotSchedule` above for the rule and for why it is allowed
-   * to stop on the answer.
-   *
-   * **`rAF`, not `setInterval`.** The steps are 60 ms apart at the start and ~500 ms at the end, so
-   * a fixed interval cannot express them; and the gate measures the last step against the dice's
-   * stillness to 120 ms, which a timer chain's accumulated drift would spend on its own.
-   *
-   * **It does not stop at `landed`, and that is amendment C.** The winner's light is held through
-   * the stop, through the 1000 ms hold and through the entrance, and hands over to the row's bold
-   * weight at ③ — cleared by the effect below, not by this one. `landed` is no longer in this
-   * effect's dependencies at all: re-running it on the landing is what used to blank the row.
+   * **The composition's measured numbers**, read from the real boxes: where each die rests (the
+   * drawn row's first drawer and the drawn column's top drawer), the 籤筒's resting place on the
+   * cabinet's top edge, and the cabinet's centre for the painted light. A `ResizeObserver`, because
+   * the list and the name arrive with the payload and the cabinet scales with the stage.
    */
-  useEffect(() => {
-    if (!data) { setSweep(null); return }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    const ids = Object.keys(data.places)
-    const winnerIndex = ids.indexOf(String(data.winning_place_id))
-    const times = slotSchedule(ids.length, winnerIndex, SEQUENCE_MS)
-    // **Never a silent cap.** A recording with no sweep in it should say which of the two it is —
-    // an effect that was skipped by rule, or an effect that was built and does not work.
-    if (!times) { setSkipped(ids.length < 2 ? 'one-row' : 'no-winner'); return }
-    setSkipped(null)
-    let t0: number | null = null
-    let i = 0
-    let raf = 0
-    const tick = (now: number) => {
-      // **`t0` is the first animation frame, not the moment the effect ran.** The effect runs
-      // inside the render that the round's close triggered, and the first frame after it can be
-      // 100 ms later — a schedule started from `performance.now()` is already four steps behind
-      // when it gets its first frame.
-      if (t0 === null) t0 = now
-      const t = now - t0
-      // **One step per frame, and never a catch-up loop.** The loop this replaces advanced `i`
-      // while it was behind, so a late first frame made the light jump straight to row 3 — rows
-      // 0,1,2 were set in the same React batch and only the last of them ever rendered. Measured:
-      // 3–4 of the opening steps never appeared, on every roll. §0c's binding is that the light
-      // starts on the first row and visits them **in order**; a dropped row breaks the visible
-      // rule, where a stalled frame merely delays the light — so if the machine is too busy to
-      // keep up, the sweep runs late rather than incomplete, and the gate's 120 ms to the dice
-      // will say so honestly.
-      if (i < times.length && t >= times[i]) {
-        setSweep(ids[i % ids.length])
-        i += 1
-      }
-      // The loop ends with the last row lit. Nothing clears it here.
-      if (i < times.length) raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [data])
-
-  /**
-   * **C · the light hands over to the weight.** The winner's row stays lit from the stop until the
-   * answer arrives, then fades as the bold does — the same moment, so the row is never unmarked
-   * for a frame and never doubly marked for long. Cleared at `ANSWER_AFTER_STAGED_MS`; the 600 ms
-   * fade is the stylesheet's, on the row's own background.
-   *
-   * Owner's words: 「選取條可以在結果揭示時顯示久一點」 — about 2.4 s lit after the dice stop.
-   */
-  useEffect(() => {
-    if (!staged) return
-    const h = window.setTimeout(() => setSweep(null), ANSWER_AFTER_STAGED_MS)
-    return () => window.clearTimeout(h)
-  }, [staged])
-
-  /**
-   * **The two measured numbers of the composition** (甲改), both read from the real boxes rather
-   * than typed: where the tumbling group must sit to be centred, and how tall the places list is.
-   *
-   * The list's height becomes `--list-h` on the root, and the staged column reserves its hole with
-   * it. **The mock reserved that hole with a fixed 440 px margin, and a fixed margin is wrong here
-   * for a reason a static page cannot show:** the list is as long as the round's pool, which runs
-   * from two places to D110's ten, so the number that looks right in a mock puts the seal on top of
-   * the list in one round and a hand's width below it in another.
-   *
-   * A `ResizeObserver` rather than a one-shot read, because the list arrives with the payload and
-   * grows again when the sweep's rows render.
-   */
-  /* A layout effect, so the first measured offset is in place before the dice are painted. */
   useLayoutEffect(() => {
     const measure = () => {
-      const r = root.current
-      if (!r) return
-      if (group.current) {
-        // **The pad is read off the element, not out of the custom property.** `--stage-pad` is a
-        // `calc()` on `--k` and computes to its token stream unless it is declared; the group's own
-        // used `left` is the same number and cannot be anything else.
-        const pad = parseFloat(getComputedStyle(group.current).left) || 0
-        // `offsetWidth` is the untransformed box, which is what centring is about — reading the
-        // rect would fold in whatever the retreat spring is doing at that instant.
-        const w = group.current.offsetWidth
-        // **Item 2: a member's tumble centres on the LEFT column**, because the board now stands
-        // in the right one from the first frame and a viewport-centred 656 px pair runs over it
-        // (RB-3). The column ends a gutter before the board's slot; the slot is absolute only in
-        // the two-column composition, so below 1100 this is the viewport centre as before.
-        const slot = boardSlot.current
-        const beside = slot && getComputedStyle(slot).position === 'absolute'
-        const right = beside ? slot.offsetLeft - 40 * (parseFloat(getComputedStyle(r).getPropertyValue('--k')) || 1) : window.innerWidth - pad
-        if (w > 0) setRollX(Math.round((pad + right) / 2 - w / 2 - pad))
-      }
-      if (list.current) {
-        r.style.setProperty('--list-h', `${Math.round(list.current.offsetHeight)}px`)
-      }
-      // The list sits under the board in the right column, and the stage must grow to hold both:
-      // an absolute column adds nothing to its parent's height (the `.stage` note in reveal.css).
-      if (boardSlot.current) {
-        r.style.setProperty('--board-h', `${Math.round(boardSlot.current.offsetHeight)}px`)
-      }
-      if (list.current) {
-        r.style.setProperty('--right-end', `${Math.round(list.current.offsetTop + list.current.offsetHeight)}px`)
-      }
-      // **Where the list may sit once the answer is on screen: under it, never through it.**
-      // The mock puts the staged list at a flat 380 px, which is 「140 px up from 520」 and is
-      // right for the name it happened to draw. Measured with a real one — STARBUCKS COFFEE
-      // （北投湖山路） wraps to three lines of the 104 px headline — the answer block runs to 667
-      // and the flat number puts the list straight through the middle of it. So the column's
-      // order is kept by DERIVING the position: the list starts a gutter below whatever the
-      // headline actually needed. A long name pushes it down the page rather than into the text.
-      // `--k` is one stage unit as a length — see `reveal.css`'s E block. Everything measured here
-      // is already in real pixels; only the numbers this file *types* have to be multiplied.
-      const k = parseFloat(getComputedStyle(r).getPropertyValue('--k')) || 1
-      if (answerBox.current) {
-        // **`offsetTop`/`offsetHeight`, never the rect.** The answer sits 26 px low under its own
-        // entrance transform until ③, and a rect folds that in — the list would be placed against
-        // a box that is about to move, and land 26 px out of true (measured: 765 where 739 was
-        // right). The offset pair is the untransformed box, measured against `.stage`, which is
-        // this element's offset parent.
-        const top = Math.round(
-          answerBox.current.offsetTop + answerBox.current.offsetHeight + LIST_GUTTER * k,
-        )
-        r.style.setProperty('--list-top', `${top}px`)
+      const r = root.current, l = layer.current
+      if (!r || !l || !data) return
+      const grid = l.parentElement?.querySelector<HTMLElement>('.cabGrid')
+      const cell = litCell(data.dice)
+      if (!grid || !cell) return
+      const lb = l.getBoundingClientRect(), gb = grid.getBoundingClientRect()
+      const first = grid.querySelector<HTMLElement>(`[data-row="${cell[0] + 1}"][data-col="1"]`)
+      const top = grid.querySelector<HTMLElement>(`[data-row="1"][data-col="${cell[1] + 1}"]`)
+      if (!first || !top) return
+      const fb = first.getBoundingClientRect(), tb = top.getBoundingClientRect()
+      const size = Math.round(fb.width * 0.86)
+      // The 3/4 view draws the cube about 1.25 × its box, so the gaps clear the cabinet's frame.
+      // …and never off the left edge of the screen (the narrow column has little room beside the grid).
+      const row: [number, number] = [Math.max(size * 0.72 - lb.left, gb.left - lb.left - size * 0.95), fb.top + fb.height / 2 - lb.top]
+      const col: [number, number] = [tb.left + tb.width / 2 - lb.left, gb.top - lb.top - size * 0.95]
+      const tubeW = Math.round(fb.width * 0.95)
+      const tube: [number, number, number] = [gb.left - lb.left + 4, gb.top - lb.top - tubeW * 2 + 6, tubeW]
+      setRest((was) => (was && was.size === size && was.row[0] === row[0] && was.row[1] === row[1]
+        && was.col[0] === col[0] && was.col[1] === col[1] && was.tube[1] === tube[1] ? was : { size, row, col, tube }))
+      // The key light is centred on the cabinet, in the page's coordinates: the painting is laid from
+      // the page's top-left and onto each cover panel at its offset (cut C: no full-screen overlay).
+      const pb = r.getBoundingClientRect()
+      r.style.setProperty('--cx', `${Math.round(gb.left + gb.width / 2 - pb.left)}px`)
+      r.style.setProperty('--cy', `${Math.round(gb.top + gb.height / 2 - 20 - pb.top)}px`)
+      if (boardSlot.current) r.style.setProperty('--board-h', `${Math.round(boardSlot.current.offsetHeight)}px`)
+      // Each cover panel's offset from the page's top-left, so the one painting lines up across them.
+      const rb = r.getBoundingClientRect()
+      for (const el of [boardSlot.current, r.querySelector<HTMLElement>('.right')]) {
+        if (!el) continue
+        el.style.setProperty('--ox', `${Math.round(el.offsetLeft + (el.offsetParent as HTMLElement | null ?? r).getBoundingClientRect().left - rb.left)}px`)
+        el.style.setProperty('--oy', `${Math.round(el.offsetTop + (el.offsetParent as HTMLElement | null ?? r).getBoundingClientRect().top - rb.top)}px`)
       }
     }
     measure()
     window.addEventListener('resize', measure)
     const ro = new ResizeObserver(measure)
-    if (group.current) ro.observe(group.current)
-    if (list.current) ro.observe(list.current)
+    if (layer.current) ro.observe(layer.current)
     if (answerBox.current) ro.observe(answerBox.current)
-    if (boardSlot.current) ro.observe(boardSlot.current)
     return () => { window.removeEventListener('resize', measure); ro.disconnect() }
   }, [data])
 
-  /** The beat. Long enough to read as a stop rather than as a stutter — the prototype's own
-   *  proportion, 6% of a 6.4 s loop. Reduced motion has no stages to separate, so it goes straight
-   *  through. */
-  useEffect(() => {
-    if (!landed) return
-    // **Reduced motion applies all three at once, instantly** (evaluator's ruling, 2026-08-26):
-    // there is no tumble to separate them from and no sequence to read, so the end state is the
-    // whole animation — §5 rule 3's 「the end states still apply」.
-    // The board and its lit cell are part of the end state, so reduced motion gets both — §3:
-    // 「nothing is removed». BD-9 measures exactly that.
-    if (landedBy === 'reduced') {
-      setStaged(true); setFlooded(true); setAnswered(true)
-      setBoarded(true); setBoardLit(true)
-      return
-    }
-    // **The beat runs from composed stillness, so it is `HOLD_MS` on the screen and not
-    // `HOLD_MS` plus whatever the instrument cost.** Clamped at zero: if confirming took longer
-    // than the whole beat the answer is *stage now*, never *stage in the past*.
-    const spent = stillAt.current === null ? 0 : performance.now() - stillAt.current
-    const h = window.setTimeout(() => setStaged(true), Math.max(0, HOLD_MS - spent))
-    return () => window.clearTimeout(h)
-  }, [landed, landedBy])
+  /** The camera, cut C: it scales the proof group (the cabinet and the dice resting in it), never
+   *  the whole page — scaling the page halved the frame rate in the preview's A/B. */
+  const camera = useCallback((frames: Keyframe[], duration: number, easing = 'cubic-bezier(.4,0,.2,1)') => {
+    const el = boardSlot.current
+    if (!el || reduce) return null
+    return el.animate(frames, { duration, easing, fill: 'forwards' })
+  }, [reduce])
 
-  /** ② and ③, measured from `staged` itself rather than from the hold — so a long confirm eats
-   *  into the hold (which is what `HOLD_MS − spent` is for) and never into the sequence a person
-   *  is watching. Both clear on unmount and on any re-run, so a second roll cannot leave a timer
-   *  from the first one alive. */
-  useEffect(() => {
-    if (!staged || answered) return
-    const a = window.setTimeout(() => setFlooded(true), FLOOD_AFTER_STAGED_MS)
-    const b = window.setTimeout(() => setAnswered(true), ANSWER_AFTER_STAGED_MS)
-    return () => { window.clearTimeout(a); window.clearTimeout(b) }
-  }, [staged, answered])
+  const toLit = useCallback(() => setPhase((p) => (p === 'answered' ? p : 'lit')), [])
+  const toAnswered = useCallback(() => {
+    setPhase('answered')
+    // Back to the ruled framing, then no transform at all: a held `scale(1)` would still make the
+    // group a transformed box, and its viewport-pinned light would stop lining up with the page's.
+    const pull = camera([{ transform: `scale(${PUSH})` }, { transform: 'scale(1)' }], PULL_MS)
+    void pull?.finished.then(() => boardSlot.current?.getAnimations().forEach((a) => a.cancel())).catch(() => {})
+  }, [camera])
 
   /**
-   * ④ and ⑤ — the board, then its one cell. **Its own effect, and that is a correction rather
-   * than a style: both of its offsets are LATER than `answered`.**
-   *
-   * Putting them in the effect above cost the board entirely, measured on the built page: that
-   * effect lists `answered` in its deps and returns early once it is true, so `answered` flipping
-   * at 1400 re-ran it, the cleanup cleared every timer it had set, and the 2000 ms one never
-   * fired. `stage` read `answered` and `.under` held only the pairs and the commitment — a
-   * component that was correct, wired, type-checked and simply not there.
-   *
-   * So the guard is `boardLit` — the LAST thing this effect sets — and the deps are `staged` and
-   * that. It runs once per staging and stops itself. Same clock as ② and ③ (offsets from
-   * `staged`), same cleanup discipline: a second roll cannot leave the first one's timers alive.
+   * **The dice run.** The two cubes are rendered at their resting places in the cabinet layer; the
+   * flight is a transform from the left column back to that place (FLIP), so the resting
+   * composition is what the stylesheet and the measurement say, and the animation is the only thing
+   * that has to be undone. Each die is thrown from its own point and spins its own way: two cubes
+   * given one motion read as one object cut in half.
    */
   useEffect(() => {
-    if (!staged || boardLit) return
-    const c = window.setTimeout(() => setBoarded(true), BOARD_AFTER_STAGED_MS)
-    const d = window.setTimeout(() => setBoardLit(true), LIT_AFTER_STAGED_MS)
-    return () => { window.clearTimeout(c); window.clearTimeout(d) }
-  }, [staged, boardLit])
+    if (!data || !rest || reduce || anim !== 'dice' || ran.current) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const a = answerBox.current, l = layer.current
+    const dice = [rowDie.current, colDie.current], spins = [rowSpin.current, colSpin.current]
+    if (!a || !l || dice.some((d) => !d) || spins.some((s) => !s)) return
+    ran.current = true
+    const lb = l.getBoundingClientRect(), ab = a.getBoundingClientRect()
+    const T = DICE_MS.tumble
+    const starts: [number, number][] = [
+      [ab.left + ab.width * 0.3, innerHeight * 0.47],
+      [ab.left + ab.width * 0.62, innerHeight * 0.52],
+    ]
+    camera([{ transform: 'scale(1)' }, { transform: `scale(${PUSH})` }], T)
+    const targets = [rest.row, rest.col]
+    const flights = dice.map((d, i) => {
+      const [sx, sy] = starts[i]
+      const dx = sx - (lb.left + targets[i][0]), dy = sy - (lb.top + targets[i][1])
+      d!.animate([
+        { transform: `translate(${dx}px, ${dy - 180}px) scale(2.3)` },
+        { transform: `translate(${dx}px, ${dy}px) scale(2.3)`, offset: 0.2 },
+        { transform: `translate(${dx}px, ${dy}px) scale(2.3)`, offset: 0.74 },
+        { transform: 'none' },
+      ], { duration: T, easing: 'cubic-bezier(.35,.7,.3,1)', fill: 'both' })
+      const w = i ? [1, -1] : [-1, 1]
+      return spins[i]!.animate([
+        { transform: `rotateX(${w[0] * 1080}deg) rotateY(${w[1] * 900}deg) rotateZ(${w[0] * 180}deg)` },
+        { transform: REST, offset: 0.74 },
+        { transform: REST },
+      ], { duration: T, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'both' })
+    })
+    let live = true
+    const timers: number[] = []
+    const failsafe = window.setTimeout(() => {
+      if (!live) return
+      setLandedBy('fallback'); setPhase('answered')
+    }, FAILSAFE_MS)
+    void Promise.all(flights.map((f) => f.finished)).then(() => {
+      if (!live) return
+      setLandedBy('animation'); setPhase('landed')
+      camera([{ transform: `scale(${PUSH})` }, { transform: `scale(${PUSH - 0.015})` }, { transform: `scale(${PUSH - 0.008})` }], DICE_MS.settle, 'ease-out')
+      timers.push(window.setTimeout(toLit, DICE_MS.hold1))
+      timers.push(window.setTimeout(() => { window.clearTimeout(failsafe); toAnswered() }, DICE_MS.hold1 + DICE_MS.hold2))
+    }).catch(() => { /* cancelled on unmount */ })
+    return () => { live = false; window.clearTimeout(failsafe); timers.forEach((t) => window.clearTimeout(t)) }
+  }, [data, rest, reduce, anim, camera, toLit, toAnswered])
+
+  /** The 籤筒 run's camera: in during the shake, back out as the stick leaves the tube. Its own
+   *  phases come from `TubeRun`. */
+  const tubeMounted = useRef(false)
+  useEffect(() => {
+    if (!data || reduce || anim !== 'tube' || tubeMounted.current) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    tubeMounted.current = true
+    camera([{ transform: 'scale(1)' }, { transform: `scale(${PUSH})` }], TUBE_MS.shake * TUBE_MS.shakes)
+    const failsafe = window.setTimeout(() => { setLandedBy('fallback'); setPhase('answered') }, FAILSAFE_MS)
+    return () => window.clearTimeout(failsafe)
+  }, [data, reduce, anim, camera])
+  const tubeStick = useCallback(() => camera([{ transform: `scale(${PUSH})` }, { transform: 'scale(1)' }], 600), [camera])
+  const tubeLit = useCallback(() => { setLandedBy('animation'); toLit() }, [toLit])
+  const tubeNamed = useCallback(() => {
+    setPhase('answered')
+    boardSlot.current?.getAnimations().forEach((a) => a.cancel())
+  }, [])
 
   const sign = useCallback(async () => {
     if (!dev || signing) return
@@ -637,10 +290,11 @@ export default function Reveal({ roundId }: { roundId: number }) {
     try {
       const { trip: signed, created } = await signTrip(dev, roundId)
       setTrip(signed)
-      /* Only a 201 is an act this person just performed — see `sealLanded`. */
       if (created) setSealLanded(true)
     } catch (e) {
+      // SeatGone and RoundVoid carry their own sentences.
       setError((e as Error).message || '簽不上')
+      if (e instanceof SeatGone) window.setTimeout(() => { window.location.href = '/' }, 2500)
     } finally {
       setSigning(false)
     }
@@ -661,428 +315,170 @@ export default function Reveal({ roundId }: { roundId: number }) {
     )
   }
 
+  const answered = phase === 'answered'
+  const lit = phase === 'lit' || answered
   const face = data ? faceOf(data.places, data.winning_place_id) : null
-  /** Derived from the seat marked `counts`, falling back to `deciding_member` only if no seat is
-   *  marked — a payload that predates A6 has neither, and the line simply does not render. */
-  const decider = data
-    ? (data.rolls?.find((r) => r.counts)?.nickname ?? data.deciding_member?.nickname ?? '')
-    : ''
-  /** A16: the headline takes the API's shortened form, and falls back to the composed name when
-   *  the payload carries none. Nothing is computed here — see `winner_headline` in `lib/reveal`. */
   const winner = data && data.winning_place_id !== null
     ? (data.winner_headline ?? data.places[String(data.winning_place_id)])
     : ''
-  /** `design.md` §4b. **No fallback, and that asymmetry is the ruling.** A missing headline still
-   *  has to say something, so it falls back to the composed name; a missing qualifier has nothing
-   *  to say and renders no element at all. Deriving one here from the composed name would be the
-   *  browser computing a name, which is the one thing A16 exists to stop. */
+  /** `design.md` §4b: no fallback — a missing qualifier renders no element. */
   const qualifier = data?.winner_qualifier ?? null
-  /** `lib/board.ts` — the odds sentence's one input, unit-tested there. */
-  const even = evenBoard(data?.board)
+  const n = drawerOf(data?.dice)
+  const qian = n ? `第${zhNumeral(n)}籤 ${ganzhi(n)}` : ''
+  const wood = woodBoard(data?.board)
+  const member = !!data && !evidence
+  const running = !reduce && landedBy !== 'reduced'
 
   return (
-    // The flood (§5 rule 1) — the winning place's own face colour becomes the whole ground, over
-    // .45s ease-out. `data-face` carries it; the colour lives in CSS, so no palette value is
-    // written in a component.
     <main
       ref={root}
       className="reveal"
       data-screen="reveal"
-      data-state={landed ? 'landed' : 'rolling'}
-      data-stage={answered ? 'answered' : flooded ? 'flooded' : staged ? 'staged' : 'rolling'}
+      data-roll-anim={anim}
+      data-state={phase === 'rolling' ? 'rolling' : 'landed'}
+      data-stage={phase}
       data-landed-by={landedBy ?? undefined}
-      data-sweep-skipped={skipped ?? undefined}
-      // **The flood moves with the stage, not with the stop.** Flooding the instant the dice
-      // settle would put a full-screen colour change inside the beat, and the beat's entire
-      // content is that nothing has reacted yet. The screen reacts after it — and since D109's
-      // second amendment it reacts in three steps, so the colour waits for the dice to be at
-      // rest (②) instead of moving with them.
-      //
-      // **The list settles on this same cue and needs no gate of its own**: the flood repaints
-      // the ground and `color: inherit` carries every row with it. One attribute, one moment.
-      data-face={flooded && face ? face : undefined}
+      /* The slip is dimmed while the cabinet holds the eye and comes forward with the name (cut C:
+         focus by dimming, never blur). */
+      data-focus={answered ? 'slip' : 'cabinet'}
+      /* The flood moves with the name, never with the stop. */
+      data-face={answered && face ? face : undefined}
     >
-      {/* The ground's printed pair belongs to the flood, not to the retreat — it is the colour
-          arriving, drawn in the flood's own darker step. */}
-      <Field dice={data?.dice} staged={flooded} />
+      {/* The ground's printed pair names the drawer with the board beside it, so it arrives with
+          the name and not before (gate 4). */}
+      <Field dice={data?.dice} staged={answered} />
 
       <div className="stage">
 
-      {/* **The dice mount only once the round is known, and that closed a latent bug.** They used
-          to render immediately with a placeholder 1 and start tumbling, so the landing angle was
-          re-targeted mid-flight when the real value arrived. Nothing showed for it, because the CSS
-          re-resolved and the die still landed on the right face — a throw aimed at the wrong number
-          that corrected itself invisibly. `.dice` holds its box from `min-height`, so waiting costs
-          no layout.
-
-          `data-dice-state` is set from the die's own settle completing rather than from a timer:
-          **a spring has no duration anyone outside it can know**, which is precisely why it feels
-          different from an ease, and the die calls back when its spring has decayed onto the
-          face. */}
-      {/* **The group is anchored where it ENDS and transformed to where it starts.** The landed
-          position is the CSS one — left column, x 104 — and 「centred and large」 is a transform
-          away from it. That way the resting composition is what the stylesheet says, and the
-          animation is the only thing that has to be undone; the other way round leaves the final
-          frame depending on an animation having run.
-
-          Transform only, so the retreat reflows nothing: the name's box, the list's box and the
-          bar are exactly where they were before the dice moved. */}
-      <m.div
-        ref={group}
-        className="group"
-        data-part="dice-group"
-        style={rollX === null && !reduce ? { visibility: 'hidden' } : undefined}
-        animate={reduce || staged ? STAGED : { x: rollX ?? 0, y: 0, scale: 1 }}
-        /* **The spring is for the retreat only.** Before `staged` the group's x changes only when it
-           is measured (on arrival, on resize), and that is a correction to be applied, not a move to
-           be watched — so it lands in one frame. */
-        transition={
-          reduce || !staged
-            ? { duration: 0 }
-            : { type: 'spring', stiffness: 140, damping: 22, mass: 1.1 }
-        }
-      >
-        <div className="dice" data-part="dice" data-dice-state={landed ? 'landed' : 'tumbling'}>
-          {data && (
-            <>
-              <Die value={data.dice[0]} seat={0} onLanded={(at) => land('animation', at)} onProgress={beat} />
-              <Die value={data.dice[1]} seat={1} onLanded={(at) => land('animation', at)} onProgress={beat} />
-            </>
-          )}
-        </div>
-      </m.div>
-
-      {/* **The answer region holds its box from the first frame.** `opacity` alone moves — never
-          `display`, never `height` — so the tumble→land sequence shifts 0.00 px and the answer is
-          genuinely not on screen while the dice move. `aria-hidden` while rolling so a screen
-          reader is not told the winner before the sighted reader gets it; `inert` would also stop
-          the trip control being reachable early. */}
-      {/* **D108 — the deciding seat is named from the first frame, before any dice are seen.**
-          That ordering is the ruling's own honesty mechanism: five results with one silently
-          chosen afterwards is indistinguishable from picking the roll somebody liked. So this
-          line sits OUTSIDE `.answer` and is visible during the tumble, deliberately.
-
-          **It is safe there and I checked rather than assumed.** `RV-16` asks that nothing on
-          screen distinguishes the WINNER mid-tumble; this names a person, carries no place and no
-          number, and is identical whichever place wins. The name comes from `counts` on the seat
-          rather than from `deciding_member`, though both are on the wire — one fact, one source,
-          so a sentence cannot name somebody a row does not mark.
-
-          **「以 … 的骰子為準」 and never 「… 擲出了」.** The seed was drawn at open and every pair
-          derives from it; the tap discloses a number that already existed. Wording that credits
-          the tap with producing it is D108's stated prohibition in prose. */}
-      {decider && (
-        <p className="decider" data-part="deciding">以 {decider} 的骰子為準。</p>
-      )}
-
-      {/* **Item 2 — the member's board is in the first screen, from the first frame**
-          (`spec-reveal-board-first-2026-10-08.md`). The board is the product's fairness argument:
-          the dice point at a cell and the cell is a shop. A full scroll below the dice, nobody saw
-          that, and the result read as a lottery (the evaluator's walk, 2026-10-07).
-
-          **Here in the DOM, between whose dice and the name**, because below 1100 the column reads
-          dice → board → name. At ≥ 1100 the slot is lifted into the right column (reveal.css) and
-          the tumble centres on the left one, so the pair never covers it.
-
-          Unlit until the dice are at rest and retreating (`boardLit`, staged + 500 ms), so nothing
-          marks the winner while the dice still move (D91). No legend: each list row carries its
-          shop's mark instead (`Evidence`), so the two never say the same thing twice. The
-          operator's board stays in `.under`, unchanged. */}
-      <div className="boardSlot" ref={boardSlot}>
-        {data && !evidence && (
-          <Board board={data.board} places={data.places} dice={data.dice} lit={boardLit} legend={false} />
-        )}
-      </div>
-
-      {/* The answer, said to a screen reader once it is on screen. The box below toggles
-          `aria-hidden`, which a live region does not reliably announce, so this one line is
-          the live region and holds nothing until ③. */}
+      {/* The answer region holds its box from the first frame and only its opacity moves, so the
+          sequence shifts nothing. From `lit` the slip shows, carrying 「第N籤 干支」; the name and the
+          act wait for `answered`. */}
       <p className="sr-only" aria-live="polite">{answered && winner ? winner : ''}</p>
-
-      <m.div
+      <div
         ref={answerBox}
         className="answer"
         data-part="answer"
+        data-shown={lit ? (answered ? 'all' : 'slip') : undefined}
         aria-hidden={!answered}
         inert={!answered}
-        initial={false}
-        animate={{ opacity: answered ? 1 : 0, y: reduce || answered ? 0 : 26 }}
-        transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 24, mass: 1 }}
       >
-        {/* **`sum` is in the member payload and is deliberately NOT rendered.** It is an innocent
-            number — the two dice added up — but §1's table does not list it in member state, and
-            §1a refuses *any bare number the eye can pair with a place*. A digit sitting directly
-            above a restaurant's name is that shape exactly, whatever it happens to mean, and
-            `RV-2` is written to walk text and attributes looking for precisely it. The dice
-            already say what they rolled, in pips, which is the form that cannot be mistaken for a
-            share of anything. */}
-        {/* `--len` is the name's width in em (CJK 1, Latin 0.6) — the stylesheet shrinks the
-            headline to fit one line before it lets it wrap (item 2 §5). */}
-        {/* **The winner's board number beside its name** (item 2 gate: at 430 and 900 nothing in
-            the first view joined the lit cell's 「3」 to the name — the list that does sits below
-            it). The same swatch as the list row and the cells (`markOf`/`faceOf`), outside the
-            `h1` so the name's own text stays the name. Member only: the operator has no marks. */}
-        {/* Look D: the winner is a joss-paper slip. The red head band is a brand plate, drawn only
-            for the eye (`aria-hidden`); the name inside is still the `h1`. */}
-        <div className="slip" data-part="slip">
-        <div className="slipHead" aria-hidden="true" />
-        <div className="winnerLine">
-          {!evidence && data && data.winning_place_id !== null && (
-            <span className="boardSwatch winnerMark" data-part="winner-mark" aria-hidden="true"
-              data-face={faceOf(data.places, data.winning_place_id) ?? undefined}>
-              {markOf(data.places, data.winning_place_id)}
-            </span>
+        {/* Look D: the winner is a joss-paper slip. The red head band is drawn for the eye only. */}
+        <div className="slip" data-part="slip" ref={slipRef}>
+          <div className="slipHead" aria-hidden="true" />
+          {/* **「第N籤 干支」 ties the answer to drawer N** — the drawer's numeral and its own name,
+              never a shop's. It replaces the numbered swatch. */}
+          {lit && n && <p className="qianNo dSerif" data-part="qian-no">{qian}</p>}
+          <div className="winnerLine">
+            <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
+          </div>
+        </div>
+
+        {/* Beside the slip at ≥ 1100, centred on its middle; under it below. */}
+        <div className="answerSide">
+          {/* **The qualifier — which branch** (`design.md` §4b): rendered only when non-null, no
+              punctuation added back. */}
+          {qualifier !== null && (
+            <p className="qualifier" data-part="qualifier">{qualifier}</p>
           )}
-          <h1 className="winner" data-part="winner" data-user-content style={{ '--len': nameEm(winner ?? '') } as CSSProperties}>{winner}</h1>
-        </div>
-        </div>
 
-        {/* **The qualifier — which branch** (owner-ruled 2026-08-28, `design.md` §4b). The bracket
-            D92 composes onto a name that needs one, set as its own line under the headline instead
-            of inside it: the headline reads 一階堂拉麵, this reads 大安和平東路, and the 提名 row below
-            still reads 一階堂拉麵餐飲有限公司（大安和平東路）, which is how the two are matched by eye.
-
-            **Rendered only when non-null — no empty element and no reserved box.** A single-site
-            winner has nothing to say here and the sentence moves up by exactly the line it did not
-            need. That is the opposite of `.winner`'s reserved second line above, deliberately: the
-            headline's height is a property of the screen (`R-D9`'s floor), and this line's is a
-            property of the name.
-
-            **No parentheses, no dash, no icon.** The API sends the bracket's content without its
-            punctuation and the browser adds none back — a parenthesis appearing here is a defect.
-
-            It is inside `.answer`, so it rides the block's `aria-hidden` / `inert` and its fade
-            and `D91`'s zero-shift clause is kept for free — the same argument the act below it
-            already runs on. */}
-        {qualifier !== null && (
-          <p className="qualifier" data-part="qualifier">{qualifier}</p>
-        )}
-
-        {/* **The sentence.** Everything the evidence table used to carry now rests on nine
-            characters, so they are load-bearing typography and not a caption: `text-lead`, full
-            `ink`, the body face's regular weight. It does not animate and it is present from the
-            first painted frame of the landed state — a fact that arrives late reads as an apology.
-
-            **The words changed on 2026-09-16** (evaluator-ruled): 「三十六格已按權重分配」 named the
-            mechanism — 格 and 權重 are the operator's vocabulary — where a member needs the fact, so
-            it reads 「每一家的機會不一樣」. Seven characters, the same class, the same place, the same
-            first painted frame. **Not nothing:** D91 forbids the surface implying the roll was plain
-            chance, and dice plus a winner with no line at all is exactly that implication.
-
-            **It is inert until `[OPEN-1]` is ruled**: plain text, no handler, no link styling, no
-            tooltip, no icon. Inert is the reversible option — a door added later changes nothing
-            already built, whereas a door removed later leaves a dead region people have learned to
-            press. It claims that the allocation happened and that weight drove it. It does not
-            claim the reader can check that, and it must not be dressed to imply so. */}
-        {/* **The sentence is read off the board, never assumed** (the look-D gate, 2026-10-08: on
-            a six-shop board of 6 cells each, four of four readers counted, found 「不一樣」 false,
-            and two would not accept the result). Uneven counts keep the ruled words; an even board
-            says so. Counted from the same `board` the cells draw, so the two cannot disagree. */}
-        <p className="sentence" data-part="sentence" data-even={even ? 'yes' : undefined}>
-          {even ? '這一輪每一家的機會一樣' : '每一家的機會不一樣'}
-        </p>
-
-        {/* **The act, inline and inside `.answer` — owner-ruled 2026-08-20, option 乙.** The pinned
-            BAR is retired; the act belongs to the composition it acts on. It sits under the winner
-            block and starts at the same left edge as the headline, so the column reads as one
-            column rather than a page with a control bolted to its foot.
-
-            **Inside `.answer` on purpose, and that is what "renders only in the staged state"
-            buys.** The block already carries `aria-hidden` and `inert` while the dice tumble and
-            fades in with the name, so there is no moment where a control invites a press that
-            would do nothing — which deletes the disabled state from this screen entirely rather
-            than restyling it. `D91`'s zero-shift clause is kept for free: the act arrives with the
-            block it lives in, so nothing above it moves.
-
-            **The seal is drawn in `currentColor`, never in hot.** The old bar was hot-on-cobalt and
-            that clash is what died with it; `currentColor` means one declaration serves all four
-            winning faces and no frame can render ink on ink. */}
-        {/* **蓋章 — the reveal's act is a stamp** (evaluator-ruled 2026-08-20 under D101's
-            delegation; `sign-act.html` 乙). Not a button that says 我們去了: an empty seal waiting
-            for a mark, and the act of pressing it is the act of agreeing. That is §5 質感 rule 1's
-            whole argument — the control is drawn as the thing it means from print culture, and a
-            seal is what a Taiwanese page uses to mean *settled*.
-
-            **The seal keeps its box across both states**, so the change from asking to signed is a
-            cross-fade in a box that never resizes (§5 rule 2) and `RV-17`'s reserve-the-box logic
-            applies to the nickname: the name is 900-weight display type and arrives where its
-            space already was.
-
-            **The seal is FIRST in both states, and that is what "same position" costs.** Reading
-            order would rather the name came before 說這一餐去了 — and it does, because the name is
-            *inside* the seal. Putting the question first instead would move the seal 200 px
-            sideways the moment someone signed. */}
-        <div className="act-row" data-part="act">
-          {trip ? (
-            /* D106 — the trip is named; the proposal it came from never is. The nickname is the
-               one the wire carries, and it is the only member identity this screen keeps. */
-            /* 乙 §3 — **the rite's ending, and the only thing this spec adds to 開獎.** The act a
-               member performs to say *we are going* was a 120 ms opacity cross-fade: the flattest
-               moment in the product was its most meaningful one. Now the seal inks over
-               `--t-flood` — border dashed → solid, ground filling paper — and 「說這一餐去了」
-               follows one stagger step behind it, so the pair reads as cause then consequence
-               rather than as one block appearing.
-
-               **Ink only. No scale, no bounce, no rotation sweep:** the keyframes never mention
-               `transform`, so `.sealSigned`'s own `rotate(-4deg)` holds from the first frame to the
-               last. That angle is where the stamp RESTS, not something it turns into — a stamp that
-               spins on landing is the animation performing an act the hand did not (§質感 rule 2:
-               a stamp inks, it does not shrink).
-
-               **`sealLanded`, never `trip`.** The seal is signed on three paths and lands on one. */
-            <p className="sealRow" data-part="trip" data-landed={sealLanded ? 'yes' : undefined}>
-              <span className={sealLanded ? 'seal sealSigned sealLand' : 'seal sealSigned'}>
-                {/* **Vertical for a name with CJK in it, horizontal for an all-Latin one**
-                    (evaluator-ruled 2026-08-20). `vertical-rl` sets CJK top-to-bottom, which is
-                    what a seal does; it rotates Latin 90 degrees, and **a rotated word is not a
-                    stamped one** — it reads as a label lying on its side. The fork is on the data
-                    rather than on a setting, because the nickname is whatever someone typed.
-
-                    The test is *does it contain CJK*, not *is it all Latin*: a mixed name like
-                    `Amy美` is set vertically, which is right — the CJK half is the half the
-                    vertical setting exists for. */}
-                <span
-                  className="sealName"
-                  data-user-content
-                  data-set={/[\u3400-\u9FFF\uF900-\uFAFF]/.test(trip.nickname) ? 'vertical' : 'horizontal'}
-                >
-                  {trip.nickname}
+          {/* **蓋章 — the reveal's act is a stamp** (evaluator-ruled 2026-08-20, `sign-act.html` 乙).
+              The seal keeps its box in both states, so asking → signed is a cross-fade. */}
+          <div className="act-row" data-part="act">
+            {trip ? (
+              /* D106 — the trip is named; the proposal it came from never is. */
+              <p className="sealRow" data-part="trip" data-landed={sealLanded ? 'yes' : undefined}>
+                <span className={sealLanded ? 'seal sealSigned sealLand' : 'seal sealSigned'}>
+                  {/* Vertical for a name with CJK in it, horizontal for an all-Latin one: a rotated
+                      word is not a stamped one. */}
+                  <span
+                    className="sealName"
+                    data-user-content
+                    data-set={/[\u3400-\u9FFF\uF900-\uFAFF]/.test(trip.nickname) ? 'vertical' : 'horizontal'}
+                  >
+                    {trip.nickname}
+                  </span>
                 </span>
-              </span>
-              {/* One stagger step behind the seal — and it borrows `.arrive` rather than
-                  declaring its own delay, so the 90 ms still appears exactly once in the
-                  stylesheets (`YI-10`). Nothing on a 409: the sentence is already true. */}
-              <span
-                className={sealLanded ? 'sealSaid arrive' : 'sealSaid'}
-                style={sealLanded ? arrive(1) : undefined}
-              >說這一餐去了</span>
-            </p>
-          ) : (
-            <button
-              type="button"
-              className="sealRow sealBtn"
-              data-part="sign"
-              data-primary
-              onClick={() => void sign()}
-              disabled={signing}
-            >
-              {/* `aria-hidden` on the seal itself: it is the drawing, and the button's accessible
-                  name is the question. A screen reader announcing an empty box before the question
-                  would be describing the ink rather than the act. */}
-              {/* **A stamp, not a box** (item 2 gate, 2026-10-08: two readers of two read the empty
-                  square as a checkbox — 「不確定是要點方框還是點整個區塊」). The frame already says
-                  «button»; inside it the seal carries the act's own character, 定, set in the
-                  display face like the question beside it (`.sealAsk`, so the glyph is already in
-                  the cut set). Signing replaces it with the name, as before. */}
-              <span className="seal sealEmpty" aria-hidden="true"><span className="sealAsk sealGlyph">定</span></span>
-              {/* UX batch U5c — what the empty seal does, said before the press: it records who
-                  said the circle went (D106 — a trip is named). **Inside the button, under the
-                  question**, because the row is one 80 px box in both states and a line beside it
-                  would vanish on signing and shrink the row; the seal is tall enough for two lines.
-                  The button's name becomes the question plus what pressing it does, which is the
-                  thing a screen reader user also needs before pressing. */}
-              <span className="sealText">
-                <span className="sealAsk">這一餐，說定了嗎？</span>
-                <span className="sealHow" data-part="sign-explain">按下去會記下：是你說這一餐去了這家。</span>
-              </span>
-            </button>
-          )}
-        </div>
-        {/* Moved up from the commitment block below the fold: the claim belongs where the member
-            decides, under the seal, in the first view. The fingerprint details stay in `.commit`. */}
-        {data?.seed_commit && <p className="commitClaim">結果開局就固定了，事後改不了。</p>}
-      </m.div>
-
-      {/* **§0b, owner-amended: the member sees the LIST, never the numbers.** 「使用者畫面我認為可
-          以套用開發者的這頁，只是需要移除36格的畫面，以及權重點數」 — the same panel as the
-          operator's, minus the grid and minus the counts. D105 removed the whole thing because
-          「麻辣火鍋 0/36」 in a circle of five is one guess; **the guessable object was always the
-          number, never the name** — the places were proposed openly by the people in the room.
-
-          One component renders both states, and that is the point rather than a convenience: §0
-          says the operator state is the member state *plus* two things, so the two states cannot
-          drift into two layouts. `evidence` is null for a member because nothing arrived, and every
-          numeric column is gated on it — so a member's screen cannot show a count even if someone
-          later adds one to the markup without thinking.
-
-          **No proposer name on any row** (owner-ruled 2026-08-19, separately): the winning place
-          would reveal whose pick won, and a repeat winner becomes a pattern about a person. The
-          spec's §0b still calls that question open — it was ruled after that line was written. */}
-      <div className="right" data-part="right-column" ref={list}>
-      {data && (
-        <Evidence
-          ev={evidence}
-          places={data.places}
-          winnerId={data.winning_place_id}
-          sweep={sweep}
-          counts={counts}
-        />
-      )}
-      {/* **A19 §2's `my-reasons` block was here and is gone** (2026-08-30,
-          `spec-return-choice.md` §4). It rendered the sentences this reader alone was allowed to
-          read about their own round — 「原料含有：蛋」 — and it went with the field: the ingredient
-          kind is withdrawn, so no `represented_member` reason is written any more and
-          `MEMBER_KEYS` lost `my_reasons`.
-
-          **Two rulings it carried are worth keeping where the next reader will meet them.** The
-          sentences were never attached to a row, because the wire deliberately carried no place id
-          — one would have rebuilt the operator's evidence view a field at a time on the member
-          wire. And they were never put under the winner: a veto is a ×0, so the place a reason
-          speaks for can never be the winner, and 「原料含有：蛋」 under the winner's name would have
-          told a person the place they were about to eat at contains the thing they avoid. If a
-          per-member sentence ever returns, those two constraints return with it. */}
-      </div>
-
-      {/* Owner-ruled 「要」 2026-08-19. **After the dice land**, not before: the pairs are the
-          receipt for a result the screen has just shown, and printing them while the dice are still
-          in the air would be the answer available in numbers beside an animation withholding it —
-          the same argument that keeps the revealed seed until the landing. */}
-      <div className="under">
-      {answered && data && <Pairs rolls={data.rolls ?? []} />}
-      {/* **The board sits with the pairs, and that is where it belongs rather than a free
-          choice.** `.under` is the receipt for the result the left column has just announced —
-          the pairs list says which two dice counted, and the board is the table those two dice
-          index. Reading them in that order is the ruling's own sentence: find your row, find your
-          column, read the colour.
-
-          **`boarded`, not `answered`** (§3): it enters after the answer block, and its cell
-          lights after it in turn. A swept pool and a short board both render nothing here, which
-          is `Board`'s own guard — never a grey grid. */}
-      {boarded && data && evidence && (
-        <Board board={data.board} places={data.places} dice={data.dice} lit={boardLit} />
-      )}
-
-      {/* ── D108 · the commitment, and the seed that opens it ──────────────────────────────
-          **The hash is shown throughout; the seed only once the dice have landed.** The commitment
-          is a hash and discloses nothing, so it is safe during the tumble and belongs there — it is
-          the claim that the outcome predates the round. **The seed is the answer in another form**:
-          every pair, the decider and the winner recompute from it, so putting it on screen mid-
-          tumble would be the whole result sitting beside an animation built to withhold it. Nobody
-          is going to compute sha256 by hand in 1.4 seconds, and that is not the standard — `D91`
-          says the animation may not assert a fact it lacks, and a screen holding the answer in a
-          recoverable form has not withheld it.
-
-          Both are shown in full. A hash exists to be compared with another hash, and half of one
-          cannot be. */}
-      {/* UX batch U3 — the same shape as the round screen: the claim in words, the fingerprint and
-          the seed behind 「怎麼驗證？」, closed by default. The seed is published only once the
-          answer is on screen, as before. */}
-      {data?.seed_commit && (
-        <div className="commit" data-part="seed-commit">
-          <details className="verify">
-            <summary>怎麼驗證？</summary>
-            <p>開局時公開的指紋：<span className="commitHash">{data.seed_commit}</span></p>
-            {answered && data.revealed_seed && (
-              <p>這一輪的種子（十六進位）：<span className="commitHash">{data.revealed_seed}</span></p>
+                <span
+                  className={sealLanded ? 'sealSaid arrive' : 'sealSaid'}
+                  style={sealLanded ? arrive(1) : undefined}
+                >說這一餐去了</span>
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="sealRow sealBtn"
+                data-part="sign"
+                data-primary
+                onClick={() => void sign()}
+                disabled={signing}
+              >
+                <span className="seal sealEmpty" aria-hidden="true"><span className="sealAsk sealGlyph">定</span></span>
+                <span className="sealText">
+                  <span className="sealAsk">這一餐，說定了嗎？</span>
+                  <span className="sealHow" data-part="sign-explain">按下去會記下：是你說這一餐去了這家。</span>
+                </span>
+              </button>
             )}
-            <p>把種子轉回位元組，算一次 SHA-256，會得到開局時那串指紋。</p>
-          </details>
+          </div>
         </div>
+      </div>
+
+      {/* **The proof: the 籤詩櫃, with the dice (or the 籤筒) resting on it** — in the first screen
+          from the first frame, unmarked until `lit` (D91). The camera pushes in on this group. */}
+      <div className="boardSlot" ref={boardSlot} data-cine-cam="">
+        {member && (
+          <Cabinet board={data.board} places={data.places} dice={data.dice} lit={lit}
+            mark={anim === 'dice' ? 'lines' : 'frame'}>
+            <div className="cabLayer" ref={layer}>
+              {anim === 'dice' && rest && data.dice && (
+                <>
+                  <Cube ref={rowDie} spinRef={rowSpin} value={data.dice[0]} axis="row"
+                    style={{ left: rest.row[0], top: rest.row[1], '--cube': `${rest.size}px` } as CSSProperties} />
+                  <Cube ref={colDie} spinRef={colSpin} value={data.dice[1]} axis="col"
+                    style={{ left: rest.col[0], top: rest.col[1], '--cube': `${rest.size}px` } as CSSProperties} />
+                </>
+              )}
+              {anim === 'tube' && rest && (
+                <div ref={tubeRest} className="cabTube" data-part="tube-rest" aria-hidden="true"
+                  data-hidden={running && !lit ? 'yes' : undefined}
+                  style={{ left: rest.tube[0], top: rest.tube[1] }}>
+                  <TubeArt width={rest.tube[2]} />
+                </div>
+              )}
+            </div>
+          </Cabinet>
+        )}
+      </div>
+
+      {/* The places list: the names in play, never a number (§0b). No proposer on any row. The
+          winning row's weight arrives with the name. */}
+      <div className="right" data-part="right-column">
+        {data && (
+          <Evidence
+            ev={evidence}
+            places={data.places}
+            winnerId={answered ? data.winning_place_id : null}
+            wood={wood}
+            counts={counts}
+          />
+        )}
+      </div>
+
+      {/* The receipt, after the answer: the pairs, and the operator's board. */}
+      <div className="under">
+        {answered && data && <Pairs rolls={data.rolls ?? []} />}
+        {answered && data && evidence && (
+          <Board board={data.board} places={data.places} dice={data.dice} lit={lit} />
+        )}
+      </div>
+
+      </div>
+
+      {/* The 籤筒's flight layer: fixed, outside the camera, played once on a reveal with motion. */}
+      {member && anim === 'tube' && running && rest && n && (
+        <TubeRun numeral={zhNumeral(n)} restRef={tubeRest} slipRef={slipRef}
+          onStick={tubeStick} onLit={tubeLit} onNamed={tubeNamed} />
       )}
-      </div>
-
-      </div>
-
     </main>
   )
 }

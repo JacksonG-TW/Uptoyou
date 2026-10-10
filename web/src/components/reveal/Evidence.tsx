@@ -1,4 +1,4 @@
-import { FACES, faceOf, markOf, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
+import { FACES, faceOf, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
 /* §3a. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
    moved them here — one definition, so the operator's figure and the payload's cannot part
    company. */
@@ -8,7 +8,8 @@ import { pct, type Preferences } from '@/lib/preferences'
  * A3's second half — `TABLE` and `ALLOC36`, **operator state only** (`D105`, `design.md` §4b).
  *
  * **This is an addition, not a toggle.** It renders only when the response carried the accounting,
- * which happens only for a credential issued with `--operator`. Nothing in the member state moves,
+ * which happens only for a credential issued with `--evidence` (the accounting keys on `evidence`
+ * since 0047; `--operator` alone no longer carries it). Nothing in the member state moves,
  * resizes or re-flows when it is present: it appends below the answer region, so a person who has
  * seen both recognises the second as the first.
  *
@@ -98,17 +99,15 @@ export default function Evidence({
   ev,
   places,
   winnerId,
-  sweep = null,
+  wood = false,
   counts = null,
 }: {
   ev: EvidenceData | null
   places: Places
   winnerId: number | null
-  /** A7 — the place id the sweep is lighting during the tumble, or `null`. **It is handed in and
-   *  never derived here**: the schedule that guarantees equal dwell and an order uncorrelated with
-   *  the winner lives in one place, and a component that decided its own highlight would be a
-   *  second, unmeasured one. */
-  sweep?: string | null
+  /** **From five shops the cabinet is plain wood** and colour names no shop, so the row's swatch
+   *  goes with it (owner 「A」, 2026-10-10). */
+  wood?: boolean
   /** §3a — the counts that left the member's 這一餐. `null` for a member (the fetch never runs)
    *  and `null` for an operator whose preferences call failed; both draw nothing, because a
    *  footnote must not be able to cost this screen its bars. */
@@ -178,7 +177,6 @@ export default function Evidence({
               <tr
                 key={placeId}
                 data-part="table-row"
-                data-sweep={sweep === placeId ? 'on' : undefined}
               >
                 <td className="evPlace" data-user-content data-won={String(placeId) === String(winnerId) ? 'yes' : 'no'}>
                   {/* CHIP — identity, never quantity, and **operator only**. It exists to key a row
@@ -186,19 +184,14 @@ export default function Evidence({
                       means nothing, and above four places it would repeat and mean something
                       wrong. */}
                   {ev && <span className="chip" data-face={FACES[seat % FACES.length]} />}
-                  {/* **The board's legend, folded into the row (item 2).** The member's board sits
-                      beside this list from the first frame and draws no legend of its own; the
-                      mark is the same `markOf`/`faceOf` the cells use, so a row and its cells
-                      cannot disagree (RB-6). An index, never a count. */}
-                  {!ev && (
+                  {/* **The row's colour is the shop's colour on the cabinet, and nothing else**
+                      (owner, after v11: shops by colour alone; no mark, no number). From five
+                      shops the cabinet is wood and the swatch goes, because a repeated colour
+                      would name two shops at once. */}
+                  {!ev && !wood && (
                     <span className="boardSwatch rowMark" data-part="row-mark"
-                      data-face={faceOf(places, Number(placeId)) ?? undefined} aria-hidden="true">
-                      {markOf(places, Number(placeId))}
-                    </span>
+                      data-face={faceOf(places, Number(placeId)) ?? undefined} aria-hidden="true" />
                   )}
-                  {/* The mark said in text as well, so a screen reader hears 「1 店名」 the way the
-                      eye reads the row — the line the board's legend used to carry. */}
-                  {!ev && <span className="sr-only">{markOf(places, Number(placeId))} </span>}
                   {/* **The name is laid out twice and painted once**, and `reveal.css` explains
                       why: the winner's mark is a real 900 weight that appears at the landing
                       frame, and on a name that ends near a line's edge a weight change adds a

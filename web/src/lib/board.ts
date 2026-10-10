@@ -1,23 +1,4 @@
 /**
- * **Does every pooled shop hold the same number of the 36 cells?** — 6 shops × 6, 4 × 9, 3 × 12,
- * 2 × 18. Then the reveal's 「每一家的機會不一樣」 would be false, and it says 「這一輪每一家的機會一樣」
- * instead (owner kept both wordings, 2026-10-08). Read from the drawn board, never from the pool
- * size: the same `board` the cells draw, so the sentence and the cells cannot disagree.
- *
- * Anything that is not a 6 × 6 board is `false` — no board, no claim of evenness. A one-shop board
- * cannot reach a reveal (the roll refuses a pool under two), and reads `false` too.
- */
-export function evenBoard(board: unknown): boolean {
-  if (!Array.isArray(board) || board.length !== 6) return false
-  const counts = new Map<number, number>()
-  for (const row of board) {
-    if (!Array.isArray(row) || row.length !== 6) return false
-    for (const id of row) counts.set(id, (counts.get(id) ?? 0) + 1)
-  }
-  return counts.size > 1 && new Set(counts.values()).size === 1
-}
-
-/**
  * **The rolled cell, as 0-based [row, column]: `board[die1 − 1][die2 − 1]`** — the first die picks
  * the row, the second the column (`spec-board-2026-09-11.md` §2). A transposed reading lights the
  * wrong shop on every non-double, and the board would still look right. `null` before the dice are
@@ -28,4 +9,61 @@ export function litCell(dice: readonly [number, number] | undefined | null): [nu
   const [a, b] = dice
   if (![a, b].every((v) => Number.isInteger(v) && v >= 1 && v <= 6)) return null
   return [a - 1, b - 1]
+}
+
+/**
+ * **The drawn drawer's number, N = (die1 − 1) × 6 + die2** (`spec-reveal-qiantong-2026-10-09.md`):
+ * rows are die one and columns die two, both 1…6 from the top left, so the 36 drawers are numbered
+ * left to right, top to bottom — the same cell `litCell` names. `null` when the dice are not known.
+ */
+export function drawerOf(dice: readonly [number, number] | undefined | null): number | null {
+  const cell = litCell(dice)
+  return cell ? cell[0] * 6 + cell[1] + 1 : null
+}
+
+const DIGIT = '〇一二三四五六七八九'
+
+/** A drawer number, 1…36, in Chinese numerals as a 籤 is written: 一, 十, 十四, 二十, 二十七, 三十六.
+ *  Anything outside 1…99 is `''` — the board has 36 drawers and never asks for more. */
+export function zhNumeral(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 99) return ''
+  if (n < 10) return DIGIT[n]
+  const tens = Math.floor(n / 10), ones = n % 10
+  return (tens === 1 ? '' : DIGIT[tens]) + '十' + (ones ? DIGIT[ones] : '')
+}
+
+const STEMS = '甲乙丙丁戊己庚辛壬癸'
+const BRANCHES = '子丑寅卯辰巳午未申酉戌亥'
+
+/** **Each drawer's own 干支 name, in sixty-cycle order** (owner 「A」, 2026-10-10): drawer n →
+ *  天干[(n − 1) mod 10] + 地支[(n − 1) mod 12], so 一 = 甲子, 二十七 = 庚寅, 三十六 = 己亥. It names the
+ *  drawer and never a shop. `''` outside 1…60. */
+export function ganzhi(n: number): string {
+  if (!Number.isInteger(n) || n < 1 || n > 60) return ''
+  return STEMS[(n - 1) % 10] + BRANCHES[(n - 1) % 12]
+}
+
+/** **From this many shops the cabinet is plain wood** (owner 「A」, 2026-10-10; the threshold set by
+ *  frontend and the evaluator on one fixture round per count): the palette has four face colours, so
+ *  from the fifth shop a colour repeats and stops naming a shop. */
+export const WOOD_FROM = 5
+
+/** Is this board's cabinet plain wood? Counted from the drawn board — the shops it actually holds. */
+export function woodBoard(board: readonly (readonly number[])[] | undefined | null): boolean {
+  if (!board) return false
+  return new Set(board.flat()).size >= WOOD_FROM
+}
+
+/**
+ * **Which roll animation this reveal plays: the dice or the 籤筒** (owner, decision-log 6c743a5:
+ * one picked at random each time). Seeded from the round id, so every device in the circle sees
+ * the same one and a reload shows it again. A small integer hash (mulberry-style mix), not
+ * `Math.random`: the same round id must give the same answer everywhere.
+ */
+export function rollAnimFor(roundId: number): 'dice' | 'tube' {
+  let x = (roundId | 0) ^ 0x9e3779b9
+  x = Math.imul(x ^ (x >>> 16), 0x85ebca6b)
+  x = Math.imul(x ^ (x >>> 13), 0xc2b2ae35)
+  x ^= x >>> 16
+  return (x & 1) === 0 ? 'dice' : 'tube'
 }

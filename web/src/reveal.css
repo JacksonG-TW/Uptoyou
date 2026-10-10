@@ -316,7 +316,12 @@
   opacity: 0;
   transition: opacity var(--t-flood) ease-out;
 }
-.reveal[data-state="landed"] .answer { opacity: 1; }
+/* The 籤詩櫃 rebuild: the slip shows from `lit` (carrying 「第N籤 干支」), the name and the act from
+   `answered` — `data-shown` on the block, set by the reveal's one clock. */
+.reveal .answer[data-shown] { opacity: 1; }
+.reveal .answer[data-shown="slip"] .winnerLine,
+.reveal .answer[data-shown="slip"] .answerSide { opacity: 0; }
+.reveal .answer .winnerLine, .reveal .answer .answerSide { transition: opacity .45s ease-out; }
 
 .reveal .winner {
   /* **The sans, deliberately — NOT the display face.** The display subset is ten fixed glyphs cut
@@ -1603,3 +1608,181 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
    seven pieces against six, so the band stays a plain seal-red strip: the slip still reads as a
    slip, and the brand is on the home's own band. */
 .reveal .slipHead { min-height: 26px; }
+
+
+/* ═══ the 籤詩櫃 rebuild + the cinematic cut C (frontend, 2026-10-10) ══════════════════════════
+   `spec-reveal-qiantong-2026-10-09.md` and `spec-reveal-cinematic-2026-10-09.md` «C, as built».
+   Member only where it matters: the operator keeps its table and grid below the answer. */
+
+/* ── the answer column ── the qualifier and the act sit beside the slip at ≥ 1100, under it below. */
+.reveal .answerSide { display: contents; }
+.reveal .qianNo {
+  margin: 4px 0 2px; font-size: 22px; font-weight: 700; line-height: 1.2; letter-spacing: .08em;
+  color: var(--color-ink); text-align: center;
+}
+/* Focus by dimming, never blur (cut C): the slip is quiet while the cabinet holds the eye. */
+.reveal .slip { transition: opacity .7s ease; }
+.reveal[data-focus="cabinet"]:not([data-landed-by="reduced"]) .slip { opacity: .55; }
+
+/* ── the cabinet ── 36 drawers in a wooden frame, numeral centred, 干支 small top-left. */
+.reveal .cabinet { width: 100%; padding: 0; margin: 0; }
+.reveal .cabinet .boardNote { margin: 0 0 6px; }
+.reveal .cabFrame { position: relative; padding-top: 104px; }
+.reveal .cabGrid {
+  position: relative;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 12px;
+  width: min(100%, 400px); box-sizing: border-box;
+  background: #5a2a17; border: 3px solid var(--color-ink);
+  box-shadow: inset 0 0 0 2px var(--color-gold);
+}
+.reveal .cabGrid .boardCell {
+  position: relative; aspect-ratio: 1;
+  display: grid; place-items: center;
+  border-radius: 2px;
+  outline: 1.5px solid var(--color-ink); outline-offset: 0;
+  box-shadow: inset 0 -5px 0 rgb(0 0 0 / .18), inset 0 2px 0 rgb(255 255 255 / .18);
+}
+.reveal .cabNo { font-size: 16px; font-weight: 700; line-height: 1; letter-spacing: -.06em; white-space: nowrap; margin-top: 9px; }
+.reveal .cabGz { position: absolute; left: 4px; top: 3px; font-size: 10px; font-weight: 700; line-height: 1; letter-spacing: -.04em; }
+/* Plain wood from five shops: one wood for every drawer, the numeral and 干支 in paper
+   (#F2E2A0 on #7c4c25 → #6c4019: 5.09 to 6.78, measured with the grain). */
+.reveal .cabinet[data-wood] .boardCell {
+  background: repeating-linear-gradient(90deg, rgb(255 255 255 / .035) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #7c4c25, #6c4019);
+  color: var(--color-paper);
+}
+/* The dice run: a gold frame along the drawn row and one along the drawn column, in the gaps,
+   crossing on the drawer; the drawer itself keeps a plain ink edge. */
+.reveal .cabTrace {
+  position: relative; z-index: 4; margin: -4px; pointer-events: none;
+  border: 2.5px solid #F2C14E; border-radius: 4px; box-shadow: 0 0 0 1px var(--color-ink);
+}
+/* The 籤筒 run: a gold frame inside the drawn drawer's edge with an ink ring; the numeral drops
+   to 13 px so 三十三 clears it, and the 干支 moves 7 px in, off the gold (6.09 on wood). */
+.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] {
+  z-index: 2; outline: 3px solid #F2C14E; outline-offset: -3px;
+  box-shadow: inset 0 0 0 4.5px var(--color-ink), 0 0 0 1px var(--color-ink);
+}
+.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] .cabNo { font-size: 13px; }
+.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] .cabGz { left: 7px; top: 7px; }
+/* The lit drawer's glow: a box-shadow only, the fill unchanged (BD-4). */
+.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"],
+.reveal .cabinet[data-mark="lines"] .boardCell[data-lit="yes"] { filter: none; }
+.reveal .cabinet[data-mark="lines"] .boardCell[data-lit="yes"] { box-shadow: 0 0 22px 5px rgb(255 200 90 / .75); z-index: 2; }
+.reveal .cabinet[data-mark="frame"] .boardCell[data-lit="yes"] {
+  box-shadow: 0 0 0 1px var(--color-ink), 0 0 22px 5px rgb(255 200 90 / .75), inset 0 0 0 4.5px var(--color-ink);
+}
+.reveal .cabTrace { box-shadow: 0 0 0 1px var(--color-ink), 0 0 12px rgb(255 200 90 / .5); }
+
+/* ── the dice at rest ── a CSS cube placed by its centre, value on top, a cast shadow under it. */
+.reveal .cabLayer { position: absolute; inset: 0; pointer-events: none; }
+.reveal .cube {
+  --cube: 48px; --half: calc(var(--cube) / 2);
+  position: absolute; width: var(--cube); height: var(--cube);
+  margin: calc(var(--cube) / -2) 0 0 calc(var(--cube) / -2);
+  perspective: calc(var(--cube) * 9); z-index: 6;
+}
+.reveal .cube::after {
+  content: ""; position: absolute; left: 6%; right: -6%; bottom: -34%; height: 16%;
+  border-radius: 50%; background: rgb(43 23 19 / .35); z-index: -1;
+}
+.reveal .cubeSpin { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateX(-32deg) rotateY(-42deg); }
+.reveal .cubeFace {
+  position: absolute; inset: 0; box-sizing: border-box;
+  border: 2px solid var(--color-ink); border-radius: 14%;
+  backface-visibility: hidden; background: #E3D09A;
+}
+.reveal .cubeFace[data-side="top"] { background: #FFF8E2; }
+.reveal .cubeFace[data-side="front"] { background: #EAD9A6; }
+.reveal .cubeFace[data-side="right"] { background: #CFB87F; }
+.reveal .cubePip {
+  position: absolute; width: 17%; height: 17%; margin: -8.5% 0 0 -8.5%;
+  border-radius: 50%; background: var(--color-ink);
+}
+.reveal .cubePip[data-red] { background: var(--color-pipred, #B3261E); }
+
+/* ── the 籤筒 ── at rest on the cabinet's top edge; the flight layer is fixed. */
+.reveal .cabTube { position: absolute; z-index: 5; }
+.reveal .cabTube[data-hidden] { visibility: hidden; }
+.reveal .tubeFly { position: fixed; z-index: 30; pointer-events: none; transform-origin: 0 0; visibility: hidden; }
+.reveal .stick {
+  position: fixed; z-index: 31; pointer-events: none; visibility: hidden; overflow: hidden;
+  box-sizing: border-box; border-radius: 3px; background-color: #e9c97f;
+  border: 1.5px solid var(--color-ink); box-shadow: 4px 4px 0 rgb(43 23 19 / .45);
+  display: flex; align-items: center; justify-content: center;
+}
+.reveal .stick::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 16px; background: #b3261e; }
+/* **The close-up's numeral, centred on the stick** (owner 「籤筒的籤繁體字至中」): vertical, set in
+   the display face, ink on the stick's bamboo, shown only while the stick is forward. */
+.reveal .stickNo {
+  writing-mode: vertical-rl; text-orientation: upright;
+  font-weight: 700; line-height: 1.05;
+  color: var(--color-ink); opacity: 0; transition: opacity .25s;
+}
+
+/* ── the cinematic cut C ── the key light, the vignette and a static grain painted into the page
+   background (no full-screen overlay: one halved the frame rate), centred on the cabinet. */
+.reveal {
+  --grain: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .06 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --key: radial-gradient(520px 460px at var(--cx, 70%) var(--cy, 45%), rgb(255 214 150 / .20) 0%, rgb(255 214 150 / .06) 45%, transparent 70%);
+  --vignette: radial-gradient(140% 120% at 50% 50%, transparent 55%, rgb(0 0 0 / .55) 100%);
+}
+body:has(.reveal[data-screen="reveal"] .stage) { background: #1c0907; }
+/* **One viewport-sized painting, laid on the page and on each cover panel at the panel's own
+   offset** (`--ox`/`--oy`, measured by the reveal), so the panels draw no seam. Not
+   `background-attachment: fixed`: on the camera's group Chromium stopped painting a fixed
+   background after the push (measured: the page's dark edge colour showed through the panel). */
+.reveal:has(.stage) {
+  --ground: radial-gradient(120% 90% at var(--cx, 70%) var(--cy, 45%), #6e1d12 0%, #3a100b 45%, #1c0907 100%);
+  background-image: var(--key), var(--vignette), var(--grain), var(--ground);
+  background-size: 100vw 100vh, 100vw 100vh, 220px 220px, 100vw 100vh;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-position: calc(-1 * var(--ox, 0px)) calc(-1 * var(--oy, 0px));
+}
+.reveal[data-face]:has(.stage) {
+  --ground: radial-gradient(120% 90% at var(--cx, 70%) var(--cy, 45%), #8a2416 0%, #45120c 50%, #1f0a07 100%);
+}
+/* The flood's cover panels take the same painting at their own offset, without a halo. */
+.reveal[data-face] :is(.right, .group, .boardSlot),
+.reveal[data-face]:not(:has(.evNum)) :is(.right, .boardSlot) {
+  background-image: var(--key), var(--vignette), var(--grain), var(--ground);
+  background-size: 100vw 100vh, 100vw 100vh, 220px 220px, 100vw 100vh;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
+  background-position: calc(-1 * var(--ox, 0px)) calc(-1 * var(--oy, 0px));
+  box-shadow: none;
+}
+body:has(.reveal[data-face]) { background-color: #1f0a07; }
+.reveal .boardSlot { transform-origin: 50% 50%; }
+
+/* The painted ground is dark on every frame now, so the page's own text is paper from the first
+   frame, not ink waiting for a flood (the list read ink on lacquer before the name). */
+.reveal:has(.stage):not([data-face]) { color: var(--color-paper); }
+
+@media (max-width: 1099px) {
+  /* One column: the cabinet (with the dice on it), then the slip and the act (spec: dice → board →
+     name below 1100). The die at the row's start needs room left of the grid. */
+  .reveal:has(.stage) .stage { display: flex; flex-direction: column; align-items: center; }
+  .reveal:not(:has(.evNum)) .boardSlot { order: -1; width: min(100%, 420px); }
+  .reveal .cabFrame { padding-top: 84px; padding-left: 58px; }
+  .reveal .cabGrid { width: 100%; gap: 4px; padding: 9px; }
+  .reveal .cabNo { font-size: 14px; margin-top: 7px; }
+  .reveal .cabGz { font-size: 9px; }
+}
+
+@media (min-width: 1100px) {
+  /* The answer group leads at the top of the stage: the dice panel it sat under is gone. */
+  .reveal:not(:has(.evNum)) .stage { padding-top: calc(150 * var(--k)); }
+  .reveal:not(:has(.evNum)) .answer { margin-top: 0; align-items: center; }
+  .reveal:not(:has(.evNum)) .answer > .slip { grid-row: 1; }
+  .reveal:not(:has(.evNum)) .answerSide {
+    display: flex; flex-direction: column; align-items: flex-start; grid-column: 2; grid-row: 1; align-self: center;
+  }
+  .reveal:not(:has(.evNum)) .answerSide > .act-row { margin-top: calc(18 * var(--k)); }
+  .reveal:not(:has(.evNum)) .answerSide > .act-row:first-child { margin-top: 0; }
+  .reveal:not(:has(.evNum)) .boardSlot { width: calc(400 * var(--k)); }
+  .reveal .cabFrame { padding-top: calc(104 * var(--k)); }
+  .reveal .cabGrid { width: 100%; gap: calc(5 * var(--k)); padding: calc(12 * var(--k)); }
+  .reveal .cabNo { font-size: calc(16 * var(--k)); margin-top: calc(9 * var(--k)); }
+  .reveal .cabGz { font-size: calc(10 * var(--k)); }
+  .reveal .qianNo { font-size: calc(22 * var(--k)); }
+}

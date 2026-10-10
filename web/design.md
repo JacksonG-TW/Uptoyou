@@ -358,8 +358,9 @@ named, and ruling 1 closes it with the sources above. The list of what to consul
 「三十六格已按權重分配」**, and the bar. **No per-place shares. No reasons. No table. No allocation
 grid.**
 
-**Operator state — demo and operator only, gated on a flag on the `device_secret`, set at issue
-(`python -m upto.issue <circle_id> <nickname> --operator`), never on a URL flag:** everything above
+**Operator state — demo and operator only, gated on the `evidence` flag on the `device_secret`, set
+at issue (`python -m upto.issue <circle_id> <nickname> --evidence`; since 0047 `--operator` alone no
+longer carries the table), never on a URL flag:** everything above
 **plus** `TABLE` and `ALLOC36`. **The role rides the credential, not the person** — `D12` keeps
 `principal` holding an id and a stamp and nothing else — so the response shape is chosen by which
 credential authenticated, and no parameter can carry it. The operator holds a seat like any member.

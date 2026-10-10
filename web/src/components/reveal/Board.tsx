@@ -63,7 +63,7 @@ function AxisFace({ value, axis }: { value: number; axis: 'row' | 'col' }) {
  * The shape is checked rather than assumed because the alternative is a `.map` over `undefined`
  * inside a screen whose whole job is to have already landed.
  */
-function drawable(board: number[][] | undefined): board is number[][] {
+export function drawable(board: number[][] | undefined): board is number[][] {
   return (
     Array.isArray(board) &&
     board.length === SIDE &&
