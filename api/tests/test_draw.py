@@ -287,9 +287,13 @@ class ABoundLargerThanAByteTerminates(unittest.TestCase):
         degenerate instrument reporting skew in the subject** — the mirror of the earlier draw test
         that could not detect the bias it claimed to measure, and the same lesson from the other
         side. Ten buckets of 600; chi-square against 16.92 (df 9, p=0.05).
+
+        **A fixed seed, as the module docstring requires** (2026-10-10). This one drew `new_seed()`, so
+        a fair draw failed it about one run in twenty by construction — the public CI went red on
+        chi2 18.35. Deterministic now: the same pass for everyone, and a skewed `_below` still fails.
         """
         bound, buckets, draws = 300, 10, 6000
-        seed = draw.new_seed()
+        seed = fixed_seeds(1)[0]
         counts = [0] * buckets
         for index in range(draws):
             value = draw._below(seed, b"member:" + str(index).encode(), bound)
