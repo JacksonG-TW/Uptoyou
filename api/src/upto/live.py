@@ -47,7 +47,7 @@ from .stream import subscribe
 # No prefix — the proxy strips /api/ before forwarding, same as rounds.py explains.
 # **25 seconds, and the number is set by the shortest proxy timeout in front of us.** Cloudflare's
 # proxy answers 524 after «the default 125 seconds» without a response (Cloudflare's error-524 page,
-# updated 2026-07-23; it read ~100 s when this was written); four heartbeats inside that window means three can be
+# updated 2026-07-23; it read ~100 s when this was written); five heartbeats inside that window means four can be
 # lost to a slow moment and the connection still lives. It is deliberately not tuned to "how often
 # does a phone need to hear from us" — nothing on any screen reads it — but to the infrastructure,
 # so it moves when the infrastructure does and not before.
