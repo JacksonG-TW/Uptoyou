@@ -189,13 +189,16 @@ git --no-pager log --oneline "$deployed..$after" 2>/dev/null | sed 's/^/    /' |
 # image: a pushed change to a mount, a privilege, an image name or the migrate command would be
 # applied by `pull`, `migrate` (as the database owner) and `up` below with no person looking — and
 # this service runs with Docker, which is root-equivalent. So its first deploy is by hand too.
-HELD="deploy/ compose.yaml"
+# **`airflow/init.sh` likewise (owner 「加」, 2026-10-10):** compose mounts it from this clone and
+# runs it as airflow-init's entrypoint on every `up`, with Airflow's database credentials — the same
+# reach, and no image in between. (db/init runs only on an empty volume; tls/ holds no file.)
+HELD="deploy/ compose.yaml airflow/init.sh"
 # shellcheck disable=SC2086  # HELD is a fixed list of pathspecs, split on purpose
 if ! git diff --quiet "$deployed" "$after" -- $HELD; then
-    say "REFUSING: this deploy changes the deploy itself (deploy/ or compose.yaml)."
+    say "REFUSING: this deploy changes the deploy itself (deploy/, compose.yaml or airflow/init.sh)."
     # shellcheck disable=SC2086
     git --no-pager diff --stat "$deployed" "$after" -- $HELD | sed 's/^/    /'
-    say "         A compose.yaml change reaches the box without an image, so a person looks first."
+    say "         A compose.yaml or airflow/init.sh change reaches the box without an image, so a person looks first."
     say "         A deploy/ change: the script that just ran is the one from before the pull — it cannot perform a"
     say "         step it does not have. Nothing was pulled into the stack and nothing was restarted,"
     say "         and every tick will say this until a person runs the new file's steps (H85):"
