@@ -18,9 +18,12 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /srv
 
-# Requirements first, so a source edit does not reinstall the world.
-COPY requirements.txt /srv/requirements.txt
-RUN pip install --no-cache-dir -r /srv/requirements.txt
+# Requirements first, so a source edit does not reinstall the world. **`-c constraints.txt` fixes
+# every installed version, the dependencies of our dependencies included** (owner 「A」, 2026-10-11):
+# without it a rebuild resolved them afresh against the day's PyPI, so the same commit could ship
+# different code a month apart. Changed a pin? `tools/freeze_constraints.sh`, then commit both files.
+COPY requirements.txt constraints.txt /srv/
+RUN pip install --no-cache-dir -c /srv/constraints.txt -r /srv/requirements.txt
 
 COPY src /srv/src
 COPY alembic.ini /srv/alembic.ini
@@ -54,5 +57,5 @@ USER root
 # every other dependency here: «it worked on my machine last week» is what `requirements.txt`
 # prevents, and a format library that changes its defaults between minor versions would change
 # what the shipped dataset IS.
-RUN pip install --no-cache-dir "pyarrow==25.0.1"
+RUN pip install --no-cache-dir -c /srv/constraints.txt "pyarrow==25.0.1"
 USER 10001

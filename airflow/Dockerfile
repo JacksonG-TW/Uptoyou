@@ -22,10 +22,15 @@ FROM apache/airflow:3.0.6
 # wheel is 50.1 MB compressed and the serving image is 287 MB, so it would grow the thing the box
 # pulls and serves from by roughly half, for a library the server never imports. This image is
 # 2.57 GB, where the same library is under 6%.
+#
+# **`-c airflow/constraints.txt` fixes every version in the venv, pip and the dependencies of these
+# three included** (owner 「A」, 2026-10-11): a rebuild installs today's set, not the day's PyPI.
+# Changed a pin here? `tools/freeze_constraints.sh`, then commit both files.
 COPY --chown=airflow:root api/requirements.txt /opt/upto/requirements.txt
+COPY --chown=airflow:root airflow/constraints.txt /opt/upto/constraints.txt
 RUN python -m venv /opt/upto/venv \
-    && /opt/upto/venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /opt/upto/venv/bin/pip install --no-cache-dir \
+    && /opt/upto/venv/bin/pip install --no-cache-dir -c /opt/upto/constraints.txt --upgrade pip \
+    && /opt/upto/venv/bin/pip install --no-cache-dir -c /opt/upto/constraints.txt \
          "sqlalchemy[asyncio]==2.0.43" "asyncpg==0.30.0" "pyarrow==25.0.1"
 
 ENV UPTO_PYTHON=/opt/upto/venv/bin/python \

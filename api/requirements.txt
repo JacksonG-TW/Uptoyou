@@ -1,4 +1,8 @@
 # Pinned, because "it worked on my machine last week" is the failure this file prevents.
+#
+# **Changed a pin or added a package? Re-freeze `constraints.txt` beside this file:** run
+# `tools/freeze_constraints.sh` and commit both files. The image installs this list under that file's
+# `-c`, which fixes every version, the dependencies of these included.
 fastapi==0.116.1
 uvicorn[standard]==0.35.0
 # Async end to end (H1): SQLAlchemy's async mode with asyncpg, never the sync driver.
