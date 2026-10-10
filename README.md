@@ -67,7 +67,7 @@ be checked.
 
    ![Create a circle](docs/tutorial/1-create.png)
 
-3. **Send the invite link** (the link itself is hidden in this picture; it opens a seat for whoever taps it).
+3. **Send the invite link**; a friend who opens it joins the circle.
 
    ![The invite panel](docs/tutorial/2-invite.png)
 
