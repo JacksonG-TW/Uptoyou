@@ -15,8 +15,9 @@ The response shapes the entries already ruled:
   place, so two requests for the same place cannot disagree;
 - submitting to a closed round answers **200 with the stored result** (D69), as reading its
   result does — the retry gets exactly the answer it missed, in the shape a first close returns;
-- a void round (every pinned seat left; revision 0050) answers **409**, or **410** where a
-  result or a trip is asked for — gone, not «not yet»;
+- a void round (every pinned seat left; revision 0050) answers **410** on every round route —
+  gone for good, never «not yet» and never 409's «conflict, read again» (owner 「A」, 2026-10-10;
+  every route's statuses are in `statuses.py`);
 - a swept or empty pool answers 409 out loud (D22's shape) rather than resolving to an
   arbitrary winner.
 
@@ -193,7 +194,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
             raise HTTPException(status_code=404, detail="找不到這一輪。")
         member = await _resolve_member(session, request, round_row.circle_id)
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         if round_row.status != "open":
             raise HTTPException(status_code=409, detail="這一輪已經擲過了。")
         await refuse_if_submitted(session, round_id, member)
@@ -494,7 +495,7 @@ async def submit(round_id: int, request: Request) -> dict:
             # D69: the retry gets the answer it missed, in the shape a first close returns.
             return await _stored_result(session, round_id, round_row, member, sees_evidence)
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
 
         if round_row.seat_ids and member not in round_row.seat_ids:
             raise HTTPException(status_code=409, detail="你是這一輪開始後才加入的，下一輪再一起選。")
@@ -556,7 +557,7 @@ async def unsubmit(round_id: int, request: Request) -> dict:
         if round_row.status == "closed":
             raise HTTPException(status_code=409, detail="大家都提交了，已經開獎，收不回來了。")
         if round_row.status == "void":
-            raise HTTPException(status_code=409, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
+            raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
         await session.execute(
             text("delete from member_roll where round_id = :r and member_id = :m"),
             {"r": round_id, "m": member},
