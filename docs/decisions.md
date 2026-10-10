@@ -359,8 +359,8 @@ to twelve.
 
 ### What the name derivation actually produces
 
-*Measured 2026-09-11 by a read-only probe against the publication of 2026-09-02, the same run that
-produced the README's reach figures.* Sign-less sites only, grouped by the registered company
+*Measured 2026-09-11 by a read-only probe against the publication of 2026-09-02, the run behind the
+README's name-ladder table until it was re-measured on 2026-10-10.* Sign-less sites only, grouped by the registered company
 name — the collision key the read path uses — and run through the shipped `naming.derive_names`, so
 this is the product's rule rather than a query describing it.
 
