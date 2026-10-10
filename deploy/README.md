@@ -30,7 +30,7 @@ Nothing else in either file hardcodes a path.
 ## Done — what a person can see
 
 **Push a commit here; once Actions has built its images, the next timer tick serves it, with nobody
-logging in** — unless it changes `deploy/`, `compose.yaml` or `airflow/init.sh`, which a person runs
+logging in** — unless it changes `deploy/` (other than its `.md` files), `compose.yaml` or `airflow/init.sh`, which a person runs
 by hand.
 
 ```sh
@@ -44,7 +44,7 @@ range it moved through, then checks the alert channel and prints `alert channel:
 present`.
 
 **Exit codes:** 0 nothing to do or deployed · 3 no `flock` · 4 `git pull --ff-only` failed (diverged
-or unreachable) · 5 `deploy/`, `compose.yaml` or `airflow/init.sh` changed in the pull — the refusal prints the new file's steps to run by hand with the tag set (a plain `--once` would find no change) · **6 the stack is UP but
+or unreachable) · 5 `deploy/` (other than its `.md` files), `compose.yaml` or `airflow/init.sh` changed in the pull — the refusal prints the new file's steps to run by hand with the tag set (a plain `--once` would find no change) · **6 the stack is UP but
 `telegram_alerts` is absent** — the failure alerts send nothing until both `UPTO_TELEGRAM_BOT_TOKEN` and
 `UPTO_TELEGRAM_CHAT_ID` are set in `.env` and `airflow-init` is recreated; re-check with
 `deploy/pull-deploy.sh --check-alert-channel` (the box was silent for the whole launch
