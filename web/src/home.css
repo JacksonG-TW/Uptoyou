@@ -337,7 +337,9 @@ h1.headline .lit { color: var(--color-hot-ink); }
 .wxsNow .c { font-size: var(--text-body); }
 .wxsNow .wxicon { width: 36px; height: 36px; margin-right: 0; }
 .wxsDetail { font-size: var(--text-body); display: flex; flex-wrap: wrap; gap: 6px 24px; margin-left: auto; }
-.wxsDetail .k { color: color-mix(in srgb, var(--color-on-hot) 80%, var(--color-ground)); }
+/* The labels in the strip's own paper (a muted mix read 3.9:1 on the lacquer); the values are told
+   apart by their weight. */
+.wxsDetail .k { color: var(--color-on-hot); font-weight: 400; }
 .wxsDetail .u { white-space: nowrap; }
 
 
