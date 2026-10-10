@@ -292,9 +292,9 @@
    "method": "DELETE",
    "path": "/circles/{circle_id}/members/{member_id}",
    "status": 409,
-   "meaning": "that seat has submitted in the open round",
+   "meaning": "that seat has submitted in the open round (the stream's `submitted` does not say why the removal failed, so the sentence is the only account of it)",
    "detail": "這個人已經提交了，不能請對方離開。",
-   "client_action": "reread"
+   "client_action": "show_detail"
   },
   {
    "method": "GET",
@@ -764,9 +764,9 @@
    "method": "DELETE",
    "path": "/rounds/{round_id}/submit",
    "status": 409,
-   "meaning": "everyone submitted; the round closed",
+   "meaning": "everyone submitted; the round closed (say why the take-back failed; the close follows)",
    "detail": "大家都提交了，已經開獎，收不回來了。",
-   "client_action": "reread"
+   "client_action": "show_detail"
   },
   {
    "method": "DELETE",

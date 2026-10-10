@@ -106,8 +106,9 @@ STATUSES = [
          "that seat has already gone", "這個人已經不在圈子裡了。"),
     _row("DELETE", "/circles/{circle_id}/members/{member_id}", 409, "show_detail",
          "the host cannot remove their own seat", "房主不能請自己離開。要離開，請用離開圈子。"),
-    _row("DELETE", "/circles/{circle_id}/members/{member_id}", 409, "reread",
-         "that seat has submitted in the open round", "這個人已經提交了，不能請對方離開。"),
+    _row("DELETE", "/circles/{circle_id}/members/{member_id}", 409, "show_detail",
+         "that seat has submitted in the open round (the stream's `submitted` does not say why the "
+         "removal failed, so the sentence is the only account of it)", "這個人已經提交了，不能請對方離開。"),
 
     _row("GET", "/circles/{circle_id}/members", 200, "success", "the seats"),
     *_seat("GET", "/circles/{circle_id}/members"),
@@ -181,7 +182,8 @@ STATUSES = [
     _row("DELETE", "/rounds/{round_id}/submit", 200, "success", "the submission is taken back"),
     *_seat("DELETE", "/rounds/{round_id}/submit"),
     _row("DELETE", "/rounds/{round_id}/submit", 404, "show_detail", "no such round", NO_ROUND),
-    _row("DELETE", "/rounds/{round_id}/submit", 409, "reread", "everyone submitted; the round closed",
+    _row("DELETE", "/rounds/{round_id}/submit", 409, "show_detail",
+         "everyone submitted; the round closed (say why the take-back failed; the close follows)",
          "大家都提交了，已經開獎，收不回來了。"),
     _row("DELETE", "/rounds/{round_id}/submit", 410, "void", "the round is void", VOID),
 
