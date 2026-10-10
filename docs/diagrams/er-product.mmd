@@ -3,6 +3,7 @@ erDiagram
         bigint id PK
         text name
         timestamptz created_at "default CURRENT_TIMESTAMP()"
+        int host_member_id FK "nullable"
     }
     principal {
         bigint id PK
@@ -127,6 +128,7 @@ erDiagram
         text value "nullable"
         text town_code "nullable"
     }
+    circle }o--|| member : "host_member_id"
     member }o--|| principal : "principal_id"
     member }o--|| circle : "circle_id"
     device_secret }o--|| principal : "principal_id"

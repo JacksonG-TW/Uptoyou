@@ -4,7 +4,9 @@ CREATE TABLE circle (
     id bigint NOT NULL,
     name text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    PRIMARY KEY (id)
+    host_member_id integer,
+    PRIMARY KEY (id),
+    FOREIGN KEY (host_member_id) REFERENCES member(id)
 );
 CREATE TABLE principal (
     id bigint NOT NULL,

@@ -39,7 +39,9 @@ CREATE TABLE business_tax_row (
 );
 CREATE TABLE circle (
     id bigint NOT NULL,
-    PRIMARY KEY (id)
+    host_member_id integer,
+    PRIMARY KEY (id),
+    FOREIGN KEY (host_member_id) REFERENCES member(id)
 );
 CREATE TABLE device_secret (
     id bigint NOT NULL,

@@ -9,7 +9,7 @@ source of truth for the diagram: `pg_dump --schema-only` out of the running cont
 reduced to what an ERD is made of.
 
 **Why not the migrations.** `alembic upgrade head --sql` also emits DDL without a
-database, but it emits the whole *history*: 40 `ALTER TABLE` statements, several of them
+database, but it emits the whole *history*: dozens of `ALTER TABLE` statements, several of them
 `DROP CONSTRAINT`, replaying every intermediate shape. A parser reading that file sees
 each table as it was first created, not as it is. `pg_dump` sees only the end state.
 
@@ -21,7 +21,7 @@ types and nullability, PRIMARY KEY and FOREIGN KEY — and those are *inlined in
 CREATE TABLE*, because pg_dump emits them as separate `ALTER TABLE ... ADD CONSTRAINT`
 statements which the parser reads as tables with no keys at all.
 
-**What is projected away.** A faithful diagram of all 26 tables with all their columns is
+**What is projected away.** A faithful diagram of all 34 tables with all their columns is
 unreadable — `business_tax_row` alone carries eight industry code/name columns. So each
 table is projected down to its keys (always kept, in full) plus the few columns that carry
 the story: provenance, hashes, the values a reader is looking for. The allowlist is

@@ -28,6 +28,7 @@ erDiagram
     }
     circle {
         bigint id PK
+        int host_member_id FK "nullable"
     }
     device_secret {
         bigint id PK
@@ -168,6 +169,7 @@ erDiagram
     brand_registration }o--|| brand_publication : "publication_id"
     business_status_row }o--|| business_status_publication : "publication_id"
     business_tax_row }o--|| business_tax_publication : "publication_id"
+    circle }o--|| member : "host_member_id"
     device_secret }o--|| principal : "principal_id"
     forecast_reading }o--|| forecast_publication : "publication_id"
     ingest_run }o--|| forecast_publication : "forecast_publication_id"
