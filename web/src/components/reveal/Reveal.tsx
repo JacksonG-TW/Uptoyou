@@ -495,7 +495,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
       <div className="under">
         {answered && data && <Pairs rolls={data.rolls ?? []} />}
         {answered && data && evidence && (
-          <Board board={data.board} places={data.places} dice={data.dice} lit={lit} />
+          <Board board={data.board} places={data.places} dice={data.dice} lit={lit} note={anim === 'dice'} />
         )}
       </div>
 

@@ -83,6 +83,7 @@ export default function Board({
   dice,
   lit,
   legend = true,
+  note = true,
 }: {
   board: number[][] | undefined
   places: Places
@@ -96,6 +97,9 @@ export default function Board({
   /** **False for the member's first-screen board (item 2):** the places list beside it carries
    *  each shop's mark on its row, so a legend here would say the same thing twice. */
   legend?: boolean
+  /** **False under the 籤筒** (owner 「直接不講」): no dice sentence is said on a run that threw no
+   *  dice, on the operator's receipt either. */
+  note?: boolean
 }) {
   if (!drawable(board)) return null
 
@@ -117,9 +121,11 @@ export default function Board({
       {/* States the mechanism once, and states rather than advises (D20). **Names nobody since
           item 2:** it said 「你的兩顆骰子」, which was true for one reader in N — the dice that count
           are the decider's, and the line directly above the board already names them. */}
-      <p className="boardNote" data-part="board-note">
-        骰子指到哪一格，就是哪一家。
-      </p>
+      {note && (
+        <p className="boardNote" data-part="board-note">
+          骰子指到哪一格，就是哪一家。
+        </p>
+      )}
 
       {/* **Nested map, not `board.flat()` with computed indices.** Backend's own note with the
           payload: if you flatten it, keep the row/column meaning in the markup rather than
