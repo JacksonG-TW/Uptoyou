@@ -28,6 +28,32 @@
 [AI and evaluation →](#for-ai-engineers-the-classifier-and-its-evaluation) ·
 [How the dice decide →](#how-the-dice-decide) · [Run it yourself →](#quick-start)
 
+### How to use it
+
+1. **Create a circle**: name the group and yourself.
+
+   ![Create a circle](docs/tutorial/1-create.png)
+
+2. **Send the invite link** (the link itself is hidden in this picture; it opens a seat for whoever taps it).
+
+   ![The invite panel](docs/tutorial/2-invite.png)
+
+3. **A friend joins** with a nickname.
+
+   ![A friend joins](docs/tutorial/3-join.png)
+
+4. **Propose places, and tick 這次不想吃的類別** (your own, never shown to others).
+
+   ![Proposing places](docs/tutorial/4-propose.png)
+
+5. **Press 提交**; the round lists 還沒提交 and 已提交 until everyone is in.
+
+   ![Waiting for everyone](docs/tutorial/5-waiting.png)
+
+6. **The reveal**: dice or the 籤筒, picked per round, then the drawer and the slip.
+
+   ![The reveal](docs/tutorial/6-reveal.png)
+
 ## Why this exists
 
 A few friends want dinner. Everybody has a mild preference, and nobody wants to own the decision. So
@@ -237,7 +263,7 @@ at the table it loses a fifth and stays reachable. The constants are written pol
 with no record of what real groups chose, there is nothing to train a scorer on, and a stated rule can
 be checked.
 
-![The reveal: the winner, and every factor that moved its odds](docs/reveal-panel.png)
+![The reveal: the drawn drawer in the 籤詩櫃, and the slip naming tonight's place](docs/tutorial/6-reveal.png)
 
 **The draw is fixed before the first proposal**: a seed is committed when the round opens and revealed
 when it closes, and both travel with the result, so anyone in the circle can check the draw against what
