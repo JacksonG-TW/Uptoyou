@@ -34,6 +34,9 @@ name: upto
 # uptime and uses it never — the DAG asks `BaseHook`, and the key comes back decrypted from the
 # metadata database with the Fernet key that IS here.
 x-airflow-env: &airflow-env
+      # Whether this host runs the classifier pass (upto_place_classify_backfill). Only the
+      # development machine sets it to 1; the production instance never classifies.
+      UPTO_CLASSIFY_HOST: ${UPTO_CLASSIFY_HOST:-0}
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags

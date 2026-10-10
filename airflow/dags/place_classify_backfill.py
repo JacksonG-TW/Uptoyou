@@ -157,6 +157,22 @@ having count(*) > 0
     tags=["classify", "A8", "gpu", "asset-triggered"],
 )
 def upto_place_classify_backfill():
+    @task.short_circuit(task_id="this_host_classifies")
+    def this_host_classifies() -> bool:
+        """Only a host that says so classifies; anywhere else the run skips, quietly (2026-10-10).
+
+        The production instance runs the same reference ingest, so it emits the same asset, and it
+        must never classify: it cannot reach the GPU, and its categories are carried from the
+        development database by hand (runbook-classifier, «Carrying categories to the box»). This
+        DAG arrives paused there, but «paused» is one unpause away from a twelve-hour wait that ends
+        in a failure and an alert. A short circuit skips the rest — no failure, so no alert.
+        `UPTO_CLASSIFY_HOST=1` is set only in the development machine's `.env`.
+        """
+        enabled = os.environ.get("UPTO_CLASSIFY_HOST", "") == "1"
+        if not enabled:
+            print("this host does not classify (UPTO_CLASSIFY_HOST is not 1) — the run skips, nothing fails")
+        return enabled
+
     @task.sensor(
         task_id="model_service_up",
         poke_interval=POKE_SECONDS,
@@ -317,7 +333,7 @@ def upto_place_classify_backfill():
             )
         return "{} township(s): {}".format(len(done), ", ".join(done) or "none")
 
-    model_service_up() >> classify_new_publication()
+    this_host_classifies() >> model_service_up() >> classify_new_publication()
 
 
 upto_place_classify_backfill()
