@@ -42,8 +42,9 @@ are stored and read by nothing.
 
 ## The GPU pass: three measurements, and the first two were of the wrong thing
 
-The README's decision 8 gives one number — **1.27 s a name** on the home box's 8 GB card, against
-12–19 s a name on its CPU. Here is what happened after that number was taken.
+The first GPU number was **1.27 s a name** on the home box's 8 GB card, against 12–19 s a name on
+its CPU. It is history now (a pass on 2026-10-10 ran about 1.15 s a name over 1,324 names); here is
+what happened after it was taken.
 
 ### The card was waiting, not computing
 
@@ -103,8 +104,9 @@ the development database were read side by side):
 | **36,497** | `place`, origin `reference` | development database | one per reference row ever seen; accumulates across publications and is not pruned (a 36,498th row is one circle's own place) |
 | **36,499** | `reference_place` | development database, publication of **2026-08-11** | the first publication. Kept here because measurements were quoted against it until 2026-09-11 |
 
-**36,499 is the FIRST publication, not the current one.** The reference file moved on 2026-09-02 and
-the current one carries 36,376. The README's name-ladder figures were measured against 36,499 until
+**36,499 is the FIRST publication, not the current one.** The reference file moved on 2026-09-02
+(36,376 rows) and again on 2026-10-07 (36,587 rows, the current one; the arithmetic below is as of
+2026-09-12, on 36,376). The README's name-ladder figures were measured against 36,499 until
 2026-09-11, when the probe was re-run against the current publication and the page's four reach
 figures moved with it — so nothing public quotes 36,499 any more.
 
@@ -174,7 +176,7 @@ The code is one part of this repository; the rest is the measurement behind each
 **One decision at a time, with a recommendation, its cost, and the branch turned down.** Every
 choice is written down once, with a date.
 *Instance:* the launch surface's structure was re-decided three times after a «final» build in early
-September — so a screen is now designed and built from a written spec, gated on the built page, and
+September — so a screen is now designed and built from a written spec, checked on the built page, and
 judged by the owner on the result.
 
 **Measure before deciding, and check the instrument before blaming the product.** A number beats an
@@ -268,7 +270,7 @@ development database, 2026-09-11):
 | **1,711,012** | rows in the CSV |
 | **~14,560** | rows kept **per publication** — one per 統編, no duplicates: the newest publication here holds 14,561 rows and 14,561 distinct 統編 |
 | **14,521** | that same per-publication figure on the day the README quotes |
-| **72,801** | `business_tax_row` on the launch instance — the table **accumulates**, one set of rows per publication it has seen, and at ~14,560 a publication that is about five of them |
+| **72,801** | `business_tax_row` on the launch instance on 2026-09-11 (392,661 on 2026-10-10) — the table **accumulates**, one set of rows per publication it has seen, and at ~14,560 a publication that is about five of them |
 
 So «the rest is never written» is about **1.696M rows per run**, not a one-off: each publication
 keeps its own ~14,560 and discards the rest again.
@@ -296,8 +298,8 @@ both ways over the whole publication).
 
 ### Why pgvector rather than a second service
 
-The retrieval crib is **537 rows per embedder**, three embedders, thousands of vectors at the
-outside. A dedicated vector store (Pinecone, Milvus, Qdrant) buys nothing at that size and costs one
+The retrieval crib holds **179 labelled names per embedder** for the test set (four embedders) and
+288 brand rows for the production embedder — hundreds of vectors, not millions. A dedicated vector store (Pinecone, Milvus, Qdrant) buys nothing at that size and costs one
 more stateful service to run, back up, monitor and keep a version of. `pgvector` is an extension on
 a database the stack already has, so the crib is in the same dump as everything else and needs no
 second backup story.
@@ -391,8 +393,9 @@ zero, which is a fact about this publication and not a guarantee.
 
 ### The classifier's own footprint
 
-The quantized 3B model peaks around **2.1 GB** while a backfill runs, which is why it sits behind a
-profile and is off otherwise. The deployment target has 4 GB.
+The quantized 3B model used in evaluation rounds peaked around **2.1 GB** while a backfill ran; the
+production model, gemma2:2b, was not measured. The model sits behind a profile and is off otherwise,
+and the 3.8 GB server never runs one.
 
 ### The backup drill
 

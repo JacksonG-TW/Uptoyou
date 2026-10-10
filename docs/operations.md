@@ -26,8 +26,10 @@ The model is behind a compose profile and is off unless a backfill is running.
 docker compose --profile model up -d ollama
 docker compose exec ollama ollama pull gemma2:2b
 docker compose exec ollama ollama pull snowflake-arctic-embed2
-docker compose exec api python -m upto.classify.run 63000010 --rag --embed arctic
-#   exit 3 = the model service is not up, and nothing was written
+docker compose run --rm tests python -m upto.classify.examples load --embed arctic
+docker compose run --rm tests python -m upto.classify.examples load-brands --embed arctic
+docker compose exec -e UPTO_MODEL=gemma2:2b api python -m upto.classify.run 63000010 --rag --embed arctic
+#   exit 3 = the model service is not up or the crib is not loaded, and nothing was written
 ```
 
 **Exit 3 is ordinary rather than a failure**, and nothing is written on that path. A pass commits as

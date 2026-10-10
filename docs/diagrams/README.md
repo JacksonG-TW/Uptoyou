@@ -53,7 +53,7 @@ er-*.mmd  ──▶  mmdc -b white -s 3  ──▶  er-*.png
 ```
 
 **Why not the migrations, which need no database.** `alembic upgrade head --sql` also emits DDL
-offline, but it emits the whole *history*: 40 `ALTER TABLE` statements, several of them
+offline, but it emits the whole *history*: dozens of `ALTER TABLE` statements, several of them
 `DROP CONSTRAINT`, replaying every intermediate shape of every table. A parser reading that file
 sees each table as it was first created, not as it is now. `pg_dump` sees only the end state.
 

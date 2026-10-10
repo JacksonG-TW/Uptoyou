@@ -184,9 +184,11 @@ precedence.
 
 | Step | Rows | Share |
 |---|---|---|
-| sign | 1,363 | 3.7% |
-| brand (single-brand companies) | 4,003 | 11.0% |
-| registered name (the rest) | 31,010 | 85.2% |
+| sign | 1,355 | 3.7% |
+| brand (single-brand companies) | 4,017 | 11.0% |
+| registered name (the rest) | 31,215 | 85.3% |
+
+On the reference list of 2026-10-07 (36,587 rows), measured 2026-10-10.
 
 Overture Maps, the open global places dataset, was tried and dropped: 39.5% trustworthy matches and
 46% false joins on address alone.
@@ -267,7 +269,7 @@ The embedder was screened the same way (nearest neighbour's label as the answer,
 - **Data:** the names never leave the machine.
 - **Latency does not matter:** classification is a batch pass nobody waits for.
 
-The whole city, **36,014 names in 10.5 hours** on one 8 GB graphics card (0.92 s a name; the same
+The whole city, **36,014 names in 10.5 hours** on one 8 GB graphics card (about 1.05 s a name on average; the same
 box's CPU takes 12–19 s). The production server runs no model.
 
 ### Where the official codes help
