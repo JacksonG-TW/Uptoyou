@@ -582,8 +582,9 @@ services:
       # interface, so anyone on the dev VM's Wi-Fi could open the dev product. A clone's
       # `localhost:8080` is unchanged; a host reached from outside — the box, which Cloudflare
       # must reach — sets `UPTO_BIND=0.0.0.0` in its `.env`, and **that line goes in BEFORE this
-      # file reaches the box**, or the pull re-binds the live proxy to loopback and the site goes
-      # dark (pull-deploy refuses only on `deploy/` changes, and this file is not under it).
+      # file is deployed there**, or the `up` re-binds the live proxy to loopback and the site goes
+      # dark. A change to this file is held by pull-deploy for a person's hand-run (exit 5), and
+      # that hand-run is the moment to check `.env`.
       - "${UPTO_BIND:-127.0.0.1}:${UPTO_HTTP_PORT:-8080}:8080"
       # **8443 answers only where `tls/` holds a `listen 8443 ssl;` (candidate 12).** Published
       # everywhere so the compose file is one file (§6); on a host whose `tls/` is empty the port
