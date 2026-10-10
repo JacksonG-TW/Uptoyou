@@ -34,9 +34,6 @@ name: upto
 # uptime and uses it never — the DAG asks `BaseHook`, and the key comes back decrypted from the
 # metadata database with the Fernet key that IS here.
 x-airflow-env: &airflow-env
-      # Whether this host runs the classifier pass (upto_place_classify_backfill). Only the
-      # development machine sets it to 1; the production instance never classifies.
-      UPTO_CLASSIFY_HOST: ${UPTO_CLASSIFY_HOST:-0}
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
@@ -699,6 +696,10 @@ services:
     command: ["scheduler", "--skip-serve-logs"]
     environment:
       <<: *airflow-env
+      # Whether this host runs the classifier pass (upto_place_classify_backfill), read by that DAG's
+      # first task. Here and not in the anchor: only the scheduler runs tasks (LocalExecutor). Only
+      # the development machine sets it, to exactly 1; the production instance never classifies.
+      UPTO_CLASSIFY_HOST: ${UPTO_CLASSIFY_HOST:-0}
       # One task at a time (default 32). Not for throughput — LocalExecutor keeps every worker it
       # ever spawned at ~220 MB each, so a burst left the launch box's scheduler at 850 MiB (H77).
       # Two DAGs due in the same minute now queue, which D83's stagger already intended.
