@@ -33,6 +33,11 @@ Four things, and each one is a way the experiment could quietly stop measuring r
    argv rather than clamped — a clamped k would put a number in the file that the command never
    asked for.
 
+7. **`--testset` asks a held-out set while the crib stays the frozen one** (owner 「A」,
+   2026-10-11). The current frozen set appends nothing to the file name, a held-out set appends
+   its stem last, and a set sharing any registry number with the frozen one is refused: those
+   rows would retrieve their own gold.
+
 Import discipline, same rule as `test_evaluate_score.py`: nothing reached from here may pull
 SQLAlchemy at import time. The host Python has none, and D88's store is imported by
 `run_round` inside the `--rag` branch alone for exactly that reason.
@@ -915,6 +920,50 @@ class TheBrandCribIsAFactTable(unittest.TestCase):
             hashlib.sha256(payload.encode()).hexdigest(),
             hashlib.sha256(names_only.encode()).hexdigest(),
         )
+
+
+class TestTheHeldOutSet(unittest.TestCase):
+    """The held-out set (owner 「A」, 2026-10-11): asked from one set, retrieved from another."""
+
+    def _write(self, rows):
+        handle = tempfile.NamedTemporaryFile("w", suffix=".json", prefix="heldout_t", delete=False,
+                                             encoding="utf-8")
+        json.dump({"rows": rows}, handle, ensure_ascii=False)
+        handle.close()
+        self.addCleanup(os.unlink, handle.name)
+        return handle.name
+
+    def test_the_frozen_set_appends_nothing(self):
+        from upto.evaluate.score import TESTSET_PATH
+        self.assertEqual(
+            run_round.round_path("gemma", RAG_PROMPT_VERSION, "arctic"),
+            run_round.round_path("gemma", RAG_PROMPT_VERSION, "arctic",
+                                 asked_set=os.path.basename(TESTSET_PATH)),
+        )
+
+    def test_a_held_out_set_appends_its_stem_last(self):
+        path = run_round.round_path("gemma", RAG_PROMPT_VERSION, "arctic", None, "c66604f1aa",
+                                    "heldout_v1.json")
+        self.assertTrue(path.endswith(
+            f"round_gemma_{RAG_PROMPT_VERSION}_arctic_brandc66604f1_heldout_v1.json"), path)
+
+    def test_a_set_sharing_a_registry_number_with_the_frozen_one_is_refused(self):
+        frozen = [{"registry_no": "A-1", "name": "甲", "label": "其他"}]
+        shared = self._write([{"registry_no": "A-1", "name": "甲", "label": None},
+                              {"registry_no": "B-2", "name": "乙", "label": None}])
+        with self.assertRaises(run_round.UsageError) as caught:
+            run_round.asked_set(shared, frozen)
+        self.assertIn("1 registry number", str(caught.exception))
+
+    def test_a_disjoint_set_is_read_with_its_own_digest(self):
+        frozen = [{"registry_no": "A-1", "name": "甲", "label": "其他"}]
+        path = self._write([{"registry_no": "B-2", "name": "乙", "label": None}])
+        rows, digest = run_round.asked_set(path, frozen)
+        self.assertEqual([r["name"] for r in rows], ["乙"])
+        self.assertEqual(len(digest), 64)
+
+    def test_testset_without_a_path_is_a_usage_error(self):
+        self.assertEqual(run_round.main(["gemma", "--testset"]), 2)
 
 
 if __name__ == "__main__":

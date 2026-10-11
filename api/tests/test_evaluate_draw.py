@@ -13,7 +13,9 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
-from upto.evaluate.draw import FLOOR, LAYERS, SIZE, allocate, pick  # noqa: E402
+from upto.evaluate.draw import (  # noqa: E402
+    FLOOR, HELDOUT_SEED, LAYERS, SIZE, SEED, allocate, pick, pick_heldout,
+)
 
 RAN = 0
 
@@ -72,5 +74,18 @@ check(len({r["registry_no"] for r in first}) == SIZE, "a row was drawn twice")
 
 # A different seed is a different draw — the seed is doing something.
 check(pick(pool, seed=83) != first, "seed 83 drew the identical set; the seed is inert")
+
+# The held-out draw (owner 「A」, 2026-10-11): disjoint from the frozen draw by construction,
+# allocated on what is left, and its own seed.
+frozen = pick(pool)
+excluded = {r["registry_no"] for r in frozen}
+held = pick_heldout(pool, excluded)
+check(len(held) == SIZE, f"held-out size {len(held)} != {SIZE}")
+check(not excluded & {r["registry_no"] for r in held}, "a frozen row was drawn into the held-out set")
+left = {layer: songshan_like[layer] - sum(1 for r in frozen if r["layer"] == layer) for layer in LAYERS}
+check({layer: sum(1 for r in held if r["layer"] == layer) for layer in LAYERS} == allocate(left),
+      "the held-out allocation must be computed on the rows left after the exclusion")
+check(pick_heldout(list(reversed(pool)), excluded) == held, "the held-out draw must reproduce")
+check(HELDOUT_SEED != SEED, "the held-out draw must not reuse the frozen seed")
 
 print(f"ok — {RAN} checks: the draw is a function of (rows, seed) and nothing else")

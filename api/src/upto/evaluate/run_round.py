@@ -222,7 +222,7 @@ def evaluation_dir(start: str | None = None) -> str:
 
 def round_path(candidate: str, prompt_version: str = PROMPT_VERSION,
                embed_key: str | None = None, k: int | None = None,
-               crib_digest: str | None = None) -> str:
+               crib_digest: str | None = None, asked_set: str | None = None) -> str:
     """Where a round is written. `embed_key` is D88's second axis and `bge` is spelled by omission.
 
     The default embedder appends nothing, and that is a compatibility rule rather than
@@ -249,6 +249,10 @@ def round_path(candidate: str, prompt_version: str = PROMPT_VERSION,
     # the runner that wrote it — the same compatibility rule the embedder and k follow.
     if crib_digest:
         suffix += "_brand" + crib_digest[:8]
+    # **The asked set is a fifth axis (the held-out set, owner 「A」 2026-10-11)**, last in the
+    # name. The current frozen set appends nothing, so every file on disk stays reachable.
+    if asked_set and asked_set != os.path.basename(TESTSET_PATH):
+        suffix += "_" + os.path.splitext(asked_set)[0]
     return os.path.join(evaluation_dir(), f"round_{candidate}_{prompt_version}{suffix}.json")
 
 
@@ -679,8 +683,29 @@ def rag_examples(digest: str, embed_model: str, k: int = RAG_K):
 
 USAGE = (
     "usage: python -m upto.evaluate.run_round <qwen|gemma|llama|gemini> "
-    "[--rag [--embed <{}>] [--k <1-{}>]]".format("|".join(EMBED_MODELS), RAG_K_MAX)
+    "[--rag [--embed <{}>] [--k <1-{}>]] [--testset <held-out set>]".format(
+        "|".join(EMBED_MODELS), RAG_K_MAX)
 )
+
+
+def asked_set(path: str, frozen_rows: list[dict]) -> tuple[list[dict], str]:
+    """The held-out set's rows and sha256, or a UsageError if it could teach its own answers.
+
+    The crib is the frozen set (D88), so a held-out round asks one set and retrieves from
+    another. That is honest only if no asked row is a frozen row: a shared registry number
+    would put the asked place's gold in the crib under its own name. **Refused here rather
+    than trusted to the draw**, because the file is what is asked and the draw is history.
+    Leave-one-out by name still applies at the query, exactly as in a frozen round.
+    """
+    rows, digest = load_testset(path)
+    shared = {row["registry_no"] for row in rows} & {row["registry_no"] for row in frozen_rows}
+    if shared:
+        raise UsageError(
+            "{} shares {} registry number(s) with {}, the set the crib is built from, so those "
+            "rows would retrieve their own gold. A held-out set is disjoint from the frozen one "
+            "or it is not held out.".format(
+                os.path.basename(path), len(shared), os.path.basename(TESTSET_PATH)))
+    return rows, digest
 
 
 def main(argv: list[str]) -> int:
@@ -690,9 +715,17 @@ def main(argv: list[str]) -> int:
         arguments.remove("--rag")
     embed_key: str | None = None
     k_asked: str | None = None
+    testset_asked: str | None = None
     index = 0
     while index < len(arguments):
         argument = arguments[index]
+        if argument == "--testset":
+            if index + 1 >= len(arguments):
+                print(USAGE, file=sys.stderr)
+                return 2
+            testset_asked = arguments[index + 1]
+            del arguments[index : index + 2]
+            continue
         if argument == "--embed":
             if index + 1 >= len(arguments):
                 print(USAGE, file=sys.stderr)
@@ -782,21 +815,32 @@ def main(argv: list[str]) -> int:
         print(str(error), file=sys.stderr)
         return 2
 
+    # `digest` is the frozen set's and stays the crib's stale-cache check (rag_examples); the
+    # asked set is the frozen one unless --testset names a held-out set.
     gold_rows, digest = load_testset()
+    asked_name, asked_digest = os.path.basename(TESTSET_PATH), digest
+    if testset_asked is not None:
+        if os.path.abspath(testset_asked) != os.path.abspath(TESTSET_PATH):
+            try:
+                gold_rows, asked_digest = asked_set(testset_asked, gold_rows)
+            except (UsageError, OSError, ValueError) as error:
+                print(str(error), file=sys.stderr)
+                return 2
+            asked_name = os.path.basename(testset_asked)
     prompt_version = RAG_PROMPT_VERSION if rag else PROMPT_VERSION
     # **The crib's identity is read BEFORE the name is chosen**, because it is part of the name
     # now (H72). A plain round retrieves from nothing and asks the store nothing.
     provenance = _crib_provenance(EMBED_MODELS[embed_key]) if rag else {}
     path = round_path(name, prompt_version, embed_key if rag else None, k if rag else None,
-                      provenance.get("crib_brand_sha256"))
+                      provenance.get("crib_brand_sha256"), asked_name)
 
     examples_for = None
     document = {
         "candidate": name,
         "model": getattr(candidate, "model", None),
         "prompt_version": prompt_version,
-        "testset": os.path.basename(TESTSET_PATH),
-        "testset_sha256_at_run": digest,
+        "testset": asked_name,
+        "testset_sha256_at_run": asked_digest,
         "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "finished_at": None,
         "rows": [],
