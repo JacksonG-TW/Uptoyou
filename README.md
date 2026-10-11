@@ -337,8 +337,8 @@ search, so there is no second service to run and back up for the vectors.
 The CI badge above runs on every public commit: **the tests that need no database** (standard
 library only), **the web build with its type check and lint**, and **the compose file read as a fresh
 clone would**. The full suite is 77 test files in two tempos: host-side tests with no network, and
-tests that build and drop their own database. Seven local checks run before every commit (secrets,
-what may leave app/, fonts, the server's user-facing text and status table, staged Python). The CD badge is the image build: GitHub Actions builds the three images for every commit to the release branches, tags them with the commit's full sha, and the server pulls exactly that sha on its timer.
+tests that build and drop their own database. Nine local checks run before every commit (among them
+secrets, what may leave app/, fonts, the server's user-facing text and status table, the README pictures' text size and numbers, and staged Python). The CD badge is the image build: GitHub Actions builds the three images for every commit to the release branches, tags them with the commit's full sha, and the server pulls exactly that sha on its timer.
 
 ## Performance
 
