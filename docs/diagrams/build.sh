@@ -69,13 +69,21 @@ erdify_run() {  # $@ = extra erdify flags (e.g. --check)
 # -s 3 is the whole legibility setting: mermaid lays the diagram out at its natural size
 # and this renders it at 3x, which is what makes the column names readable.
 
+#
+# The look comes from style.json, the same tokens the README pictures are drawn from:
+# mermaid_theme.py maps them onto mermaid's `base` theme and the config is passed with -c.
+
 render_png() {
+  local theme
+  theme="$(mktemp -d)"
+  python3 "$HERE/mermaid_theme.py" "$HERE/style.json" > "$theme/config.json"
   for name in "${DIAGRAMS[@]}"; do
     docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
       -e PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-      -v "$HERE:/data" "$MERMAID_IMAGE" \
-      -i "/data/$name.mmd" -o "/data/$name.png" -b white -s 3
+      -v "$HERE:/data" -v "$theme:/theme:ro" "$MERMAID_IMAGE" \
+      -i "/data/$name.mmd" -o "/data/$name.png" -c /theme/config.json -b white -s 3
   done
+  rm -rf "$theme"
 }
 
 if [ "$CHECK" = "1" ]; then
