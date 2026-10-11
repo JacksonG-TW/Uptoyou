@@ -1532,6 +1532,9 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 .reveal .cabGrid {
   position: relative;
   display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 12px;
+  /* Explicit rows, so the column trace's `1 / -1` reaches the sixth row. Without them `-1` is row line
+     2 and the column frame collapses onto the column's top drawer (found on a deck capture). */
+  grid-template-rows: repeat(6, auto);
   width: min(100%, 400px); box-sizing: border-box;
   background: #5a2a17; border: 3px solid var(--color-ink);
   box-shadow: inset 0 0 0 2px var(--color-gold);
