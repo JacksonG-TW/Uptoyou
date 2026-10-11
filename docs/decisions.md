@@ -21,7 +21,8 @@ rows are the ones actually scored.
 `testset_v1` under prompt v5 (`round_gemma_v5-rag-2026-08-15_arctic.json.report.md`). The same
 model and configuration now reads **71.0%** on `testset_v3` under prompt v7.
 
-Both were read on the set that configuration was tuned on, so they are indicative, not confirmed.
+Both were read on the set that configuration was tuned on. A second set drawn later, from the same
+district and never tuned on, found no drop (README, «How it is scored»).
 
 **The join figures below did not move with it, and that is not luck.** The 200 rows were drawn once
 and frozen; v1, v2 and v3 are the same rows in the same order, relabelled. So «142 of 200 join a
@@ -413,9 +414,11 @@ The README used to state the serving stack at rest **twice** — 942 MiB in one 
 in another, measured on different days and both true when written. One number per fact: the page now
 states 1,009 MiB, which is the one measured after the shrink that both decisions are about.
 
-### A score that is a different experiment, not a better one
+### The brand list: a different configuration, measured as its own round
 
-Two of the four rounds have `_brandcrib` variants, run with an authored brand crib added. They read
-**2.5 to 4.0 points higher** and are not comparable with the four in the README's table: a different
-crib is a different configuration, so it gets its own round rather than a better number for the same
-one.
+Two of the four models were also run with 288 labelled brand names added to the retrieved
+examples (`_brandc66604f1`): `gemma2:2b` 71.0 → 73.5 and `qwen2.5:7b` 72.0 → 75.5, both inside the
+band. The table keeps the rounds without the list, so the four models compare on one configuration.
+Production runs with the list loaded, so 73.5% is the in-use figure on the first set. An earlier
+pair, `_brandcrib`, embedded the names with a query prefix the product does not use, and is not
+quoted.

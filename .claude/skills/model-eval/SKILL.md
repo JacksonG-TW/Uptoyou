@@ -142,7 +142,8 @@ These rounds ran through the project's own classification pipeline, not through 
   three kinds of name with at least 30 per stratum so the small strata stay scorable. The labels
   were drafted by one model and cross-checked by a second, not written by a person, so every number
   below is **agreement with those labels**, not accuracy. The band at 200 rows is about ±6.5 points.
-  The retrieval settings were chosen on this same set, and no second set was drawn.
+  The retrieval settings were chosen on this same set. A second set, drawn later from the same
+  population and labelled the same way, scored 75.5% against 73.5%: no drop at ±8.5.
 - **Retrieval, per model:** five retrieved look-alikes moved a 2B model 51.5% → 61.0% (+9.5: past
   the ±6.5 band for one score but inside the ±9.7 band for an unpaired difference; paired on the
   same names, McNemar p ≈ 0.008) and a 3B model 37.0% → 58.0% (+21, p < 0.001), both on the same

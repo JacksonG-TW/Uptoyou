@@ -258,8 +258,13 @@ McNemar p ≈ 0.008; and 52 against 10, p < 0.001), while `qwen2.5:3b` went 51.0
 
 **The same set also chose the settings.** The embedder, the number of retrieved examples and the
 prompt were settled on these 200 names, and the scores above are read on the same names, so they
-are indicative. A setting chosen on a set is confirmed only on a set it never saw, and that set has
-not been drawn yet.
+are indicative. A setting chosen on a set is confirmed only on a set it never saw, so a second set was drawn:
+200 other names from the same district, labelled the same way by newer drafting models, whose lead
+drafter, re-labelling the first set, agrees with its labels on 179 of 200. The configuration in use,
+which since September also retrieves from 288 labelled brand names (73.5% on the first set, against
+the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The difference is well inside the
+±8.5 band, so tuning did not inflate the score by more than 200 names can show. That set has now
+been used, so any later change needs a fresh one.
 
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
