@@ -1,16 +1,17 @@
 # Diagrams
 
-Ten technical diagrams of this system — five generated entity-relationship diagrams and five drawn
-pictures — and the exact commands that produced them. Nothing here is drawn from memory: the ER
-diagrams are generated from the live schema, and every label on the drawn pictures was read out of
-the source file named in its footer.
+Ten technical diagrams of this system, and the exact commands that produce them: five
+entity-relationship diagrams generated from the live schema, and five pictures drawn for the README.
+Their look is decided in one file, `style.json`, and both pipelines read it.
 
-| Diagram | Files | How it was made |
+| Diagram | Files | How it is made |
 |---|---|---|
-| Entity relationships | `er-overview` + four clusters, `.mmd` and `.png` | generated — `pg_dump` → `er_schema.py` → **erdify** → **mermaid-cli** |
-| Architecture | `architecture.json` · `.html` · `.png` | drawn — an archify specification, rendered and exported with headless chromium |
-| ETL pipeline | `etl-flow.html` · `.png` | drawn — same |
-| AI evaluation | `evaluation-flow.html` · `.png` | drawn — same |
+| Entity relationships | `er-overview` + four clusters, `.mmd` and `.png` | generated — `pg_dump` → `er_schema.py` → **erdify** → **mermaid-cli**, themed from `style.json` |
+| Architecture | `architecture.json` · `.readme.svg` · `.png` | drawn — `draw.py` |
+| ETL pipeline | `etl-flow.json` · `.readme.svg` · `.png` | drawn — `draw.py` |
+| AI evaluation | `evaluation-flow.json` · `.readme.svg` · `.png` | drawn — `draw.py` |
+| Name ladder | `name-ladder.json` · `.readme.svg` · `.png` | drawn — `draw.py` |
+| Schema at a glance | `schema-glance.json` · `.readme.svg` · `.png` | drawn — `draw.py` |
 
 ---
 
@@ -49,7 +50,9 @@ docs/diagrams/ddl/er-*.sql        (generated — committed, so the diagram is re
 erdify --sql-dialect postgres --format mermaid
         │
         ▼
-er-*.mmd  ──▶  mmdc -b white -s 3  ──▶  er-*.png
+er-*.mmd  ──▶  mmdc -c er-theme.json -b white -s 3  ──▶  er-*.png
+                     ▲
+style.json ──▶ mermaid_theme.py ──▶ er-theme.json
 ```
 
 **Why not the migrations, which need no database.** `alembic upgrade head --sql` also emits DDL
@@ -69,6 +72,10 @@ and FOREIGN KEY, **inlined into the `CREATE TABLE`**: pg_dump emits keys as sepa
 in full plus a short allowlist of story-carrying columns (`STORY` in `er_schema.py`). The
 allowlist is checked against the dump both ways: a table in the database and not in `STORY`
 raises, and a column in `STORY` and not in the database raises. Neither is silently skipped.
+
+**Where the look comes from.** `mermaid_theme.py` maps the colour, font and size tokens in
+`style.json` onto mermaid's `base` theme, the one theme whose variables are all honoured, and writes
+`er-theme.json`. A table takes the colour that means «stored» everywhere else in these pictures.
 
 ### The five diagrams
 
@@ -105,104 +112,61 @@ none of the four clusters.
 
 ### Drift
 
-`build.sh --check` runs two checks and fails on either:
+`build.sh --check` runs three checks and fails on any:
 
 1. Re-derives the DDL from the live schema and diffs it against the committed `ddl/*.sql`. A
    migration that changed a table shows up here.
 2. `erdify --check`, which regenerates each `.mmd` from its `.sql` and exits non-zero on a
    difference.
+3. Re-derives the mermaid theme from `style.json` and compares it with the committed
+   `er-theme.json`. A changed token shows up here as «stale».
 
-It does not re-render the PNGs, so a stale PNG is not caught. Re-run `build.sh` after any
-migration.
+It does not re-render the PNGs. Re-run `build.sh` after any migration or token change.
 
-**erdify is pinned** (`ERDIFY_VERSION` in `build.sh`, currently `0.12.1`). Unpinned, the drift
-check would eventually report the tool's own version bump as a schema change.
+**Both tools are pinned** in `build.sh`: erdify by version (`ERDIFY_VERSION`, currently `0.12.1`)
+and mermaid-cli by version and digest (`11.16.0`). Unpinned, a tool's own update would read as a
+change to the schema or the look.
 
 ---
 
-## 2. The three drawn diagrams — self-contained HTML
+## 2. The five README pictures — drawn
 
-`architecture.html` · `etl-flow.html` · `evaluation-flow.html`
+```sh
+python3 docs/diagrams/draw.py            # write every <name>.readme.svg
+python3 docs/diagrams/draw.py --check    # change nothing; exit 1 if a committed SVG differs
+python3 docs/diagrams/draw.py --labels   # print every label and the specification it is drawn from
+python3 docs/diagrams/draw.py --png      # also rasterise each SVG to <name>.png at twice its size
+```
 
-Drawn with archify (MIT, `tt-a1i/archify`, patched so the rendered page makes no external
-request): each diagram is a small JSON specification — `architecture.json`, `etl-flow.json`,
-`schema-glance.json` and the others beside them — rendered to one self-contained HTML file and
-validated for crossings, label clearance and readability before it is exported to PNG.
+`draw.py` needs only Python's standard library to write the SVGs. `--png` also needs Playwright's
+chromium and a Noto Sans TC font file named in `UPTO_DIAGRAM_FONT`; the repository carries no full
+CJK face, and without one the Latin and Chinese fall back to different fonts and every width
+changes. `draw.py` refuses to rasterise without it rather than draw the wrong widths.
 
-**The five pictures the README shows — `architecture.png`, `etl-flow.png`, `schema-glance.png`,
-`name-ladder.png`, `evaluation-flow.png` — are drawn by hand instead**, as `*.readme.svg` on an 840-unit canvas and rasterised at twice that
-size. A README column is about 840 pixels wide, and archify's fixed text sizes left its labels
-at 4–9 px there; drawn at the column's own width, every word in these five is 13 px or larger.
-Their facts are the archify specifications' (`architecture.json`, `etl-flow.json`,
-`schema-glance.json`, `name-ladder.json`, `evaluation-flow.json`), which stay the checked record of what connects to what. They are one set drawn for engineers rather than in the product's look: a white ground, black lines
-and arrows, and a few colours that each mean one thing, the same thing in every chart — blue for
-public open data and its reference copy, green for weather, vermilion for the product, grey for the
-database and what it stores, purple for the scheduled pipeline (Okabe–Ito hues, which stay apart for
-the common colour-vision deficiencies), and pale yellow with a heavy black border for alerts and
-models — told from vermilion by lightness, since a darker amber looked the same as vermilion to
-protan and deutan readers. A box takes a light tint of its
+**Why they are drawn, not exported.** A README column is about 840 pixels wide. Each picture is
+drawn on an 840-unit canvas, so its text sizes are the sizes a reader sees; no text is smaller than
+12 px at that width.
+
+**The look is `style.json`**: the colours, the font stack, the text sizes, the strokes, as design
+tokens in the W3C Design Tokens Format (2025.10). No labels and no layout are in it. The colours
+each mean one thing, the same in every picture: blue for public open data and its reference copy,
+green for weather, vermilion for the product, grey for the database and what it stores, purple for
+the scheduled pipeline (hues chosen to stay apart for the common colour-vision deficiencies:
+Okabe–Ito, darkened where needed, with Paul Tol's purple for the pipeline),
+and pale yellow with a heavy black border for alerts and models. A box takes a light tint of its
 colour with the full colour as its border; a group's outline takes the colour, dashed. Every text
-clears 4.5:1 and every border 3:1, measured on the PNGs. `architecture` is drawn in the same idiom with the vendors' own marks: a solid AWS frame with the AWS mark, a dashed AWS EC2 frame, and Cloudflare, FastAPI, PostgreSQL, Airflow, Ollama and GitHub in their own colours (marks/NOTICE.md). nginx, the container registry and Telegram are labelled boxes.
+clears 4.5:1 and every border 3:1.
 
-**Each file is one file.** No stylesheet, no webfont, no CDN script, no remote image — the
-upstream skill's Google Fonts link and its two CDN export scripts were removed for exactly this
-reason. The check:
-
-```sh
-grep -n 'https\?://' docs/diagrams/*.html
-```
-
-The only permitted hit is `xmlns="http://www.w3.org/2000/svg"`, which is an XML namespace
-identifier and not a URL anything fetches. Verified with a real browser as well: loading each
-page under Playwright makes **zero** non-`file://` requests and logs no console errors.
-
-Chinese labels (店名 · 品牌名稱 · 登記名稱 · 統編 · 法人 · 行業代號) resolve through the local
-font stack, with *Noto Sans TC* in it.
-
-### Re-shooting the five README pictures
-
-Each `*.readme.svg` is shot at twice its own size (1680 px wide) by headless chromium. Its text asks
-for Helvetica and then `sans-serif`; map both to Noto Sans TC, or the Latin falls back to DejaVu and
-every width changes. A fontconfig file with `<alias binding="strong">` entries preferring
-`Noto Sans TC` for `sans-serif`, `Helvetica Neue`, `Helvetica` and `Arial` (and `<dir>~/.fonts</dir>`)
-does it: load each SVG with `FONTCONFIG_FILE` pointing at it, a viewport of the SVG's own
-`width × height` and `deviceScaleFactor: 2`, and screenshot it to the `.png` beside it.
-
-### Re-shooting the PNGs
-
-They are browser screenshots, at 1780px wide so the 10px annotations stay readable:
-
-```sh
-export LD_LIBRARY_PATH="$HOME/.local/micromamba/envs/web/lib:$LD_LIBRARY_PATH"
-export FONTCONFIG_PATH="$HOME/.local/micromamba/envs/web/etc/fonts"
-python3 - <<'PY'
-import asyncio
-from playwright.async_api import async_playwright
-
-PAGES = ["architecture", "etl-flow", "evaluation-flow"]
-HERE = "/absolute/path/to/app/docs/diagrams/"
-
-async def main():
-    async with async_playwright() as play:
-        browser = await play.chromium.launch(args=["--no-sandbox"])
-        page = await browser.new_page(viewport={"width": 1780, "height": 1200})
-        for name in PAGES:
-            await page.goto("file://" + HERE + name + ".html", wait_until="load")
-            await page.wait_for_timeout(1000)
-            await page.screenshot(path=HERE + name + ".png", full_page=True)
-        await browser.close()
-
-asyncio.run(main())
-PY
-```
-
-The two environment variables are not optional on this machine: without `LD_LIBRARY_PATH`
-chromium fails to start on `libnspr4`, and without `FONTCONFIG_PATH` every Chinese glyph renders
-as a tofu box — which screenshots as a plausible-looking diagram with no readable Chinese in it.
+**The marks.** `architecture` carries the vendors' own marks, unaltered: a solid AWS frame with the
+AWS mark, a dashed AWS EC2 frame, and Cloudflare, FastAPI, PostgreSQL, Airflow, Ollama and GitHub in
+their own colours. Their sources and terms are in `marks/NOTICE.md`. nginx, the container registry
+and Telegram are labelled boxes.
 
 ### Where each label came from
 
-Every number and name was read out of the code or the database, not recalled:
+Every number and name was read out of the code or the database, not recalled. Each picture's
+`.json` specification records what connects to what, and `draw.py --labels` prints every label with
+the specification it is drawn from. For three of them, the sources behind the specification:
 
 - **architecture** — `app/compose.yaml`, `app/api/Dockerfile`, `app/README.md`.
 - **etl-flow** — `app/airflow/dags/*.py` (the `SOURCES` table carries the crons),
@@ -212,5 +176,5 @@ Every number and name was read out of the code or the database, not recalled:
   `app/api/src/upto/classify/examples.py` and `embed.py`, the reports in
   `app/evaluation/`, and `select embed_model, count(*) from example_embedding group by 1`.
 
-The accuracy figures come from the reports' own **Pooled** tables, and each report carries the sha256
-of the test set it was scored on; only reports with the same sha share a table.
+The agreement figures (the share of names whose label matches the AI-drafted reference) come from the reports' own **Pooled** tables, and each report carries the
+sha256 of the test set it was scored on; only reports with the same sha share a table.
