@@ -268,7 +268,6 @@ def architecture():
     """The stack as it is built and served. Its own helpers: it was drawn after the other four, with
     vendor marks, and its boxes set captions 1 unit higher than theirs."""
     o = []
-    small = num("font.size.small")
     plain_fill = GROUND.upper()   # a plain box is the sheet's white, written as it was drawn
 
     def t(x, y, s, size=BODY, weight=W_BODY, fill=INK, anchor="middle"):
@@ -322,8 +321,8 @@ def architecture():
     region(20, 128, 140, 82, "GPU box")
     si("ollama", 30, 156, 28)
     t(66, 166, "Ollama", BODY, W_TITLE, INK, "start")
-    t(66, 181, "classifier", small, W_BODY, MUTED, "start")
-    t(66, 196, "batches", small, W_BODY, MUTED, "start")
+    t(66, 181, "classifier", BODY, W_BODY, MUTED, "start")
+    t(66, 196, "batches", BODY, W_BODY, MUTED, "start")
     arrow([(92, 210), (92, 220)])
     b(24, 222, 136, 44, "Batch results", "PostgreSQL")
     # The build path, inside one GitHub region carrying the GitHub mark once.
