@@ -42,7 +42,7 @@ pipeline, run the rounds through that pipeline instead, and keep the rules below
 - **Work out the set's sampling band before reading any difference.** On n rows at a score p, the 95%
   interval is about ±1.96·√(p(1−p)/n): **about ±6.5 points at 200 rows and 70%**. A difference
   smaller than that band is never a finding, in either direction. The difference between two
-  independent scores is noisier still (about √2 wider, ~±9 points here), so to claim a difference,
+  independent scores is noisier still (about √2 wider: ~±9 points at 70%, ±9.7 at 51.5% and 61.0%), so to claim a difference,
   run the paired test: both candidates on the same rows, compared row by row (McNemar's test).
 - **A refusal is wrong.** An answer outside the allowed labels is not repaired or fuzzy-matched. Count
   refusals separately as well, because a model that refuses often and one that is confidently wrong
@@ -143,9 +143,10 @@ These rounds ran through the project's own classification pipeline, not through 
   were drafted by one model and cross-checked by a second, not written by a person, so every number
   below is **agreement with those labels**, not accuracy. The band at 200 rows is about ±6.5 points.
   The retrieval settings were chosen on this same set, and no second set was drawn.
-- **Retrieval, per model:** five retrieved look-alikes moved a 2B model 51.5% → 61.0% (+9.5: outside
-  the ±6.5 band for one score, and just past the ~±9 band for a difference) and a 3B model
-  37.0% → 58.0% (+21), both on the same 200 rows. The paired test was not run. Another 3B model went
+- **Retrieval, per model:** five retrieved look-alikes moved a 2B model 51.5% → 61.0% (+9.5: past
+  the ±6.5 band for one score but inside the ±9.7 band for an unpaired difference; paired on the
+  same names, McNemar p ≈ 0.008) and a 3B model 37.0% → 58.0% (+21, p < 0.001), both on the same
+  200 rows. Another 3B model went
   51.0% → 48.5%, inside the band: no gain.
 - **The table, after a relabel to thirteen categories (a new set, so not compared with the numbers
   above):**

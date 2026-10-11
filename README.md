@@ -102,7 +102,7 @@ be checked.
 | | Before → after | What was measured |
 |---|---|---|
 | **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
-| **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, past the ±6.5 band for one score, and just past the ~±9 band for a difference. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
+| **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, and, compared name by name on the same 200, 33 names went from wrong to right against 14 the other way (McNemar p ≈ 0.008). The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
 | **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
 
 ## The data pipeline
@@ -236,8 +236,8 @@ Missing knowledge is added as labelled examples; the prompt and the model's weig
 per stratum), and never re-drawn between rounds. Its reference labels were drafted by one large model
 and cross-checked by a second, not labelled by a person, so the metric is **agreement**: the share of
 names where the model's category equals the reference label. On 200 names one score carries a band of
-about ±6.5 points. A difference between two scores is wider, about ±9, unless both run on the same
-names and are compared name by name, a paired test this project has not run. Every candidate runs once on the same set, through the same pipeline a
+about ±6.5 points. A difference between two scores is wider, about ±9.7 at 51.5% and 61.0%, unless
+both run on the same names and are compared name by name (McNemar's test). Every candidate runs once on the same set, through the same pipeline a
 classification pass uses.
 
 | Model | Licence | Agreement on the 200 |
@@ -252,8 +252,9 @@ them. The 2B was already in use, so it stayed; its full city pass took 10.5 hour
 graphics card.
 
 **Retrieval is measured per model**, because the same examples help one model and confuse another: on
-the earlier set retrieval moved `gemma2:2b` 51.5 → 61.0 and `llama3.2:3b` 37.0 → 58.0, while
-`qwen2.5:3b` went 51.0 → 48.5.
+the earlier set, with the bge-m3 embedder, retrieval moved `gemma2:2b` 51.5 → 61.0 and `llama3.2:3b`
+37.0 → 58.0 (compared name by name on the same 200: 33 names wrong→right against 14 the other way,
+McNemar p ≈ 0.008; and 52 against 10, p < 0.001), while `qwen2.5:3b` went 51.0 → 48.5.
 
 **The same set also chose the settings.** The embedder, the number of retrieved examples and the
 prompt were settled on these 200 names, and the scores above are read on the same names, so they
