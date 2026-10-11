@@ -28,9 +28,11 @@ alone. `--png` needs Playwright with its Chromium, and a Noto Sans TC font file 
 `UPTO_DIAGRAM_FONT` (the repository carries no full CJK face): every family the texts name is mapped
 to it for the run, and without it the Chinese labels rasterise as empty boxes.
 
-The architecture picture is drawn elsewhere for now; it joins this file once its vendor marks have a
-home under `marks/` (read `marks/NOTICE.md`).
+**Marks** (read `marks/NOTICE.md`): the architecture picture embeds the three AWS files byte for byte
+and places six Simple Icons paths from `marks/simple-icons-16.28.0.json` at their own colours. Marks
+take no token: they are never recoloured.
 """
+import base64
 import html
 import json
 import os
@@ -80,6 +82,9 @@ TEXT_FAMILY = ", ".join(FAMILY)
 SHEET_FAMILY = ", ".join(FAMILY[:-1] + [f"'{CJK}'", FAMILY[-1]])
 
 # Each meaning, as (border, tint, label). The keys are the tokens' own names under color.key.
+SIMPLE_ICONS = {m["id"]: m for m in json.loads(
+    (HERE / "marks" / "simple-icons-16.28.0.json").read_text(encoding="utf-8"))["marks"]}
+
 KEY = {k: (color(f"color.key.{k}.border"), color(f"color.key.{k}.tint"), color(f"color.key.{k}.label"))
        for k in ("public", "weather", "product", "stored", "pipeline", "alert")}
 
@@ -259,7 +264,132 @@ def evaluation_flow():
     return "\n".join(q)
 
 
-PICTURES = {"etl-flow": etl_flow, "schema-glance": schema_glance,
+def architecture():
+    """The stack as it is built and served. Its own helpers: it was drawn after the other four, with
+    vendor marks, and its boxes set captions 1 unit higher than theirs."""
+    o = []
+    small = num("font.size.small")
+    plain_fill = GROUND.upper()   # a plain box is the sheet's white, written as it was drawn
+
+    def t(x, y, s, size=BODY, weight=W_BODY, fill=INK, anchor="middle"):
+        _labels.append(s)
+        o.append(f'<text x="{x}" y="{y}" text-anchor="{anchor}" font-size="{size}" font-weight="{weight}" '
+                 f'fill="{fill}" font-family="{TEXT_FAMILY}">{s}</text>')
+
+    def b(x, y, w, h, title, sub=None, key=None):
+        border, tint = (KEY[key][0], KEY[key][1]) if key else (INK, plain_fill)
+        width = num("stroke.alert") if key == "alert" else num("stroke.box")
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{num("radius.box")}" fill="{tint}" '
+                 f'stroke="{border}" stroke-width="{width}"/>')
+        if sub:
+            t(x + w / 2, y + h / 2 - 3, title, TITLE, W_TITLE)
+            t(x + w / 2, y + h / 2 + 14, sub, BODY, W_BODY, MUTED)
+        else:
+            t(x + w / 2, y + h / 2 + 5, title, TITLE, W_TITLE)
+
+    def region(x, y, w, h, label, dashed=True):
+        d = f' stroke-dasharray="{dash("dash.frame")}"' if dashed else ""
+        stroke, width = (DASH, num("stroke.frameDashed")) if dashed else (INK, num("stroke.frameSolid"))
+        o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{num("radius.frame")}" fill="none" '
+                 f'stroke="{stroke}" stroke-width="{width}"{d}/>')
+        if label:
+            t(x + 10, y + 18, label, BODY, W_TITLE, MUTED, "start")
+
+    def si(slug, x, y, size):
+        """A Simple Icons mark at its own colour, uniformly scaled. Never recoloured (marks/NOTICE.md)."""
+        m = SIMPLE_ICONS[slug]
+        o.append(f'<svg x="{x}" y="{y}" width="{size}" height="{size}" viewBox="0 0 {m["viewBox"]} {m["viewBox"]}">'
+                 f'<path fill="#{m["hex"]}" d="{m["path"]}"/></svg>')
+
+    def aws(file, x, y, size):
+        """An AWS mark, embedded as its own file: placed and scaled, never edited (marks/NOTICE.md)."""
+        data = base64.b64encode((HERE / "marks" / file).read_bytes()).decode()
+        o.append(f'<image x="{x}" y="{y}" width="{size}" height="{size}" href="data:image/svg+xml;base64,{data}"/>')
+
+    def arrow(pts, label=None, lx=None, ly=None, dashed=False, anchor="middle"):
+        d = "M" + " L".join(f"{a},{c}" for a, c in pts)
+        dd = f' stroke-dasharray="{dash("dash.line")}"' if dashed else ""
+        o.append(f'<path d="{d}" fill="none" stroke="{INK}" stroke-width="{num("stroke.line")}"{dd} marker-end="url(#a)"/>')
+        if label:
+            t(lx, ly, label, BODY, W_BODY, MUTED, anchor)
+
+    t(20, 34, "Up to You — built in the open, served from one box", HEAD, W_HEAD, INK, "start")
+    # The lab. The dev machine sits on the code path only; the classification path is the GPU box
+    # running Ollama, then the PostgreSQL holding batch results (not production), then a copy to the
+    # box. Nothing runs from the cloud to the GPU.
+    region(12, 52, 154, 228, "Lab")
+    b(24, 76, 136, 42, "Dev machine", "commits, publishes")
+    region(20, 128, 140, 82, "GPU box")
+    si("ollama", 30, 156, 28)
+    t(66, 166, "Ollama", BODY, W_TITLE, INK, "start")
+    t(66, 181, "classifier", small, W_BODY, MUTED, "start")
+    t(66, 196, "batches", small, W_BODY, MUTED, "start")
+    arrow([(92, 210), (92, 220)])
+    b(24, 222, 136, 44, "Batch results", "PostgreSQL")
+    # The build path, inside one GitHub region carrying the GitHub mark once.
+    region(222, 56, 596, 82, None)
+    si("github", 232, 63, 20)
+    t(258, 78, "GitHub", BODY, W_TITLE, MUTED, "start")
+    b(234, 88, 110, 44, "Public repo", "each commit")
+    arrow([(160, 110), (230, 110)], "publish", 196, 102)
+    b(370, 88, 196, 44, "GitHub Actions", "builds api · airflow · proxy")
+    arrow([(344, 110), (366, 110)])
+    b(592, 88, 220, 44, "GitHub Container Registry", "ghcr.io · public · full-sha tags", "stored")
+    arrow([(566, 110), (588, 110)])
+    # The AWS frame and the instance.
+    region(232, 156, 592, 470, None, dashed=False)
+    aws("aws-cloud-logo.svg", 244, 166, 40)
+    t(292, 191, "AWS", BODY, W_TITLE, INK, "start")
+    region(252, 216, 552, 280, None)
+    aws("amazon-ec2.svg", 262, 226, 32)
+    t(302, 247, "AWS EC2 · one instance · docker compose", BODY, W_TITLE, MUTED, "start")
+    b(640, 228, 160, 48, "pull-deploy", "timer, by full sha")
+    arrow([(640, 286), (332, 286), (332, 296)], "compose up (all services)", 480, 280)
+    arrow([(746, 132), (746, 224)], "pulls", 740, 180, anchor="end")
+    arrow([(289, 132), (289, 146), (690, 146), (690, 224)], "git pull", 684, 205, dashed=True, anchor="end")
+    b(272, 300, 120, 50, "nginx", "front end", "product")
+    si("fastapi", 480, 305, 40)
+    t(500, 362, "FastAPI", BODY, W_TITLE)
+    t(500, 378, "rounds, stream", BODY, W_BODY, MUTED)
+    si("postgresql", 620, 305, 40)
+    t(668, 321, "PostgreSQL", BODY, W_TITLE, INK, "start")
+    t(668, 338, "pgvector", BODY, W_BODY, MUTED, "start")
+    si("apache-airflow", 480, 412, 40)
+    t(500, 469, "Airflow", BODY, W_TITLE)
+    t(500, 485, "ingests, checks", BODY, W_BODY, MUTED)
+    arrow([(392, 325), (476, 325)], "/api", 434, 317)
+    arrow([(520, 325), (616, 325)], "SQL", 568, 317)
+    arrow([(520, 432), (654, 432), (654, 349)])
+    aws("amazon-s3.svg", 610, 540, 40)
+    t(658, 556, "S3", BODY, W_TITLE, INK, "start")
+    t(658, 573, "nightly dumps", BODY, W_BODY, MUTED, "start")
+    arrow([(500, 490), (500, 560), (606, 560)], "pg_dump", 553, 552)
+    # The batch results reach production as a copy, never live.
+    arrow([(160, 244), (204, 244), (204, 211), (612, 211), (612, 301)], "batch copy, not live", 430, 205, dashed=True)
+    # Outside the box, on the left.
+    b(20, 300, 90, 50, "Members", "browsers", "product")
+    si("cloudflare", 132, 305, 40)
+    t(152, 362, "Cloudflare", BODY, W_TITLE)
+    t(152, 378, "TLS edge", BODY, W_BODY, MUTED)
+    arrow([(110, 325), (128, 325)])
+    arrow([(176, 325), (268, 325)], "HTTPS", 202, 317)
+    b(20, 412, 160, 48, "AI agent", "on the same host")
+    b(272, 412, 150, 48, "MCP lineage tool", "in the api image, stdio")
+    arrow([(180, 436), (268, 436)], "stdio", 206, 428)
+    arrow([(422, 436), (440, 436), (440, 396), (580, 396), (580, 345), (616, 345)], "read-only", 586, 368, anchor="start")
+    t(586, 384, "role", BODY, W_BODY, MUTED, "start")
+    b(20, 540, 190, 48, "Telegram", "alerts", "alert")
+    arrow([(476, 452), (444, 452), (444, 522), (190, 522), (190, 536)], "a task fails, after 2 retries", 317, 516)
+
+    h = 640
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{h}" viewBox="0 0 {W} {h}" '
+            f'font-family="{TEXT_FAMILY}, \'{CJK}\'">'
+            f'<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+            f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="{INK}"/></marker></defs>'
+            f'<rect width="{W}" height="{h}" fill="{GROUND}"/>' + "\n".join(o) + "</svg>")
+
+
+PICTURES = {"architecture": architecture, "etl-flow": etl_flow, "schema-glance": schema_glance,
             "name-ladder": name_ladder, "evaluation-flow": evaluation_flow}
 
 
@@ -304,6 +434,16 @@ def rasterise(svg_path, png_path):
 
 
 def main(argv):
+    import argparse
+    ap = argparse.ArgumentParser(description="Draw the README pictures from style.json.")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="change nothing; exit 1 if a committed SVG differs")
+    mode.add_argument("--labels", action="store_true", help="print {picture: [{text, source}]} as JSON")
+    ap.add_argument("--png", action="store_true", help="also rasterise each SVG to <name>.png at 2x")
+    args = ap.parse_args(argv)
+    if args.png and args.check:
+        ap.error("--png writes files; --check changes nothing")
+    argv = [f"--{k}" for k, v in vars(args).items() if v]
     if "--labels" in argv:
         print(json.dumps({n: [{"text": t, "source": f"docs/diagrams/{n}.json"} for t in draw(n)[1]]
                           for n in PICTURES}, ensure_ascii=False, indent=1))
