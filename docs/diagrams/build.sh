@@ -71,19 +71,17 @@ erdify_run() {  # $@ = extra erdify flags (e.g. --check)
 
 #
 # The look comes from style.json, the same tokens the README pictures are drawn from:
-# mermaid_theme.py maps them onto mermaid's `base` theme and the config is passed with -c.
+# mermaid_theme.py maps them onto mermaid's `base` theme. The result is committed as
+# er-theme.json, so --check can tell when a token change has left the PNGs behind.
 
 render_png() {
-  local theme
-  theme="$(mktemp -d)"
-  python3 "$HERE/mermaid_theme.py" "$HERE/style.json" > "$theme/config.json"
+  python3 "$HERE/mermaid_theme.py" "$HERE/style.json" > "$HERE/er-theme.json"
   for name in "${DIAGRAMS[@]}"; do
     docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
       -e PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-      -v "$HERE:/data" -v "$theme:/theme:ro" "$MERMAID_IMAGE" \
-      -i "/data/$name.mmd" -o "/data/$name.png" -c /theme/config.json -b white -s 3
+      -v "$HERE:/data" "$MERMAID_IMAGE" \
+      -i "/data/$name.mmd" -o "/data/$name.png" -c /data/er-theme.json -b white -s 3
   done
-  rm -rf "$theme"
 }
 
 if [ "$CHECK" = "1" ]; then
@@ -99,6 +97,11 @@ if [ "$CHECK" = "1" ]; then
   done
   # erdify's own drift check: does each .mmd still match what its .sql generates?
   erdify_run --check || failed=1
+  # The theme: the PNGs were drawn with er-theme.json; does style.json still give the same?
+  if ! python3 "$HERE/mermaid_theme.py" "$HERE/style.json" | diff -q - "$HERE/er-theme.json" >/dev/null; then
+    echo "stale: er-theme.json no longer matches style.json, so the ER PNGs are drawn in an old look" >&2
+    failed=1
+  fi
   if [ "$failed" != "0" ]; then
     echo "" >&2
     echo "Rerun docs/diagrams/build.sh and commit the result." >&2
