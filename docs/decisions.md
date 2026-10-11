@@ -17,7 +17,7 @@ ten, and that they sharpen the classifier rather than replacing it. That came fr
 join. It was then measured again on the 200-row evaluation set, which is the harder test: those
 rows are the ones actually scored.
 
-**The accuracy quoted beside the first version of this was 66.0%** — `gemma2:2b` with retrieval on
+**The score quoted beside the first version of this was 66.0%** — `gemma2:2b` with retrieval on
 `testset_v1` under prompt v5 (`round_gemma_v5-rag-2026-08-15_arctic.json.report.md`). The same
 model and configuration now reads **71.0%** on `testset_v3` under prompt v7.
 
@@ -314,9 +314,10 @@ stratum so the small sign and brand strata stay scorable. Labels drafted by a fr
 cross-checked by a second, recorded per row — so a score reads «agreement with the teacher», never
 ground truth.
 
-**What it bought, in one instance:** prompt v4 read better than v3 to a person and scored **51.5 →
-49.5** on the set. Without a frozen set that revision ships on the strength of reading well. That is
-the only thing a fixed set exists to do, and it did it once in the first fortnight.
+**What it is for:** a prompt revision that reads better to a person ships on the strength of
+reading well unless a frozen set scores it. Prompt v4 read better than v3 and scored 51.5 → 49.5:
+inside the ±6.5 band, so the set showed it no better, which is reason enough not to ship it for
+its wording alone.
 
 The draw has never been re-run. v1, v2 and v3 are the same 200 rows in the same order, relabelled
 under a ruling; every report carries the set's sha256 so two scores compare only when it matches.

@@ -102,7 +102,7 @@ be checked.
 | | Before → after | What was measured |
 |---|---|---|
 | **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
-| **AI classification** | Cuisine labels: **51.5% → 61.0% correct** by adding retrieval | A local 2-billion-parameter model labels each restaurant, scored on 200 frozen hand-labelled names. Retrieving five labelled look-alikes first gave the jump. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
+| **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, larger than the set's noise band of about ±6.5 points. The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
 | **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
 
 ## The data pipeline
@@ -232,20 +232,23 @@ Missing knowledge is added as labelled examples; the prompt and the model's weig
 
 ### How it is scored
 
-**One frozen set of 200 names**, drawn once in proportion to the categories, labelled by hand, and
-never re-drawn between rounds. The metric is **accuracy**: the share of names where the model's
-category equals the hand label. Every candidate runs once on the same set, through the same pipeline
-a classification pass uses.
+**One frozen set of 200 names**, drawn once, stratified over the three kinds of name (at least 30
+per stratum), and never re-drawn between rounds. Its reference labels were drafted by one large model
+and cross-checked by a second, not labelled by a person, so the metric is **agreement**: the share of
+names where the model's category equals the reference label. On 200 names a difference under about
+6.5 points is noise. Every candidate runs once on the same set, through the same pipeline a
+classification pass uses.
 
-| Model | Licence | Accuracy on the 200 |
+| Model | Licence | Agreement on the 200 |
 |---|---|---|
 | `qwen2.5:7b-instruct` | Apache-2.0 | **72.0%** |
 | `gemma2:2b` (in use) | Gemma terms | 71.0% |
 | `llama3.2:3b` | Llama 3.2 community | 70.5% |
 | `qwen2.5:3b-instruct` | research licence, evaluation only | 65.5% |
 
-**Why the 2B model:** the top three sit within two points, and the 7B costs three times as much per
-name. The set also caught a prompt revision that read better and scored worse (51.5 → 49.5).
+**Why the 2B model:** the top three sit inside the set's noise band, so the scores do not separate
+them. The 2B was already in use, so it stayed; its full city pass took 10.5 hours on one 8 GB
+graphics card.
 
 **Retrieval is measured per model**, because the same examples help one model and confuse another: on
 the earlier set retrieval moved `gemma2:2b` 51.5 → 61.0 and `llama3.2:3b` 37.0 → 58.0, while
@@ -255,7 +258,7 @@ the earlier set retrieval moved `gemma2:2b` 51.5 → 61.0 and `llama3.2:3b` 37.0
 
 The embedder was screened the same way (nearest neighbour's label as the answer, leave-one-out):
 
-| Embedder | Accuracy |
+| Embedder | Agreement |
 |---|---|
 | `snowflake-arctic-embed2`, bare (in use) | **55.0%** |
 | `snowflake-arctic-embed2`, with its `query:` prefix | 53.5% |
