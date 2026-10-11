@@ -21,6 +21,8 @@ rows are the ones actually scored.
 `testset_v1` under prompt v5 (`round_gemma_v5-rag-2026-08-15_arctic.json.report.md`). The same
 model and configuration now reads **71.0%** on `testset_v3` under prompt v7.
 
+Both were read on the set that configuration was tuned on, so they are indicative, not confirmed.
+
 **The join figures below did not move with it, and that is not luck.** The 200 rows were drawn once
 and frozen; v1, v2 and v3 are the same rows in the same order, relabelled. So «142 of 200 join a
 tax row» is a fact about the draw, not about the prompt that scored it.
@@ -316,7 +318,7 @@ ground truth.
 
 **What it is for:** a prompt revision that reads better to a person ships on the strength of
 reading well unless a frozen set scores it. Prompt v4 read better than v3 and scored 51.5 → 49.5:
-inside the ±6.5 band, so the set showed it no better, which is reason enough not to ship it for
+inside either band, so the set showed it no better, which is reason enough not to ship it for
 its wording alone.
 
 The draw has never been re-run. v1, v2 and v3 are the same 200 rows in the same order, relabelled

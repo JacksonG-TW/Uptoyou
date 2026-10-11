@@ -29,6 +29,10 @@ pipeline, run the rounds through that pipeline instead, and keep the rules below
   still stand. Never compare two numbers without checking which set each one names.
 - **Say when a category is too small to score.** A category with one row in 200 gives 0% or 100%.
   Print «insufficient rows», never a percentage.
+- **A setting chosen on the set is confirmed only on a set it never saw.** Choosing a model, an
+  embedder, k or a prompt on the frozen set and then quoting that set's score overstates it. Before
+  quoting a tuned score as a result, draw a second set from the same population, label it the same
+  way, and run the chosen setting once. Until then, call the score indicative.
 
 ## 2. Fix the metric before the first round
 
@@ -138,6 +142,7 @@ These rounds ran through the project's own classification pipeline, not through 
   three kinds of name with at least 30 per stratum so the small strata stay scorable. The labels
   were drafted by one model and cross-checked by a second, not written by a person, so every number
   below is **agreement with those labels**, not accuracy. The band at 200 rows is about ±6.5 points.
+  The retrieval settings were chosen on this same set, and no second set was drawn.
 - **Retrieval, per model:** five retrieved look-alikes moved a 2B model 51.5% → 61.0% (+9.5: outside
   the ±6.5 band for one score, and just past the ~±9 band for a difference) and a 3B model
   37.0% → 58.0% (+21), both on the same 200 rows. The paired test was not run. Another 3B model went
