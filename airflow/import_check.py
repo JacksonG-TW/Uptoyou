@@ -16,15 +16,20 @@ This script fails the image build instead.
     python import_check.py <dags dir> <src dir> inprocess # under Airflow's Python
 
 The module list is read from the DAG files, never written here, so a DAG that starts a new
-module is checked without anyone remembering to add it. A string counts as a module when it
-names a `.py` file or a package under `<src dir>`; any other `upto.` string (a log line, a
-docstring) is not one. Exit 1 names each module that would not import, with its error.
+module is checked without anyone remembering to add it. A name is taken by its shape: a string
+that is exactly a dotted `upto.` name (a docstring or a log line never is), or the module of a
+`from upto.<module> import`. A name that no longer exists under `<src dir>` is a finding, not a
+skip: a renamed module would otherwise drop out of the list and pass. Exit 1 names each module
+that would not import, with its error.
 """
 
 import ast
 import importlib
 import os
+import re
 import sys
+
+DOTTED = re.compile(r"upto(\.[A-Za-z_]\w*)+")
 
 
 def is_module(name, src):
@@ -50,7 +55,7 @@ def modules(dags, src, mode):
                     continue
             else:
                 continue
-            if name.startswith("upto.") and is_module(name, src):
+            if DOTTED.fullmatch(name):
                 found.add(name)
     return sorted(found)
 
@@ -65,12 +70,15 @@ def main():
         sys.exit("import_check: no upto module found in {} ({}): the reading is broken".format(dags, mode))
     broken = []
     for name in names:
+        if not is_module(name, src):
+            broken.append("{}: not found under {}".format(name, src))
+            continue
         try:
             importlib.import_module(name)
         except Exception as error:  # any failure to import is the finding
             broken.append("{}: {}: {}".format(name, type(error).__name__, error))
-    print("import_check ({}, {}): {} module(s), {} would not import".format(
-        mode, sys.executable, len(names), len(broken)))
+    print("import_check ({}, {}): {} module(s), {} would not import: {}".format(
+        mode, sys.executable, len(names), len(broken), " ".join(names)))
     for line in broken:
         print("  " + line)
     return 1 if broken else 0
