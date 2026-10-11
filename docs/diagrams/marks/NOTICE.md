@@ -120,9 +120,10 @@ that page, so they stay labelled boxes inside the region.
 
 **The file:** `simple-icons-16.28.0.json`, beside this notice. It holds the six marks the architecture
 picture draws: **Cloudflare, FastAPI, PostgreSQL, Apache Airflow, Ollama and GitHub**. Each entry is
-copied **unaltered** from the Simple Icons 16.28.0 entries this repository already carried in archify's
-generated bundle, with its own provenance record kept beside it. Before this, the drawing script read
-them from outside `app/`; now `app/` holds what it draws with.
+**Simple Icons 16.28.0** as published (npm `simple-icons@16.28.0`, `icons/<slug>.svg` and
+`data/simple-icons.json`): paths and colours identical, with each entry's provenance record kept
+beside it. The earlier sections' pointer to a copy under `.claude/skills/` names a private working
+copy that this public tree does not contain; this file is the copy `app/` holds and draws with.
 
 **The source and its terms:** the **Simple Icons 16.28.0** collection, whose **CC0** dedication covers
 the collection work and not the underlying trademarks. Each mark remains its owner's, under the terms

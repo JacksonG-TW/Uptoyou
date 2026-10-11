@@ -2,7 +2,7 @@
  "collection": "Simple Icons",
  "version": "16.28.0",
  "licence": "CC0 1.0 for the collection work; each mark remains its owner's trademark (NOTICE.md)",
- "note": "Copied unaltered from the Simple Icons 16.28.0 entries this repository's archify bundle carries; each entry keeps its own provenance record. draw.py places each path at its own colour and scales it uniformly.",
+ "note": "Simple Icons 16.28.0 as published (npm simple-icons@16.28.0, icons/<slug>.svg and data/simple-icons.json): paths and colours identical, each entry with its provenance record. draw.py places each path at its own colour and scales it uniformly.",
  "marks": [
   {
    "id": "cloudflare",
