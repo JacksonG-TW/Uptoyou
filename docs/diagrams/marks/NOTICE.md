@@ -113,3 +113,23 @@ that page, so they stay labelled boxes inside the region.
   (2026-10-10), so the MCP lineage tool stays a labelled box.
 - **The dev machine, the GPU box and members' browsers** are generic roles with no vendor mark to
   ask about; they stay labelled boxes.
+
+## Simple Icons — the six paths now held here (2026-10-11)
+
+*Appended 2026-10-11 on the owner's ruling; nothing above this line was changed.*
+
+**The file:** `simple-icons-16.28.0.json`, beside this notice. It holds the six marks the architecture
+picture draws: **Cloudflare, FastAPI, PostgreSQL, Apache Airflow, Ollama and GitHub**. Each entry is
+copied **unaltered** from the Simple Icons 16.28.0 entries this repository already carried in archify's
+generated bundle, with its own provenance record kept beside it. Before this, the drawing script read
+them from outside `app/`; now `app/` holds what it draws with.
+
+**The source and its terms:** the **Simple Icons 16.28.0** collection, whose **CC0** dedication covers
+the collection work and not the underlying trademarks. Each mark remains its owner's, under the terms
+already recorded in this notice: referential use in a diagram of this project's own system, no
+implication of sponsorship, endorsement or partnership. GitHub's own terms are quoted in its section
+above.
+
+**How they are used:** `../draw.py` places each path in its own published colour and scales it
+uniformly. No path is redrawn, recoloured, stretched or cropped, and no mark takes a token from
+`../style.json`.

@@ -50,7 +50,8 @@
       "$description": "In drawing units on the size.canvas sheet. Minimums, not free choices: at the README's rendered width each must stay at or above size.minimumRendered.",
       "heading": { "$value": { "value": 20, "unit": "px" }, "$description": "the picture's title" },
       "title":   { "$value": { "value": 15, "unit": "px" }, "$description": "a box title, a note heading" },
-      "body":    { "$value": { "value": 13, "unit": "px" }, "$description": "captions, edge labels, frame labels, notes" }
+      "body":    { "$value": { "value": 13, "unit": "px" }, "$description": "captions, edge labels, frame labels, notes" },
+      "small":   { "$value": { "value": 12, "unit": "px" }, "$description": "the architecture picture's two lines beside the Ollama mark; at 838 px it renders at 11.97, a hair under size.minimumRendered, kept because today's pictures are kept byte for byte" }
     }
   },
   "size": {
