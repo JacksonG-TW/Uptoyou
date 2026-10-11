@@ -46,6 +46,16 @@ RUN mkdir -p /opt/airflow/auth
 COPY --chown=airflow:root api/src /opt/upto/src
 COPY --chown=airflow:root airflow/dags /opt/airflow/dags
 
+# **Every `upto` module a DAG runs must import under the interpreter that runs it, or the build
+# stops.** A failed import surfaces only when its DAG runs, and the classifier's DAG runs only when
+# a new publication lands: it imported the web framework, which the venv does not have, and every
+# scheduled pass failed from 2026-08-14 to 2026-10-10. The module list is read from the DAG files.
+# The script is bind-mounted rather than copied, and PYTHONDONTWRITEBYTECODE is set above, so the
+# image's files are the same with or without this step.
+RUN --mount=type=bind,source=airflow/import_check.py,target=/tmp/import_check.py \
+    /opt/upto/venv/bin/python /tmp/import_check.py /opt/airflow/dags /opt/upto/src child \
+    && python /tmp/import_check.py /opt/airflow/dags /opt/upto/src inprocess
+
 # **A11 ⑤ — `USER airflow` stated, though it was already true. Owner-ruled 2026-08-19.**
 #
 # `apache/airflow:3.0.2` (and 3.0.6, re-checked at the bump) already ends on `USER airflow` (uid 50000), and nothing above switches to
