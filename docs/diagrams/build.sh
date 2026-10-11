@@ -24,7 +24,9 @@ DIAGRAMS=(er-overview er-reference er-weather er-product er-ledger)
 # tool's own version bump as a schema change.
 ERDIFY_VERSION="0.12.1"
 PYTHON_IMAGE="python:3.13-slim"
-MERMAID_IMAGE="minlag/mermaid-cli:latest"
+# mermaid-cli by version and digest: 11.16.0 is the release the committed PNGs were drawn
+# with; re-rendered under this pin, four differ only in anti-aliasing and one not at all.
+MERMAID_IMAGE="minlag/mermaid-cli:11.16.0@sha256:29077c6bd02f14bdfdd5fee552d9c00fe68d4fab3cd84952d21e2d1faf2fadaf"
 
 CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
