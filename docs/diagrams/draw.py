@@ -105,7 +105,14 @@ def box(x, y, w, h, label, caption=None, key=None):
     out = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{num("radius.box")}" fill="{tint}" '
            f'stroke="{border}" stroke-width="{width}"/>']
     cy = y + h / 2
-    if caption:
+    lines = caption.split("\n") if caption else []
+    if len(lines) > 1:
+        # A caption of several lines: the block is centred, one 18-unit step per line.
+        top = cy - 3 - 9 * (len(lines) - 1)
+        out.append(text(x + w / 2, top, label, TITLE, W_TITLE))
+        for i, ln in enumerate(lines):
+            out.append(text(x + w / 2, top + 18 * (i + 1), ln, BODY, W_BODY, MUTED))
+    elif caption:
         out.append(text(x + w / 2, cy - 3, label, TITLE, W_TITLE))
         out.append(text(x + w / 2, cy + 15, caption, BODY, W_BODY, MUTED))
     else:
@@ -156,7 +163,7 @@ def etl_flow():
         q.append(text(x, 66, label, BODY, W_TITLE, MUTED, "start"))
     q.append(box(20, 96, 180, 64, "中央氣象署 · 2 sources", "forecast + observation", "weather"))
     q.append(box(20, 226, 180, 64, "5 daily sources", "zip, csv · nightly", "public"))
-    q.append(box(228, 161, 150, 64, "6 ingest DAGs", "one per source", "pipeline"))
+    q.append(box(228, 161, 150, 82, "6 ingest DAGs", "weather's DAG reads\ntwo CWA datasets", "pipeline"))
     q.append(box(452, 161, 160, 64, "PostgreSQL", "publications + ledger", "stored"))
     q.append(box(228, 336, 160, 64, "Value + freshness", "each ingest · nightly", "pipeline"))
     q.append(box(655, 80, 165, 56, "The product", "reads names, weather", "product"))
@@ -172,7 +179,7 @@ def etl_flow():
     q.append(line([(532, 225), (532, 368), (392, 368)], "counts, hours", (462, 386)))
     q.append(line([(308, 400), (308, 436), (737, 436), (737, 400)], "a rule breaks", (522, 428), dashed=True))
     # Any task that fails after its 2 retries alerts too (the on_failure_callback in every ingest DAG).
-    q.append(line([(240, 225), (240, 315), (220, 315), (220, 462), (790, 462), (790, 400)], "a task fails, after 2 retries",
+    q.append(line([(240, 243), (240, 315), (220, 315), (220, 462), (790, 462), (790, 400)], "a task fails, after 2 retries",
                   (505, 486)))
     q.append("</svg>")
     return "\n".join(q)
