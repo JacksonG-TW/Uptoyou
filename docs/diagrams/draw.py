@@ -192,7 +192,7 @@ def schema_glance():
     q.append(frame(16, 166, 200, 288, "Reference", "public"))
     q.append(box(30, 192, 172, 56, "publications", "one per source", "public"))
     q.append(box(30, 290, 172, 56, "reference_place", "as published", "public"))
-    q.append(box(30, 388, 172, 56, "place", "ours, 3 origins", "public"))
+    q.append(box(30, 388, 172, 56, "place", "ours, 2 origins", "public"))
     q.append(frame(318, 60, 506, 330, "Product", "product"))
     q.append(box(334, 86, 190, 56, "circle", "the table", "product"))
     q.append(box(616, 86, 190, 56, "member", "a seat, a nickname", "product"))
