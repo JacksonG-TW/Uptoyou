@@ -16,3 +16,7 @@
 
 # A host's TLS material is mounted at run time (compose.yaml, proxy) and must never be baked in.
 tls/
+
+# The public agent skill (.claude/skills/) is documentation for a reader of the repository; no image
+# carries it.
+.claude/

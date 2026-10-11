@@ -265,6 +265,8 @@ The embedder was screened the same way (nearest neighbour's label as the answer,
 | `e5`, with `query:` | 51.5% |
 | `0.6b`, with an instruction | 51.5% |
 
+The method is packaged as an agent skill, [`model-eval`](.claude/skills/model-eval/SKILL.md): a frozen labelled set, one metric read against its noise band, one resumable round per candidate and a round table, with a small Python standard-library runner for any Ollama-compatible server.
+
 ### Why local
 
 - **Quota:** a hosted model's free tier allows 500 calls a day, so 3,300 places take a week; the
