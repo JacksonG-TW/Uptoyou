@@ -534,10 +534,12 @@ def embed_host_preflight(generator_url: str, embed_host: str, embed_model: str,
     to say so. A classify pass uses one host for both, so a round that stands for production must
     too (owner 「A」, 2026-10-11).
 
-    **And the query model must be the crib's model, byte for byte.** The crib was embedded where
-    `examples load` ran; if either machine re-pulls the embedder, the round would retrieve with one
-    set of weights against vectors made by another. The digests are compared, and both go into the
-    round file.
+    **And the query model must be the one the crib's host serves.** The crib was embedded where
+    `examples load` ran; if one machine re-pulls the embedder, the round would retrieve with one
+    set of weights against vectors made by another. The digests the two hosts serve *today* are
+    compared, and both go into the round file. **What this cannot see:** a re-pull on both hosts
+    after the crib was loaded — `example_embedding` records no embedder digest, so the weights the
+    vectors were made with are not on record (a column for it is a schema change, the owner's).
     """
     generator_host = urllib.parse.urlparse(generator_url).netloc
     if generator_host != embed_host:
