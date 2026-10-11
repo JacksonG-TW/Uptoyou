@@ -962,6 +962,36 @@ class TestTheHeldOutSet(unittest.TestCase):
         self.assertEqual([r["name"] for r in rows], ["乙"])
         self.assertEqual(len(digest), 64)
 
+    def test_a_set_not_named_heldout_is_refused(self):
+        # The reviewer's reproduction: a disjoint set saved as testset_v3.json elsewhere would
+        # take the frozen round's file name and resume over it.
+        import shutil
+        frozen = [{"registry_no": "A-1", "name": "甲", "label": "其他"}]
+        source = self._write([{"registry_no": "B-2", "name": "乙", "label": None}])
+        for bad in ("testset_v3.json", "k3.json", "arctic.json"):
+            directory = tempfile.mkdtemp()
+            self.addCleanup(shutil.rmtree, directory)
+            target = os.path.join(directory, bad)
+            shutil.copy(source, target)
+            with self.assertRaises(run_round.UsageError):
+                run_round.asked_set(target, frozen)
+
+    def test_a_round_file_asked_another_set_is_not_resumed(self):
+        directory = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, directory)
+        held = os.path.join(directory, "heldout_t1.json")
+        with open(held, "w", encoding="utf-8") as handle:
+            json.dump({"rows": [{"registry_no": "B-2", "name": "乙", "label": None}]}, handle,
+                      ensure_ascii=False)
+        os.environ["UPTO_EVALUATION_DIR"] = directory
+        self.addCleanup(os.environ.pop, "UPTO_EVALUATION_DIR")
+        path = run_round.round_path("gemma", asked_set="heldout_t1.json")
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump({"candidate": "gemma", "prompt_version": run_round.PROMPT_VERSION,
+                       "testset": "heldout_t1.json", "testset_sha256_at_run": "0" * 64,
+                       "rows": []}, handle)
+        self.assertEqual(run_round.main(["gemma", "--testset", held]), 2)
+
     def test_testset_without_a_path_is_a_usage_error(self):
         self.assertEqual(run_round.main(["gemma", "--testset"]), 2)
 

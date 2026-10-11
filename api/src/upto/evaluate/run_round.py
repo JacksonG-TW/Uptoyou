@@ -85,6 +85,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import sys
 import time
@@ -697,6 +698,13 @@ def asked_set(path: str, frozen_rows: list[dict]) -> tuple[list[dict], str]:
     than trusted to the draw**, because the file is what is asked and the draw is history.
     Leave-one-out by name still applies at the query, exactly as in a frozen round.
     """
+    stem = os.path.splitext(os.path.basename(path))[0]
+    if not re.fullmatch(r"heldout[\w-]*", stem):
+        # The stem becomes the round file's last suffix, so it must neither collide with the
+        # frozen set's name (which appends nothing) nor read as another axis (`_k3`, `_arctic`).
+        raise UsageError(
+            "a held-out set's file is named heldout<…>.json — {} is not, and its name would "
+            "become the round's suffix.".format(os.path.basename(path)))
     rows, digest = load_testset(path)
     shared = {row["registry_no"] for row in rows} & {row["registry_no"] for row in frozen_rows}
     if shared:
@@ -865,6 +873,20 @@ def main(argv: list[str]) -> int:
     if os.path.exists(path):
         with open(path, encoding="utf-8") as handle:
             existing = json.load(handle)
+        held_out = asked_name != os.path.basename(TESTSET_PATH)
+        if existing.get("testset") != asked_name or (
+                held_out and existing.get("testset_sha256_at_run") != asked_digest):
+            # One round is one asked set: resuming across sets would replace one set's answers
+            # under the other's name and sha. (The frozen set's own amendments keep their
+            # existing path: resume_point and the scorer's sha check already answer them.)
+            print(
+                f"{path} was asked {existing.get('testset')} "
+                f"({str(existing.get('testset_sha256_at_run'))[:16]}…) and this run asks "
+                f"{asked_name} ({asked_digest[:16]}…). Move it aside rather than mixing two sets "
+                "in one file.",
+                file=sys.stderr,
+            )
+            return 2
         if existing.get("candidate") != name or existing.get("prompt_version") != prompt_version:
             print(
                 f"{path} holds a {existing.get('candidate')} round at prompt "
