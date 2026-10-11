@@ -90,6 +90,7 @@ import socket
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
@@ -505,6 +506,61 @@ def read_key(path: str = GEMINI_KEY_FILE) -> str:
     return key
 
 
+# Where `examples load` embedded the crib: the embedder's own default host, the dev VM's compose
+# Ollama. A round's query vectors must come from the same model weights as the crib's (H109).
+CRIB_EMBED_HOST = os.environ.get("UPTO_CRIB_EMBED_HOST", "ollama:11434")
+
+
+def served_digest(host: str, model: str) -> str | None:
+    """The digest `host` serves `model` under, or None if it is down or does not hold it."""
+    try:
+        with urllib.request.urlopen(f"http://{host}/api/tags", timeout=10) as response:
+            tags = json.load(response)
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+    for entry in tags.get("models", []):
+        if entry.get("name") in (model, model + ":latest"):
+            return entry.get("digest")
+    return None
+
+
+def embed_host_preflight(generator_url: str, embed_host: str, embed_model: str,
+                         crib_host: str = CRIB_EMBED_HOST, digest_of=served_digest) -> dict:
+    """Refuse a retrieval round whose two halves would run on different machines (H109).
+
+    **The generator follows `UPTO_OLLAMA_URL` and the query embeddings follow `UPTO_MODEL_HOST`**,
+    and until 2026-10-11 a round set only the first: gemma answered on the GPU box while every
+    query vector was made on the dev VM, with correct-looking output and nothing in the round file
+    to say so. A classify pass uses one host for both, so a round that stands for production must
+    too (owner 「A」, 2026-10-11).
+
+    **And the query model must be the crib's model, byte for byte.** The crib was embedded where
+    `examples load` ran; if either machine re-pulls the embedder, the round would retrieve with one
+    set of weights against vectors made by another. The digests are compared, and both go into the
+    round file.
+    """
+    generator_host = urllib.parse.urlparse(generator_url).netloc
+    if generator_host != embed_host:
+        raise UsageError(
+            f"the generator runs at {generator_host} (UPTO_OLLAMA_URL) and the query embeddings "
+            f"at {embed_host} (UPTO_MODEL_HOST): two machines. Set UPTO_MODEL_HOST={generator_host} "
+            "so the round embeds where it generates, as a classify pass does (H109).")
+    query = digest_of(embed_host, embed_model)
+    crib = query if crib_host == embed_host else digest_of(crib_host, embed_model)
+    if query is None or crib is None:
+        raise UsageError(
+            f"could not read {embed_model}'s digest at {embed_host if query is None else crib_host} "
+            "— the host is down or does not hold the model. The round needs both digests to know "
+            "it retrieves with the crib's own weights (H109).")
+    if query != crib:
+        raise UsageError(
+            f"{embed_model} is {query[:12]} at {embed_host} but {crib[:12]} at {crib_host}, where "
+            "the crib was embedded: two different models under one name. Re-pull one side, or "
+            "reload the crib with the round's host (H109).")
+    return {"embed_host": embed_host, "embed_digest": query,
+            "crib_embed_host": crib_host, "crib_embed_digest": crib}
+
+
 def _crib_provenance(embed_model: str) -> dict:
     """What the round retrieved from, per source — sizes and digests.
 
@@ -856,6 +912,8 @@ def main(argv: list[str]) -> int:
     if rag:
         embed_model = EMBED_MODELS[embed_key]
         try:
+            from upto.classify import embed as embedding
+            hosts = embed_host_preflight(OLLAMA_URL, embedding.HOST, embed_model)
             examples_for = rag_examples(digest, embed_model, k)
         except UsageError as error:
             print(str(error), file=sys.stderr)
@@ -870,6 +928,7 @@ def main(argv: list[str]) -> int:
         # the time, which nobody can check afterwards. `brand` is absent on a round run before
         # the crib was grown, which is a true statement about that round rather than a gap.
         document["rag"].update(_crib_provenance(embed_model))
+        document["rag"].update(hosts)
     if os.path.exists(path):
         with open(path, encoding="utf-8") as handle:
             existing = json.load(handle)

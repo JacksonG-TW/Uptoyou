@@ -391,13 +391,16 @@ class TestTheKAxis(unittest.TestCase):
             seen["embed_model"] = embed_model
             raise run_round.UsageError("stopped here on purpose")
 
-        originals = (run_round.build_candidate, run_round.rag_examples)
+        originals = (run_round.build_candidate, run_round.rag_examples,
+                     run_round.embed_host_preflight)
         run_round.build_candidate = lambda name: Stubbed()
         run_round.rag_examples = capture
+        run_round.embed_host_preflight = lambda *a, **kw: {}  # no network here (H109's own test is below)
         try:
             status = run_round.main(argv)
         finally:
-            run_round.build_candidate, run_round.rag_examples = originals
+            (run_round.build_candidate, run_round.rag_examples,
+             run_round.embed_host_preflight) = originals
         return status, seen
 
     def test_the_default_k_is_five(self):
@@ -516,17 +519,20 @@ class TestTheKAxis(unittest.TestCase):
 
     def _run_offline_round(self, argv, directory):
         """A whole round with a stubbed candidate and a stubbed crib: no model, no store."""
-        originals = (run_round.build_candidate, run_round.rag_examples)
+        originals = (run_round.build_candidate, run_round.rag_examples,
+                     run_round.embed_host_preflight)
         previous = os.environ.get("UPTO_EVALUATION_DIR")
         os.environ["UPTO_EVALUATION_DIR"] = directory
         run_round.build_candidate = lambda name: Stubbed()
         run_round.rag_examples = lambda digest, embed_model, k=5: (
             lambda name: list(EXAMPLES)[:k]
         )
+        run_round.embed_host_preflight = lambda *a, **kw: {}
         try:
             return run_round.main(argv)
         finally:
-            run_round.build_candidate, run_round.rag_examples = originals
+            (run_round.build_candidate, run_round.rag_examples,
+             run_round.embed_host_preflight) = originals
             if previous is None:
                 del os.environ["UPTO_EVALUATION_DIR"]
             else:
@@ -994,6 +1000,43 @@ class TestTheHeldOutSet(unittest.TestCase):
 
     def test_testset_without_a_path_is_a_usage_error(self):
         self.assertEqual(run_round.main(["gemma", "--testset"]), 2)
+
+
+class TestTheEmbedHost(unittest.TestCase):
+    """H109 (owner 「A」, 2026-10-11): a round embeds where it generates, with the crib's weights."""
+
+    def digests(self, table):
+        return lambda host, model: table.get(host)
+
+    def test_two_hosts_are_refused(self):
+        with self.assertRaises(run_round.UsageError) as caught:
+            run_round.embed_host_preflight("http://172.17.0.1:11434", "ollama:11434",
+                                           "snowflake-arctic-embed2",
+                                           digest_of=self.digests({}))
+        self.assertIn("UPTO_MODEL_HOST=172.17.0.1:11434", str(caught.exception))
+
+    def test_a_digest_differing_from_the_crib_host_is_refused(self):
+        with self.assertRaises(run_round.UsageError) as caught:
+            run_round.embed_host_preflight(
+                "http://172.17.0.1:11434", "172.17.0.1:11434", "snowflake-arctic-embed2",
+                crib_host="ollama:11434",
+                digest_of=self.digests({"172.17.0.1:11434": "aaa" * 20, "ollama:11434": "bbb" * 20}))
+        self.assertIn("two different models under one name", str(caught.exception))
+
+    def test_an_unreadable_digest_is_refused(self):
+        with self.assertRaises(run_round.UsageError):
+            run_round.embed_host_preflight(
+                "http://172.17.0.1:11434", "172.17.0.1:11434", "snowflake-arctic-embed2",
+                crib_host="ollama:11434", digest_of=self.digests({"172.17.0.1:11434": "a" * 64}))
+
+    def test_one_host_one_digest_is_recorded(self):
+        same = "5de93a84837d" + "0" * 52
+        out = run_round.embed_host_preflight(
+            "http://172.17.0.1:11434", "172.17.0.1:11434", "snowflake-arctic-embed2",
+            crib_host="ollama:11434",
+            digest_of=self.digests({"172.17.0.1:11434": same, "ollama:11434": same}))
+        self.assertEqual(out, {"embed_host": "172.17.0.1:11434", "embed_digest": same,
+                               "crib_embed_host": "ollama:11434", "crib_embed_digest": same})
 
 
 if __name__ == "__main__":
