@@ -1,0 +1,3026 @@
+{
+ "candidate": "gemma",
+ "model": "gemma2:2b",
+ "prompt_version": "v7-rag-2026-08-30",
+ "testset": "heldout_v1.json",
+ "testset_sha256_at_run": "e102b6c5a6a3a25fb05a1de73fddfcce8488ffc91e816220930ef6dfe2b26610",
+ "started_at": "2026-10-11T13:34:07+00:00",
+ "finished_at": "2026-10-11T13:39:49+00:00",
+ "rows": [
+  {
+   "i": 0,
+   "name": "匹胖鐵板燒商行",
+   "layer": "registered",
+   "gold": "燒烤",
+   "answer": "燒烤",
+   "outcome": "category",
+   "examples": [
+    "炭火食業有限公司",
+    "食藝小吃店",
+    "臺北溙小吃店",
+    "嘎兜商行",
+    "馬可先生麵包坊"
+   ]
+  },
+  {
+   "i": 1,
+   "name": "五沅小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "丞鑫小吃店",
+    "饞食小吃店",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 2,
+   "name": "潮味商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "志慶商行",
+    "永旺商行",
+    "林霖商行",
+    "九龍商行",
+    "儒陵商行"
+   ]
+  },
+  {
+   "i": 3,
+   "name": "基督復臨安息日會醫療財團法人臺安醫院",
+   "layer": "sign",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "馬偕紀念醫院附設喜樂工作坊",
+    "復興航棧",
+    "時尚產後護理之家",
+    "臺北碧瑤飯店",
+    "奇華餅家"
+   ]
+  },
+  {
+   "i": 4,
+   "name": "臺北市松山區敦化國小",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "樂雅樂餐廳-敦化店",
+    "翰林茶館-松山機場",
+    "樂田-松山",
+    "饗樂餐飲實業股份有限公司松山民生分公司",
+    "紅蕃茄餐飲-臺北市立中崙高中"
+   ]
+  },
+  {
+   "i": 5,
+   "name": "麥當勞-臺北民生",
+   "layer": "sign",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "麥當勞民生二和德昌(股)公司",
+    "麥當勞",
+    "饗樂餐飲實業股份有限公司松山民生分公司",
+    "築間-臺北復興南店",
+    "臺北國泰萬怡酒店-MJ Kitchen"
+   ]
+  },
+  {
+   "i": 6,
+   "name": "麥當勞-民權一",
+   "layer": "sign",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "麥當勞",
+    "麥當勞民生二和德昌(股)公司",
+    "壹咖啡",
+    "馬可先生麵包坊",
+    "麥味登"
+   ]
+  },
+  {
+   "i": 7,
+   "name": "大來商旅(桃莉廚房)",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "大來自助餐",
+    "燕子廚房",
+    "好食廚坊",
+    "廣一樂廚",
+    "幸福時光廚房"
+   ]
+  },
+  {
+   "i": 8,
+   "name": "君悅排骨-敦北店",
+   "layer": "sign",
+   "gold": "飯食",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "樂雅樂餐廳-敦化店",
+    "臺北君悅酒店-彩日本料理",
+    "雞啃夠有限公司光復店",
+    "牛鼎火鍋店",
+    "春水堂-慶城店"
+   ]
+  },
+  {
+   "i": 9,
+   "name": "新東陽",
+   "layer": "brand",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "新東陽",
+    "五桐號",
+    "五桐號",
+    "京盛宇",
+    "龍凰號"
+   ]
+  },
+  {
+   "i": 10,
+   "name": "STARBUCKS COFFEE",
+   "layer": "brand",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "STARBUCKS COFFEE",
+    "KEY COFFEE",
+    "Dreamers Coffee Roasters",
+    "奎士咖啡",
+    "路易莎咖啡"
+   ]
+  },
+  {
+   "i": 11,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 12,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 13,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 14,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 15,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 16,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 17,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 18,
+   "name": "上島咖啡-八德店",
+   "layer": "sign",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "上島珈琲店",
+    "丹堤咖啡",
+    "那琇自家烘焙咖啡廳",
+    "鶴茶樓-鶴頂紅茶商店",
+    "S&D咖啡"
+   ]
+  },
+  {
+   "i": 19,
+   "name": "鬍鬚張-臺北民生店",
+   "layer": "sign",
+   "gold": "飯食",
+   "answer": "飯食",
+   "outcome": "category",
+   "examples": [
+    "鬍鬚張-臺北八德店",
+    "臺北溙小吃店",
+    "鬍子茶",
+    "築間-臺北復興南店",
+    "雞啃夠有限公司光復店"
+   ]
+  },
+  {
+   "i": 20,
+   "name": "OK mart",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "OK mart",
+    "永旺商行",
+    "饞食小吃店",
+    "美食街食品行",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 21,
+   "name": "OK mart",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "OK mart",
+    "永旺商行",
+    "饞食小吃店",
+    "美食街食品行",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 22,
+   "name": "OK mart",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "OK mart",
+    "永旺商行",
+    "饞食小吃店",
+    "美食街食品行",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 23,
+   "name": "OK mart",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "OK mart",
+    "永旺商行",
+    "饞食小吃店",
+    "美食街食品行",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 24,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 25,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 26,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 27,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 28,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 29,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 30,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 31,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 32,
+   "name": "全家便利商店股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "全家便利商店股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司",
+    "鮨舍股份有限公司",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 33,
+   "name": "萊爾富",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "萊爾富",
+    "林霖商行",
+    "來于生活股份有限公司",
+    "路易莎咖啡股份有限公司",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 34,
+   "name": "萊爾富",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "萊爾富",
+    "林霖商行",
+    "來于生活股份有限公司",
+    "路易莎咖啡股份有限公司",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 35,
+   "name": "萊爾富",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "萊爾富",
+    "林霖商行",
+    "來于生活股份有限公司",
+    "路易莎咖啡股份有限公司",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 36,
+   "name": "萊爾富",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "萊爾富",
+    "林霖商行",
+    "來于生活股份有限公司",
+    "路易莎咖啡股份有限公司",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 37,
+   "name": "摩斯漢堡",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "摩斯漢堡",
+    "拉亞漢堡",
+    "弘爺漢堡",
+    "鮮堡漢堡",
+    "城市漢堡"
+   ]
+  },
+  {
+   "i": 38,
+   "name": "摩斯漢堡",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "摩斯漢堡",
+    "拉亞漢堡",
+    "弘爺漢堡",
+    "鮮堡漢堡",
+    "城市漢堡"
+   ]
+  },
+  {
+   "i": 39,
+   "name": "摩斯漢堡",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "摩斯漢堡",
+    "拉亞漢堡",
+    "弘爺漢堡",
+    "鮮堡漢堡",
+    "城市漢堡"
+   ]
+  },
+  {
+   "i": 40,
+   "name": "摩斯漢堡",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "摩斯漢堡",
+    "拉亞漢堡",
+    "弘爺漢堡",
+    "鮮堡漢堡",
+    "城市漢堡"
+   ]
+  },
+  {
+   "i": 41,
+   "name": "芭蕾國際食品有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "世運食品股份有限公司",
+    "寶林餐飲事業股份有限公司",
+    "鮨舍股份有限公司",
+    "嘻嘻哈哈有限公司",
+    "米塔國際餐旅事業集團"
+   ]
+  },
+  {
+   "i": 42,
+   "name": "關北企業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "凰品企業有限公司",
+    "金滿有限公司",
+    "晁楷股份有限公司",
+    "后苑餐飲股份有限公司",
+    "團圓國際股份有限公司"
+   ]
+  },
+  {
+   "i": 43,
+   "name": "北方園實業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "瘋果子有限公司",
+    "凰品企業有限公司",
+    "后苑餐飲股份有限公司",
+    "啜香有限公司",
+    "福田有限公司"
+   ]
+  },
+  {
+   "i": 44,
+   "name": "睿鼎興業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "雲鼎網路有限公司",
+    "凰品企業有限公司",
+    "荐恆軒藝文實業有限公司",
+    "維利揚有限公司",
+    "金滿有限公司"
+   ]
+  },
+  {
+   "i": 45,
+   "name": "犁園湯包館",
+   "layer": "sign",
+   "gold": "麵食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "蘭丸美食館",
+    "牛鼎火鍋店",
+    "御膳煲養生雞湯館",
+    "醉楓園小館",
+    "饞食小吃店"
+   ]
+  },
+  {
+   "i": 46,
+   "name": "山喜房國際事業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "國亨開發股份有限公司",
+    "石松國際有限公司",
+    "鮨舍股份有限公司",
+    "紅屋餐飲事業有限公司",
+    "八方雲集國際股份有限公司"
+   ]
+  },
+  {
+   "i": 47,
+   "name": "和民手作廚房-微風南京店",
+   "layer": "sign",
+   "gold": "日式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "這味泰泰-微風南京",
+    "微風超市股份有限公司",
+    "瑞麟美又美南京店",
+    "燕子廚房",
+    "點水樓-南京店"
+   ]
+  },
+  {
+   "i": 48,
+   "name": "三井料理美術館",
+   "layer": "sign",
+   "gold": "日式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "臺北君悅酒店-彩日本料理",
+    "食藝小吃店",
+    "蘭丸美食館",
+    "欣葉日本料理",
+    "築川越南美食小吃店"
+   ]
+  },
+  {
+   "i": 49,
+   "name": "吉品海鮮餐廳",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": null,
+   "outcome": "refused",
+   "examples": [
+    "牛鼎火鍋店",
+    "嗎哪天然之味餐廳",
+    "聚寶餐廳",
+    "蘭丸美食館",
+    "李記中式餐廳"
+   ],
+   "raw": "海鮮 \n"
+  },
+  {
+   "i": 50,
+   "name": "樂田-南京復興",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "樂田-松山",
+    "樂田麵包屋",
+    "樂麵屋",
+    "樂家康",
+    "復興航棧"
+   ]
+  },
+  {
+   "i": 51,
+   "name": "樂田-南復二店",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "樂田麵包屋",
+    "樂田-松山",
+    "樂麵屋",
+    "樂雅樂餐廳-敦化店",
+    "春水堂-慶城店"
+   ]
+  },
+  {
+   "i": 52,
+   "name": "好了啦紅茶冰",
+   "layer": "brand",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "好了啦紅茶冰",
+    "李記紅茶冰",
+    "紅茶巴士",
+    "紅茶洋行",
+    "初韻好韻茶"
+   ]
+  },
+  {
+   "i": 53,
+   "name": "烤食煮盒便當屋",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "好食廚坊",
+    "咖哩盒食 & 麵東北",
+    "甘擔廚房",
+    "食藝小吃店",
+    "煮婦廚房"
+   ]
+  },
+  {
+   "i": 54,
+   "name": "德和綠茶專賣店",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "綠蓋茶館",
+    "鶴茶樓-鶴頂紅茶商店",
+    "紅茶洋行",
+    "吉祥小吃店",
+    "橘子工坊飲料店"
+   ]
+  },
+  {
+   "i": 55,
+   "name": "六號水門工作室",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "百蕎工作室",
+    "燕子廚房",
+    "比沙家國際本舖",
+    "幸福時光廚房",
+    "水巷茶弄"
+   ]
+  },
+  {
+   "i": 56,
+   "name": "麥味登",
+   "layer": "brand",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "麥味登",
+    "麥當勞",
+    "米米香",
+    "林少宇",
+    "瑞麟美而美"
+   ]
+  },
+  {
+   "i": 57,
+   "name": "作良時有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "四時輕燒肉股份有限公司",
+    "金滿有限公司",
+    "炭物語有限公司",
+    "維利揚有限公司",
+    "福田有限公司"
+   ]
+  },
+  {
+   "i": 58,
+   "name": "泰鼎泰式餐廳",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "日式",
+   "outcome": "category",
+   "examples": [
+    "牛鼎火鍋店",
+    "臺北溙小吃店",
+    "食藝小吃店",
+    "吉祥小吃店",
+    "島語自助餐廳"
+   ]
+  },
+  {
+   "i": 59,
+   "name": "彼內朵有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "凰品企業有限公司",
+    "維利揚有限公司",
+    "啜香有限公司",
+    "合尊股份有限公司",
+    "法特曼有限公司"
+   ]
+  },
+  {
+   "i": 60,
+   "name": "老撈有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "嘻嘻哈哈有限公司",
+    "啜香有限公司",
+    "金滿有限公司",
+    "鮨舍股份有限公司",
+    "頤樂餐飲有限公司"
+   ]
+  },
+  {
+   "i": 61,
+   "name": "大戶屋-微風廣場店",
+   "layer": "sign",
+   "gold": "日式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "微風超市股份有限公司",
+    "翁翁小館",
+    "小李子麵食館",
+    "樂田麵包屋",
+    "一風堂"
+   ]
+  },
+  {
+   "i": 62,
+   "name": "王記府城肉粽",
+   "layer": "sign",
+   "gold": "飯食",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "朱記餡餅粥店",
+    "李記中式餐廳",
+    "金仙魯肉飯",
+    "弘爺漢堡",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 63,
+   "name": "立彪企業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "維利揚有限公司",
+    "凰品企業有限公司",
+    "金滿有限公司",
+    "濡果企業社",
+    "合尊股份有限公司"
+   ]
+  },
+  {
+   "i": 64,
+   "name": "Krispy Kreme Doughnuts",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "Krispy Kreme Doughnuts",
+    "喜憨兒烘焙屋",
+    "肯德基",
+    "肯德基",
+    "橘子工坊飲料店"
+   ]
+  },
+  {
+   "i": 65,
+   "name": "五花馬-松山機場",
+   "layer": "sign",
+   "gold": "麵食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "翰林茶館-松山機場",
+    "環亞機場貴賓室-臺灣松山國際機場",
+    "WING CAFÉ-松山機場",
+    "大心-臺北松山機場店",
+    "松山機場聯合貴賓室(高雄空廚公司)"
+   ]
+  },
+  {
+   "i": 66,
+   "name": "花也生活企劃有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "來于生活股份有限公司",
+    "炭物語有限公司",
+    "頤樂餐飲有限公司",
+    "夢想三十八號股份有限公司",
+    "活潑餐飲行銷有限公司"
+   ]
+  },
+  {
+   "i": 67,
+   "name": "滷台味-微風南京",
+   "layer": "sign",
+   "gold": "麵食",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "這味泰泰-微風南京",
+    "大厝內滷味",
+    "beard papa-微風南京店",
+    "臺北溙小吃店",
+    "微風超市股份有限公司"
+   ]
+  },
+  {
+   "i": 68,
+   "name": "臺灣富禮納思股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "樂尼尼國際股份有限公司",
+    "晁楷股份有限公司",
+    "夢想三十八號股份有限公司",
+    "后苑餐飲股份有限公司",
+    "合尊股份有限公司"
+   ]
+  },
+  {
+   "i": 69,
+   "name": "黑橋牌企業股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "鮨舍股份有限公司",
+    "岩島成股份有限公司",
+    "晁楷股份有限公司",
+    "合尊股份有限公司",
+    "石石餐飲企業股份有限公司"
+   ]
+  },
+  {
+   "i": 70,
+   "name": "微風國際股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "微風超市股份有限公司",
+    "艾風有限公司",
+    "香味股份有限公司",
+    "八方雲集國際股份有限公司",
+    "樂尼尼國際股份有限公司"
+   ]
+  },
+  {
+   "i": 71,
+   "name": "八方雲集國際股份有限公司",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "團圓國際股份有限公司",
+    "雲鼎網路有限公司",
+    "嘻嘻哈哈有限公司",
+    "世運食品股份有限公司",
+    "合尊股份有限公司"
+   ]
+  },
+  {
+   "i": 72,
+   "name": "花蓮扁食",
+   "layer": "brand",
+   "gold": "麵食",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "花蓮扁食",
+    "臺北溙小吃店",
+    "食藝小吃店",
+    "粥麵湯鍋",
+    "吉祥小吃店"
+   ]
+  },
+  {
+   "i": 73,
+   "name": "沙拉野餐工作室",
+   "layer": "registered",
+   "gold": "西式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "百蕎工作室",
+    "雲先生創意食堂",
+    "拾方素食館",
+    "食藝小吃店",
+    "饞食小吃店"
+   ]
+  },
+  {
+   "i": 74,
+   "name": "beard papa's-SOGO復興店",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "beard papa-微風南京店",
+    "はま寿司-南京復興店",
+    "春水堂-慶城店",
+    "振作小吃店",
+    "雞啃夠有限公司光復店"
+   ]
+  },
+  {
+   "i": 75,
+   "name": "清心福全",
+   "layer": "brand",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "清心福全",
+    "幸福道",
+    "萬家福",
+    "萬家福",
+    "豐富"
+   ]
+  },
+  {
+   "i": 76,
+   "name": "HOOTERS美式餐廳",
+   "layer": "sign",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "麥當勞",
+    "阿瑪翠斯廚房",
+    "食藝小吃店",
+    "李記中式餐廳",
+    "島語自助餐廳"
+   ]
+  },
+  {
+   "i": 77,
+   "name": "善禾企業股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "凰品企業有限公司",
+    "鮨舍股份有限公司",
+    "濡果企業社",
+    "合尊股份有限公司",
+    "永旺商行"
+   ]
+  },
+  {
+   "i": 78,
+   "name": "二師兄肉羹-松山機場",
+   "layer": "sign",
+   "gold": "小吃",
+   "answer": null,
+   "outcome": "refused",
+   "examples": [
+    "翰林茶館-松山機場",
+    "松山機場聯合貴賓室(高雄空廚公司)",
+    "大心-臺北松山機場店",
+    "WING CAFÉ-松山機場",
+    "環亞機場貴賓室-臺灣松山國際機場"
+   ],
+   "raw": "肉羹 \n"
+  },
+  {
+   "i": 79,
+   "name": "洋洋肉骨茶-松山機場",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "翰林茶館-松山機場",
+    "WING CAFÉ-松山機場",
+    "大心-臺北松山機場店",
+    "松山機場聯合貴賓室(高雄空廚公司)",
+    "環亞機場貴賓室-臺灣松山國際機場"
+   ]
+  },
+  {
+   "i": 80,
+   "name": "築間-臺北三民店",
+   "layer": "sign",
+   "gold": "火鍋",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "築間-臺北復興南店",
+    "臺北溙小吃店",
+    "城市商旅-臺北南東館",
+    "漢堡王-南京三民店",
+    "大心-臺北松山機場店"
+   ]
+  },
+  {
+   "i": 81,
+   "name": "庫克餐飲事業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "石石餐飲企業股份有限公司",
+    "頤樂餐飲有限公司",
+    "后苑餐飲股份有限公司",
+    "寶林餐飲事業股份有限公司",
+    "紅屋餐飲事業有限公司"
+   ]
+  },
+  {
+   "i": 82,
+   "name": "喥喥有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "嘻嘻哈哈有限公司",
+    "凰品企業有限公司",
+    "啜香有限公司",
+    "福田有限公司",
+    "炭物語有限公司"
+   ]
+  },
+  {
+   "i": 83,
+   "name": "祥福餐廳",
+   "layer": "sign",
+   "gold": "其他",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "吉祥小吃店",
+    "福弟蔬食餐廳",
+    "振作小吃店",
+    "欣豐自助餐",
+    "饗聚廚房"
+   ]
+  },
+  {
+   "i": 84,
+   "name": "蒼蠅咖啡商行",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "興波咖啡",
+    "貳虎茶倉餐飲股份有限公司",
+    "丹堤咖啡",
+    "路易莎咖啡股份有限公司",
+    "漾咖啡"
+   ]
+  },
+  {
+   "i": 85,
+   "name": "金養生飯糰店",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "飯食",
+   "outcome": "category",
+   "examples": [
+    "吉祥小吃店",
+    "御膳煲養生雞湯館",
+    "食藝小吃店",
+    "振作小吃店",
+    "我家養生料理"
+   ]
+  },
+  {
+   "i": 86,
+   "name": "御盛食品工作室",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "百蕎工作室",
+    "頤樂餐飲有限公司",
+    "食藝小吃店",
+    "艾風有限公司",
+    "鮨舍股份有限公司"
+   ]
+  },
+  {
+   "i": 87,
+   "name": "達恆商鋪",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "曉食光舖",
+    "泰市場",
+    "發達車輪餅舖",
+    "志慶商行",
+    "安心購"
+   ]
+  },
+  {
+   "i": 88,
+   "name": "VGEST 低碳披薩",
+   "layer": "sign",
+   "gold": "西式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "真芳碳烤吐司",
+    "鮨舍股份有限公司",
+    "隱家拉麵",
+    "雲先生創意食堂",
+    "金格食品"
+   ]
+  },
+  {
+   "i": 89,
+   "name": "21世紀風味館",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "21世紀風味館",
+    "蘭丸美食館",
+    "幸福時光廚房",
+    "雲先生創意食堂",
+    "活潑餐飲行銷有限公司"
+   ]
+  },
+  {
+   "i": 90,
+   "name": "21世紀風味館",
+   "layer": "brand",
+   "gold": "西式",
+   "answer": "西式",
+   "outcome": "category",
+   "examples": [
+    "21世紀風味館",
+    "蘭丸美食館",
+    "幸福時光廚房",
+    "雲先生創意食堂",
+    "活潑餐飲行銷有限公司"
+   ]
+  },
+  {
+   "i": 91,
+   "name": "微胖國際企業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "微風超市股份有限公司",
+    "團圓國際股份有限公司",
+    "嘻嘻哈哈有限公司",
+    "啜香有限公司",
+    "凰品企業有限公司"
+   ]
+  },
+  {
+   "i": 92,
+   "name": "昶尚有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "金滿有限公司",
+    "敦賀有限公司",
+    "一晉有限公司",
+    "啜香有限公司",
+    "合尊股份有限公司"
+   ]
+  },
+  {
+   "i": 93,
+   "name": "椰們國際餐飲有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "后苑餐飲股份有限公司",
+    "頤樂餐飲有限公司",
+    "貳虎茶倉餐飲股份有限公司",
+    "寶林餐飲事業股份有限公司",
+    "紅屋餐飲事業有限公司"
+   ]
+  },
+  {
+   "i": 94,
+   "name": "奕佑坊有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "凰品企業有限公司",
+    "維利揚有限公司",
+    "金滿有限公司",
+    "頤樂餐飲有限公司",
+    "荐恆軒藝文實業有限公司"
+   ]
+  },
+  {
+   "i": 95,
+   "name": "品川蘭-松山機場",
+   "layer": "sign",
+   "gold": "麵食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "翰林茶館-松山機場",
+    "環亞機場貴賓室-臺灣松山國際機場",
+    "WING CAFÉ-松山機場",
+    "松山機場聯合貴賓室(高雄空廚公司)",
+    "大心-臺北松山機場店"
+   ]
+  },
+  {
+   "i": 96,
+   "name": "福勝亭",
+   "layer": "brand",
+   "gold": "日式",
+   "answer": "日式",
+   "outcome": "category",
+   "examples": [
+    "福勝亭",
+    "幸福道",
+    "福弟蔬食餐廳",
+    "復興航棧",
+    "樂麵屋"
+   ]
+  },
+  {
+   "i": 97,
+   "name": "玉湛小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "如玉川菜小吃店",
+    "丞鑫小吃店",
+    "富錦蔬食小吃店"
+   ]
+  },
+  {
+   "i": 98,
+   "name": "韓多小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "饞食小吃店",
+    "臺北溙小吃店",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 99,
+   "name": "米之屋小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "饞食小吃店",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 100,
+   "name": "古點食堂",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "想柒飯食堂",
+    "老賴茶棧",
+    "雲先生創意食堂",
+    "磚窯古早味餐廳",
+    "男子漢拉麵食堂"
+   ]
+  },
+  {
+   "i": 101,
+   "name": "鍋爸涮涮鍋-南京店",
+   "layer": "sign",
+   "gold": "火鍋",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "牛鼎火鍋店",
+    "漢堡王-南京三民店",
+    "點水樓-南京店",
+    "Q Burger松山南京五店",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 102,
+   "name": "新東街臨時攤販集中場",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-好泰",
+    "饒河街臨時攤販集中場-吉茶莊",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-堉泓饒河西米露",
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉"
+   ]
+  },
+  {
+   "i": 103,
+   "name": "歐力巨工作室",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "百蕎工作室",
+    "艾風有限公司",
+    "翁翁小館",
+    "炭物語有限公司",
+    "荐恆軒藝文實業有限公司"
+   ]
+  },
+  {
+   "i": 104,
+   "name": "劉旭小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "丞鑫小吃店",
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "饞食小吃店"
+   ]
+  },
+  {
+   "i": 105,
+   "name": "慶城海南雞飯有限公司",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "飯食",
+   "outcome": "category",
+   "examples": [
+    "維京人慶城股份有限公司",
+    "頤樂餐飲有限公司",
+    "貳虎茶倉餐飲股份有限公司",
+    "紅屋餐飲事業有限公司",
+    "雞啃夠有限公司光復店"
+   ]
+  },
+  {
+   "i": 106,
+   "name": "沙瑪商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "九龍商行",
+    "林霖商行",
+    "永旺商行",
+    "嘎兜商行",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 107,
+   "name": "古味小吃店",
+   "layer": "sign",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "饞食小吃店",
+    "臺北溙小吃店",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 108,
+   "name": "松山小紅莓火鍋有限公司",
+   "layer": "registered",
+   "gold": "火鍋",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "紅屋餐飲事業有限公司",
+    "饗樂餐飲實業股份有限公司松山民生分公司",
+    "炭火食業有限公司",
+    "貳虎茶倉餐飲股份有限公司",
+    "頤樂餐飲有限公司"
+   ]
+  },
+  {
+   "i": 109,
+   "name": "卡滋有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "鮨舍股份有限公司",
+    "炭物語有限公司",
+    "石松國際有限公司",
+    "嘻嘻哈哈有限公司",
+    "啜香有限公司"
+   ]
+  },
+  {
+   "i": 110,
+   "name": "宏葉企業社",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "濡果企業社",
+    "凰品企業有限公司",
+    "嘻嘻哈哈有限公司",
+    "瘋果子有限公司",
+    "香味股份有限公司"
+   ]
+  },
+  {
+   "i": 111,
+   "name": "饒河街臨時攤販集中場-福州世祖胡椒餅",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-堉泓饒河西米露",
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-西哥木瓜牛奶",
+    "饒河街臨時攤販集中場-吉茶莊"
+   ]
+  },
+  {
+   "i": 112,
+   "name": "李佳燕",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "裕珍馨",
+    "郭元益",
+    "李李豆行",
+    "林少宇",
+    "樂家康"
+   ]
+  },
+  {
+   "i": 113,
+   "name": "魚菜小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "饞食小吃店",
+    "臺北溙小吃店",
+    "吉祥小吃店",
+    "如玉川菜小吃店"
+   ]
+  },
+  {
+   "i": 114,
+   "name": "美心食品企業股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "世運食品股份有限公司",
+    "微風超市股份有限公司",
+    "大正食品社",
+    "鮨舍股份有限公司",
+    "寶林餐飲事業股份有限公司"
+   ]
+  },
+  {
+   "i": 115,
+   "name": "佳福小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "吉祥小吃店",
+    "振作小吃店",
+    "食藝小吃店",
+    "臺北溙小吃店",
+    "富錦蔬食小吃店"
+   ]
+  },
+  {
+   "i": 116,
+   "name": "東青料理餐酒館",
+   "layer": "registered",
+   "gold": "西式",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "毛青茶室",
+    "李記中式餐廳",
+    "食藝小吃店",
+    "築川越南美食小吃店",
+    "蘭丸美食館"
+   ]
+  },
+  {
+   "i": 117,
+   "name": "金靈國際股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "金滿有限公司",
+    "凰品企業有限公司",
+    "合尊股份有限公司",
+    "八方雲集國際股份有限公司",
+    "樂尼尼國際股份有限公司"
+   ]
+  },
+  {
+   "i": 118,
+   "name": "華南早餐店",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "美而美早餐店",
+    "初晨早午餐",
+    "晨間廚房",
+    "臺北溙小吃店",
+    "庄角囝仔早午餐"
+   ]
+  },
+  {
+   "i": 119,
+   "name": "昱翔商號",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "營業名稱:藍焰骰子牛",
+    "鮨舍股份有限公司",
+    "志慶商行",
+    "艾風有限公司",
+    "維利揚有限公司"
+   ]
+  },
+  {
+   "i": 120,
+   "name": "好時光咖啡餐館",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "幸福時光廚房",
+    "老賴茶棧",
+    "好食廚坊",
+    "Felice Cafe 享樂咖啡",
+    "伯朗咖啡館"
+   ]
+  },
+  {
+   "i": 121,
+   "name": "山東高家莊餃子館",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": null,
+   "outcome": "refused",
+   "examples": [
+    "牛鼎火鍋店",
+    "奇華餅家",
+    "蘭丸美食館",
+    "橘子工坊飲料店",
+    "御膳煲養生雞湯館"
+   ],
+   "raw": "餃子館 \n"
+  },
+  {
+   "i": 122,
+   "name": "太春小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "吉祥小吃店",
+    "食藝小吃店",
+    "臺北溙小吃店",
+    "振作小吃店",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 123,
+   "name": "九二刀削麵館",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "九湯屋日本拉麵",
+    "小李子麵食館",
+    "樂麵屋",
+    "隱家拉麵",
+    "男子漢拉麵食堂"
+   ]
+  },
+  {
+   "i": 124,
+   "name": "饒河街臨時攤販集中場-空心鳳爪",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-好泰",
+    "饒河街臨時攤販集中場-吉茶莊",
+    "饒河街臨時攤販集中場-旗魚黑輪"
+   ]
+  },
+  {
+   "i": 125,
+   "name": "饒河街夜市-妖怪臭薯條",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "饒河夜市 風の燒",
+    "營業名稱:好腸好嚐(饒河夜市)",
+    "饒河街臨時攤販集中場-旗魚黑輪",
+    "饒河街臨時攤販集中場-魷魚"
+   ]
+  },
+  {
+   "i": 126,
+   "name": "饒河街臨時攤販集中場-家鄉雞排",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "饒河街臨時攤販集中場-吉茶莊",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-好泰",
+    "饒河街臨時攤販集中場-堉泓饒河西米露"
+   ]
+  },
+  {
+   "i": 127,
+   "name": "饒河街臨時攤販集中場-難忘米粉湯",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-堉泓饒河西米露",
+    "饒河街臨時攤販集中場-吉茶莊",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "饒河街臨時攤販集中場-好泰"
+   ]
+  },
+  {
+   "i": 128,
+   "name": "十二籃粥火鍋小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "牛鼎火鍋店",
+    "食藝小吃店",
+    "丞鑫小吃店",
+    "朱記餡餅粥店",
+    "吉祥小吃店"
+   ]
+  },
+  {
+   "i": 129,
+   "name": "LIGHTYARD COFFEE",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "KEY COFFEE",
+    "黑沃咖啡",
+    "路易莎咖啡",
+    "漾咖啡",
+    "Ikari Coffee 怡客咖啡"
+   ]
+  },
+  {
+   "i": 130,
+   "name": "珍蜜咖啡館",
+   "layer": "sign",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "上島珈琲店",
+    "那琇自家烘焙咖啡廳",
+    "翰林茶館-松山機場",
+    "丹堤咖啡",
+    "莫凡彼咖啡館"
+   ]
+  },
+  {
+   "i": 131,
+   "name": "嚐鮮蚵小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饞食小吃店",
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 132,
+   "name": "茹心商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "志慶商行",
+    "儒陵商行",
+    "永旺商行",
+    "林霖商行",
+    "九龍商行"
+   ]
+  },
+  {
+   "i": 133,
+   "name": "三片吐司美食坊",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "麥町吐司工房",
+    "Beimaru米三角日式飯糰專賣店",
+    "真芳碳烤吐司",
+    "你回來啦食事坊",
+    "饞食小吃店"
+   ]
+  },
+  {
+   "i": 134,
+   "name": "春美餐飲國際有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "紅屋餐飲事業有限公司",
+    "寶林餐飲事業股份有限公司",
+    "后苑餐飲股份有限公司",
+    "頤樂餐飲有限公司",
+    "團圓國際股份有限公司"
+   ]
+  },
+  {
+   "i": 135,
+   "name": "汐東軒捲餅舖",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "奇華餅家",
+    "朱記餡餅粥店",
+    "大力士可麗餅舖",
+    "樂麵屋",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 136,
+   "name": "幸福甜日式紅豆餅",
+   "layer": "registered",
+   "gold": "日式",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "關北紅豆餅",
+    "幸福手作",
+    "吉祥小吃店",
+    "喜憨兒烘焙屋",
+    "幸福時光廚房"
+   ]
+  },
+  {
+   "i": 137,
+   "name": "阿美好吃放山雞便當",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "阿婆草仔粿",
+    "胖老爹美式炸雞",
+    "花蓮扁食",
+    "好好吃大餛飩",
+    "天天健康便當"
+   ]
+  },
+  {
+   "i": 138,
+   "name": "阿展小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "振作小吃店",
+    "吉祥小吃店",
+    "饞食小吃店",
+    "臺北溙小吃店"
+   ]
+  },
+  {
+   "i": 139,
+   "name": "大鵬日本料理店",
+   "layer": "registered",
+   "gold": "日式",
+   "answer": "日式",
+   "outcome": "category",
+   "examples": [
+    "欣葉日本料理",
+    "李記中式餐廳",
+    "牛鼎火鍋店",
+    "蘭丸美食館",
+    "臺北君悅酒店-彩日本料理"
+   ]
+  },
+  {
+   "i": 140,
+   "name": "黃朝正",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "郭元益",
+    "林少宇",
+    "樂家康",
+    "麥味登",
+    "麥味登"
+   ]
+  },
+  {
+   "i": 141,
+   "name": "妮可庫柏工作室",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "百蕎工作室",
+    "燕子廚房",
+    "那琇自家烘焙咖啡廳",
+    "荐恆軒藝文實業有限公司",
+    "橘子工坊飲料店"
+   ]
+  },
+  {
+   "i": 142,
+   "name": "兄弟海味鐵板海鮮",
+   "layer": "registered",
+   "gold": "燒烤",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "臺北溙小吃店",
+    "食藝小吃店",
+    "島語自助餐廳",
+    "豐 FOOD 海陸百匯",
+    "好食廚坊"
+   ]
+  },
+  {
+   "i": 143,
+   "name": "加分昆布鍋物-臺北八德店",
+   "layer": "sign",
+   "gold": "火鍋",
+   "answer": "火鍋",
+   "outcome": "category",
+   "examples": [
+    "鬍鬚張-臺北八德店",
+    "臺北溙小吃店",
+    "花敦道鍋物",
+    "八王子東京拉麵-蓋飯",
+    "點水樓-南京店"
+   ]
+  },
+  {
+   "i": 144,
+   "name": "金州餐飲事業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "紅屋餐飲事業有限公司",
+    "石石餐飲企業股份有限公司",
+    "頤樂餐飲有限公司",
+    "后苑餐飲股份有限公司",
+    "炭火食業有限公司"
+   ]
+  },
+  {
+   "i": 145,
+   "name": "餐飲業",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "炭火食業有限公司",
+    "食藝小吃店",
+    "發肉餐飲有限公司",
+    "活潑餐飲行銷有限公司",
+    "麥當勞"
+   ]
+  },
+  {
+   "i": 146,
+   "name": "瑾之寶烘培企業社",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "啜香有限公司",
+    "頤樂餐飲有限公司",
+    "鮨舍股份有限公司",
+    "奇華餅家",
+    "尖烽烘培坊"
+   ]
+  },
+  {
+   "i": 147,
+   "name": "B棟太太(士林夜市)",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "臺北溙小吃店",
+    "蓓老闆吃雞(中崙店)",
+    "阿婆草仔粿",
+    "老賴茶棧",
+    "甘蔗媽媽飲料店"
+   ]
+  },
+  {
+   "i": 148,
+   "name": "韓勾商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "九龍商行",
+    "志慶商行",
+    "嘎兜商行",
+    "林霖商行",
+    "永旺商行"
+   ]
+  },
+  {
+   "i": 149,
+   "name": "鳳海雞粥",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "御膳煲養生雞湯館",
+    "粥麵湯鍋",
+    "甲大鴻港式燒臘",
+    "豐 FOOD 海陸百匯",
+    "韓國雞蛋糕"
+   ]
+  },
+  {
+   "i": 150,
+   "name": "翔嘉食品行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "美食街食品行",
+    "鮨舍股份有限公司",
+    "食藝小吃店",
+    "吉祥小吃店",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 151,
+   "name": "業興咖啡有限公司",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "興波咖啡",
+    "漾咖啡",
+    "成真咖啡",
+    "路易莎咖啡股份有限公司",
+    "啜香有限公司"
+   ]
+  },
+  {
+   "i": 152,
+   "name": "楊楊商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "儒陵商行",
+    "林霖商行",
+    "永旺商行",
+    "九龍商行",
+    "志慶商行"
+   ]
+  },
+  {
+   "i": 153,
+   "name": "玖玖肉麻麵小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "小李子麵食館",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 154,
+   "name": "長義食品股份有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "大正食品社",
+    "世運食品股份有限公司",
+    "鮨舍股份有限公司",
+    "統一超商股份有限公司",
+    "統一超商股份有限公司"
+   ]
+  },
+  {
+   "i": 155,
+   "name": "阿錦高麗菜飯原味排骨湯店",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "飯食",
+   "outcome": "category",
+   "examples": [
+    "安藤雞湯本舖",
+    "天然豚骨拉麵專門店 一蘭",
+    "富錦蔬食小吃店",
+    "樂麵屋",
+    "御膳煲養生雞湯館"
+   ]
+  },
+  {
+   "i": 156,
+   "name": "東引小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "饞食小吃店",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 157,
+   "name": "帶我走。咖啡",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "壹咖啡",
+    "客美多咖啡",
+    "漾咖啡",
+    "路易莎咖啡",
+    "彼得好咖啡"
+   ]
+  },
+  {
+   "i": 158,
+   "name": "綠珀商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "志慶商行",
+    "儒陵商行",
+    "九龍商行",
+    "嘎兜商行",
+    "永旺商行"
+   ]
+  },
+  {
+   "i": 159,
+   "name": "甄福記烤鴨餐廳",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "燒烤",
+   "outcome": "category",
+   "examples": [
+    "雞啃夠有限公司光復店",
+    "牛鼎火鍋店",
+    "福弟蔬食餐廳",
+    "李記中式餐廳",
+    "朱記餡餅粥店"
+   ]
+  },
+  {
+   "i": 160,
+   "name": "樂食堂",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "樂麵屋",
+    "樂雅樂餐廳-敦化店",
+    "吉祥小吃店",
+    "廣一樂廚",
+    "想柒飯食堂"
+   ]
+  },
+  {
+   "i": 161,
+   "name": "麻吉寶複合式早午餐店",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "美而美早餐店",
+    "欣豐自助餐",
+    "初晨早午餐",
+    "麻古茶坊",
+    "吉祥小吃店"
+   ]
+  },
+  {
+   "i": 162,
+   "name": "老司機熱壓三明治",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "洪瑞珍三明治",
+    "紅茶巴士",
+    "胖老爹美式炸雞",
+    "喫茶趣ToGo",
+    "老董牛肉麵"
+   ]
+  },
+  {
+   "i": 163,
+   "name": "老木小店",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "老賴茶棧",
+    "食藝小吃店",
+    "麻古茶坊",
+    "翁翁小館",
+    "薺元小館"
+   ]
+  },
+  {
+   "i": 164,
+   "name": "徐記麵線專賣店",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "朱記餡餅粥店",
+    "饞食小吃店",
+    "小李子麵食館",
+    "振作小吃店"
+   ]
+  },
+  {
+   "i": 165,
+   "name": "吉食膳餐飲企業社",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "鮨舍股份有限公司",
+    "石石餐飲企業股份有限公司",
+    "頤樂餐飲有限公司",
+    "后苑餐飲股份有限公司",
+    "紅屋餐飲事業有限公司"
+   ]
+  },
+  {
+   "i": 166,
+   "name": "狄克魯咖啡企業有限公司",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "路易莎咖啡股份有限公司",
+    "貳虎茶倉餐飲股份有限公司",
+    "漾咖啡",
+    "Ikari Coffee 怡客咖啡",
+    "石石餐飲企業股份有限公司"
+   ]
+  },
+  {
+   "i": 167,
+   "name": "共樂生活實業有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "頤樂餐飲有限公司",
+    "來于生活股份有限公司",
+    "嘻嘻哈哈有限公司",
+    "饗樂餐飲實業股份有限公司松山民生分公司",
+    "團圓國際股份有限公司"
+   ]
+  },
+  {
+   "i": 168,
+   "name": "安堤餐坊",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "好食廚坊",
+    "安藤雞湯本舖",
+    "島語自助餐廳",
+    "福弟蔬食餐廳",
+    "食藝小吃店"
+   ]
+  },
+  {
+   "i": 169,
+   "name": "武大郎 胡椒餅 蟹殼黃 饒河店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "饒河街臨時攤販集中場-饒河街廟口蟹腳蟹肉",
+    "營業名稱:好腸好嚐(饒河夜市)",
+    "饒河街臨時攤販集中場-魷魚",
+    "饒河街臨時攤販集中場-堉泓饒河西米露",
+    "臺北溙小吃店"
+   ]
+  },
+  {
+   "i": 170,
+   "name": "上味泰小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "饞食小吃店",
+    "富錦蔬食小吃店"
+   ]
+  },
+  {
+   "i": 171,
+   "name": "時時企業社",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "四時輕燒肉股份有限公司",
+    "鮨舍股份有限公司",
+    "濡果企業社",
+    "嘻嘻哈哈有限公司",
+    "福田有限公司"
+   ]
+  },
+  {
+   "i": 172,
+   "name": "搖滾地瓜球",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "Juice Bear",
+    "糖葫蘆",
+    "島熊咖哩",
+    "頂呱呱",
+    "果然果汁吧"
+   ]
+  },
+  {
+   "i": 173,
+   "name": "禾峰早餐店",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "美而美早餐店",
+    "庄角囝仔早午餐",
+    "晨間廚房",
+    "初晨早午餐",
+    "尖烽烘培坊"
+   ]
+  },
+  {
+   "i": 174,
+   "name": "老先覺-臺北光復南店",
+   "layer": "sign",
+   "gold": "火鍋",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "築間-臺北復興南店",
+    "臺北溙小吃店",
+    "老賴茶棧",
+    "城市商旅-臺北南東館",
+    "雞啃夠有限公司光復店"
+   ]
+  },
+  {
+   "i": 175,
+   "name": "澄品美學創藝有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "凰品企業有限公司",
+    "荐恆軒藝文實業有限公司",
+    "啜香有限公司",
+    "金滿有限公司",
+    "嘻嘻哈哈有限公司"
+   ]
+  },
+  {
+   "i": 176,
+   "name": "享賀小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "吉祥小吃店",
+    "饞食小吃店",
+    "食藝小吃店",
+    "振作小吃店",
+    "富錦蔬食小吃店"
+   ]
+  },
+  {
+   "i": 177,
+   "name": "營業名稱:很難吃到甜點工作室",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "饞食小吃店",
+    "營業名稱:有家軒私廚料理",
+    "食藝小吃店",
+    "活潑餐飲行銷有限公司",
+    "營業名稱:藍焰骰子牛"
+   ]
+  },
+  {
+   "i": 178,
+   "name": "千果坊",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "奇華餅家",
+    "米哥烘焙坊",
+    "麻古茶坊",
+    "橘子工坊飲料店",
+    "喜憨兒烘焙屋"
+   ]
+  },
+  {
+   "i": 179,
+   "name": "漁檤日式餐飲店",
+   "layer": "registered",
+   "gold": "日式",
+   "answer": "日式",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "臺北溙小吃店",
+    "築川越南美食小吃店",
+    "饞食小吃店",
+    "欣葉日本料理"
+   ]
+  },
+  {
+   "i": 180,
+   "name": "臺北炸蛋蔥油餅",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "臺北溙小吃店",
+    "廟口蚵仔煎",
+    "關北紅豆餅",
+    "花蓮扁食",
+    "奇華餅家"
+   ]
+  },
+  {
+   "i": 181,
+   "name": "少點鹽健康餐盒專賣小巨蛋店",
+   "layer": "sign",
+   "gold": "飯食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "點水樓-南京店",
+    "臺灣客美多股份有限公司小巨蛋分公司",
+    "御膳煲養生雞湯館",
+    "滿溢餐盒企業社",
+    "臺北溙小吃店"
+   ]
+  },
+  {
+   "i": 182,
+   "name": "近色文化出版有限公司",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "炭物語有限公司",
+    "啜香有限公司",
+    "凰品企業有限公司",
+    "嘻嘻哈哈有限公司",
+    "荐恆軒藝文實業有限公司"
+   ]
+  },
+  {
+   "i": 183,
+   "name": "酷齊早午餐",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "初晨早午餐",
+    "庄角囝仔早午餐",
+    "美而美早餐店",
+    "晨間廚房",
+    "茹曦酒店-SUNNY BUFFET"
+   ]
+  },
+  {
+   "i": 184,
+   "name": "豪歡喜商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "志慶商行",
+    "永旺商行",
+    "嘻嘻哈哈有限公司",
+    "九龍商行",
+    "儒陵商行"
+   ]
+  },
+  {
+   "i": 185,
+   "name": "函館朝式的麵",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "麵食",
+   "outcome": "category",
+   "examples": [
+    "甘泉魚麵",
+    "奧特拉麵",
+    "男子漢拉麵食堂",
+    "豚人拉麵",
+    "花月嵐拉麵"
+   ]
+  },
+  {
+   "i": 186,
+   "name": "爆漿黃金雞腿卷",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "胖老爹美式炸雞",
+    "餓了極品滷肉飯",
+    "臺北炸蛋蔥油餅",
+    "辣麻味噌拉麵鬼金棒",
+    "韓國雞蛋糕"
+   ]
+  },
+  {
+   "i": 187,
+   "name": "牛脾氣美食坊",
+   "layer": "registered",
+   "gold": "麵食",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "好食廚坊",
+    "食藝小吃店",
+    "吉祥小吃店",
+    "饞食小吃店",
+    "牛鼎火鍋店"
+   ]
+  },
+  {
+   "i": 188,
+   "name": "潮味商行",
+   "layer": "registered",
+   "gold": "法人",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "志慶商行",
+    "永旺商行",
+    "林霖商行",
+    "九龍商行",
+    "儒陵商行"
+   ]
+  },
+  {
+   "i": 189,
+   "name": "回形針咖啡商行",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "興波咖啡",
+    "路易莎咖啡股份有限公司",
+    "漾咖啡",
+    "奎士咖啡",
+    "Ikari Coffee 怡客咖啡"
+   ]
+  },
+  {
+   "i": 190,
+   "name": "派格南西珈琲店",
+   "layer": "registered",
+   "gold": "咖啡飲料",
+   "answer": "咖啡飲料",
+   "outcome": "category",
+   "examples": [
+    "上島珈琲店",
+    "那琇自家烘焙咖啡廳",
+    "伯朗咖啡館",
+    "丹堤咖啡",
+    "奎士咖啡"
+   ]
+  },
+  {
+   "i": 191,
+   "name": "米粒咖哩",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "飯食",
+   "outcome": "category",
+   "examples": [
+    "島熊咖哩",
+    "咖哩盒食 & 麵東北",
+    "米米香",
+    "鬍子茶",
+    "稻村麵包"
+   ]
+  },
+  {
+   "i": 192,
+   "name": "夢建商行",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "志慶商行",
+    "永旺商行",
+    "儒陵商行",
+    "夢想三十八號股份有限公司",
+    "林霖商行"
+   ]
+  },
+  {
+   "i": 193,
+   "name": "森鱻伙房小吃店",
+   "layer": "registered",
+   "gold": "小吃",
+   "answer": "小吃",
+   "outcome": "category",
+   "examples": [
+    "食藝小吃店",
+    "吉祥小吃店",
+    "臺北溙小吃店",
+    "饞食小吃店",
+    "丞鑫小吃店"
+   ]
+  },
+  {
+   "i": 194,
+   "name": "極炙松阪豬",
+   "layer": "registered",
+   "gold": "燒烤",
+   "answer": "燒烤",
+   "outcome": "category",
+   "examples": [
+    "森田雞肉",
+    "餓了極品滷肉飯",
+    "安藤雞湯本舖",
+    "珍煮丹",
+    "甲大鴻港式燒臘"
+   ]
+  },
+  {
+   "i": 195,
+   "name": "欣蘋便當店",
+   "layer": "registered",
+   "gold": "飯食",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "欣豐自助餐",
+    "吉祥小吃店",
+    "欣葉日本料理",
+    "食藝小吃店",
+    "饞食小吃店"
+   ]
+  },
+  {
+   "i": 196,
+   "name": "蜜吐早餐店",
+   "layer": "registered",
+   "gold": "早餐",
+   "answer": "早餐",
+   "outcome": "category",
+   "examples": [
+    "美而美早餐店",
+    "吉祥小吃店",
+    "振作小吃店",
+    "米哥烘焙坊",
+    "喜憨兒烘焙屋"
+   ]
+  },
+  {
+   "i": 197,
+   "name": "好食心情",
+   "layer": "registered",
+   "gold": "其他",
+   "answer": "其他",
+   "outcome": "category",
+   "examples": [
+    "清心福全",
+    "清心福全",
+    "味亦美",
+    "味亦美",
+    "好食廚坊"
+   ]
+  },
+  {
+   "i": 198,
+   "name": "晶英產後護理之家",
+   "layer": "sign",
+   "gold": "法人",
+   "answer": "法人",
+   "outcome": "no_signal",
+   "examples": [
+    "時尚產後護理之家",
+    "御膳煲養生雞湯館",
+    "幸福時光廚房",
+    "燕子廚房",
+    "饗聚廚房"
+   ]
+  },
+  {
+   "i": 199,
+   "name": "統一超商股份有限公司",
+   "layer": "brand",
+   "gold": "便利商店",
+   "answer": "便利商店",
+   "outcome": "category",
+   "examples": [
+    "統一超商股份有限公司",
+    "全家便利商店股份有限公司",
+    "全家便利商店股份有限公司",
+    "團圓國際股份有限公司",
+    "鮨舍股份有限公司"
+   ]
+  }
+ ],
+ "rag": {
+  "embed_model": "snowflake-arctic-embed2",
+  "embed_key": "arctic",
+  "k": 5,
+  "crib_rows": {
+   "brand": 288,
+   "testset": 179
+  },
+  "prefix_kind": "none",
+  "crib_testset_sha256": "84aafea32c479ad182eece68e71c37ce03d667520909a7aff1056cbb0783d868",
+  "crib_brand_sha256": "c66604f13274d98794c7ea3676d9875ade2f69bfbd353c96bdba1e9639bb25f9"
+ }
+}

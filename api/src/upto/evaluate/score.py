@@ -1,6 +1,6 @@
 """D64's metrics: one round file plus the frozen set, in — one report, out. Pure and re-runnable.
 
-    python -m upto.evaluate.score evaluation/round_qwen_v3-2026-08-14.json
+    python -m upto.evaluate.score app/evaluation/round_qwen_v3-2026-08-14.json
 
 Prints the report and writes the same bytes to `<round-file>.report.md`. One renderer feeds
 both, so what a reader sees in the terminal is what the commit carries.
