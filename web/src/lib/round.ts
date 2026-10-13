@@ -16,8 +16,8 @@ import { forgetSeat, must, send, SEAT_GONE } from './http'
  *  the truth.
  *
  *  **One fact, not two, since 2026-08-30**: the routing lost its middle step when 偏好 was removed
- *  (`spec-return-choice.md` §2), so a device with a key goes straight to 這一餐. The three-way
- *  table this replaced is `spec-conditional-routing.md`'s and is retired with the screen. */
+ *  (choice returned to the member), so a device with a key goes straight to 這一餐. The three-way
+ *  table this replaced (no key / key without preferences / both) is retired with the screen. */
 export function doorHref(): string {
   return device() ? '/round' : '/device'
 }
@@ -136,7 +136,7 @@ export async function unsubmit(d: Device, roundId: number): Promise<void> {
 /** A pooled place, as the snapshot and each `pooled` event carry it.
  *
  *  **It carried A19's `ingredient_data` until 2026-08-30** and no longer does: the ingredient kind
- *  was withdrawn wholesale (`spec-return-choice.md`) and backend dropped the field from all three
+ *  was withdrawn wholesale (2026-08-30) and backend dropped the field from all three
  *  wires. A name and an id is the whole row again.
  *
  *  **`name` is nullable, and here it can go null TWO ways** — `rounds.py:205` sends

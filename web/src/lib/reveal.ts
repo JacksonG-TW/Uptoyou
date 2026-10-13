@@ -75,7 +75,7 @@ export type MemberReveal = {
   /**
    * The 36 outcomes as the server drew them — **`board[die1 − 1][die2 − 1]` is that cell's
    * `place_id`**, row = the first die, column = the second, both 1…6 from the top left. Candidate
-   * 17 (`e603936`), `spec-board-2026-09-11.md` §2.
+   * 17 (`e603936`), the board's reading order.
    *
    * **Nested, not flat, and that is the point of the field.** A flat 36 makes the client compute
    * `(die1 − 1) * 6 + (die2 − 1)`, and a client that writes the two the other way round gets a
@@ -92,7 +92,7 @@ export type MemberReveal = {
    */
   board?: number[][]
   /* **`ingredient_data` and `my_reasons` left `MEMBER_KEYS` on 2026-08-30**
-   *  (`spec-return-choice.md` §1). The first said `declared`/`unknown` per pooled place and the
+   *  (the ingredient kind was withdrawn). The first said `declared`/`unknown` per pooled place and the
    *  second carried this reader's own veto sentences; the ingredient kind is withdrawn, so neither
    *  has anything to describe. The rule the first was built on outlives it and is recorded in
    *  `defences.md`: an absent mark reads as clean, so `unknown` had to be a value rather than a
@@ -115,7 +115,7 @@ export type Factor = {
   effect: string
   reason: string | null
   /**
-   * **Did this contributor actually run** — candidate 16, `spec-weights-picture-2026-09-11.md` §3.
+   * **Did this contributor actually run** — candidate 16, 甲's bar picture.
    *
    * The panel carries every known contributor at its D46 position, so the picture has the same
    * rows every round and 「上次去過 showing nothing」 is a fact the payload states rather than one
@@ -177,7 +177,7 @@ export function faceOf(places: Places, placeId: number | null): Face | null {
   return seat < 0 ? null : FACES[seat % FACES.length]
 }
 
-/** **The place's mark: its pool number, 1…N** (`spec-board-2026-09-11.md` §8). Colour repeats
+/** **The place's mark: its pool number, 1…N** (the board's legend). Colour repeats
  *  from the fifth place, so the number is what names the shop on the board and in its legend.
  *  **An index, never a count** — it says which shop, not how many cells. Same seat as `faceOf`,
  *  so a place's number and colour always travel together; `null` for a place not in the pool. */

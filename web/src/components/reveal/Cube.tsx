@@ -3,7 +3,7 @@ import { RED } from './Die'
 
 /**
  * **A die at rest on the cabinet, in a 3/4 view, value on top** (owner 「A」 on preview v9:
- * 「新的立體骰子好看」; `spec-reveal-qiantong-2026-10-09.md`, Layout). A CSS 3-D cube: six faces,
+ * 「新的立體骰子好看」; the 籤詩櫃 rebuild's layout). A CSS 3-D cube: six faces,
  * each `translateZ(size / 2)` from the centre, so the object is real under any rotation the flight
  * puts it through, and it comes to rest at `REST` with the rolled value on its TOP face.
  *

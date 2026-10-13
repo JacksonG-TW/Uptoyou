@@ -19,8 +19,8 @@ import { SeatGone } from '@/lib/http'
 import { fetchPreferences, type Preferences } from '@/lib/preferences'
 
 /**
- * The reveal — **the 籤詩櫃 rebuild with the cinematic cut C** (`spec-reveal-qiantong-2026-10-09.md`,
- * `spec-reveal-cinematic-2026-10-09.md` «C, as built»; owner 「電影版」 amended 「用C好了」).
+ * The reveal — **the 籤詩櫃 rebuild with the cinematic cut C** (2026-10-09,
+ * cut C as built; owner 「電影版」 amended 「用C好了」).
  *
  * **The result is the payload's, decided by the committed seed before a frame animates** (D91,
  * D108). Both roll animations — the dice and the 籤筒, one per round, seeded from the round id so

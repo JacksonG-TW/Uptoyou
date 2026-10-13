@@ -1,5 +1,5 @@
 /**
- * The self-serve surface's own labels — `spec-self-serve-2026-09-13.md` §6.
+ * The self-serve surface's own labels — the self-serve design, 2026-09-13.
  *
  * **What is here and what is not.** Every member-facing *refusal* (409 the circle is full, 410 the
  * ticket was replaced, 404 no such ticket, 429 the daily ceiling) is the server's sentence,
@@ -67,7 +67,7 @@ export const NO_ACCOUNT = '不用帳號，也不用 email。'
  */
 export const MEMBER_INVITE = '邀請連結由房主發。'
 
-/* **Reworded 2026-10-08** (`spec-round-diet-circle-2026-10-08.md` B): it now states only who can
+/* **Reworded 2026-10-08**: it now states only who can
    make a link, in one line, because the member's page also carries its own act (選這一餐) and the
    old sentence told them to go and ask — a second instruction beside the first. */
 
@@ -96,7 +96,7 @@ export const LINK_EXPIRED = '上一條連結過期了，朋友點了會進不來
 export const NO_SEAT = '這台裝置還沒有圈子。圈子可以自己開，也可以從朋友傳來的邀請連結進來。'
 
 /**
- * UX batch U6 / `spec-one-circle-per-device-2026-10-07.md` — above the act on `/create` and
+ * UX batch U6, one circle per device — above the act on `/create` and
  * `/join`, only when the device already holds a seat (owner ruling (b), 2026-10-07). One string
  * for both doors. **It never says 回不去**: the old seat stays in the old circle (nothing deletes a
  * `member` row) and a fresh link from that circle seats this device again, as a new member.
@@ -105,7 +105,7 @@ export const REPLACE_NOTICE =
   '這台裝置已經在一個圈子裡。繼續的話，它會換到這個新圈子，原本的座位會讓出來。要再回去，那個圈子的人要給一條邀請連結，回去會是新的座位。'
 
 /**
- * Home, under 開一個圈子 — what a 圈子 is (`spec-nav-labels-home-2026-10-08.md` N2). The cold
+ * Home, under 開一個圈子 — what a 圈子 is (2026-10-08). The cold
  * reader could only guess the word from «最多 10 人»; it is the product's word on twenty screens,
  * so it is defined once here rather than renamed everywhere. States, never advises (D20).
  */

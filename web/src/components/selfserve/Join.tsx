@@ -13,8 +13,8 @@ import { REPLACE_NOTICE } from './copy'
  * effect. So this component never reads `window.location`, and there is no render in which the
  * ticket is still in the URL (`SS-9`).
  *
- * **One step since 2026-09-16** (owner-ruled, «the key leaves the member surface», e0ff214; the
- * evaluator's `spec-key-off-the-member-surface-2026-09-16.md` §4). The screen after 加入 showed this
+ * **One step since 2026-09-16** (owner-ruled, «the key leaves the member surface», e0ff214, as
+ * the evaluator specified it). The screen after 加入 showed this
  * seat's own key, printed once, exactly as the creator's did — and it is gone for the same reason:
  * the key and the join link look alike, they get pasted into different places, and **a person who
  * pastes their own key into the group chat has given away their seat**, which nothing can undo. The
@@ -97,7 +97,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
           {/* **The screen names the circle and its creator — frontend's decision of 2026-10-07**,
               after the evaluator's input and with the owner's delegation; the reasoning, its cost
               and the rejected 2026-09-13 branch (a leaked ticket yields the name without a trace)
-              are in `doc/decision-log.md` (2026-10-07 «/join names the circle»). Only a live ticket gets a name. The creator is
+              were recorded with the ruling (2026-10-07 «/join names the circle»). Only a live ticket gets a name. The creator is
               the honest «inviter» because a ticket does not record who passed it on, and with the
               creator's seat gone the line says 有人 rather than a blank. */}
           <p className="eyebrow"><em>★</em>入座</p>

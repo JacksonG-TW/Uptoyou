@@ -2,7 +2,7 @@
    rule: every class name in this directory is shared, so a screen's geometry lives under its own
    root or it belongs to everyone. */
 
-/* **The four inner screens start below the fixed bars** — `spec-inner-header.md`, evaluator-ruled
+/* **The four inner screens start below the fixed bars** — the inner-header rule, evaluator-ruled
    2026-08-28 from the stranger's walk. Every inner `h1` began at y 20 while `Back` and the switcher
    are 39–41 tall, so the title's top 19–21 px sat under the bar line at every width. At 1440 it
    showed nothing because the title and the switcher do not share a column; **at 430 they do** —
@@ -18,7 +18,7 @@
   padding-bottom: 56px;
 }
 
-/* **The device screen takes the HOME's column** — 丙, `spec-device-typeset.md` §1. It sat on
+/* **The device screen takes the HOME's column** — 丙, the device screen's typesetting. It sat on
    `min(720px, 88vw)`, so at 1440 its left edge was x=360 against the home's 120: the first two
    screens a person meets had different gutters and read as two buildings. The content stays
    left-aligned inside the column; it is the column that is shared, not the alignment.
@@ -29,7 +29,7 @@
 
 @media (min-width: 900px) {
   /* **Vertically centred, like the home's hero.** The spec asks for `padding-block: 60px`; the top
-     keeps `--bar-h + 24` instead, because `spec-inner-header.md` landed between the two specs and
+     keeps `--bar-h + 24` instead, because the inner-header rule landed between the two specs and
      a flat 60 would put the title back under the bars on a tall form. 64 > 60, so the spec's
      intent (breathing room) is met and IH-1 still holds. Flagged rather than chosen quietly. */
   .device {
@@ -147,7 +147,7 @@
 .hitName { font-weight: 700; }
 .hitWhere { font-size: var(--text-note); color: var(--color-muted); margin-left: auto; }
 
-/* 角花 — the corner ornament. `spec-round-menu-2026-09-03.md` sec. 4; owner-ruled 2026-09-03 as
+/* 角花 — the corner ornament, from the round's menu design; owner-ruled 2026-09-03 as
    路（a）, over 路（b）'s 茶綠 second colour; arms, stroke and colour ruled 2026-09-04 and recorded
    as **D101 (10)**.
 
@@ -333,7 +333,7 @@
 }
 
 /* ── 「這次不吃」 · the chip row ──────────────────────────────────────────────
-   `spec-preference-split.md` §2, owner-ruled 2026-08-28. Ten types as one wrapping row above the
+   Preferences split by tempo (allergies stay, 「這次不吃」 is this round's), owner-ruled 2026-08-28. Ten types as one wrapping row above the
    search, `data-part="tonight-chip"` per `design.md` §4a.
 
    **Filled on, ghost off — and the fill is licensed rather than decorative.** R-2: a control
@@ -343,7 +343,7 @@
    and they take the same recipe rather than a second one invented here. */
 .round .tonightBlock { margin-top: 28px; }
 
-/* 甲・菜單 — `spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and 帳本.
+/* 甲・菜單 — the pool drawn as a menu, owner-ruled 軸一 over 牌面 and 帳本.
 
    **Two columns, filled DOWN then across, which is what `columns` does and what a printed menu
    does.** Do not "fix" it to across-then-down: the reading order of a menu is a column at a time,
@@ -370,7 +370,7 @@
 .round .menuSection svg { flex: none; }
 
 /* **A chip carries a STANCE, not an act — so it does not get the act's construction.**
-   Evaluator-ruled 2026-08-28 from the stranger's walk (`spec-tonight-chips.md`), and the defect it
+   Evaluator-ruled 2026-08-28 from the stranger's walk, and the defect it
    names is mine: I built these on `.band`'s recipe (700 / 2px / 4px hard shadow / 48–52 tall) on the
    argument that two *selection* controls should look alike. Measured on the built page that
    argument fails — ten of them stack above the search, so the screen's first read is ten buttons
@@ -405,7 +405,7 @@
 }
 .round .chip .n { font-weight: 700; white-space: nowrap; }
 /* **The leader dots, and they are the menu's whole signature.** `flex: 1` so they take the whole
-   row after the name, which since `spec-weights-picture-2026-09-11.md` §1 is every row: there is no
+   row after the name, which since the counts left the member's screen is every row: there is no
    count on the right any more, so the dots always run to the row's end. `translateY` lifts the
    dotted rule off the baseline to where a menu prints it; `min-width` is kept for the case the flex
    basis cannot help — the longest name at the narrowest column. */
@@ -416,7 +416,7 @@
   transform: translateY(-.35em);
   opacity: .55;
 }
-/* **The count's rules went with the count** (`spec-weights-picture-2026-09-11.md` §1): `.round
+/* **The count's rules went with the count** (the counts left the member's screen): `.round
    .chip .c` and its `[data-shape="why"]` wrap exception can no longer match anything, and dead CSS
    that still reads as live is how a removed element gets revived by accident. The figures move to
    the operator's reveal, so `tabular-nums` is `reveal.css`'s problem now, not this file's. */
@@ -451,7 +451,7 @@
 }
 
 /* **`.mark` lives here now.** It was defined in `preferences.css`, which went with the 偏好 screen
-   on 2026-08-30 (`spec-return-choice.md` §2). The chips are its only caller left, so the part
+   on 2026-08-30 (choice returned to the member; the 偏好 screen was removed). The chips are its only caller left, so the part
    moved to the stylesheet of the screen that uses it rather than being left in a file whose reason
    to exist had gone. `design.md`'s registry still names it; only its address changed. */
 
@@ -472,7 +472,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .round .chip { transition: none; } }
 
-/* 38 at phone width. **600 is not a new breakpoint** — it is the width `spec-inner-header.md` §1
+/* 38 at phone width. **600 is not a new breakpoint** — it is the width the inner-header rule
    names for where the two fixed bars read as one row, so the two specs share one number rather
    than each carrying its own. */
 /* The 38 px phone height went with the chip's box: a menu row is sized by its own padding and its
@@ -489,14 +489,14 @@
   font-size: var(--text-body);
 }
 
-/* **A19's pool mark is gone** (`spec-return-choice.md` §4, 2026-08-30). The rows carried
+/* **A19's pool mark is gone** (the ingredient kind was withdrawn, 2026-08-30). The rows carried
    「原料未公開／原料已公開」 beside each name; the ingredient kind was withdrawn wholesale, so the
    wire no longer sends the state and the surface no longer has one to state. `.rowTag`'s recipe
    went with `preferences.css`. */
 
 /* The swept-pool sentence takes `.roundWarn`'s register — the accent as a left rule, the one
    cautionary treatment on this screen — at `text-lead` rather than `text-body`, per
-   `spec-pool-vetoed.md` §2. Keyed on the part rather than a second class: it IS a `roundWarn`, it
+   so the sentence that says the vetoes swept the pool is the loudest caution. Keyed on the part rather than a second class: it IS a `roundWarn`, it
    is only a louder one, and a modifier class would invite a third. */
 .round [data-part="pool-vetoed"] { font-size: var(--text-lead); font-weight: 400; }
 
@@ -532,7 +532,7 @@
 .round .tonightToggle:focus-visible, .round .secondary:focus-visible { outline: 2px solid var(--color-ink); outline-offset: 3px; }
 .round .secondary:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
-/* ═══ The waiting room — `spec-round-waiting-room-2026-10-09.md` ═══════════════════════════════
+/* ═══ The waiting room (2026-10-09) ═══════════════════════════════
    **The submitted button is the same `.act`, recoloured** so its box cannot drift from 提交's: paper
    ground, ink text and edge, a jade check. It reads as done, not as a second red call to act. */
 .round .act.actDone { display: inline-flex; align-items: center; background: var(--color-paper); color: var(--color-ink); gap: 10px; white-space: nowrap; }
@@ -610,7 +610,7 @@ main.device .deviceTitle .lit, main.round .menuSection { color: var(--color-hot-
 .roundTitle { border-bottom: 3px solid var(--color-ink); padding-bottom: 10px; }
 .round .roundH { border-bottom: 1.5px solid rgb(43 23 19 / .45); padding-bottom: 6px; }
 
-/* ═══ Two columns from 900 wide — `spec-round-two-column-2026-10-09.md` ═══════════════════════
+/* ═══ Two columns from 900 wide (2026-10-09) ═══════════════════════
    Owner 「左邊輸入右邊顯示清單」 (49ade4e), built per the v7b preview (44ac714). Input on the left,
    this round's list on the right. **Last in the file and on `main.round`**, because the paper rule
    above (`main.round, main.device`) sets a 680 width and `display: block`, and it must win over

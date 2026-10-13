@@ -25,7 +25,7 @@ import { pct, type Preferences } from '@/lib/preferences'
  */
 
 /**
- * 甲's bar picture — `spec-weights-picture-2026-09-11.md` §3, the owner 「甲」.
+ * 甲's bar picture — the owner 「甲」, 2026-09-11.
  *
  * **What a contributor is called on this screen, and nothing else reads this map.** The payload
  * names contributors the way the engine does (`preference` · `last_trip` · `weather`); those are
@@ -44,7 +44,7 @@ const LABEL: Record<string, string> = {
 /**
  * **The bar's width, and this one line is the whole claim the picture makes.**
  *
- * `spec-weights-picture-2026-09-11.md` §3: «a bar that reads 0.79 must be 0.79 of the track», and
+ * The bar picture's rule: «a bar that reads 0.79 must be 0.79 of the track», and
  * WP-6 measures the rendered width against the wire. So the width is the payload's own string,
  * parsed and never rounded for looks, and nothing here recomputes a factor from anything else
  * (§4: a recomputed number and a pinned one disagree the day the formula moves, and then the
@@ -203,8 +203,8 @@ export default function Evidence({
                   <span className="evName" data-name={places[placeId]}>
                     <span className="evNameInk">{places[placeId]}</span>
                   </span>
-                  {/* **A19's 原料未公開／已公開 mark was here and is gone** (2026-08-30,
-                      `spec-return-choice.md` §4). The ingredient kind was withdrawn wholesale, so
+                  {/* **A19's 原料未公開／已公開 mark was here and is gone** (2026-08-30).
+                      The ingredient kind was withdrawn wholesale, so
                       the wire carries no state and the row has none to state. The rule it was
                       built on is still doctrine and is why nothing replaced it with a blank: an
                       absent mark reads as a claim, so the answer to withdrawing the feature was to
@@ -267,7 +267,7 @@ export default function Evidence({
       </table>
 
       {/* ─── §3a — where the member-side numbers now live ───────────────────────────────────
-          `spec-weights-picture-2026-09-11.md` §3a. The owner's ruling took the counts off the
+          The owner's ruling took the counts off the
           member's screen because they are 「SDE 需要知道的資訊」; that sentence names a reader, so
           the figures were moved rather than deleted.
 

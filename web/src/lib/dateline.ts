@@ -1,5 +1,5 @@
 /**
- * 甲・日報 — the masthead's dateline. `spec-home-dateline.md` §1, evaluator 2026-08-26.
+ * 甲・日報 — the masthead's dateline, evaluator 2026-08-26.
  *
  * Three segments — date · weekday · solar term — computed here and never fetched. The
  * page is a dated sheet; this is its date.
@@ -108,7 +108,7 @@ export function solarTerm(taipei: Date): string | null {
 }
 
 /* The edition word (早報／午報／晚報) left with 2026-10-08's home rebuild
-   (`spec-nav-labels-home-2026-10-08.md` N3): the cold reader read 「午報」 as noise, and the brief's
+   (the first view held to the attention budget): the cold reader read 「午報」 as noise, and the brief's
    voice is a friend, not a newspaper. Deleted rather than kept unused (the reviewer, 3b0921d). */
 
 export type Dateline = {

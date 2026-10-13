@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * Roof C, 整片屋頂 — the temple roof across the top of the inner screens (owner 「照建議做」,
- * 2026-10-09; `idea & img/frontend/specs/spec-roof-inner-screens-2026-10-09.md`).
+ * 2026-10-09).
  *
  * **Decoration only**: no words, no control, `aria-hidden`. It sits under the bar and scrolls with
  * the page. Its room comes from `--eaves-h` (`switcher.css`), which `main.tsx` turns on by setting

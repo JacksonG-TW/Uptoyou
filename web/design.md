@@ -255,7 +255,7 @@ component to obtain a part in this column; write it.
 | `BAR` | **custom** | pinned primary control, `fixed inset-x-0 bottom-0`, `3px ink` top rule, content box 56 + 10 padding, `--bar-h: calc(76px + env(safe-area-inset-bottom))`. **At most one per screen.** Every screen carrying one sets `main { padding-bottom: calc(var(--bar-h) + 16px) }`. |
 | `ROW` | **custom** | one place in a list. `min-height` 56/60/68, `1.5px ink` bottom rule (last row none), name `text-body`, a `CHIP` at the left. Rows never alternate ground. |
 | `CHIP` | **custom** | `12 × 12 px` square, radius 0, `1.5px ink` border, filled from the `FACES = [hot, cobalt, jade, sun]` cycle keyed by pool seat. **Identity, never quantity** — no share, weight or count. |
-| `COLLAGE` | **custom** | the home entry's images (`D95`), 2×2 offset, each `2px ink` border + the §3 hard offset shadow, radius 0. **A pool of ten, four visible, one cell swapping every 10 s** (owner-ruled 2026-08-18) — the geometry never moves, only the photograph inside a fixed box. Every image carries `alt` naming the dish and describing the frame, and **the `alt` swaps with the image**. **A picture that cannot be named truthfully does not ship** (owner-ruled 2026-08-18: the menu is drawn only from dishes the generator renders truthfully, and breadth across `D38`'s ten categories chooses it — not taste in food). Rotation, loading, pool order and the `HC` gate: `idea & img/evaluator/spec-home-collage-rotation.md`. |
+| `COLLAGE` | **custom** | the home entry's images (`D95`), 2×2 offset, each `2px ink` border + the §3 hard offset shadow, radius 0. **A pool of ten, four visible, one cell swapping every 10 s** (owner-ruled 2026-08-18) — the geometry never moves, only the photograph inside a fixed box. Every image carries `alt` naming the dish and describing the frame, and **the `alt` swaps with the image**. **A picture that cannot be named truthfully does not ship** (owner-ruled 2026-08-18: the menu is drawn only from dishes the generator renders truthfully, and breadth across `D38`'s ten categories chooses it — not taste in food). Rotation, loading, pool order and the `HC` gate were ruled with it, and `HC` checks them. |
 **`R-D9`'s floor applies to the TUMBLING stage, not the resting one — ruled 2026-08-19 by the
 evaluator from the staged recording, and it is conditional.**
 
@@ -285,7 +285,7 @@ each pair as text. Failing either half fails the line.
 
 | `DIE` | **custom** | the 3-D cube — **it already is one**; six faces, `rotateX`/`rotateY`, `translateZ`. It lands **face-on**, which is why the resting state reads flat to a viewer. **If a tilted resting angle is ever ruled (raised by the owner 2026-08-19, unruled), one constraint binds it and it is not cosmetic: the landed face's pip count must stay unambiguous — a person reads the number without counting twice.** The landed face is the only place the roll's result is legible, and `D91` forbids the animation misrepresenting a decided result; the resting frame is where that result is asserted. Foreshortening the winning face while neighbouring faces contribute pips is exactly that failure, so **a small angle that keeps one face dominant is the target — near-corner-on views, where three faces sit at similar prominence, are where it breaks.** Choose by rendering candidates and ruling from them, never by picking a number (frontend's constraint, 2026-08-19). One variable, `--die`, at **140**/180/240 px; the `translateZ` that closes the six faces **derives from it** — change the value, never the derivation. **140, not 132, ruled 2026-08-19** (frontend found the conflict; the recommendation was its): 132 is **17.37%** of 760 against `R-D9`'s **18%** floor, so the token contradicted the gate it is measured by. 136.8 px is the exact floor and 140 clears it at 18.42% with margin for a border. **The floor was not moved to fit the token** — a target adjusted to pass its own test measures nothing, and 18% came from R-D9's measurement of the reference. Parked-width note: 430 is out of scope under §7b, so this changes nothing today; it is fixed now because a known contradiction left in this file is one the next reader has to rediscover. |
 
-### §4a′ · 將選擇權還給使用者 — owner-ruled 2026-08-30 evening; supersedes §4a's sheet (`spec-return-choice.md`)
+### §4a′ · 將選擇權還給使用者 — owner-ruled 2026-08-30 evening; supersedes §4a's sheet
 
 **There is no 偏好 screen.** Budget and 不吃的食材 leave the product (screen, contributor, endpoint kind; A19's ingest
 stays); the keep guard goes with them; the switcher has four tabs (首頁 · 裝置 · 這一餐 · 開獎); a keyed device goes home →
@@ -295,7 +295,7 @@ moved from the sheet) and D22's crossed warning under it. The ingredient marks (
 `my-reasons` block are removed. §4a below stays as the record of the sheet that was; the `.mark` part stays in the registry (the
 `AlertDialog` left with Radix, 2026-10-10). The owner's frame: 「將選擇權還給使用者，我們專心做好分類」.
 
-### §4a · Preferences by tempo — owner-ruled 2026-08-28 (`spec-preference-split.md`)
+### §4a · Preferences by tempo — owner-ruled 2026-08-28
 
 **偏好 is for months; 這一餐 is for tonight.** The preferences page holds the budget and 不吃的食材 —
 what is about the person. The round page holds 「這次不吃」, D38's ten types as a chip row above the
@@ -307,7 +307,7 @@ mirrors that row's `persist`** (amended 2026-08-28 — a non-kept `allow` over a
 by the nightly erasure).
 
 **偏好 asks once before you leave with an un-kept change — owner-ruled 2026-08-28, corrected the same
-day (`spec-ingredient-keep.md`; the kept-by-default wording was withdrawn by him and never built).**
+day (the kept-by-default wording was withdrawn by him and never built).**
 D17's opt-in stands for every kind. A change made this visit whose row is not kept is a *pending* one;
 any in-app exit from 偏好 with a pending change opens the registry's one dialog part — `keep-dialog`,
 shadcn `AlertDialog`, in-page, never `window.confirm` — 「要保留這次的變更嗎？／保留的話，只有你看得到。」 + per pending kind 「不吃的食材會一直記著。」／「預算記到下個月底。」 (no 05:00 sentence; a kept ingredient never lapses — owner, 2026-08-28) with 保留 as the filled
@@ -330,7 +330,7 @@ Contrast* (the chip's 1.5 px ink border and the mark ≥ 3:1 against paper — m
 a selected filter chip shows a leading check glyph *and* a container colour change, never the colour alone; Apple
 HIG *Feedback* — confirm a selection where it was made, immediately; Nielsen #1 *Visibility of system status* and
 #6 *Recognition rather than recall*; Doherty threshold (the optimistic flip is < 400 ms today — measured ~120 ms to
-paint); Refactoring UI, "don't rely on colour alone to communicate state". Spec: `spec-chip-mark.md`.
+paint); Refactoring UI, "don't rely on colour alone to communicate state".
 
 **2. The reveal's `my_reasons` line is a different moment only when the roll DID something.** A stance is
 confirmed at the tap (ruling 1). What the tap cannot show is what the roll did with it — and there are two very
@@ -349,8 +349,8 @@ vanished with no trace); two visual weights for two meanings (the fix for a redu
 
 **Where the owner's "reference material" point lands, stated plainly:** the chip spec (2026-08-28) ruled weight
 and fill from the depth vocabulary and did not consult the accessibility criteria for state; that is the gap he
-named, and ruling 1 closes it with the sources above. The list of what to consult is now in
-`idea & img/orchestrator/research/skill-research-sources.md`'s design section.
+named, and ruling 1 closes it with the sources above. The list of what to consult is now kept
+with the team's research sources, outside this repository.
 
 ### §4b · The reveal has two states, and they are not a permission toggle over one design — `D105`
 
@@ -436,8 +436,8 @@ never "filled".**
 3. **`prefers-reduced-motion: reduce`** removes the tumble, both transitions and rule 4's arrival
    (no travel, no stagger); **the end states still apply, instantly.**
 4. **Arrival — one per screen, on first paint, once per mount** (`--t-flood` 450 ms `ease-out`,
-   from `translateY(12px)` + `opacity: 0`, staggered 90 ms in reading order). The full rules are
-   `spec-motion-arrival-2026-09-11.md` §1a; the two that are most often got wrong are **never on
+   from `translateY(12px)` + `opacity: 0`, staggered 90 ms in reading order). Of the arrival rules
+   (2026-09-11), the two most often got wrong are **never on
    anything that renders in response to an action** (a refusal that fades in has not refused
    anything yet — `BF-1`) and **never on 開獎**, whose sequence is `D111`'s and is the only motion
    that screen has.
@@ -564,7 +564,7 @@ Cross-fade only (§5 rule 2); the seal's box is reserved from first paint (RV-17
 *The owner's standing complaint was 單調, and the licence given was a static image. The ruling
 spends it on pattern, not photograph: the halftone dot is print's own texture AND the die's pip —
 the one mark this product owns. Riso-print logic: paper, spot colours, halftone. Reference render:
-`idea & img/frontend/reveal-ground.html`. Pure CSS (`radial-gradient` tiles), zero image
+a proposal page outside this repository. Pure CSS (`radial-gradient` tiles), zero image
 assets, §6's dead-wifi rule untouched. **Glow is banned on this ground — print does not glow**;
 the staged state's radial blur dies with this ruling. **Scope (2026-08-20, `F-6`): the ban is the
 reveal's print ground, not the whole product** — home's sun halo (`.halo`, the 5 s pulse) is
@@ -617,7 +617,7 @@ ui*, *restaurant picker*).
 
 **They are not interchangeable and the difference is load-bearing.**
 
-- **The moodboard (`idea & img/frontend/moodboard.html`) is nine SHIPPED commercial products** —
+- **The moodboard (a page outside this repository) is nine SHIPPED commercial products** —
   the owner's stated bar, 「商業等級的範例」. **It is the fidelity reference and nothing else replaces
   it**: every screen in it survives real data, real names, real edge cases.
 - **The component libraries are recipes.** Useful for *how* an effect is built. Each one costs a
@@ -791,8 +791,8 @@ What still counts as a defect:
 
 **「先捨棄手機，目前在趕進度，像 lawcidity 一樣有個 demo 網頁就好」.**
 
-**The target is one width: 1440 — the approved page's own viewport.** Every spec in
-`idea & img/evaluator/` states numbers at 430 / 900 / 2560; **while this section stands, only the
+**The target is one width: 1440 — the approved page's own viewport.** Every evaluator spec
+states numbers at 430 / 900 / 2560; **while this section stands, only the
 1440 column is built and only the 1440 column is gated.** The others are not deleted from the specs,
 because deleting them is how they come back as guesswork.
 
@@ -820,7 +820,7 @@ shown to work on a phone; it has been shown to photograph well on a laptop.
 ### The switcher's corner at ultra-wide — ruled 2026-08-21, WITHDRAWN by the owner 2026-09-04
 
 > **This paragraph no longer describes the product. Owner-ruled 2026-09-03, 軸二 = 乙 報頭內
-> (`D101` amendment (10)'s sibling ruling; `spec-round-menu-2026-09-03.md` §3): the switcher moves
+> (`D101` amendment (10)'s sibling ruling): the switcher moves
 > INTO the home's masthead row — brand · dateline · picker · switcher — and the four inner screens
 > get ONE slim fixed bar carrying 返回 at the left and the links at the right. It reverses ruling ⑥
 > of 2026-08-20 and it reverses the sentence below.**
@@ -831,7 +831,7 @@ shown to work on a phone; it has been shown to photograph well on a laptop.
 > rather than something aligned to the composition. What the ruling changed is the HOME, where the
 > masthead is itself chrome and the switcher inside it is no longer a second, competing frame.
 >
-> **What it cost, measured before the build** (candidate 5, `idea & img/evaluator/baseline-cand5/`):
+> **What it cost, measured before the build** (candidate 5, against the evaluator's baseline shots):
 > the masthead is a wrapping flex row already holding brand, dateline and the picker. At **1440 and
 > 2560 the switcher fits on that row and the masthead's height does not change**, which is why A0c
 > stayed at 0.00 px through this change. At **≤900 it does not fit** (752 px of content against 777

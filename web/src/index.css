@@ -129,7 +129,7 @@
   --color-ink: #2B1713;
   --color-paper: #F2E2A0;
   --color-muted: #6A4A38;
-  /* **Look D (擲筊與籤詩, owner 「我喜歡D」 2026-10-08, `spec-look-d-moon-blocks-2026-10-08.md`).**
+  /* **Look D (擲筊與籤詩, owner 「我喜歡D」 2026-10-08).**
      The page stands on lacquer and every content column is a joss-paper slip. `ground` is the
      lacquer; `gold` is the slip's inner rule and hairlines only — decoration, never text (paper on
      ground 5.85 · ink on paper 13.09 · muted on paper 6.1 · paper on hot 5.58 · ink on sun 7.85).
@@ -274,7 +274,7 @@
 }
 
 /* ═══ 乙 · the arrival ════════════════════════════════════════════════════════════════════════
-   `spec-motion-arrival-2026-09-11.md` §1a. The owner 「動態感太少」 reversed `design.md` §5's
+   Blocks arrive in reading order. The owner 「動態感太少」 reversed `design.md` §5's
    「no entrance animation on a block」; the other two thirds of that sentence stand — nothing
    scroll-triggered, nothing springy.
 
@@ -455,7 +455,7 @@
   }
 }
 
-/* §2 · the ladder, tier 3 — **甲, owner-ruled 2026-08-20 night** (`spec-home-wide.md`). At ≥1920
+/* §2 · the ladder, tier 3 — **甲, owner-ruled 2026-08-20 night**: wide screens print the home larger. At ≥1920
    the whole home composition scales as one object, so the ladder steps with it: the 27-inch render
    is the 1440 design printed larger rather than the 1440 design floating in paper.
 
@@ -507,7 +507,7 @@
   *, *::before, *::after { border-radius: 0; }
 }
 
-/* ═══ Look D — the lacquer ground and the slip (`spec-look-d-moon-blocks-2026-10-08.md`) ════════
+/* ═══ Look D — the lacquer ground and the slip ════════
    The page stands on lacquer with a faint vertical grain and a soft top light; every screen's
    content column is a joss-paper slip — a 2 px ink edge, a gold rule 8 px in, the hard offset
    shadow. The reveal paints its own ground (its flood tokens are this lacquer). */

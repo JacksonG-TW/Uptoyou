@@ -24,8 +24,8 @@ export const TOWNSHIPS = [
 /**
  * The wall clock in Taipei, as a `Date` whose LOCAL getters read Taipei's date and hour.
  *
- * **Extracted 2026-08-28 so the dateline could reuse it** (`lib/dateline.ts`, `spec-home-dateline`
- * §1: "do not write a second timezone helper"). The shift itself is unchanged and this is the only
+ * **Extracted 2026-08-28 so the dateline could reuse it** (`lib/dateline.ts`; the dateline's
+ * rule: "do not write a second timezone helper"). The shift itself is unchanged and this is the only
  * place on the surface that performs it — a second copy is how one of the two gets corrected alone
  * and the page starts disagreeing with itself about what day it is.
  *

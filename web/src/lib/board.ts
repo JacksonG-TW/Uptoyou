@@ -1,6 +1,6 @@
 /**
  * **The rolled cell, as 0-based [row, column]: `board[die1 − 1][die2 − 1]`** — the first die picks
- * the row, the second the column (`spec-board-2026-09-11.md` §2). A transposed reading lights the
+ * the row, the second the column (the board's reading order, 2026-09-11). A transposed reading lights the
  * wrong shop on every non-double, and the board would still look right. `null` before the dice are
  * known, or for a value off a die.
  */
@@ -12,7 +12,7 @@ export function litCell(dice: readonly [number, number] | undefined | null): [nu
 }
 
 /**
- * **The drawn drawer's number, N = (die1 − 1) × 6 + die2** (`spec-reveal-qiantong-2026-10-09.md`):
+ * **The drawn drawer's number, N = (die1 − 1) × 6 + die2** (the 籤詩櫃 rebuild, 2026-10-09):
  * rows are die one and columns die two, both 1…6 from the top left, so the 36 drawers are numbered
  * left to right, top to bottom — the same cell `litCell` names. `null` when the dice are not known.
  */

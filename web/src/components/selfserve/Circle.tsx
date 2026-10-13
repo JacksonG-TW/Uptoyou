@@ -58,7 +58,7 @@ export default function Circle({ device }: { device: Device }) {
 
   return (
     <main className="selfserve" data-screen="circle">
-      {/* No 「★ 這個圈子」 eyebrow (`spec-round-diet-circle-2026-10-08.md` B): the title already says
+      {/* No 「★ 這個圈子」 eyebrow (2026-10-08): the title already says
           where you are, and the eyebrow was one more piece of text in a first view that is budgeted. */}
       {/* **The title follows what this seat can do here** (the evaluator's red, 2026-10-08: a member
           read 「邀朋友加入」 over a page whose only act was 選這一餐 — 「標題和按鈕的用途對不起來」).

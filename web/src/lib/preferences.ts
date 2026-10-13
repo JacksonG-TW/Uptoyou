@@ -14,7 +14,7 @@
 import { auth, type Device } from './device'
 import { must, send } from './http'
 
-/* **The budget's two bands went with the 偏好 screen** (`spec-return-choice.md`, 2026-08-30):
+/* **The budget's two bands went with the 偏好 screen** (choice returned to the member, 2026-08-30):
    nothing sets a budget any more and the API refuses the kind. The wire's words were
    `tight`/`easy` and appeared on no screen; the labels were 省一點／鬆一點. */
 
@@ -40,7 +40,7 @@ export const CATEGORIES = [
    commit that added them (c90b06e); nothing here was authored, so nothing is lost that a document
    does not hold. */
 
-/** **One kind since 2026-08-30** (`spec-return-choice.md` §1). `budget` and `avoid_ingredient`
+/** **One kind since 2026-08-30** (the budget and the ingredient kinds were withdrawn). `budget` and `avoid_ingredient`
  *  are refused with a 422 naming the kind — refused, not ignored, so a client still sending one
  *  learns it rather than failing quietly. */
 export type Kind = 'avoid_category'
@@ -84,7 +84,7 @@ export type Coverage = {
 }
 
 export type Preferences = {
-  /* **`month` went with the budget** (`spec-return-choice.md` §1, 2026-08-30). It was the server's
+  /* **`month` went with the budget** (2026-08-30). It was the server's
      own expiry boundary and existed so the screen could never derive one — the two-clock defect
      that rule closed is recorded in D25. With no budget there is no month boundary to state. */
 
@@ -133,7 +133,7 @@ export type Preferences = {
    */
   values_awaiting_classification?: { values: string[]; why: string }
   /* **`ingredient_coverage`, `budget` and `avoid_ingredients[]` left the payload** with the kinds
-     they described (`spec-return-choice.md` §1). Stored rows stay in the database — D24's pins
+     they described (withdrawn 2026-08-30). Stored rows stay in the database — D24's pins
      reference them and the nightly erasure runs unchanged — they are simply never returned. */
 }
 

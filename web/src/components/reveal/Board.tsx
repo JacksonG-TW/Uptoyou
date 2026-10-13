@@ -3,7 +3,7 @@ import { PIPS, RED } from './Die'
 import { litCell } from '@/lib/board'
 
 /**
- * **The OPERATOR's 36-cell board** (`spec-board-2026-09-11.md`). Since the 籤詩櫃 rebuild
+ * **The OPERATOR's 36-cell board** (2026-09-11). Since the 籤詩櫃 rebuild
  * (2026-10-10) the member's board is `Cabinet.tsx`: drawers numbered 一…三十六 with their 干支, no
  * marks and no axes. The text below is this component's own history, and still true of it — the
  * operator's instrument keeps the numbered cells, the pip axes and the legend. `drawable` is shared.

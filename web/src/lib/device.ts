@@ -17,7 +17,7 @@ export function device(): Device | null {
 }
 
 /** One key, one circle: writing a second circle replaces the first (owner ruling (b), cc04fab;
- *  `spec-one-circle-per-device-2026-10-07.md`). The old seat is given back by `leaveCircle`. */
+ *  one circle per device). The old seat is given back by `leaveCircle`. */
 export function remember(d: Device): void {
   // A different circle's last round is not this circle's 上一餐, and the new key cannot read it.
   if (localStorage.getItem('upto_circle') !== d.circle) localStorage.removeItem('upto_last_round')

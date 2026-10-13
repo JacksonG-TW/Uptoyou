@@ -7,7 +7,7 @@ import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
 
 /**
  * §2 — creating a circle. **Three steps, and the order is the design**
- * (`spec-self-serve-2026-09-13.md`).
+ * (the self-serve design, 2026-09-13).
  *
  * **One component with internal steps, NOT three routes, and this protects a server guarantee with
  * a client decision.** A route change means a refresh is possible between the steps, and a refresh
@@ -16,8 +16,8 @@ import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
  * refreshed away by a tap on 返回 or a stray reload of an address that changed.
  *
  * **§3's rule — the key and the join link are NEVER on one screen — is now kept by there being no
- * key screen at all** (owner-ruled 2026-09-16, «the key leaves the member surface»; the evaluator's
- * `spec-key-off-the-member-surface-2026-09-16.md` §1). The danger it was written for is unchanged:
+ * key screen at all** (owner-ruled 2026-09-16, «the key leaves the member surface»; as the evaluator
+ * specified it). The danger it was written for is unchanged:
  * the key **is them**, the link **makes someone else a member**, they look alike, and the first
  * person to paste their own key into the group chat has given away their seat, which a re-issue
  * cannot undo. Showing the key was what created the chance to paste it; the creator never needs to

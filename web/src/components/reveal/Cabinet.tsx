@@ -4,7 +4,7 @@ import { ganzhi, litCell, woodPool, zhNumeral } from '@/lib/board'
 import { drawable } from './Board'
 
 /**
- * **The member's board as a 籤詩櫃: 36 numbered drawers** (`spec-reveal-qiantong-2026-10-09.md`).
+ * **The member's board as a 籤詩櫃: 36 numbered drawers** (the 籤詩櫃 rebuild, 2026-10-09).
  *
  * Each drawer is one outcome. **Its label is its own number in Chinese numerals, 一 … 三十六, and
  * its own 干支 name small in the corner** (owner 「A」, 2026-10-10) — drawer (r, c) is
@@ -19,7 +19,7 @@ import { drawable } from './Board'
  *   crossing on the drawer. Grid items placed on the row and the column, so nothing is measured.
  * - `frame` (the 籤筒 run): a gold frame inside the drawn drawer's edge, with an ink ring.
  *
- * **Every cell on screen is a cell the server decided** (spec-board §2): the nested map emits the
+ * **Every cell on screen is a cell the server decided** (the board's reading order): the nested map emits the
  * board as drawn, and each cell carries its row and column in the DOM. No count, no share, no
  * percentage, anywhere (§4). The grid is `aria-hidden`; the list beside it says the shops in text.
  *

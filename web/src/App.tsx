@@ -87,7 +87,7 @@ export default function App() {
     return () => { live = false }
   }, [])
 
-  /* **The 邀朋友加入 door is the creator's alone** (`spec-round-diet-circle-2026-10-08.md` B): only
+  /* **The 邀朋友加入 door is the creator's alone** (2026-10-08): only
      they can make a link, so for everyone else the door led to a page that says «ask someone
      else». The same read `/circle` uses. Not shown while the read is in flight, and not shown if
      it fails or says anything but creator (`unknown` is `/circle`'s fallback, not a reason to
@@ -109,7 +109,7 @@ export default function App() {
     <>
       {/* **Home's first view holds one act and six pieces of our own text** — the attention
           principle the owner ruled on 2026-10-08 and the budget agreed with the evaluator
-          (`idea & img/frontend/specs/spec-nav-labels-home-2026-10-08.md` N3). Everything a person
+          (2026-10-08). Everything a person
           does not need to start sits below the first view — except the weather strip under the
           masthead (owner 「1-4」 and 「A」, 2026-10-09: date, today's weather with its picker, the
           reading and the detail, reported apart from the budget); the sources stay below. Still
@@ -119,7 +119,7 @@ export default function App() {
         <header className="mast" data-part="masthead">
           <div className="brand"><b>由你決定</b></div>
         </header>
-        {/* **The weather strip** (`spec-home-weather-strip-2026-10-10.md`): the card's items 1-4 on
+        {/* **The weather strip** (2026-10-10): the weather card's first four items on
             one line under the masthead, no frame. Outside the first-view budget by the owner's 「A」
             ruling, so it carries `data-budget-exempt="weather"`; nothing else on home does. */}
         <div className="wxs" data-part="weather-strip" data-budget-exempt="weather">

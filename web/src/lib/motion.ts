@@ -20,7 +20,7 @@ import type { CSSProperties } from 'react'
 export { LazyMotion, domAnimation, m, useReducedMotion, useAnimate } from 'motion/react'
 
 /**
- * 乙's arrival — `spec-motion-arrival-2026-09-11.md` §1a, owner 「1」 after 「動態感太少」.
+ * 乙's arrival — blocks arrive in reading order, owner 「1」 after 「動態感太少」.
  *
  * **The arrival is CSS, not `motion`, and that is the whole reason this helper is three lines.**
  * §1a rule 1 is *once per mount, and a state change inside the screen never re-fires it*. A CSS

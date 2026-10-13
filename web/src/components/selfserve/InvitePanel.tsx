@@ -244,7 +244,7 @@ export default function InvitePanel({
       {role?.role === 'creator' && role.status?.expired && (
         <p className="ssStatus" data-part="link-status" data-state="expired">{LINK_EXPIRED}</p>
       )}
-      {/* **Role decides the page's one act** (`spec-round-diet-circle-2026-10-08.md` B). A member
+      {/* **Role decides the page's one act** (2026-10-08). A member
           cannot make a link, so the page says who can, once, and its one act is going to eat:
           選這一餐, the same door the home gives (`doorHref`). Only on `/circle` — the create flow
           (`inCreateFlow`) has the link in hand as its act and keeps this panel as it was. */}

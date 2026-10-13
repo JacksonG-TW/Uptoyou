@@ -17,7 +17,7 @@ import {
 
 /**
  * The menu's three section marks — 密度一, ruled by the owner 2026-09-03
- * (`spec-round-menu-2026-09-03.md` sec. 2, over 密度〇 and 密度二).
+ * (over 密度〇 and 密度二).
  *
  * **This grouping is authored by us and nothing may read it.** D38 has no notion of a section:
  * the API's closed list is thirteen flat values, and these three groups plus their two invented
@@ -53,7 +53,7 @@ const MENU_SECTIONS = [
 ]
 
 /**
- * 乙's stagger step per chip row — `spec-motion-arrival-2026-09-11.md` §2.
+ * 乙's stagger step per chip row — rows arrive in reading order.
  *
  * **Reading order across the whole menu, capped at six steps.** Past six the stagger outruns §1a
  * rule 4's one beat, so rows seven and after share the sixth step: the thirteen rows finish at
@@ -122,7 +122,7 @@ export default function Round() {
    *  re-subscribing on every change. */
   const openId = useRef<number | null>(null)
 
-  /** **「這次不吃」's state is the server's, read once on mount** (`spec-preference-split.md` §2).
+  /** **「這次不吃」's state is the server's, read once on mount** (preferences split by tempo, owner 2026-08-28).
    *  `null` until the GET answers, which is why the row renders its chips off rather than not at
    *  all — ten controls appearing a beat late would move the search box under the reader's thumb. */
   const [prefs, setPrefs] = useState<Preferences | null>(null)
@@ -135,7 +135,7 @@ export default function Round() {
    *  state this screen is allowed to assert. */
   const [pending, setPending] = useState<Record<string, boolean>>({})
   /** Whether 「這次不想吃的類別」 is open. **Not remembered** — it starts closed on every visit
-   *  (`spec-round-diet-circle-2026-10-08.md` A1): most rounds never touch it. */
+   *  (2026-10-08): most rounds never touch it. */
   const [tonightOpen, setTonightOpen] = useState(false)
 
   /** **The round whose pool swept to nothing, or `null`.** A round id rather than a boolean, and
@@ -155,7 +155,7 @@ export default function Round() {
    *  whenever the event was a beat late, which is the timing a fast local stack never produces and
    *  a phone on a train does. */
   const [rollError, setRollError] = useState<{ round: number; message: string } | null>(null)
-  /** **The waiting room** (`spec-round-waiting-room-2026-10-09.md`). Who this device is and who the
+  /** **The waiting room** (2026-10-09). Who this device is and who the
    *  host is, from the snapshot (backend, 2026-10-09); a ref beside `me` so the stream's handler,
    *  set up once, can tell an event about this seat from one about another. */
   const [me, setMe] = useState<number | null>(null)
@@ -361,13 +361,13 @@ export default function Round() {
     }
   }, [dev, roundId, busy])
 
-  /* **The door check — `spec-conditional-routing.md` §1.** A typed `/round` used to end at a
+  /* **The door check — a screen that cannot serve sends the person where they can act.** A typed `/round` used to end at a
      sentence with nowhere to go: true, and useless, because the thing the person needs is the
      device screen and the screen knew it. Now the screen sends them.
 
      Two facts, in order: no key → `/device`; key but this circle's preferences never seen →
      **One check, not two, since 2026-08-30.** This also sent a keyed device that had never seen
-     偏好 to `/preferences`; that screen was removed (`spec-return-choice.md` §2) and the routing
+     偏好 to `/preferences`; that screen was removed (choice returned to the member) and the routing
      lost its middle step, so a key is the only question left. `replace`, never `href`, so the back
      arrow does not return to a screen that immediately bounces again.
 
@@ -557,7 +557,7 @@ export default function Round() {
 
   return (
     <main className="round" data-screen="round">
-      {/* **Two columns from 900 wide** (`spec-round-two-column-2026-10-09.md`, owner 「左邊輸入右邊顯示
+      {/* **Two columns from 900 wide** (2026-10-09, owner 「左邊輸入右邊顯示
           清單」, 49ade4e, built per the v7b preview, 44ac714). It reverses A1's one column, and A1's
           reason is answered rather than ignored: the right column is not an empty 600 px any more,
           it holds the list this round is made of. Three wrappers in the one-column order (input,
@@ -580,7 +580,7 @@ export default function Round() {
           bar's 「擲骰」. The difference from the line above: D110 supplies the exact number, so that
           fix is determined; D108 forbids a phrasing without supplying the replacement, and which
           word replaces 擲 is a wording choice the evaluator gates. */}
-      {/* **One rule line, not two** (`spec-round-diet-circle-2026-10-08.md` A2): the first view is
+      {/* **One rule line, not two** (2026-10-08): the first view is
           budgeted to six pieces of our own text, and the cap and the pool rule are one fact about
           proposing. The cap stays ruled at three (D110, stated on the home page too); the second
           half is D70's pool rule — a place is one entry however many people proposed it, and a
@@ -598,7 +598,7 @@ export default function Round() {
         每人最多提三家。同一家不管幾個人提，都只算一份。
       </p>
 
-      {/* **No visible 找一家店 label** (`spec-round-diet-circle-2026-10-08.md` A3): the placeholder
+      {/* **No visible 找一家店 label** (2026-10-08): the placeholder
           names the act and says what to type, so a label above it was a second piece of text
           saying the same. The accessible name stays, as `aria-label`. */}
       <label className="roundSearch">
@@ -694,8 +694,8 @@ export default function Round() {
         <p className="roundNote" data-part="search-cap">只列出前 10 家。</p>
       )}
 
-      {/* **The roll sits ABOVE the list since item 3** (frontend, 2026-10-08,
-          `spec-round-diet-circle-2026-10-08.md`). Under the list, a ten-shop pool pushed it below
+      {/* **The roll sits ABOVE the list since item 3** (frontend, 2026-10-08).
+          Under the list, a ten-shop pool pushed it below
           the first view at both widths (`g_multi_device` MD-6: 0 primary on every device), so the
           one act of the screen was the one thing a full table could not see. Above, it is at the
           same place whatever the pool's length: the list's heading names what it rolls. */}
@@ -703,7 +703,7 @@ export default function Round() {
           directly under the pool it acts on: *these are the places · roll them*.
 
           **It moved above 這一輪的人 and the seed line on 2026-09-16** (the evaluator's amendment to
-          `spec-round-two-columns-2026-09-16.md`, closing RA-5). Those two are status — who has
+          the round's two-column layout, closing RA-5). Those two are status — who has
           looked, and the commitment that fixes the result — and status reads after the act. With six
           places pooled they had pushed 擲骰's top to 1071, past the fold the two-column ruling exists
           to keep it above.
@@ -870,14 +870,14 @@ export default function Round() {
           menu). The grid places it under the input wrapper. */}
       <div className="roundTonight" data-part="round-tonight" hidden={submitted}>
         {/* ── 「這次不吃」 ─────────────────────────────────────────────────────────
-            `spec-preference-split.md` §2, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
+            Preferences split by tempo, owner-ruled 2026-08-28: 「過敏原是長期的。但是，這次不想吃
             甚麼例如火鍋，這是短期的」. The long-term pair (預算, 不吃的食材) stays on 偏好; the ten
             types moved here, **before the search in reading order** — before a person looks for a place
             they say what tonight is not, so the stance is set while it is still cheap. **Since
             2026-09-16 that is expressed by the right column rather than by sitting above the search**
             (owner-ruled axis 1): the thirteen chips were pushing the screen's own act past the fold,
             so they stand beside it instead of before it. **Since 2026-10-08 the whole menu folds behind
-            one button below 這一輪的人** (`spec-round-diet-circle-2026-10-08.md` A1): optional, and most
+            one button below 這一輪的人** (2026-10-08): optional, and most
             rounds never touch it. Nothing inside it changed.
 
             **No keep toggle, and its absence is the ruling rather than an omission.** Every tap sends
@@ -907,7 +907,7 @@ export default function Round() {
           <p className="roundNote" data-part="tonight-explain">
             只算你自己的選擇。勾了的類別，這一輪抽中的機會會變小，店還是留在名單上。
           </p>
-          {/* **甲・菜單** (`spec-round-menu-2026-09-03.md` sec. 1, owner-ruled 軸一 over 牌面 and
+          {/* **甲・菜單** (the pool drawn as a menu, owner-ruled 軸一 over 牌面 and
               帳本): the wrapping row of thirteen buttons becomes a Taiwanese menu — mark · name ·
               leader dots · count, grouped under three section marks (sec. 2, 密度一).
 
@@ -949,7 +949,7 @@ export default function Round() {
                         aria-pressed={on}
                         onClick={() => void tapCategory(c, on, catStat.get(c)?.persist ?? false)}
                       >
-                        {/* **A second cue that is not colour** — `spec-chip-mark.md`, answering the
+                        {/* **A second cue that is not colour** — answering the
                             owner's critique. The on-state was an ink fill plus a 500→700 weight: a
                             fill inversion is a lightness change and survives colour-blindness, but
                             neither is a shape a person can name, and the product already has one —
@@ -966,7 +966,7 @@ export default function Round() {
                         <span className="lead" aria-hidden="true" />
                         {/* **Nothing follows the dots, and that is the ruling** — the owner
                             2026-09-11: 「有些數據不用特別給使用者，例如店家的數量，這是 SDE 需要知道的
-                            資訊，使用者應該專注在產品體驗」 (`spec-weights-picture-2026-09-11.md` §1).
+                            資訊，使用者應該專注在產品體驗」.
                             So `tonight-stat` is gone — with it the count, the percentage, and the
                             `data-shape` fork that chose between them. **The dots now run to the row's
                             end**, which is what they did before the menu spec folded a number into
@@ -1025,14 +1025,14 @@ export default function Round() {
             to make it appear (A2-G8b stays n/a).
 
             **The count left this sentence on 2026-09-11 and the warning did not**
-            (`spec-weights-picture-2026-09-11.md` §2). The ruling took the engineering numbers off
+            The ruling took the engineering numbers off
             this screen; the evaluator's reading is that the denominator was the number and the
             warning is D22's protection, so the wording drops 「這個圈子提得出來的 N 家裡」 and keeps
             everything that makes it a caution. Same trigger, same `crossed` read, no figure —
             **removing the sentence itself would remove a protection, and that is the owner's word
             to give.** Every character is in the shipped body subset, so no font rebuild.
 
-        **It sits outside the fold on purpose** (`spec-round-diet-circle-2026-10-08.md` A1): a caution
+        **It sits outside the fold on purpose** (2026-10-08): a caution
         that is protection must not be hidden by a closed disclosure. */}
         {prefs?.breadth.crossed && (
           <p className="roundWarn" data-part="tonight-breadth">

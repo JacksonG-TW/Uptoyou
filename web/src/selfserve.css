@@ -1,8 +1,8 @@
 /* A24 — the self-serve screens: `/create` and `/join`.
-   `spec-self-serve-2026-09-13.md`. Scoped under `.selfserve`, per the global-namespace rule the
+   A circle is created and joined without an operator. Scoped under `.selfserve`, per the global-namespace rule the
    other screen stylesheets follow.
 
-   **The column is the home's, like 裝置's** (丙, `spec-device-typeset.md` §1): the first screens a
+   **The column is the home's, like 裝置's** (丙, the device screen's typesetting): the first screens a
    stranger meets must not read as different buildings, and `/create` is now one of them — for a
    person arriving with no key it is the *first* screen, so it has more claim on that column than
    any other. */
@@ -152,7 +152,7 @@
    wide, the width of the column, which reads as a banner rather than a control. Measured at 1440
    before this rule. The blocks above them (the link box, the seat list) DO want the column's full
    width, so the fix is on the controls rather than on the container's `align-items`. */
-/* The filled re-issue / 選這一餐 on `/circle` (`spec-round-diet-circle-2026-10-08.md` B): `.act`
+/* The filled re-issue / 選這一餐 on `/circle` (2026-10-08): `.act`
    already supplies the box, so this only opens the gap that `.ssMinor` carried and joins the status
    line to its act the way `.ssStatus + .ssMinor` does. */
 .ssAct, .selfserve a.act { margin-top: 24px; }

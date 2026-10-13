@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * A secret rendered so a person can actually keep it: **a label, the value as selectable text, and
- * a copy control beside it** — `spec-self-serve-2026-09-13.md` §2b and §2c.
+ * a copy control beside it** — the self-serve design, 2026-09-13.
  *
  * **The rendered text is the guarantee; the button is the convenience.** `navigator.clipboard` is
  * undefined on an insecure origin and in some embedded browsers, and a copy button is then the only

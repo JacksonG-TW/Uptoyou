@@ -25,7 +25,7 @@ import Eaves from './components/Eaves.tsx'
  * The proxy already serves `index.html` for any unmatched path (`try_files $uri $uri/ /index.html`),
  * so a path this file does not name reaches it anyway and falls through to the home.
  *
- * **`/preferences` is one of those now** (`spec-return-choice.md` §2, 2026-08-30): the screen was
+ * **`/preferences` is one of those now** (choice returned to the member, 2026-08-30): the screen was
  * removed, and a typed or bookmarked `/preferences` lands on the home rather than 404ing. That is
  * the fall-through below and not a redirect — a redirect would be a claim that the address moved
  * somewhere, and it did not; the thing it addressed is gone.
@@ -134,7 +134,7 @@ createRoot(document.getElementById('root')!).render(
     {/* `strict` refuses a `motion.*` component anywhere below it, which is what keeps the feature
         bundle to the half we budgeted for. See `lib/motion.ts`. */}
     <LazyMotion features={domAnimation} strict>
-    {/* Demo scaffolding, ruled 2026-08-19; ONE bar since 乙 (`spec-round-menu-2026-09-03.md` §3).
+    {/* Demo scaffolding, ruled 2026-08-19; ONE bar since 乙 (the bar moved inside the masthead, 2026-09-03).
         Removing it is this line plus the import plus the stylesheet import in `index.css` — still
         deliberately three deletions and no untangling, and one line shorter than it was, because
         `Back` is now imported by the bar rather than rendered beside it. The home's switcher is

@@ -43,12 +43,12 @@ export default function DeviceScreen() {
     // its own words instead of in this one's — which is where the person can actually act.
     await verify(d)
     remember(d)
-    /* **Forward, not home** (`spec-conditional-routing.md` §1). Landing back on the home after a
+    /* **Forward, not home** (a screen that knows where the person goes sends them). Landing back on the home after a
        successful paste made the person press the same act again to learn where they were being
        sent; the key check has just answered that question, so the screen answers it.
 
        With a key stored, `doorHref()` is `/round`; the 偏好 step it once routed through is gone
-       (`spec-return-choice.md` §2).
+       (choice returned to the member, 2026-08-30).
 
        **`replace`, not `href`** — the back arrow must not return to a device screen that would
        bounce a now-keyed person straight out again (§1's closing rule, D107's back affordance). */
@@ -118,7 +118,7 @@ export default function DeviceScreen() {
 
   return (
     <main className="device" data-screen="device">
-      {/* 丙・只動排版 (`spec-device-typeset.md`, owner-ruled 2026-08-26 from the rendered
+      {/* 丙・只動排版 (typesetting only, owner-ruled 2026-08-26 from the rendered
           three-way). **Nothing is added that was not already on the screen** — the eyebrow is the
           one new element and it carries one word. The parts are set the way the home sets its own,
           so the two doors read as one building. */}

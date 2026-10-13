@@ -2,7 +2,7 @@ import { send } from './http'
 
 /**
  * How many shops the source lists today — `GET /api/places/count` (agreed with backend
- * 2026-10-08; `spec-nav-labels-home-2026-10-08.md`, last section).
+ * 2026-10-08, with the home's rebuild to the attention budget).
  *
  * The number is `place_rows` of the newest 食藥署 publication, and `as_of` is the **publisher's own
  * date** (the day 食藥署 cut the file), so the home can say «N shops, as of that day» as the

@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react'
 
 /**
  * **The 籤筒 — the reveal's second roll animation** (owner, decision-log 6c743a5: one of two,
- * picked per round; `spec-reveal-qiantong-2026-10-09.md` «The 籤筒 sequence»; the cinematic cut C,
- * `spec-reveal-cinematic-2026-10-09.md`).
+ * picked per round; the 籤筒 sequence of the 籤詩櫃 rebuild, and the
+ * cinematic cut C).
  *
  * Decoration only: `aria-hidden`, no text a screen reader needs, no control. The result is the
  * payload's, decided before anything moves; the tube shows it, it does not draw it (D91, D108).

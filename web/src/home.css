@@ -1,14 +1,14 @@
 /* The home screen's geometry.
    
    Written as CSS rather than as utility strings on purpose: the acceptance criterion for this
-   screen is a PIXEL DIFF against the owner-approved page (`home-v2.html`, once in
-   `idea & img/design-proposals/`; the file is no longer on disk — it was never tracked), and every number below is transcribed from it. Keeping the same class names and
+   screen is a PIXEL DIFF against the owner-approved page (`home-v2.html`, a design
+   proposal page that was never tracked and is no longer on disk), and every number below is transcribed from it. Keeping the same class names and
    the same declarations makes the two comparable by reading as well as by measuring — a utility
    soup would be correct and unreviewable.
    Colour and type come from the theme in `index.css`; nothing here invents a value. */
 
-/* **`--col` and `--lift-d` are tokens because 甲 scales them** (owner-ruled 2026-08-20 night,
-   `spec-home-wide.md`). Both were literals repeated across this file until the ≥1920 tier needed
+/* **`--col` and `--lift-d` are tokens because 甲 scales them** (owner-ruled 2026-08-20 night:
+   wide screens print the home larger). Both were literals repeated across this file until the ≥1920 tier needed
    to move them in one place.
 
    **`--lift-d` holds a LENGTH, not the whole shadow, and the spec's own `--lift: 8px 8px 0` shape
@@ -31,7 +31,7 @@
      the picker once `margin-right: auto` on the brand has eaten the free space.
 
      **`flex-end` + one auto margin on the brand, where it used to be `space-between` + one auto
-     margin on the dateline** (乙, `spec-round-menu-2026-09-03.md` §3). The two are identical while
+     margin on the dateline** (乙, one demo bar inside the masthead). The two are identical while
      every child fits on one line — an auto margin absorbs all the free space either way — and they
      differ on the line the switcher wraps onto: `space-between` puts a lone item at the START of
      its row, so the wrapped switcher would sit left. Moving the auto margin to the brand right-
@@ -345,7 +345,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 
 /* ═══ 甲 · at ≥1920 the whole composition scales as ONE object ═══════════════════════════════
    **Owner-ruled 2026-08-20 night** from the rendered three-way (`home-w-a/b/c.html`);
-   `spec-home-wide.md` carries the value table and the diagnosis. The complaint was a 27-inch
+   The values below come from that ruling's table. The complaint was a 27-inch
    screenshot: the 1440 design floating in paper rather than printed larger. 乙 (rhythm only) and
    丙 (right-bleed collage) are the rejected branches — 丙 because bigger photographs move the
    measured chroma, which is also why 甲 raises the hero cap only where the column grew with it.
@@ -379,7 +379,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 }
 
 /* ── 甲・日報 · the colophon ─────────────────────────────────────────────────
-   `spec-home-dateline.md` §2. The foot of a printed sheet, naming its sources.
+   The foot of a printed sheet, naming its sources.
 
    **The 3px rule is the sheet's heaviest stroke** and it is the whole reason this reads as a
    colophon rather than as a fourth paragraph — everything above it is 2px (`.mast`, `.eyebrow`)
@@ -408,7 +408,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 }
 
 /* ── 2026-10-08 · home's first view to the attention budget ───────────────────────────────
-   `spec-nav-labels-home-2026-10-08.md` N3: the first view holds the wordmark, the headline, the
+   The first view holds the wordmark, the headline, the
    doors and one line; the weather, the date and the sources sit below it in `.today`.
 
    **The hero now closes the first view on its own.** `.homeFoot` (the shape line and the act)
@@ -417,8 +417,8 @@ h1.headline .lit { color: var(--color-hot-ink); }
 @media (min-width: 900px) {
   .hero { margin-bottom: auto; }
 }
-/* **Below 900 the first view also ends where the hero ends** (`spec-round-diet-circle-2026-10-08.md`
-   B). A member who is not the circle's creator has two doors, not three, so the doors fit one row
+/* **Below 900 the first view also ends where the hero ends** (2026-10-08).
+   A member who is not the circle's creator has two doors, not three, so the doors fit one row
    at 430 and the date line under the hero rose into the 760 px first view. The column is held to
    the viewport the way ≥900 already holds it, so the date starts below the fold at any door count. */
 @media (max-width: 899px) {
@@ -457,7 +457,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
 /* The how-line keeps its last clause whole («沒有人要當／壞人» split at 22em, 1440). */
 .say { max-width: 26em; text-wrap: pretty; }
 
-/* ═══ Look D — the home on lacquer (`spec-look-d-moon-blocks-2026-10-08.md`) ═════════════════════
+/* ═══ Look D — the home on lacquer ═════════════════════
    The masthead is the slip's seal-red head band, set apart; the hero's left half is the slip that
    holds the headline, the circle line and the doors; the photos stand on the lacquer beside it;
    the sheet below the fold is a second slip. Text never sits on the lacquer in ink (2.24) — only

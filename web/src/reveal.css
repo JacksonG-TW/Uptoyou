@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: center;
   gap: 24px;
-  /* **Top padding clears the fixed bars** — `spec-inner-header.md`, evaluator-ruled 2026-08-28.
+  /* **Top padding clears the fixed bars** — the inner-header rule, evaluator-ruled 2026-08-28.
      `--bar-h` is declared in `switcher.css` beside the bars it measures.
 
      **This screen never had the clipping defect** — `justify-content: center` already put its
@@ -502,7 +502,7 @@
   transform: rotate(-4deg);
 }
 /* ── 乙 §3 · the sign act lands ───────────────────────────────────────────────────────────────
-   `spec-motion-arrival-2026-09-11.md` §3, owner 「1」. The one gesture a member performs to say
+   The arrival motion, owner 「1」. The one gesture a member performs to say
    *we are going* was a 120 ms cross-fade; it now inks over `--t-flood`.
 
    **The keyframes never mention `transform`**, so `.sealSigned`'s `rotate(-4deg)` holds unchanged
@@ -601,7 +601,7 @@
    the check failed the commit — the same rule that kept them here now sends them away. The ruling
    they carry, and the measurements behind it, moved with them whole. */
 
-/* ─── the member's 36-cell board (`spec-board-2026-09-11.md`, owner's three 「1」) ──────────────
+/* ─── the member's 36-cell board (owner's three 「1」, 2026-09-11) ──────────────
    A 6×6 grid, one cell per outcome, in its place's face colour; a legend of colour → name beneath;
    one authored line above. **No count, no share, no percentage anywhere**, which is the ruling.
 
@@ -856,7 +856,7 @@
 .reveal .evFactor { display: block; }
 .reveal .evNone { opacity: .55; }
 
-/* ─── 甲's bar picture (`spec-weights-picture-2026-09-11.md` §3, owner 「甲」) ───────────────
+/* ─── 甲's bar picture (owner 「甲」, 2026-09-11) ───────────────
    The accounting column became a drawing. Four rows always — 起點 plus one per known
    contributor — then the place's own share of the 36.
 
@@ -1193,7 +1193,7 @@
 
   /* ══ 甲改's centred member composition was here until item 2 (2026-10-08) ═══════════════
      It put the tumbling pair on the viewport's centre and the list under it. Item 2 puts the
-     board in the first screen beside the dice (`spec-reveal-board-first-2026-10-08.md`), so the
+     board in the first screen beside the dice (2026-10-08), so the
      member now takes the two columns the operator always had; its own rules are the «item 2»
      block at the end of this file. `git show main~:app/web/src/reveal.css` has the old one. */
 
@@ -1242,7 +1242,7 @@
   .reveal .evTable th { color: inherit; opacity: .6; }
 }
 
-/* **A19's two reveal rules are gone** (`spec-return-choice.md` §4): `.myReasons` held this
+/* **A19's two reveal rules are gone** (the ingredient kind was withdrawn): `.myReasons` held this
    reader's own veto sentences and `.reveal .rowTag` made the per-row mark `currentColor` on the
    flood — muted measured 2.82 on hot and 1.00 on cobalt, which is the finding that produced the
    rule and is worth keeping even though the element has left: **muted is a paper colour, and
@@ -1314,7 +1314,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 .reveal .winner { word-break: keep-all; overflow-wrap: anywhere; }
 
 /* ═══ item 2 — the board in the reveal's first screen (frontend, 2026-10-08) ═══════════════════
-   `spec-reveal-board-first-2026-10-08.md`. The board is the product's fairness argument — the
+   The board is the product's fairness argument — the
    dice point at a cell, the cell is a shop — and it sat a full scroll below the dice (top 1160 at
    1440). It is now in the first screen at every gated width, present and unlit from the first
    frame. **Member only**: every selector carries `:not(:has(.evNum))`, so the operator's
@@ -1411,7 +1411,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 .reveal .sealGlyph { font-size: 30px; line-height: 1; }
 
 /* ═══ look D (擲筊與籤詩) — the winner is a joss-paper slip (frontend, 2026-10-08) ═══════════════
-   `spec-look-d-moon-blocks-2026-10-08.md`. The ritual feel is wanted; the binding condition is that
+   The ritual feel is wanted; the binding condition is that
    the board and the odds stay in the first view at 1440×900 and 430×760. Member only: every
    selector carries `:not(:has(.evNum))`. The name stays in the SANS (Noto Sans TC 900) — an
    arbitrary restaurant name cannot be promised a serif face's glyphs. */
@@ -1508,7 +1508,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 
 
 /* ═══ the 籤詩櫃 rebuild + the cinematic cut C (frontend, 2026-10-10) ══════════════════════════
-   `spec-reveal-qiantong-2026-10-09.md` and `spec-reveal-cinematic-2026-10-09.md` «C, as built».
+   The 36 drawers of a temple's 籤詩 cabinet, and cut C of the cinematic reveal as built.
    Member only where it matters: the operator keeps its table and grid below the answer. */
 
 /* ── the answer column ── the qualifier and the act sit beside the slip at ≥ 1100, under it below. */

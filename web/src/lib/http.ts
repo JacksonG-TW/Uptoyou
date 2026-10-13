@@ -2,7 +2,7 @@
  * The one HTTP mapper. Every fetch helper in `lib/` sends through `send` and judges the reply
  * through `must` (or reads `reply.action`), so what a status MEANS is decided in one place: the
  * table in `statuses.json`, which the backend generates from `upto/statuses.py` and a commit hook
- * keeps from drifting. No helper reads a raw status to guess a meaning (`spec-http-mapper-2026-10-10`).
+ * keeps from drifting. No helper reads a raw status to guess a meaning (2026-10-10).
  *
  * Matching, in order: the exact (method, router template, status) row; among rows that share all
  * three, the one whose `detail` equals the reply's, else a row with no detail (it stands for any

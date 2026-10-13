@@ -42,8 +42,8 @@ const DRIFT = [
  * **The ground's six tilted dice** — §0c amendment D, owner 2026-08-27: 「綠底＋不同角度的立體骰子，
  * 我認為很棒，可以按照你說的四色」. Replaces the two flat poster faces.
  *
- * Positions, sizes and angles are `idea & img/frontend/reveal-ground.html` §五's, which is the page
- * the ruling was made from. `x`/`y` are percentages of the stage, `s` is the cube's edge as a
+ * Positions, sizes and angles are those of the rendered proposal page the ruling
+ * was made from (its §五, not in this repository). `x`/`y` are percentages of the stage, `s` is the cube's edge as a
  * percentage of the stage's width, `r` is the flat rotation of the whole cube's box, `rx`/`ry` the
  * 3-D turn of the cube inside it. **Fixed, never random** — a ground that lands differently on
  * every load reads as a glitch, and this one is a record of a result.

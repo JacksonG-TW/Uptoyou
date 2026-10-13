@@ -11,7 +11,7 @@
  * not spread into the screens.
  *
  * **It sits in the masthead now, and the paragraph that argued for a fixed corner is spent**
- * (`spec-round-menu-2026-09-03.md` §3, owner-ruled 軸二 = 乙・報頭內, reversing ruling ⑥ of
+ * (owner-ruled 軸二 = 乙・報頭內, the bar inside the masthead, reversing ruling ⑥ of
  * 2026-08-20). That paragraph said a switcher in the masthead moves every object below it and
  * reddens `A0c`'s pixel diff. **Measured on candidate 5 before the change, it does not:** the
  * masthead is already a three-child wrapping flex row, and at 1440 brand + dateline + picker +
@@ -22,9 +22,9 @@
  * **Two shapes, one component.** On the home the nav is a child of `.mast`. On every inner screen
  * `NavBar` below wraps it with `Back` in ONE slim fixed bar — replacing the two separate fixed
  * boxes that used to pin opposite corners. `--bar-h` in `switcher.css` is now one bar's height
- * rather than the taller of two, and `spec-inner-header.md`'s `main` offset is unchanged in shape.
+ * rather than the taller of two, and the inner-header rule's `main` offset is unchanged in shape.
  *
- * **Four destinations since 2026-08-30** (`spec-return-choice.md` §2): 偏好 was removed — with the
+ * **Four destinations since 2026-08-30** (choice returned to the member): 偏好 was removed — with the
  * budget and the ingredient list gone it would have held one sentence about a choice made on
  * another screen, which is the anti-default list's own case — and a tab pointing at 這一餐 was
  * rejected as a tab that is another tab. The rule below is unchanged and is what allowed the
@@ -63,7 +63,7 @@ function stops(): Stop[] {
   /* **這一餐 only for a device with a seat** (UX batch U1, walk item 3). Without one the link led
      to `/round`, which bounced to the key screen — the back door the 2026-09-16 ruling took off
      the member surface. A link that can only bounce is not offered. */
-  /* **Labels say what is on the other side** (`spec-nav-labels-home-2026-10-08.md` N1–N2, the
+  /* **Labels say what is on the other side** (2026-10-08, the
      owner's attention principle): 選這一餐 where 這一餐 named a page the cold reader could not
      predict, 上一餐結果 where 開獎 named an event (who opens it? when?). */
   const list: Stop[] = [{ href: '/', label: '首頁' }]
@@ -99,7 +99,7 @@ export default function Switcher() {
 }
 
 /**
- * The inner screens' single bar — `spec-round-menu-2026-09-03.md` §3, 乙・報頭內.
+ * The inner screens' single bar — 乙・報頭內, the bar inside the masthead.
  *
  * **返回 left, the stops right, one 2 px ink rule under the lot.** It replaces `.backLink`'s
  * top-left box and `.switcher`'s top-right box, which read as two decisions pinned to opposite
