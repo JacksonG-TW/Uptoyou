@@ -154,7 +154,7 @@ export default function Collage() {
               near-black ground showed through and the photograph visibly darkened mid-swap. A
               cross-fade that flashes is the defect the fade exists to prevent. Holding the
               outgoing opaque and fading the incoming in over it keeps coverage at **1.00** for
-              every frame, and to the eye it is the same dissolve. Deviation from §2's letter,
+              every frame, and to the eye it is the same dissolve. Deviation from the rotation ruling's letter,
               reported to the evaluator with both traces. */}
           {leaving[i] && (
             <img data-collage-img src={leaving[i]!.file} alt="" aria-hidden="true"

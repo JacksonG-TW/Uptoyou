@@ -31,7 +31,7 @@
  */
 
 /**
- * §2c — the join link's life, on the creator's screen. **Backend's words, font-checked before they
+ * The join link's life, on the creator's screen. **Backend's words, font-checked before they
  * reached me** (2026-09-13; they drafted three and checked all three against
  * `noto-sub-variable.woff2`'s own cmap — verified independently here, 23 characters, none absent).
  *
@@ -48,7 +48,7 @@
  */
 export const LINK_LIFE = '連結做好一小時就過期，換一條新的就再有一小時。'
 
-/** §2a — the one line on the naming screen. States the absence that matters to a stranger deciding
+/** The one line on the naming screen. States the absence that matters to a stranger deciding
  *  whether to start: there is nothing to sign up for. */
 export const NO_ACCOUNT = '不用帳號，也不用 email。'
 

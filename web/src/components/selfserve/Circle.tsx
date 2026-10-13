@@ -40,7 +40,7 @@ export default function Circle({ device }: { device: Device }) {
    * The hazard that started this is real and is why nothing is fetched on arrival: the only route
    * that yields a link is `POST …/join-ticket`, which **mints one and revokes the current one**, so
    * a screen that fetched a link on arrival would destroy the link the creator had already shared
-   * **by the act of opening the screen to look at it** — §5's 「a worried person presses the
+   * **by the act of opening the screen to look at it** — the self-serve rule 「a worried person presses the
    * frightening button and their friend's link dies with it」, with nobody pressing anything.
    *
    * **So the only thing that fills this is re-issue**, and that is honest rather than a shortfall:

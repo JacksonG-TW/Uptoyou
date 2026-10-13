@@ -5,7 +5,7 @@ import { device, remember } from '@/lib/device'
 import { REPLACE_NOTICE } from './copy'
 
 /**
- * §4 — joining by the shared link, `/join#c=<circle_id>&t=<ticket>`.
+ * Joining by the shared link, `/join#c=<circle_id>&t=<ticket>`.
  *
  * **The circle id and the ticket arrive as props, already read and already erased from the address
  * bar.** `readFragmentSecret('t')` runs once in `main.tsx`'s `route()`, at module scope — the same place
@@ -24,7 +24,7 @@ import { REPLACE_NOTICE } from './copy'
  * **A24's localStorage guarantee is unchanged**: the secret is written to this device and to nothing
  * else, and it is never rendered.
  *
- * **Nothing is created until the person names themself** (§4.1). A tap on a link is not consent to
+ * **Nothing is created until the person names themself**. A tap on a link is not consent to
  * join under a blank name, so `POST /join` is not sent on arrival — it waits for a nickname and an
  * explicit control.
  */
@@ -78,7 +78,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
          it renders what the server said. The creator's fix for a friend who was late is the
          re-issue control that already exists.
 
-         **No client-side seat cap anywhere** (§7): D110's cap is the server's and arrives as that
+         **No client-side seat cap anywhere**: D110's cap is the server's and arrives as that
          409. A screen that counted seats and greyed out joining at ten would one day predict the
          rule wrongly and refuse a legal join. */
       setError((e as Error).message)
@@ -130,7 +130,7 @@ export default function Join({ circle, ticket }: { circle: string; ticket: strin
           <form className="ssForm" onSubmit={(e) => e.preventDefault()}>
             <label className="ssField">
               <span className="ssLabel">你的暱稱</span>
-              {/* **No uniqueness check** (§7): two friends both typing 小明 is legal, the server
+              {/* **No uniqueness check**: two friends both typing 小明 is legal, the server
                   allows it, and the screen adds no marker and no 「(2)」. */}
               <Input
                 data-part="joiner-nickname"

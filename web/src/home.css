@@ -26,7 +26,7 @@
 .mast {
   display: flex; align-items: center;
   border: 2px solid var(--color-ink); padding: 14px 20px; margin-top: 20px;
-  /* 甲・日報 §1b — the dateline is a third child of a two-child bar, so the bar has to be able to
+  /* 甲・日報 — the dateline is a third child of a two-child bar, so the bar has to be able to
      take a second row rather than squeeze the brand. `column-gap` is what keeps the dateline off
      the picker once `margin-right: auto` on the brand has eaten the free space.
 
@@ -45,7 +45,7 @@
 .brand span { font-size: var(--text-note); color: var(--color-muted);
               letter-spacing: .1em; text-transform: uppercase; }
 
-/* 甲・日報 §1b · the dateline. `tabular-nums` because the date changes width every day and a
+/* 甲・日報 · the dateline. `tabular-nums` because the date changes width every day and a
    masthead that shifts under its own numerals reads as a bug rather than as a sheet. */
 .dateline {
   font-size: var(--text-note); color: var(--color-muted); letter-spacing: .08em;
@@ -350,7 +350,7 @@ h1.headline .lit { color: var(--color-hot-ink); }
    丙 (right-bleed collage) are the rejected branches — 丙 because bigger photographs move the
    measured chroma, which is also why 甲 raises the hero cap only where the column grew with it.
 
-   **The chroma ceiling holds by construction, not by re-measurement** (spec §2): the 480 cap at
+   **The chroma ceiling holds by construction, not by re-measurement**: the 480 cap at
    1440 exists because growing the food photography grew page saturation past 0.20 / 20% (swept,
    break between 510 and 540). At ≥1920 a 640-cap hero sits in a 1680 column, so the photo's share
    of the viewport is at or below the 1440 share. **Widen any of these values and the sweep re-runs

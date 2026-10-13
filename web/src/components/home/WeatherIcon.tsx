@@ -9,7 +9,7 @@
  *
  * `code` is string | null | undefined by design — the forecast half carries the key (a value or
  * null), the observation half has no code element at all, so the key is absent. All three render
- * nothing and the box holds its size; §2b's box is a sized element, not a shrink-wrap.
+ * nothing and the box holds its size; the strip's icon box is a sized element, not a shrink-wrap.
  */
 export default function WeatherIcon({ code }: { code?: string | null }) {
   return (

@@ -85,7 +85,7 @@ function route() {
     return held ? <Circle device={held} /> : home()
   }
   /**
-   * A24 §4 — `/join#c=<circle_id>&t=<ticket>`.
+   * A24, joining — `/join#c=<circle_id>&t=<ticket>`.
    *
    * **The fragment is read and erased HERE, at module scope, not in the component.** That is the
    * same placement and the same argument as the home fall-through above: `route()` is called once

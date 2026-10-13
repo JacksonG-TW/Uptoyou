@@ -184,7 +184,7 @@ export default function InvitePanel({
     setError('')
     try {
       onLink(await reissueJoinLink(device))
-      /* **Re-read rather than assume.** §5 says re-issuing ejects nobody and `SS-7` checks the
+      /* **Re-read rather than assume.** Re-issuing ejects nobody by design and `SS-7` checks the
          count is unchanged — a screen that skipped this would assert the rule instead of showing
          it, and would keep a stale list if the rule ever broke. */
       void readSeats()
@@ -220,7 +220,7 @@ export default function InvitePanel({
         </>
       )}
 
-      {/* §5 — **one control, never two.** There is no standalone revoke: revoking alone leaves a
+      {/* **One control, never two.** There is no standalone revoke: revoking alone leaves a
           circle nobody can join, and that is a state a worried person reaches by accident — they
           press the frightening button to shut a stranger out and their real friend's link dies with
           it. Whatever they press must leave them a link to share, so the action is
@@ -284,7 +284,7 @@ export default function InvitePanel({
           right, never updated, and made `SS-8` unmeasurable **while appearing to pass**.
 
           **`cap` comes from the payload, never from the markup** — it is `issue.SEAT_CAP` and it has
-          moved once already. **No client-side cap** (§7): this counts, it does not gate.
+          moved once already. **No client-side cap**: this counts, it does not gate.
 
           **Duplicates render as the server has them** (`SS-8`): no marker, no 「(2)」. The React key
           is the index for exactly that reason — the nickname is not unique and must not be treated

@@ -14,7 +14,7 @@ import {
 } from '@/lib/reveal'
 import { device, noteLastRound, type Device } from '@/lib/device'
 import { SeatGone } from '@/lib/http'
-/* §3a only. The operator's counts come from the same endpoint the member's 這一餐 used to render
+/* The operator's counts only. They come from the same endpoint the member's 這一餐 used to render
    them from, so there is one definition of each figure and no second arithmetic. */
 import { fetchPreferences, type Preferences } from '@/lib/preferences'
 
@@ -59,7 +59,7 @@ const PULL_MS = 900
  *  still get the answer they are holding. Longer than either run, so it never beats a healthy one. */
 const FAILSAFE_MS = 16000
 
-/** A name's width in em, for the headline's fit (item 2 §5): a CJK or full-width character is
+/** A name's width in em, for the headline's fit (a long name shrinks to one line): a CJK or full-width character is
  *  one em, everything else about 0.6. Never below 1. */
 function nameEm(name: string): number {
   let em = 0
@@ -74,10 +74,10 @@ export default function Reveal({ roundId }: { roundId: number }) {
   const [trip, setTrip] = useState<Trip>(null)
   /** `null` for a member because **nothing arrived** — D105's whole point. */
   const [evidence, setEvidence] = useState<EvidenceData | null>(null)
-  /** §3a — the operator's own avoided categories, fetched only once `evidence` is non-null (WP-8). */
+  /** The operator's own avoided categories, fetched only once `evidence` is non-null (WP-8). */
   const [counts, setCounts] = useState<Preferences | null>(null)
   const [signing, setSigning] = useState(false)
-  /** 乙 §3 — whether the seal LANDS: only this device's 201. A 409 re-read is a fact, not an act. */
+  /** 乙's sign act — whether the seal LANDS: only this device's 201. A 409 re-read is a fact, not an act. */
   const [sealLanded, setSealLanded] = useState(false)
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>('rolling')
@@ -120,7 +120,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
     return () => window.clearTimeout(h)
   }, [data])
 
-  /* §3a's fetch, keyed on `evidence` so a member never makes it. A failure is swallowed: the
+  /* The counts' fetch, keyed on `evidence` so a member never makes it. A failure is swallowed: the
      counts are a footnote to the operator's table, and a 500 on the footnote must not cost it. */
   useEffect(() => {
     if (!dev || !evidence) return
@@ -477,7 +477,7 @@ export default function Reveal({ roundId }: { roundId: number }) {
         )}
       </div>
 
-      {/* The places list: the names in play, never a number (§0b). No proposer on any row. The
+      {/* The places list: the names in play, never a number. No proposer on any row. The
           winning row's weight arrives with the name. */}
       <div className="right" data-part="right-column">
         {data && (

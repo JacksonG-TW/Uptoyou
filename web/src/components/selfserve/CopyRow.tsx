@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react'
  * failed copy leaves it untouched and says nothing alarming — an error there would tell a person
  * their key was lost while it is in front of them.
  *
- * Used for the join link (§2c and §5). It once served the key too, on the key screen that left
+ * Used for the join link. It once served the key too, on the key screen that left
  * with the 2026-09-16 ruling; no member screen renders a key now.
  */
 export default function CopyRow({

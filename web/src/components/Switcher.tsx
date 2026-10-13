@@ -32,7 +32,7 @@
  *
  * **The destinations, all of them built as of A4.** The rule that got them here stands and is
  * worth keeping: a stop appears when its screen exists, never before — a demo that walks a person
- * into a blank page is worse than a demo with fewer stops, which is §1a's argument that a disabled
+ * into a blank page is worse than a demo with fewer stops, which is the arrival rules' argument that a disabled
  * control is still a door. The reveal is the one that still comes and goes, because it needs a
  * round to point at.
  */

@@ -69,11 +69,11 @@
 .selfserve input::placeholder { color: var(--color-muted); }
 .selfserve input:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 1px; }
 
-/* ─── a secret, rendered so a person can keep it (§2b, §2c) ─────────────────────────────────── */
+/* ─── a secret, rendered so a person can keep it ───────────────────────────────────────────── */
 .copyRow { margin: 0 0 18px; }
 .copyLabel { font-size: var(--text-note); font-weight: 700; margin: 0 0 6px; }
 
-/* **`user-select: all` is the guarantee half of §2b**, not a nicety: `navigator.clipboard` is
+/* **`user-select: all` is the guarantee half of copying**, not a nicety: `navigator.clipboard` is
    undefined on an insecure origin and in some embedded browsers, and without a selectable value the
    copy button would be the only path to a secret never shown again.
 
@@ -100,7 +100,7 @@
 }
 .copyBtn:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
 
-/* §2b — the notice sits ABOVE the continue control (`SS-3` asserts the order), so the margin is
+/* The notice sits ABOVE the continue control (`SS-3` asserts the order), so the margin is
    what separates it from the act rather than a rule or a box. */
 .secretNotice {
   font-size: var(--text-note);
@@ -111,7 +111,7 @@
 }
 .secretOnce { display: flex; flex-direction: column; align-items: flex-start; }
 
-/* §5's re-issue — a minor control, because it is not the act of this screen and a filled block
+/* The re-issue — a minor control, because it is not the act of this screen and a filled block
    beside the real act would read as a second primary. */
 .ssMinor {
   font: inherit; font-size: var(--text-note); font-weight: 700;
@@ -127,17 +127,17 @@
 .ssMinor:disabled { color: var(--color-muted); border-color: var(--color-muted); cursor: default; }
 .ssMinor:focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
 
-/* **The refusal renders where the control is, immediately, with no arrival** — 乙 §1a rule 5, and
+/* **The refusal renders where the control is, immediately, with no arrival** — an arrival rule, and
    `SS-6`. It carries no `.arrive` and nothing here animates: a refusal that fades in has not
    refused anything yet. */
 .ssErr { color: var(--color-hot-ink); font-size: var(--text-note); line-height: 1.7; margin: 18px 0 0; }
 
-/* §2c's seat list — who is here so far. **A count, never a gate** (§7): `seats/cap` both come from
+/* The seat list — who is here so far. **A count, never a gate**: `seats/cap` both come from
    the payload, nothing greys out near the cap, and nothing predicts the 409. */
 /* Room under the list: the last row's rule ran straight into the act below it. */
 .ssSeats { margin-top: 28px; margin-bottom: 28px; }
 .ssSeats ul { list-style: none; margin: 0; padding: 0; }
-/* **Duplicates render identically and that is the ruling** (§7, `SS-8`): no marker, no 「(2)」. Two
+/* **Duplicates render identically and that is the ruling** (`SS-8`): no marker, no 「(2)」. Two
    friends both called 小明 are two rows that read the same, because that is what the server holds. */
 .ssSeats li {
   font-size: var(--text-body);

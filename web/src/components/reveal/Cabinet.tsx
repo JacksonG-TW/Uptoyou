@@ -21,7 +21,7 @@ import { drawable } from './Board'
  *
  * **Every cell on screen is a cell the server decided** (the board's reading order): the nested map emits the
  * board as drawn, and each cell carries its row and column in the DOM. No count, no share, no
- * percentage, anywhere (§4). The grid is `aria-hidden`; the list beside it says the shops in text.
+ * percentage, anywhere. The grid is `aria-hidden`; the list beside it says the shops in text.
  *
  * `children` is the layer the dice (or the 籤筒) rest in, positioned against this section.
  */

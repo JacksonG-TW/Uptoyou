@@ -55,7 +55,7 @@ export default function App() {
     return () => { live = false; window.clearInterval(t) }
   }, [township])
 
-  /** 甲・日報 §1 — **computed once, on mount, and never again.** The initialiser form is the
+  /** 甲・日報, the dateline — **computed once, on mount, and never again.** The initialiser form is the
    *  ruling: a sheet printed at 16:59 does not become the evening edition while you look at it,
    *  so there is no interval here and nothing to tear down. */
   const [sheet] = useState(dateline)

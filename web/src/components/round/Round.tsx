@@ -55,7 +55,7 @@ const MENU_SECTIONS = [
 /**
  * 乙's stagger step per chip row — rows arrive in reading order.
  *
- * **Reading order across the whole menu, capped at six steps.** Past six the stagger outruns §1a
+ * **Reading order across the whole menu, capped at six steps.** Past six the stagger outruns the arrival rules'
  * rule 4's one beat, so rows seven and after share the sixth step: the thirteen rows finish at
  * 450 + 5 × 90 = 900 ms rather than at 450 + 12 × 90 = 1,530, which would be two beats and a
  * loading spinner wearing a costume.
@@ -80,7 +80,7 @@ const CHIP_STEP: Record<string, number> = Object.fromEntries(
  * a successful POST would be a second source of truth that agrees today and drifts the first time
  * two people propose at once.
  *
- * **Nothing here names who proposed what** (§3.0, D14). The `pooled` event carries a place and no
+ * **Nothing here names who proposed what** (the product's privacy rule, D14). The `pooled` event carries a place and no
  * member, the snapshot's pool carries names and no authorship, and there is no column behind
  * either by the time the round closes. So the absence is structural rather than a field this
  * component declines to render — but it is still asserted, because the payload could grow one.
@@ -148,7 +148,7 @@ export default function Round() {
   /** A refused roll, **kept with the round it was refused on rather than merged into `error`**.
    *
    *  The refusal reaches this device twice for the swept-pool case — as its own 409 `detail` and as
-   *  the `pool_swept` every seat receives — and §2 says the roller reads one line. Suppression is
+   *  the `pool_swept` every seat receives — and the swept-pool rule says the roller reads one line. Suppression is
    *  therefore a **derived** question, not something the catch can answer: the two arrive over
    *  different transports and either can be first. Holding the message and deciding at render is
    *  what makes the order stop mattering; a check inside the catch would have shown two lines
@@ -174,7 +174,7 @@ export default function Round() {
   const listRef = useRef<HTMLDivElement>(null)
   const [listFits, setListFits] = useState(true)
 
-  /** Forget the circle, say one line, go home (spec §The device that was asked to leave). */
+  /** Forget the circle, say one line, go home (the device that was asked to leave). */
   const goneOnce = useRef(false)
   const gone = (why: 'removed' | 'dead') => {
     // **Once.** The server ends a removed seat's stream right after `seat_removed`, the stream
@@ -388,7 +388,7 @@ export default function Round() {
   /** **The row's state comes from the GET, never from what this device just tapped** (PS-4). A
    *  reload has to show the same chips, and the only thing that knows what is in force is the
    *  server (D25) — so this runs on mount and again after every accepted write. It is deliberately
-   *  NOT on the stream: a preference emits no SSE event by design (§3.0), because in a circle of
+   *  NOT on the stream: a preference emits no SSE event by design (the privacy rule), because in a circle of
    *  five the timing of an event is one guess from a name. */
   const readPrefs = useCallback(async (d: Device) => {
     try {
@@ -514,7 +514,7 @@ export default function Round() {
     const target = leavable.find((r) => r.member_id === chosen) ?? null
     return (
       <main className="round roundSingle" data-screen="round">
-        {/* **One screen: choose, then a primary that names the person** (spec §Host). Nothing is
+        {/* **One screen: choose, then a primary that names the person** (the host's screen). Nothing is
             chosen when it opens, so one tap can never remove someone the host did not pick; the
             effect is stated (D20), because removing the last waiting seat starts everyone's reveal. */}
         <div className="confirmCard" data-part="leave-confirm">
@@ -625,7 +625,7 @@ export default function Round() {
           that vanishes the moment they touch the keyboard is one they will meet again by trying
           the same thing. It clears when a proposal succeeds. */}
       {/* **The roll's refusal is suppressed exactly while `pool_swept` is explaining it** — one
-          line for the roller (§2), and the API's own sentence whenever the event did not arrive,
+          line for the roller, and the API's own sentence whenever the event did not arrive,
           so a refusal is never silent. Every other error is untouched. */}
       {(error || (rollError && rollError.round !== swept ? rollError.message : null)) && (
         <p className="roundErr" data-part="round-error" role="alert">
@@ -714,7 +714,7 @@ export default function Round() {
           as a dashed top rule; with no bar there is no rule to dash, and §5 rule 1 now names the
           dashed box as an offender, so it is a bordered paper block instead. */}
       <div className="act-row">
-        {/* **One button, one place, two states** (owner, spec §after). 提交 and its take-back are the
+        {/* **One button, one place, two states** (owner, after submitting). 提交 and its take-back are the
             same element with the same box; only the colours change, so the submitted state reads as
             done rather than as a second red call. No navigation on either response: `closed` moves
             every device to the reveal at once, and `submitted` moves names between the groups. */}
@@ -734,7 +734,7 @@ export default function Round() {
                 .finally(() => setBusy(false))
               return
             }
-            /* **The submitter sees one line, not two** (spec §2, carried over from the roll). When
+            /* **The submitter sees one line, not two** (the swept-pool rule, carried over from the roll). When
                the last submission finds every weight at zero, the refusal arrives as this device's
                409 and as `pool_swept` to every seat; the 409's text is held and suppressed while
                the event explains it, so one sentence has one owner. */
@@ -763,7 +763,7 @@ export default function Round() {
       {/* The list column: what this round is made of. While it fits the window it sticks whole beside
           the input column; when it is taller, only the 名單 sticks inside it (round.css). */}
       <div ref={listRef} className={listFits ? 'roundList listFits' : 'roundList'} data-part="round-list">
-        {/* 乙 §2 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
+        {/* 乙 — **the pool arrives as ONE block, never per row.** A fifty-row list staggered per
             row is a loading spinner wearing a costume (the spec's words). It takes the step after
             the menu's cap, because it is the last thing on the screen in reading order. */}
         <section className="poolBlock arrive" style={arrive(ARRIVE_CAP)} data-part="pool">
@@ -772,7 +772,7 @@ export default function Round() {
               (「反饋訊息給所有玩家，直接說目前的所有人的偏好導致所有店家皆無法選中，請使用者提出更多店家」).
               「大家」 and 「加起來」 are the ruling's own shape: the veto is the sum of the table, not
               one person's, and at five people a sentence that narrowed it would be one guess from a
-              name (§3.0).
+              name (the privacy rule).
 
               D20: the first sentence states what happened, the second states the condition for the
               next roll — 「請使用者提出更多店家」 said as a fact rather than as an instruction.
@@ -813,7 +813,7 @@ export default function Round() {
           ) : (
             <ul className="rows">
               {pool.map((p) => (
-                // No proposer, no count, no share — §3.0 and B1. The row is the place and nothing
+                // No proposer, no count, no share — the privacy rule and B1. The row is the place and nothing
                 // else, and the reveal is where numbers are allowed to exist at all.
                 <li key={p.place_id} className="row" data-part="pool-row">
                   <span className="rowName" data-user-content>{p.name}</span>
@@ -936,7 +936,7 @@ export default function Round() {
                     <li key={c}>
                       <button
                         type="button"
-                        /* 乙 §2 — the row arrives at its own place in the menu's reading order.
+                        /* 乙 — the row arrives at its own place in the menu's reading order.
                            **On the row, not on the `<li>`**: the row is what a person sees arrive,
                            and `.chip` is the box whose transform the gate measures. Once per mount,
                            so toggling a chip re-fires nothing (`YI-2`) — and the button answers a
@@ -981,8 +981,8 @@ export default function Round() {
                             menu by `pref-category-coverage` below: 沒有分類的店，避開讀不到。
                             **A count coming back here brings that defect back with it.**
 
-                            The numbers themselves are not deleted from the payload (§5) — they move
-                            to the operator's reveal as bars, §3/§3a, which is the second commit. */}
+                            The numbers themselves are not deleted from the payload — they move
+                            to the operator's reveal as bars and counts, which is the second commit. */}
                       </button>
                     </li>
                   )
@@ -991,7 +991,7 @@ export default function Round() {
             </Fragment>
           ))}
 
-          {/* §4's honesty requirement, moved with the types it describes. The number is the
+          {/* The honesty requirement, moved with the types it describes. The number is the
               payload's and is never written here — it moved from about 6% to nearly 13% in one day,
               and a constant would have been false by the afternoon while still rendering. Shown once
               and only while something is on: with no stance set there is nothing for it to qualify. */}

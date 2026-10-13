@@ -23,7 +23,7 @@ export { LazyMotion, domAnimation, m, useReducedMotion, useAnimate } from 'motio
  * 乙's arrival — blocks arrive in reading order, owner 「1」 after 「動態感太少」.
  *
  * **The arrival is CSS, not `motion`, and that is the whole reason this helper is three lines.**
- * §1a rule 1 is *once per mount, and a state change inside the screen never re-fires it*. A CSS
+ * The first arrival rule is *once per mount, and a state change inside the screen never re-fires it*. A CSS
  * animation on an element does exactly that for free: it runs when the element mounts and a
  * re-render does not restart it. Expressed through `motion` it would be a variant plus an
  * `initial`/`animate` pair on every block, and every one of them a place for a re-render to

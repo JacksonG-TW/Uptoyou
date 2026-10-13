@@ -17,7 +17,7 @@ import { litCell } from '@/lib/board'
  * column, and the number there is the shop. **That sentence is the whole reason this exists;
  * anything that makes it false makes the picture decorative.**
  *
- * **Why a number and not colour alone** (§8, 2026-10-07): four faces cycle, so from the fifth
+ * **Why a number and not colour alone** (2026-10-07): four faces cycle, so from the fifth
  * place two shops share a colour and colour stops naming anything. The number is the identity;
  * colour is a second cue. **Digits do one job here** — the place mark — which is why the axes are
  * pips: a 「3」 on the board is never a die value.
@@ -25,10 +25,10 @@ import { litCell } from '@/lib/board'
  * **Every cell on screen is a cell the server decided.** The payload is the drawn board, not
  * `{place_id: count}` — with counts the client would lay the cells out itself and the drawing would
  * stop being the table the server drew and become the client's arithmetic wearing the server's
- * authority (§2). So nothing here computes a position, an order or a share.
+ * authority. So nothing here computes a position, an order or a share.
  *
  * **No count, no share, no percentage — not in the text, not in `title`, not in `aria-label`, at
- * any width (§4).** That is the ruling's whole point and it is the one thing to check before adding
+ * any width.** That is the ruling's whole point and it is the one thing to check before adding
  * anything to this file. The cells stay countable by eye, and ruling 1 bought that *after the round
  * closes*; it is not licence to write the number down.
  *
@@ -44,7 +44,7 @@ import { litCell } from '@/lib/board'
 const SIDE = 6
 const AXIS = [1, 2, 3, 4, 5, 6] as const
 
-/** One axis label: a small die face, pips only, no digit (§8 rule 2). The pip table is the
+/** One axis label: a small die face, pips only, no digit. The pip table is the
  *  die's own, so an axis face and a thrown die can never disagree about what 4 looks like. */
 function AxisFace({ value, axis }: { value: number; axis: 'row' | 'col' }) {
   return (
@@ -60,7 +60,7 @@ function AxisFace({ value, axis }: { value: number; axis: 'row' | 'col' }) {
 /**
  * **Is this board drawable at all**, and the answer is never «nearly».
  *
- * §5: a missing or short `board` draws **nothing**, and never a grey grid — an even grid is the
+ * A missing or short `board` draws **nothing**, and never a grey grid — an even grid is the
  * statement «everyone had the same chance», which is false, and D112's rule is that an absence
  * gets a shape rather than a plausible-looking presence. A swept pool sends no `board` for exactly
  * this reason, so «absent» is a state the payload means rather than one it fell into.
@@ -91,7 +91,7 @@ export default function Board({
    *  `dice` is that one, already resolved by the API, so this component never picks a winner. */
   dice: [number, number] | undefined
   /** **Whether the lit cell's outline is on yet** — the board fades in after the answer block and
-   *  the cell lights after the board (§3). Handed in rather than timed here: the reveal's sequence
+   *  the cell lights after the board. Handed in rather than timed here: the reveal's sequence
    *  lives in one place, and a component running its own clock would be a second, unmeasured one. */
   lit: boolean
   /** **False for the member's first-screen board (item 2):** the places list beside it carries
@@ -113,7 +113,7 @@ export default function Board({
 
   /* The legend is the pool, in pool order, which is what gives each place its face — `faceOf` keys
      off `Object.keys(places)` so a place wears the same colour here, on the round screen and in the
-     operator's grid. Names only (§4). */
+     operator's grid. Names only. */
   const seats = Object.keys(places)
 
   return (
@@ -134,7 +134,7 @@ export default function Board({
           free, and `data-row`/`data-col` put the coordinates in the DOM so BD-2 can read a cell
           without trusting document order. */}
       <div className="boardGrid" data-part="board-grid" aria-hidden="true">
-        {/* The corner, then die two's six faces across the top (§8 rule 2). */}
+        {/* The corner, then die two's six faces across the top. */}
         <span className="boardCorner" />
         {AXIS.map((v) => <AxisFace key={`c${v}`} value={v} axis="col" />)}
         {board.map((row, r) => [
@@ -170,7 +170,7 @@ export default function Board({
         ])}
       </div>
 
-      {/* Number → shop name, and nothing else (§4, §8 rule 3). The swatch carries the same number
+      {/* Number → shop name, and nothing else. The swatch carries the same number
           the cells do; the number is an index, never a count — no 「12 格」 anywhere. */}
       {legend && <ul className="boardLegend" data-part="board-legend">
         {seats.map((placeId) => (

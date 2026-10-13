@@ -87,7 +87,7 @@ export type MemberReveal = {
    * `places[String(cell)]` (BD-12 pins the asymmetry so a client does not discover it twice).
    *
    * **`undefined` is a real state and means draw nothing**: a swept pool has no honest draw, so
-   * the field is absent rather than an empty array (§5). Never a grey grid in its place — an even
+   * the field is absent rather than an empty array. Never a grey grid in its place — an even
    * grid reads as «everyone had the same chance», which is a false statement (D112).
    */
   board?: number[][]
@@ -119,7 +119,7 @@ export type Factor = {
    *
    * The panel carries every known contributor at its D46 position, so the picture has the same
    * rows every round and 「上次去過 showing nothing」 is a fact the payload states rather than one
-   * the client infers from an absence (§4's last bullet forbids the inference).
+   * the client infers from an absence (the bar picture's ruling forbids the inference).
    *
    * **A padded row and a real one that measured no difference both read `effect: "1"`**, so the
    * drawing keys the empty track on THIS field and never on the value. `false` = did not run →
@@ -132,7 +132,7 @@ export type Factor = {
 }
 
 /** Operator only. Kept in a separate type so that nothing which renders a member screen can even
- *  name these fields — §8's build order made concrete: member state complete first, because
+ *  name these fields — the board's build order made concrete: member state complete first, because
  *  building the operator state and subtracting is how a field survives in the member payload. */
 export type Evidence = {
   weights: Record<string, string>
@@ -140,7 +140,7 @@ export type Evidence = {
   /** `base` is the fold's starting weight (`"1"`) and is **not** a `factors` row: `fold()` begins
    *  at `Decimal("1")` and multiplies, with no `weight_contribution` record behind it, and the one
    *  payload an operator audits against the database must not carry a row no record backs. The
-   *  picture draws it as its own first row (§3, corrected by the evaluator 2026-09-11). */
+   *  picture draws it as its own first row (corrected by the evaluator 2026-09-11). */
   panel: Record<string, { base: string; factors: Factor[]; clamps: unknown[] }>
 }
 
@@ -235,14 +235,14 @@ export async function fetchRaw(d: Device, roundId: number): Promise<unknown> {
  * fact. D68's shape — the loser gets what it lost — applied to a table that already holds it.
  */
 /**
- * **`created` says whether THIS device's press is what signed it**, and 乙 §3 is why it exists.
+ * **`created` says whether THIS device's press is what signed it**, and 乙's sign-act landing is why it exists.
  *
  * D106 makes 201 and 409 the same success from the member's side — either way the trip is signed
  * and the screen must show it — so this function returned only the trip and the caller could not
  * tell the two apart. The sign act's 450 ms landing may only play on 201: on a 409 someone else
- * signed first, **the trip line is already true and belongs on screen instantly** (§1a rule 5 — a
+ * signed first, **the trip line is already true and belongs on screen instantly** (an arrival rule — a
  * refusal or a fact that fades in has not happened yet). Without this flag the animation would
- * play on both, which is the one case §3 names as proving the rule is not decoration.
+ * play on both, which is the one case the landing's ruling names as proving the rule is not decoration.
  *
  * It answers the reload too, and that is the third case neither status covers: a trip already in
  * the payload was signed before this screen existed, so nothing lands. That path never calls this

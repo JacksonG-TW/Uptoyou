@@ -51,7 +51,7 @@ export default function DeviceScreen() {
        (choice returned to the member, 2026-08-30).
 
        **`replace`, not `href`** — the back arrow must not return to a device screen that would
-       bounce a now-keyed person straight out again (§1's closing rule, D107's back affordance). */
+       bounce a now-keyed person straight out again (the door check's closing rule, D107's back affordance). */
     window.location.replace(doorHref())
   }, [])
 
@@ -122,11 +122,11 @@ export default function DeviceScreen() {
           three-way). **Nothing is added that was not already on the screen** — the eyebrow is the
           one new element and it carries one word. The parts are set the way the home sets its own,
           so the two doors read as one building. */}
-      {/* 乙 §2 — 裝置 has two blocks: the instruction (0), then the act (1). The eyebrow, the
+      {/* 乙 — 裝置 has two blocks: the instruction (0), then the act (1). The eyebrow, the
           title and the lead are the instruction and share step 0, the same way 首頁's appetite
           block does: one step, no wrapper. */}
       <p className="eyebrow arrive" style={arrive(0)}><em>★</em>入座</p>
-      {/* **Two lines, and the second is the sentence the note used to end with** (§3's copy
+      {/* **Two lines, and the second is the sentence the note used to end with** (the typesetting's copy
           accounting: every clause of the old note survives somewhere). Serif 900 — the display
           face, the same one the home's headline uses. */}
       <h1 className="deviceTitle dSerif arrive" style={arrive(0)}>
@@ -134,8 +134,8 @@ export default function DeviceScreen() {
       </h1>
       <p className="deviceLead arrive" style={arrive(0)}>這一頁給手上已經有鑰匙的人。</p>
 
-      {/* **The form arrives; `deviceErr` inside it does not, and it does not need to.** §1a rule
-          5 keeps arrival off anything that answers what just happened — and the error only exists
+      {/* **The form arrives; `deviceErr` inside it does not, and it does not need to.** An arrival
+          rule keeps arrival off anything that answers what just happened — and the error only exists
           after a submit, by which time this animation finished long ago. So the refusal appears in
           the frame it becomes true (`YI-3`) without a second rule to remember. Opacity does not
           intercept clicks either, so both fields take input from the first frame (`YI-6`). */}

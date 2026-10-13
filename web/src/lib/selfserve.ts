@@ -167,12 +167,12 @@ export async function readInviteRole(d: Device): Promise<InviteRole> {
 }
 
 /**
- * §2c's seat list — `GET /circles/{id}/members` → `{members: [{nickname}], seats, cap}`.
+ * The creator's seat list — `GET /circles/{id}/members` → `{members: [{nickname}], seats, cap}`.
  *
  * Built by backend on 2026-09-13 after I raised that the spec asked for a seat list no endpoint
  * could supply. Three things about its shape are decisions rather than conveniences:
  *
- * - **`{nickname}` and nothing else.** No `member_id` — §3.0 and H3: an identifier a screen never
+ * - **`{nickname}` and nothing else.** No `member_id` — the product's privacy rule and H3: an identifier a screen never
  *   needs is a correlation somebody else might. The same shape `rolls[]` already sets.
  * - **Any member of the circle may read it, not the operator alone**, because everyone at the table
  *   can see who is at the table. It still takes a credential: a circle's membership is not public

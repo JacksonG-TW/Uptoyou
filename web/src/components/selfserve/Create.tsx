@@ -6,7 +6,7 @@ import InvitePanel from './InvitePanel'
 import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
 
 /**
- * §2 — creating a circle. **Three steps, and the order is the design**
+ * Creating a circle. **Three steps, and the order is the design**
  * (the self-serve design, 2026-09-13).
  *
  * **One component with internal steps, NOT three routes, and this protects a server guarantee with
@@ -15,7 +15,7 @@ import { NO_ACCOUNT, REPLACE_NOTICE } from './copy'
  * until tier 2 identity lands, so that key is gone and the seat with it. Steps in state cannot be
  * refreshed away by a tap on 返回 or a stray reload of an address that changed.
  *
- * **§3's rule — the key and the join link are NEVER on one screen — is now kept by there being no
+ * **The rule that the key and the join link are NEVER on one screen — is now kept by there being no
  * key screen at all** (owner-ruled 2026-09-16, «the key leaves the member surface»; as the evaluator
  * specified it). The danger it was written for is unchanged:
  * the key **is them**, the link **makes someone else a member**, they look alike, and the first
@@ -42,7 +42,7 @@ export default function Create() {
   const inFlight = useRef(false)
   const [error, setError] = useState('')
   const [made, setMade] = useState<Created | null>(null)
-  /** §5's re-issue replaces the link in place. Held separately from `made` so the original is not
+  /** Re-issuing replaces the link in place. Held separately from `made` so the original is not
    *  mutated — the person is looking at a link, and it changing under them is the one moment they
    *  need to be sure which one they now hold. */
   const [link, setLink] = useState('')
@@ -68,8 +68,8 @@ export default function Create() {
          carried is on the device rather than on the screen. */
       setStep('circle')
     } catch (e) {
-      /* §1's refused state: the server's sentence, immediately, below the control, **with no
-         arrival** — 乙 §1a rule 5, a refusal that fades in has not refused anything yet. */
+      /* The refused state: the server's sentence, immediately, below the control, **with no
+         arrival** — an arrival rule: a refusal that fades in has not refused anything yet. */
       setError((e as Error).message)
     } finally {
       inFlight.current = false
@@ -85,7 +85,7 @@ export default function Create() {
           <h1 className="ssTitle dSerif"><span>取個名字</span><span className="lit">就可以開始</span></h1>
           <p className="ssLead">{NO_ACCOUNT}</p>
 
-          {/* §2a — two fields and nothing else on the screen. **Enter creates nothing; only a click
+          {/* Two fields and nothing else on the screen. **Enter creates nothing; only a click
               on 建立 does** (owner-ruled 2026-10-09): a stray Enter in either box made a circle the
               person did not mean to make. The form holds no submit button, so the browser's
               implicit submission has nothing to press, and `onSubmit` is a second guard. No key
@@ -105,7 +105,7 @@ export default function Create() {
             </label>
             <label className="ssField">
               <span className="ssLabel">你的暱稱</span>
-              {/* **No uniqueness check, here or anywhere** (§7). Two friends both typing 小明 is
+              {/* **No uniqueness check, here or anywhere**. Two friends both typing 小明 is
                   legal and the server allows it; refusing a name because someone took it is the
                   administration the owner rejected. */}
               <Input
@@ -116,7 +116,7 @@ export default function Create() {
               />
             </label>
 
-            {/* **Un-pressable in place while building, and the layout does not move** (§1's
+            {/* **Un-pressable in place while building, and the layout does not move** (the
                 states) — `disabled` on the control that is already there, never a swap for a
                 spinner that occupies a different box. */}
             {/* One device, one circle (owner ruling (b), 2026-10-07): said before the act, only
@@ -140,7 +140,7 @@ export default function Create() {
       )}
 
       {step === 'circle' && made && (
-        /* §2c. **No key is rendered anywhere in this branch** — the other half of `SS-2`. */
+        /* **No key is rendered anywhere in this branch** — the other half of `SS-2`. */
         <>
           <p className="eyebrow"><em>★</em>{circleName.trim()}</p>
           <h1 className="ssTitle dSerif"><span>邀朋友加入</span></h1>

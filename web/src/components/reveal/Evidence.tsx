@@ -1,5 +1,5 @@
 import { FACES, faceOf, type Evidence as EvidenceData, type Places } from '@/lib/reveal'
-/* §3a. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
+/* The operator's counts. `pct` is the same helper the member's 這一餐 rendered these shares with before the ruling
    moved them here — one definition, so the operator's figure and the payload's cannot part
    company. */
 import { pct, type Preferences } from '@/lib/preferences'
@@ -19,7 +19,7 @@ import { pct, type Preferences } from '@/lib/preferences'
  * and a disagreement there destroys precisely the credibility both exist to build. So `share()`
  * exists once and both callers use it.
  *
- * **No 「示意」 caveat, and its absence is deliberate** (§5). The grid *was* an illustration on the
+ * **No 「示意」 caveat, and its absence is deliberate**. The grid *was* an illustration on the
  * home screen and is not one here — it is this round's real allocation. A caveat left on a true
  * figure is worse than no caveat, because it teaches the reader to discount a real number.
  */
@@ -47,7 +47,7 @@ const LABEL: Record<string, string> = {
  * The bar picture's rule: «a bar that reads 0.79 must be 0.79 of the track», and
  * WP-6 measures the rendered width against the wire. So the width is the payload's own string,
  * parsed and never rounded for looks, and nothing here recomputes a factor from anything else
- * (§4: a recomputed number and a pinned one disagree the day the formula moves, and then the
+ * (a recomputed number and a pinned one disagree the day the formula moves, and then the
  * auditable figure is the wrong one).
  *
  * **The track is 0 → 1 and a factor above 1 is given a shape rather than a full bar.** Nothing
@@ -108,7 +108,7 @@ export default function Evidence({
   /** **From five shops the cabinet is plain wood** and colour names no shop, so the row's swatch
    *  goes with it (owner 「A」, 2026-10-10). */
   wood?: boolean
-  /** §3a — the counts that left the member's 這一餐. `null` for a member (the fetch never runs)
+  /** The counts that left the member's 這一餐. `null` for a member (the fetch never runs)
    *  and `null` for an operator whose preferences call failed; both draw nothing, because a
    *  footnote must not be able to cost this screen its bars. */
   counts?: Preferences | null
@@ -125,7 +125,7 @@ export default function Evidence({
   return (
     <section className="evidence" data-part="evidence" data-state={ev ? 'operator' : 'member'}>
       {/* ALLOC36 — beside the table as evidence, never above it as decoration. Cells are ≥ 36 px
-          square (§3's rescue floor): below that the colour blocks stop being countable and the
+          square (the rescue floor): below that the colour blocks stop being countable and the
           figure reads as a texture rather than as thirty-six things. */}
       {/* **Option A, owner-ruled 2026-08-19 (D105 at `d94b54f`): the grid is hidden once the pool
           exceeds four, and the table is always kept.** `FACES` has four colours and the `CHIP` is
@@ -213,7 +213,7 @@ export default function Evidence({
                 {/* tabular-nums and right-aligned, so the column reads as a column */}
                 {ev && <td className="evNum">{n}<span className="evOf">/36</span></td>}
                 {ev && <td className="evWhy">
-                  {/* **甲: the numbers became a drawing** (§3). The rows are `base` then
+                  {/* **甲: the numbers became a drawing.** The rows are `base` then
                       `factors` **in the payload's own order, with no client-side reordering** —
                       the evaluator's ruling, because the picture's only claim is that it is
                       auditable, so row *i* must be `factors[i]` and checkable against the wire by
@@ -266,12 +266,12 @@ export default function Evidence({
         </tbody>
       </table>
 
-      {/* ─── §3a — where the member-side numbers now live ───────────────────────────────────
+      {/* ─── where the member-side numbers now live ───────────────────────────────────
           The owner's ruling took the counts off the
           member's screen because they are 「SDE 需要知道的資訊」; that sentence names a reader, so
           the figures were moved rather than deleted.
 
-          **Below the bars and clearly separated**, per §3a, because the bars are this round's
+          **Below the bars and clearly separated**, per the ruling, because the bars are this round's
           arithmetic and these are the corpus the round drew from — two different kinds of fact.
 
           **`ev &&` as well as `counts &&`, and both guards matter.** `counts` is only ever fetched
@@ -300,7 +300,7 @@ export default function Evidence({
           {/* **One row per avoided category, and nothing when none is set.** No 「目前沒有避開」
               line: D20 holds here too — the surface states, it does not reassure, and an empty
               list already says it. The `touched` figure is this reader's own, because the endpoint
-              is member-scoped; it is not the table's, and §3.0 is why that is not a limitation to
+              is member-scoped; it is not the table's, and the product's privacy rule is why that is not a limitation to
               work around. */}
           {counts.avoid_categories.map((a) => (
             <div key={a.value}>
@@ -320,13 +320,13 @@ export default function Evidence({
 /**
  * One row of 甲's picture — `name · track · value`.
  *
- * **`fired` decides the empty track, and `effect` must not** (§3, candidate 16). A padded row and
+ * **`fired` decides the empty track, and `effect` must not** (candidate 16). A padded row and
  * a real one that measured no difference both read ×1, so drawing the absence off the value would
  * report a measurement as an absence the moment any contributor stores a 1.000. `fired: false`
  * draws an empty track and 「—」, because 「上次去過 showing nothing is information」: it says this
  * place was not last week's.
  *
- * **Colour is the ruling's, not a choice made here** (§3's last bullet): below 1 in `hot`, at 1 in
+ * **Colour is the ruling's, not a choice made here**: below 1 in `hot`, at 1 in
  * `ink`, the total in its place's face colour. No sixth token.
  */
 function Bar({

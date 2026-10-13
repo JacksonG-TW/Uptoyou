@@ -8,7 +8,7 @@
  *
  * **Nothing is edited and nothing is deleted.** Every write appends: a different band, an `allow`
  * that un-avoids, a re-post of the same value carrying `persist: true`. There is no DELETE in this
- * file because there is none in the product (§3 D).
+ * file because there is none in the product.
  */
 
 import { auth, type Device } from './device'

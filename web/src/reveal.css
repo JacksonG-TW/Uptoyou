@@ -131,7 +131,7 @@
 }
 
 /* ── the ground's six tilted dice, staged state ────────────────────────────────────────────
-   §0c amendment D (owner 2026-08-27). This round's REAL pair, three cubes each, drawn as tilted
+   Amendment D (owner 2026-08-27). This round's REAL pair, three cubes each, drawn as tilted
    3-D dice in a darker step of the flood's own colour. The ground repeats the truth and never
    invents it: these are the stored values, so nothing appears before landed and `RV-16` is
    untouched, and each cube's two visible sides are real neighbours of its front face — never the
@@ -342,7 +342,7 @@
      the evaluator's orphaning finding traced to its cause: the boxes were evenly spaced 24/24, but
      with a one-line name the *ink* ended 114 px above the sentence, because the whole reserve sat
      between them. The sentence then read as a footnote to a different object rather than as the
-     third line of one — which is the exact failure §2 predicted for it and the token could not
+     third line of one — which is the exact failure predicted for it and the token could not
      prevent. Centring costs nothing, keeps the region's measured height (so `RV-5` is unaffected),
      and makes the gap above the sentence match the dice→name rhythm. */
   display: flex;
@@ -501,12 +501,12 @@
   color: var(--color-hot-ink);
   transform: rotate(-4deg);
 }
-/* ── 乙 §3 · the sign act lands ───────────────────────────────────────────────────────────────
+/* ── 乙 · the sign act lands ───────────────────────────────────────────────────────────────
    The arrival motion, owner 「1」. The one gesture a member performs to say
    *we are going* was a 120 ms cross-fade; it now inks over `--t-flood`.
 
    **The keyframes never mention `transform`**, so `.sealSigned`'s `rotate(-4deg)` holds unchanged
-   for all 450 ms. That is §3's 「no rotation sweep」 expressed as an absence rather than as a
+   for all 450 ms. That is the landing's 「no rotation sweep」 expressed as an absence rather than as a
    duplicated angle: the -4deg is where the stamp rests, and a keyframe restating it is a second
    copy of a ruled number waiting to disagree with the first.
 
@@ -517,7 +517,7 @@
    `border-style` cannot tween, and it does not need to: a discrete property flips at the midpoint
    of a CSS animation, which is exactly 「dashed → solid」. Both halves of the state change are in
    one animation rather than in a transition, because a transition would also fire on any later
-   restyle of this element and §1a rule 1 is *once*. */
+   restyle of this element and the first arrival rule is *once*. */
 @keyframes sealLand {
   from { border-style: dashed; border-color: currentColor; background: transparent; }
   to   { border-style: solid;  border-color: var(--color-paper); background: var(--color-paper); }
@@ -653,7 +653,7 @@
    whole point. The asymmetry is on purpose and is recorded in that gate report. */
 .reveal .boardGrid {
   display: grid;
-  /* An axis column of pip faces, then the six outcome columns (§8 rule 2). */
+  /* An axis column of pip faces, then the six outcome columns. */
   grid-template-columns: 26px repeat(6, 1fr);
   gap: 3px;
   width: min(100%, 320px);
@@ -665,7 +665,7 @@
 }
 .reveal .boardCell {
   aspect-ratio: 1;
-  /* **The place's number, centred** (§8 rule 1 and 4): ≥ 14px, 700, tabular, in the face's own
+  /* **The place's number, centred**: ≥ 14px, 700, tabular, in the face's own
      `on-` colour — `test_web_contrast.py` holds every `--color-on-X` to 4.5:1 on `--color-X`, so
      the four pairs are checked by the convention rather than by a list. Two digits fit: the cell
      is about 41px at 320 and 36px at 430's inset width. */
@@ -695,7 +695,7 @@
    cells would draw paper edges on a paper ground. */
 .reveal .boardCell[data-face] { outline-color: var(--color-ink); }
 
-/* The axes: a small die face per label, pips on a 3×3 grid, no digit (§8 rule 2). */
+/* The axes: a small die face per label, pips on a 3×3 grid, no digit. */
 .reveal .boardCorner { display: block; }
 .reveal .boardAxis {
   display: grid;
@@ -757,7 +757,7 @@
    than an extension of it** — the alternative was a legend that reads 「this colour is that shop」
    while showing no colour. */
 .reveal .boardSwatch {
-  /* Holds the place's number (§8 rule 1), so it grew from 12px to fit two digits. */
+  /* Holds the place's number, so it grew from 12px to fit two digits. */
   min-width: 24px; height: 22px; flex: 0 0 auto;
   padding-inline: 3px;
   display: grid;
@@ -785,7 +785,7 @@
    twelve holes, which is a false statement about the allocation, made by the one figure whose job
    is to be checkable. On paper all four faces are legible at once, and a paper block after a
    colour block is `§3`'s own idiom: blocks stack edge to edge and the colour change is the
-   separation. Nothing above it moves — `§0`'s rule that the operator state is the member state
+   separation. Nothing above it moves — the rule that the operator state is the member state
    plus two components. */
 .reveal .evidence {
   display: flex;
@@ -801,7 +801,7 @@
   border-top: 3px solid var(--color-ink);
 }
 
-/* ALLOC36 — 6 × 6, cells ≥ 36 px square (§3's rescue floor, carried from R-D3). Below that the
+/* ALLOC36 — 6 × 6, cells ≥ 36 px square (the rescue floor, carried from R-D3). Below that the
    blocks stop being countable and the figure becomes a texture. */
 .reveal .alloc36 {
   display: grid;
@@ -818,7 +818,7 @@
    flood's face, so the run that disappears is always the winner's**, which is the one a reader is
    looking for. 1440 only: at 900 and 430 the grid keeps a paper ground and nothing collides.
 
-   §3 of the 甲 spec freezes ALLOC36 「exactly as it is」, and the evaluator's ruling is that what
+   甲's ruling freezes ALLOC36 「exactly as it is」, and the evaluator's ruling is that what
    that froze is the figure's **data and geometry** — 6×6, ≥36 px cells, the round's real
    allocation, no 「示意」 caveat — and never a licence to keep a run nobody can see. None of those
    move here: `outline` takes no layout at all, so the cells are the same size and the same 36. */
@@ -907,7 +907,7 @@
    D45); the mark exists so a `commercial` contributor that nudged upward could not arrive
    silently. */
 .reveal .evBarFill[data-over="yes"] { outline: 2px dashed var(--color-hot-ink); outline-offset: 1px; }
-/* §3's last bullet, and no sixth token: below 1 in `hot`, at 1 in `ink`, the total in its place's
+/* 甲's colour rule, and no sixth token: below 1 in `hot`, at 1 in `ink`, the total in its place's
    own face colour. */
 /* `hot` stays a real hue — it is the one colour in this picture that MEANS something (below 1),
    and it reads on all four floods and on paper. `ink` is `currentColor`: on paper that is ink, on
@@ -936,8 +936,8 @@
 .reveal .evBar { flex-wrap: wrap; }
 .reveal .evBar .evReason { flex: 1 1 100%; margin-left: calc(5.5em + 8px); opacity: .6; }
 
-/* §3a — the counts that left the member's 這一餐, given a home. A definition list because that is
-   what it is: a label and the figure it names. **A rule above it, not a box around it** — §3a asks
+/* The counts that left the member's 這一餐, given a home. A definition list because that is
+   what it is: a label and the figure it names. **A rule above it, not a box around it** — the ruling asks
    for «clearly separated», and the bars already carry every border this block can afford to sit
    next to. */
 .reveal .evCounts {
@@ -954,7 +954,7 @@
 .reveal .evCounts dt { flex: 0 0 7em; color: var(--color-muted); }
 .reveal .evCounts dd { margin: 0; font-weight: 700; }
 
-/* §0b — the member's list. No chip, no counts, so the row is a name and the winner is the one the
+/* The member's list. No chip, no counts, so the row is a name and the winner is the one the
    headline already named; marking it again in bold is the only distinction the row needs.
 
    **`[data-state="landed"]` is the fix for a leak this rule shipped with, found by A7 on
@@ -1326,14 +1326,14 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 .reveal:not(:has(.evNum)) .boardSlot { display: block; width: min(100%, 88vw); margin-bottom: 16px; }
 .reveal:not(:has(.evNum)) .boardSlot .board {
   width: 100%; margin: 0; padding-inline: 0;
-  /* Present from the first frame (item 2 §2): no fade on arrival, the cell lights later. */
+  /* Present from the first frame: no fade on arrival, the cell lights later. */
   animation: none;
 }
 .reveal:not(:has(.evNum)) .boardSlot .boardNote { text-align: center; }
 .reveal:not(:has(.evNum)) .boardSlot .boardGrid { width: min(100%, 224px); margin-inline: auto; }
-/* **The first view has to reach the seal at 430×760** (item 2 §6: the one primary act in view).
+/* **The first view has to reach the seal at 430×760** (the one primary act in view).
    The board took 280 px above the name, so two reserves go: the name's second line, which the
-   shrink-to-fit in §5 makes unnecessary for most names (a long one still wraps and takes it), and
+   shrink-to-fit below makes unnecessary for most names (a long one still wraps and takes it), and
    20 px of the act row's lead. Wide keeps its own composition, below. */
 @media (max-width: 1099px) {
   .reveal:not(:has(.evNum)) .winner { min-height: 0; }
@@ -1343,7 +1343,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
 /* The list's marks are the board's swatches, sat in the row ahead of the name. */
 .reveal .evTable .rowMark { margin-right: 10px; vertical-align: 2px; }
 
-/* §5 — a long name shrinks to one line before it wraps. `--len` is the name's width in em
+/* A long name shrinks to one line before it wraps. `--len` is the name's width in em
    (`Reveal.tsx`'s `nameEm`); the ceiling is the size this headline always had. */
 .reveal:not(:has(.evNum)) .winner {
   font-size: clamp(28px, calc(88vw / (var(--len, 6) + 0.8)), var(--text-answer));
@@ -1369,9 +1369,9 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
   .reveal:not(:has(.evNum)) .stage {
     min-height: max(100vh, calc(var(--right-end, 0px) + 72 * var(--k)));
   }
-  /* **The receipt starts below the first view** (item 2 §6). At 1440 the pairs and the
+  /* **The receipt starts below the first view**. At 1440 the pairs and the
      commitment began at y 695 and put five more text pieces in the first screen (10 against the
-     budget's 6). The left column ends near 600·k for any one-line name — §5 makes nearly every name
+     budget's 6). The left column ends near 600·k for any one-line name — the shrink-to-fit makes nearly every name
      one line — so the gap is the viewport less that; a longer column only pushes it further. */
   .reveal:not(:has(.evNum)) .under {
     margin-top: max(calc(72 * var(--k)), calc(100vh - 600 * var(--k)));
@@ -1381,7 +1381,7 @@ body:has(.reveal[data-face="sun"])    { background-color: var(--color-flood-sun)
   }
 }
 
-/* §4 — the seal reads as a button. The dashed empty square read as a placeholder (walk item 8):
+/* The seal reads as a button. The dashed empty square read as a placeholder (walk item 8):
    now one framed control — a solid 2 px edge and the depth vocabulary's 4 px offset shadow — with
    the seal mark inside it. SINK still drives the press. */
 .reveal .sealBtn {

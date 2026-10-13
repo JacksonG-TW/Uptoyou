@@ -17,7 +17,7 @@
   gap: 0;
 }
 
-/* **The inner screens' ONE bar** — §3. 返回 at the left edge, the stops at the right, a single 2 px
+/* **The inner screens' ONE bar** — 乙・報頭內. 返回 at the left edge, the stops at the right, a single 2 px
    ink rule under both. It replaces two separate fixed boxes pinned to opposite corners; a person
    met them as two decisions, and the spec's own reason for merging them is that one bar is fewer
    pieces than two.
@@ -167,7 +167,7 @@
    **Why the selectors are `:has()` and not `~` (the reveal's chrome, 2026-09-04).** 乙 put the
    chrome in ONE bar that precedes `{screen}` in `main.tsx` — correct for tab order — so a general
    sibling combinator can never reach it and these rules matched nothing on candidate 6, with every
-   gate green. A ruling stayed in the file and stopped reaching the page. The evaluator's §0 records
+   gate green. A ruling stayed in the file and stopped reaching the page. The evaluator's own rules record
    that dead code and a withdrawn ruling look identical in a diff, and this paragraph was the only
    thing that told them apart; do not delete it to tidy the file.
 
@@ -179,7 +179,7 @@
    CHILDREN, where the parent IS `.navbar` and the word means what it says. */
 .navbar:has(~ .reveal[data-face]) {
   background: transparent;
-  /* §3a — the 2 px rule across the screen is the 貫穿 the owner named. The WIDTH goes to zero
+  /* The 2 px rule across the screen is the 貫穿 the owner named. The WIDTH goes to zero
      rather than the colour going transparent, because a transparent 2 px border still reserves
      2 px and RC-11 measures the width. `.navbar` is fixed and `--bar-h` is a static calc, so
      nothing in `main` moves when it goes. */
