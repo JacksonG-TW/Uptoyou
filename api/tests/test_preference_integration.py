@@ -422,8 +422,7 @@ async def scenario(test_url: str) -> None:
         # appends, and nothing is ever deleted.
         check("without deleting anything — every version is still there", kept == 5, kept)
 
-        # --- nothing about anyone else, and the coverage number (H3, preferences are silent)
-        # -----------
+        # --- nothing about anyone else, and the coverage number (H3, preferences are silent) ---
         check("the payload names no other member",
               "members" not in body and "circle" not in body, sorted(body))
         check("it states what an avoid can currently reach",

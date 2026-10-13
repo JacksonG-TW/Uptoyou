@@ -738,7 +738,8 @@ async def circle_members(circle_id: int, request: Request) -> dict:
     measure it, and before a round exists a circle's membership was unreadable — nicknames reached a
     client in exactly two places and both were round-scoped.*
 
-    **No `member_id`, by rule.** The silence principle and H3: a member id is an identifier a screen
+    **No `member_id`, by rule.** The silence principle (no screen tells members apart
+    by what they did privately) and H3: a member id is an identifier a screen
     never needs and a correlation somebody else might. This is the same shape `rolls[]` already
     sets.
 

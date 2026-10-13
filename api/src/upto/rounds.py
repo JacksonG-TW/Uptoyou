@@ -222,7 +222,8 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
             # **A19: the mark travels with the place, on the event that puts it in the pool.**
             # 這一餐's list is where a person chooses, so it needs the state before the roll and not
             # only after it — and a list drawn from a wire that lacks the field renders NO mark,
-            # which reads as *no allergen here*. The silence principle is satisfied because the
+            # which reads as *no allergen here*. The silence principle (no member's private
+            # preference is ever shown) is satisfied because the
             # value is a fact about the place and about nobody: it is the same string for every
             # member in the room.
             await publish(

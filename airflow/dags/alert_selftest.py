@@ -58,7 +58,8 @@ from datetime import datetime
 from airflow.sdk import dag, task
 
 # H46 — Airflow 3 does not put the dags folder on `sys.path` (Airflow 2 did), so a sibling import
-# inserts it. Read hazard H46 before moving this to `PYTHONPATH`.
+# inserts it. A wrong move shows only in `airflow dags list-import-errors`, never in the DAG
+# list, so check there before moving this to `PYTHONPATH`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import CONNECTION_ID, send_failure_alert

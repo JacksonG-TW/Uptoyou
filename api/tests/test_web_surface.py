@@ -13,9 +13,8 @@ apparatus is gone rather than adapted.
 - **Source (`app/web/src`) for anything about what the code says.** H7's rule and D20's advisory-copy
   rule are properties of what was written, and source is readable.
 - **Built output (`app/web/dist`) for anything about what a browser fetches.** The dead-wifi rule
-(the surface must work on a dead venue wifi, so every asset ships with it)
-  and the `@font-face` declarations are properties of the artefact nginx serves, and only the build
-  produces them.
+  (the surface must work on a dead venue wifi, so every asset ships with it) and the `@font-face`
+  declarations are properties of the artefact nginx serves, and only the build produces them.
 
 **Two things I measured before writing an assertion, and both changed it.**
 

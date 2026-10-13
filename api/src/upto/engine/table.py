@@ -9,10 +9,9 @@ closed round rebuilds the exact table it rolled against, from nothing but `propo
 - **A zero weight gets exactly zero outcomes.** D45's veto survives the apportionment: no
   rounding rule may hand a vetoed place a slot.
 - **A positive weight gets at least one outcome.** The design principle is that nothing is ever
-removed, and a
-  place with real odds rounded down to 0/36 would be removed in the only sense that matters.
-  The cost is a small distortion of the heaviest places' shares, admitted here; the pool is
-  capped far below 36 by the three-proposals-per-member rule, so the floor always fits.
+  removed, and a place with real odds rounded down to 0/36 would be removed in the only sense
+  that matters. The cost is a small distortion of the heaviest places' shares, admitted here; the
+  pool is capped far below 36 by the three-proposals-per-member rule, so the floor always fits.
 
 **A fully vetoed pool refuses loudly** — D22's shape: a constraint broad enough to sweep the
 pool cannot be hidden behind an arbitrary winner.

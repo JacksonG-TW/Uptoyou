@@ -19,7 +19,7 @@ claim D82 freezes a file to make.
 
 The metric order is D82's: **per name-layer first, pooled second** — the draw's floor
 over-weights the sign layer relative to deployment, so the pooled number alone would flatter
-or punish a candidate for the draw's shape rather than its own accuracy.
+or punish a candidate for the draw's shape rather than its own agreement.
 
 **A refusal counts as wrong.** An answer outside D38's list is not a near-miss to be repaired
 (D39's condition 2); in the pipeline it leaves the row unwritten, so in the evaluation it
@@ -71,7 +71,7 @@ def label_space(gold_rows: list[dict], scored: list[dict]) -> tuple[tuple, tuple
 
 LAYERS: tuple[str, ...] = ("sign", "brand", "registered")
 
-#: Below this many gold rows a per-label accuracy is not reported — the report says
+#: Below this many reference rows a per-label agreement is not reported — the report says
 #: «insufficient rows» instead. **Five, and the number is a judgement rather than a statistic**:
 #: at n = 1 the answer is 0% or 100%, at n = 5 one miss is 20 points, and there is no honest
 #: threshold that makes a small sample large. It is set where a reader would stop quoting the
@@ -300,12 +300,12 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
         rows.append([label, str(seen), str(got),
                      "insufficient rows" if 0 < seen < MIN_SCOREABLE_ROWS
                      else percent(got, seen)])
-    lines += table(["gold", "n", "agrees", "agreement"], rows)
+    lines += table(["reference", "n", "agrees", "agreement"], rows)
     lines.append("")
 
-    lines.append("## Confusion — gold down, answered across")
+    lines.append("## Confusion — reference down, answered across")
     lines.append("")
-    header = ["gold ＼ answered"] + list(predicted)
+    header = ["reference ＼ answered"] + list(predicted)
     rows = []
     for gold in labels:
         cells = [gold]

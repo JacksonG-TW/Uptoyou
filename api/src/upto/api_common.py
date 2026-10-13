@@ -283,7 +283,8 @@ def _result_body(
 # **One helper for three readers, because three copies of this query is three chances to leak a
 # column.** The reveal payload, the SSE snapshot and the signing endpoint's own response must all
 # describe a trip identically, and what they must never carry is the signer's `member_id` — H3's
-# response-shape rule, and the silence principle's reason: at five people an id is a name.
+# response-shape rule, and the silence principle's reason (no screen may tell members apart by
+# what they did privately): at five people an id is a name.
 #
 # `nickname` and `signed_at` only. Not `member_id`, not `place_id` (the winner is read from
 # `round.winning_place_id` — D28/D57, derived and never copied), and not a note, because D38 admits

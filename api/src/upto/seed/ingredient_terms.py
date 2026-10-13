@@ -13,9 +13,9 @@ product that no publisher stands behind.
 whole design: absence is `unknown`, never `no allergen`. The table may be added to for ever and is
 correct at every size — what it must never do is guess.
 
-**Read D103 before adding a row.** The test to apply is not *does this food
-contain the allergen* — it is *does this word name it*. A row that needs the first question answered
-is a row that does not belong here.
+**The test for a new row (D103).** It is not *does this food contain the allergen* — it is
+*does this word name it*. A row that needs the first question answered is a row that does not belong
+here.
 
 **Scope, stated because the numbers are surprising.** The source is D77's own file (data.taipei
 00004058), 38,101 rows, 4,387 distinct 原料名稱. **870 of them contain an allergen word**; the top
