@@ -148,11 +148,13 @@ deletions run before the backup so a dump never carries a row the product has al
   file whose columns and row count are unchanged but whose values are wrong passes them. Two
   sources, the brand registry and the hygiene grades, have no stale line yet: each has had one
   publication, so there is no gap to measure against.
-- **Every attempt writes a row to the run log**, so «nothing changed» and «failed» are two recorded
-  outcomes. Without that, a broken source looks healthy for a week.
+- **An attempt that finishes, or finds its source unavailable, writes a row to the run log**, so
+  «nothing changed» and «failed» are two recorded outcomes. Without that, a broken source looks
+  healthy for a week. The row is written after the data is committed, so a process killed in between
+  leaves stored data with no row; the scheduler's failed task is then the only trace.
 - **The backup runs nightly; its restore has been rehearsed by hand.** On the 338 MB
   development database, a 19.7 MB dump finishes in 3.7 s and restores into a fresh database in
-  9.4 s, with every row count equal.
+  9.4 s, with the schema revision and the row counts of nine tables equal on both sides.
 
 ### Content-addressed ingest
 
@@ -272,7 +274,7 @@ the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The differen
 ±8.5 band, so tuning did not inflate the score by more than 200 names can show. That set has now
 been used, so any later change needs a fresh one.
 
-Each round writes an answer sheet (every name asked, its reference label, the raw answer) and a report.
+Each round writes an answer sheet (every name asked and the parsed answer; the model's raw reply where the round kept one, which most later rounds did only for failed or refused answers) and a report.
 The sheets were kept out of the public tree under one rule: they are published the day someone outside the
 project asks for the rows. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
 reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
@@ -328,7 +330,7 @@ reads those rows back and recomputes nothing.
 **Privacy is enforced in the database.** Closing a round fires a trigger that removes who proposed
 what, in the same transaction that saves the result. A preference write emits no event at all, because
 in a small group the moment of an event is one guess away from a name. A nightly job erases unused
-preferences under a role that can touch that one table and nothing else.
+preferences under a role whose only deletes are that table and the expired weather readings.
 
 **What the database roles do and do not guard.** The API's own login can read every preference row;
 what a member is shown is decided in the application; the database has no row-level rule for it. The
