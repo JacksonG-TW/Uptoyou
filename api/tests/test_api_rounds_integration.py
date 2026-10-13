@@ -9,8 +9,8 @@ The test builds its own database and drops it, so it never touches the stack's d
 The requests go through the ASGI app itself — status codes, bodies and headers are the real
 contract, not the router functions. Every ruled response shape is asserted: 401 for both
 halves of a failed resolution (D67), 409 carrying the winner (D68), the quiet 200 (D70), the
-cap's 409 (§3.0), the closed round's stored result (D69), and the roll chain landing whole
-with D14's erasure observed after it.
+cap's 409 (three proposals per member per round), the closed round's stored result (D69), and the
+roll chain landing whole with D14's erasure observed after it.
 """
 
 import asyncio
@@ -160,7 +160,7 @@ async def scenario(test_url: str) -> None:
                 {"pub": place_pub, "r": registry, "a": addr},
             )
         # **Both siblings get a `place` row, and that is what makes the assertion deterministic.**
-        # §3.0 refuses a one-place round (「一輪至少要兩家店」), so the pool needs two — and if the
+        # A round refuses a one-place pool (「一輪至少要兩家店」), so the pool needs two — and if the
         # second were an ordinary local, the winner would be a dice draw and the bracketed case
         # would be exercised only half the time. Two sites of the same company means *whichever*
         # wins carries a bracket. A fixture that tests the case on some runs is H50 again.
@@ -293,7 +293,7 @@ async def scenario(test_url: str) -> None:
         assert lost.json()["detail"]["open_round"]["round_id"] == round_id
 
         # Proposals: 201 new, 200 repeat (D70), 404 for a place this circle cannot see,
-        # 409 for the fourth by one member (§3.0).
+        # 409 for the fourth by one member (the three-proposal cap).
         for place in (rainy, dry, locals_[0]):
             created = await client.post(
                 f"/rounds/{round_id}/proposals", json={"place_id": place}, headers=auth
@@ -370,7 +370,7 @@ async def scenario(test_url: str) -> None:
         # D46's order, and the weather sentence stays behind ('none' visibility, D13).
         #
         # **Every contributor is present whether it fired or not since candidate 16** (甲's
-        # operator picture, `spec-weights-picture-2026-09-11.md` §5). The drawing has one row per
+        # operator picture: one row per contributor, always). The drawing has one row per
         # contributor always, because «上次去過 showing nothing is information» — it says this
         # place was not last week's — and reading that from an *absence* is an inference the
         # payload can answer instead. `fired` is what separates a padded row from a real ×1, which

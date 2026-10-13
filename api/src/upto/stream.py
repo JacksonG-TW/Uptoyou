@@ -85,12 +85,12 @@ async def publish(session, circle_id: int, event: dict, transactional: bool = Tr
 
     **`transactional=False` exists for exactly one caller and D37 is the reason.** `pool_swept`
     is published on a path that deliberately raises 409 and rolls back — «four people staring at a
-    screen that did nothing is the silence §3.0 is built against». A transactional notify there
-    would be swallowed by the rollback and the other four members would learn nothing, so that one
-    event is sent on its own short-lived connection, unconditionally. The event says «the pool was
-    empty», which is true whatever happens to the request that discovered it. Ruled 2026-09-11
-    after the swallow was measured; the two rejected branches — committing the sweep (it would
-    leave a `member_roll` row D108's seat list reads, so it buys uniformity by editing a fact) and
+    screen that did nothing is the silence the design is built against». A transactional notify
+    there would be swallowed by the rollback and the other four members would learn nothing, so that
+    one event is sent on its own short-lived connection, unconditionally. The event says «the pool
+    was empty», which is true whatever happens to the request that discovered it. Ruled 2026-09-11
+    after the swallow was measured; the two rejected branches — committing the sweep (it would leave
+    a `member_roll` row D108's seat list reads, so it buys uniformity by editing a fact) and
     accepting the loss (D37 forbids it) — are in the decision log.
     """
     payload = _envelope(circle_id, event)

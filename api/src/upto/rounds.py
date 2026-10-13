@@ -222,8 +222,9 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
             # **A19: the mark travels with the place, on the event that puts it in the pool.**
             # 這一餐's list is where a person chooses, so it needs the state before the roll and not
             # only after it — and a list drawn from a wire that lacks the field renders NO mark,
-            # which reads as *no allergen here*. §3.0 is satisfied because the value is a fact about
-            # the place and about nobody: it is the same string for every member in the room.
+            # which reads as *no allergen here*. The silence principle is satisfied because the
+            # value is a fact about the place and about nobody: it is the same string for every
+            # member in the room.
             await publish(
                 session,
                 round_row.circle_id,
@@ -371,7 +372,7 @@ async def close_round(session, round_id: int, round_row, member) -> dict:
         # **Owner-ruled 2026-08-30: every seat is told, and the round stays open.** The roller
         # learns from the 409 below; the other four learn from here, because a swept pool is
         # not a fact about whoever happened to tap — it is the state of their round, and four
-        # people staring at a screen that did nothing is the silence §3.0 is built against.
+        # people staring at a screen that did nothing is the silence the design is built against.
         #
         # **Type and round id, no text.** The sentence lives in the surface and is rendered for
         # this event *and* for the 409, so one wording has one owner. The 409's `detail` stays
@@ -385,7 +386,7 @@ async def close_round(session, round_id: int, round_row, member) -> dict:
         # below, so its transaction rolls back — and a notification inside a transaction that
         # rolls back is never delivered (measured 2026-09-11). The other four members would
         # learn nothing, and «four people staring at a screen that did nothing is the silence
-        # §3.0 is built against». So this one goes on its own connection, unconditionally: the
+        # the design is built against». So this one goes on its own connection, unconditionally: the
         # event says the pool was empty, which is true whatever becomes of this request.
         await publish(session, round_row.circle_id,
                       {"type": "pool_swept", "round_id": round_id}, transactional=False)
@@ -574,16 +575,16 @@ async def unsubmit(round_id: int, request: Request) -> dict:
 async def sign_trip(round_id: int, request: Request, response: Response) -> dict:
     """B2 / item 9 — one member says the group went. 201, or 200 on a retry, or 409 with the signer.
 
-    **§3.0's asymmetry, as an endpoint.** A proposal is anonymous and D14's trigger has already
-    erased its author by the time this can be called; a trip is *named*, because "we went" is a fact
-    about an outing rather than an opinion about a restaurant. So this is the one place a member's
-    identity is recorded and kept.
+    **The anonymity asymmetry, as an endpoint.** A proposal is anonymous and D14's trigger has
+    already erased its author by the time this can be called; a trip is *named*, because "we went"
+    is a fact about an outing rather than an opinion about a restaurant. So this is the one place a
+    member's identity is recorded and kept.
 
     **Nothing is published to the stream (D53).** A close is pushed once and then the channel is
-    quiet. A trip event would tell four other people the *moment* one person tapped, and §3.0's whole
-    argument is that at five people the timing of an event is one guess from a name. D53's own flip
-    condition is a measurement of when people actually sign — not an intuition that a live badge
-    would be nice — so there is deliberately no `publish` call in this function.
+    quiet. A trip event would tell four other people the *moment* one person tapped, and the silence
+    principle's whole argument is that at five people the timing of an event is one guess from a
+    name. D53's own flip condition is a measurement of when people actually sign — not an intuition
+    that a live badge would be nice — so there is deliberately no `publish` call in this function.
 
     **The three outcomes are the database's, not this code's.**
 

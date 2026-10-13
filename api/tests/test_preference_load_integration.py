@@ -189,7 +189,7 @@ async def seed(session):
             {"c": circle, "h": MEAL},
         )
     ).scalar_one()
-    # **One place each, because §3.0 caps a member at three proposals in a round** — four places
+    # **One place each, because a member is capped at three proposals in a round** — four places
     # all proposed by one person is refused by the trigger, which is the cap doing its job. Who
     # proposed what is irrelevant to the preference pass (D70: the pool is what was proposed), so
     # the assignment is free — and it is spent deliberately: **Kevin proposes the very place his

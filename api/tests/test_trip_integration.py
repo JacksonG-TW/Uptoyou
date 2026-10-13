@@ -9,11 +9,11 @@ the things ruled about a trip are about the *stream*, and httpx's ASGI transport
 until the app returns, which an SSE generator never does. Zero events cannot be observed through a
 buffer.
 
-**What is under test is an asymmetry rather than a feature.** §3.0 says a proposal is anonymous and a
-trip is named. Those two live in one database and must not be reachable from each other: a trip
-carries who signed, D14's trigger has already erased who proposed, and no join may put them back
-together. So the checks below are as much about what cannot be found as about what the endpoint
-returns.
+**What is under test is an asymmetry rather than a feature.** The design says a proposal is
+anonymous and a trip is named. Those two live in one database and must not be reachable from each
+other: a trip carries who signed, D14's trigger has already erased who proposed, and no join may put
+them back together. So the checks below are as much about what cannot be found as about what the
+endpoint returns.
 """
 
 import asyncio
@@ -102,7 +102,7 @@ async def scenario(test_url: str, base_url: str) -> None:
             json={"target_hour": meal.isoformat()},
         )
         round_id = opened.json()["round_id"]
-        # One place each: §3.0 caps a member at three proposals, and two proposers is closer to the
+        # One place each: a member is capped at three proposals, and two proposers is closer to the
         # thing being tested — a winner whose proposer is erased.
         await client.post("/rounds/{}/proposals".format(round_id), headers=K,
                           json={"place_id": places[0]})
@@ -146,12 +146,12 @@ async def scenario(test_url: str, base_url: str) -> None:
         check("and no wire timestamp reaches the sentence",
               "T" not in said.replace("Kevin", "") and "+00:00" not in said, said)
 
-        # ---- what the payloads may not carry (H3, §3.0) -----------------------------------
+        # ---- what the payloads may not carry (H3) -----------------------------------
         #
         # **The `member_id` half of this check was written eighteen hours before the ruling that
         # reversed it, and was red for nineteen days** (this test 2026-08-19 00:10, b919af2; D55's
         # narrowing 2026-08-19 17:57, bc1c6fb; found 2026-09-07 when A17's gate made somebody run
-        # a test that is not in CLAUDE.md's register). **D55 as narrowed: the round payload and the
+        # a test that is not in the test register). **D55 as narrowed: the round payload and the
         # snapshot MAY carry the seat list — member id, nickname, counts, each pair at and after
         # close — while the pool and the weight panel still carry no author.** That is D108's whole
         # mechanism: every member rolls, every pair derives from the seed committed at open, and the

@@ -8,9 +8,9 @@ deliberately outside what it reads — see the boundary below.
 **H20 is designed in here rather than added later, and that is the whole reason this module is
 narrow.** The hazard is that a lineage tool is built to be *useful*, and the most useful answer
 is the complete one: the trail runs into `weight_contribution`, whose `private`-channel rows
-carry a member and a reason its owner was promised nobody would see (D13, §3.0). Answered
-completely, *"why did this place lose?"* is H3 firing through a door nobody watches — it is not
-a browser payload, so the network tab that would catch H3 never sees it.
+carry a member and a reason its owner was promised nobody would see (D13, the silence principle).
+Answered completely, *"why did this place lose?"* is H3 firing through a door nobody watches — it is
+not a browser payload, so the network tab that would catch H3 never sees it.
 
 **So the boundary is structural, not a filter applied at the end.** These functions read only
 the tables in `READABLE_TABLES`, each listed with its reason, and a test asserts no query reaches

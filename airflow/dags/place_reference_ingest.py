@@ -69,7 +69,8 @@ from _value_check import make_value_check_task
 from _alerts import send_failure_alert
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
-# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+# person (the pipeline never sees a person, D14). `upto_postgres` is the owner's connection and
+# no DAG uses it.
 POSTGRES_CONNECTION = "upto_ingest_postgres"
 
 # Stored on the publication row and printed in every verdict line. Kept in step with

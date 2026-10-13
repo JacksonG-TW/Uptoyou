@@ -8,10 +8,10 @@ and no second port:
 **Hand-written JSON-RPC rather than the MCP SDK, and that is a real choice with a cost.** The
 protocol surface this tool needs is three methods — `initialize`, `tools/list`, `tools/call` —
 and the alternative is a dependency in the image whose own transitive set is larger than this
-file. §6 rules out a component the builder cannot defend, and every line here is defensible by
-reading it. **The cost is admitted:** a client using a part of MCP this does not implement gets
-a clean `-32601`, and protocol drift is now this project's problem rather than a library's.
-Nothing here is a reason to avoid the SDK later; it is a reason not to need it yet.
+file. The requirements analysis rules out a component the builder cannot defend, and every line here
+is defensible by reading it. **The cost is admitted:** a client using a part of MCP this does not
+implement gets a clean `-32601`, and protocol drift is now this project's problem rather than a
+library's. Nothing here is a reason to avoid the SDK later; it is a reason not to need it yet.
 
 **H20 is why the tool list is short.** Every question the weight engine's rows could answer —
 whose preference, which channel, why a place lost — is refused with a stated reason rather than

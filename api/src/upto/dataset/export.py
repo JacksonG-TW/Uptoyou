@@ -1,7 +1,7 @@
 """The dataset export — one Parquet per reference publication, one row per place.
 
 *Owner-ruled 2026-09-12 (「有好的資料集，才好訓練模型跟給資料科學家分析」; option (c) of
-`idea & img/orchestrator/research/dataset-as-product.md`).* A data scientist gets a flat table: every place, the
+the dataset-as-product research).* A data scientist gets a flat table: every place, the
 name a person would recognise, the category with the model and prompt that produced it, and the
 hashes of the files it was all composed against.
 
@@ -22,7 +22,7 @@ be a claim the read path does not make.
 **What this does NOT export.** No member, no circle, no preference, no round, no weight. The
 dataset is the *pipeline's* product. A circle-local place carries `origin = 'circle-local'` and its
 own name — which a circle wrote — so those rows are excluded outright rather than filtered by
-column: §3.0 says the product never publishes what a member typed.
+column: the product never publishes what a member typed.
 
 **Row count.** One per reference place, and the job asserts it against `place`'s own count so a
 partial write is a failure rather than a smaller file.
@@ -113,8 +113,8 @@ async def rows_for(session) -> list[dict]:
     """Every reference place as one flat row, with the name composed by the app itself.
 
     **`origin = 'reference'` and nothing else.** A circle-local place's name is a member's own
-    words (§3.0), so it is excluded here rather than blanked — a column that is null for a reason
-    nobody states is how a dataset acquires a footnote.
+    words (which the product never publishes), so it is excluded here rather than blanked — a column
+    that is null for a reason nobody states is how a dataset acquires a footnote.
     """
     from sqlalchemy import text  # noqa: PLC0415
 

@@ -2,7 +2,7 @@
 
 The package splits three ways on purpose. `categories` holds D38's closed list and the
 validation D39 rests on; `prompt` holds the version-controlled instruction, which is the
-*Skill / Tool / Prompt* artifact §6's re-derivation names; `classify` is the pure step —
+*Skill / Tool / Prompt* artifact the requirements analysis names; `classify` is the pure step —
 a name and a way to ask a model in, one validated category or a stated refusal out.
 
 Nothing here reaches a database or a network. The runner that does both is separate, for

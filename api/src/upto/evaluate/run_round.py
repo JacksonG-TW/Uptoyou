@@ -201,10 +201,10 @@ def evaluation_dir(start: str | None = None) -> str:
 
     `UPTO_EVALUATION_DIR` wins outright — it is what the container uses, where the checkout's
     shape is not visible. Otherwise walk up from this file for a repository root (a `.git`,
-    or the private repo's `app/` + `doc/` pair); the same walk lands on the public repo's own
-    root after D47's extract, because there `app/` *is* the root. Failing both, `./evaluation`
-    under the current directory — a stated fallback rather than a guess that writes somewhere
-    surprising.
+    or a checkout holding `app/` beside a `doc/` directory); the same walk lands on the public
+    repo's own root after D47's extract, because there `app/` *is* the root. Failing both,
+    `./evaluation` under the current directory — a stated fallback rather than a guess that writes
+    somewhere surprising.
     """
     override = os.environ.get("UPTO_EVALUATION_DIR")
     if override:

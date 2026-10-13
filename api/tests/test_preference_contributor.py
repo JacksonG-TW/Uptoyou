@@ -79,7 +79,7 @@ class AnAvoidedCategory(unittest.TestCase):
         self.assertIn("燒烤", record.reason)
 
     def test_the_reason_names_no_member(self):
-        """A row that identifies a person is the exposure §3.0 is built against, whatever the
+        """A row that identifies a person is the exposure the design is built against, whatever the
         visibility column says."""
         record = avoid_contribution(7, 42, "燒烤", {"燒烤"}, FIVE)
         self.assertNotIn("7", record.reason)

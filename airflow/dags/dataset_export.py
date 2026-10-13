@@ -1,7 +1,7 @@
 """The dataset export — a Parquet of every place, nightly to S3 beside the dump.
 
-Owner-ruled 2026-09-12 (「有好的資料集，才好訓練模型跟給資料科學家分析」), option (c) of
-`idea & img/orchestrator/research/dataset-as-product.md`: export only, no schema change, reversible by deleting
+Owner-ruled 2026-09-12 (「有好的資料集，才好訓練模型跟給資料科學家分析」), option (c) of the
+dataset-as-product research: export only, no schema change, reversible by deleting
 this file.
 
 **The cron: `0 23 * * *` UTC = 07:00 Taipei, and the slot is an argument.** D83 first — every cron

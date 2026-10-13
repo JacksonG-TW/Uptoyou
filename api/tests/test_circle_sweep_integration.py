@@ -3,8 +3,8 @@
     docker compose run --rm tests python /srv/tests/test_circle_sweep_integration.py
 
 Builds and drops its own database. Pins revision 0045 (`circle_sweep_candidates`, `sweep_circle`)
-and `upto.sweep`, under the owner's three rulings of 2026-09-14 (decision-log rows «The sweep's
-deletion right», «The sweep's mechanism re-ruled», «Which circles the sweep may touch»), D24's pins
+and `upto.sweep`, under the owner's three rulings of 2026-09-14 (the sweep's deletion right, its
+mechanism re-ruled, and which circles it may touch), D24's pins
 as the cross-circle backstop, and H98.
 
 **What is worth proving, in the order a mistake would cost most.**

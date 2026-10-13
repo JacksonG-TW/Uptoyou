@@ -12,7 +12,8 @@ apparatus is gone rather than adapted.
 
 - **Source (`app/web/src`) for anything about what the code says.** H7's rule and D20's advisory-copy
   rule are properties of what was written, and source is readable.
-- **Built output (`app/web/dist`) for anything about what a browser fetches.** §6's dead-wifi rule
+- **Built output (`app/web/dist`) for anything about what a browser fetches.** The dead-wifi rule
+(the surface must work on a dead venue wifi, so every asset ships with it)
   and the `@font-face` declarations are properties of the artefact nginx serves, and only the build
   produces them.
 
@@ -25,11 +26,11 @@ but React shipping the string means the signal is not ours.
 
 **Three external URLs appear in the built output and none of them is a network dependency** — a
 `https://react.dev` link inside a React error template, `https://tailwindcss.com` in Tailwind's MIT
-licence comment, and `http://www.w3.org/2000/svg` as an SVG namespace. **So §6 cannot be checked by
-scanning for URLs.** It is checked at the places a browser actually fetches from: `<script src>`,
-`<link href>`, `<img src>`, and CSS `url(...)`. A gate that failed on a licence comment would be
-waved through the first time it fired, which is the same lesson as the font gate demanding a `═`
-that appeared only in a CSS comment.
+licence comment, and `http://www.w3.org/2000/svg` as an SVG namespace. **So the dead-wifi rule
+cannot be checked by scanning for URLs.** It is checked at the places a browser actually fetches
+from: `<script src>`, `<link href>`, `<img src>`, and CSS `url(...)`. A gate that failed on a
+licence comment would be waved through the first time it fired, which is the same lesson as the font
+gate demanding a `═` that appeared only in a CSS comment.
 
 **D20's second half is written to arm itself rather than to wait.** *Weather appears on the home
 screen and nowhere else* needs screens, and the scaffold has none. Rather than leave a comment for
@@ -153,7 +154,7 @@ class TheBuildIsPresentOrTheReasonIsStated(unittest.TestCase):
         if built():
             return
         print("\nweb surface: app/web/dist is absent — the rules about the SERVED artefact did not "
-              "run (§6's fetch points, the @font-face declarations). Build it with "
+              "run (the dead-wifi rule's fetch points, the @font-face declarations). Build it with "
               "`docker compose build proxy`, or `npm run build` in app/web, and re-run. The source "
               "rules below ran regardless.", file=sys.stderr)
 
@@ -317,7 +318,7 @@ class WeatherStaysOnTheHomeScreen(unittest.TestCase):
 
 
 class NothingIsFetchedFromAnotherHost(unittest.TestCase):
-    """§6's dead-wifi rule, at the points a browser actually fetches from."""
+    """The dead-wifi rule, at the points a browser actually fetches from."""
 
     def fetch_points(self) -> list[tuple[str, str]]:
         points = []
@@ -339,7 +340,8 @@ class NothingIsFetchedFromAnotherHost(unittest.TestCase):
                   if re.match(r"[a-z]+:", url) and not url.startswith("data:")]
         self.assertEqual(
             remote, [],
-            "§6: the surface must work on a dead wifi, so every asset ships with it; found " +
+            "the dead-wifi rule: the surface must work on a dead wifi, so every asset ships with "
+            "it; found " +
             ", ".join("{} → {}".format(where, url) for where, url in remote),
         )
 
@@ -546,9 +548,9 @@ class TheVendoredFaces(unittest.TestCase):
         `home.css` set `font-family: "UpTo Serif", "Noto Serif TC", serif` on the masthead while no
         `@font-face` named `UpTo Serif`, so the largest text on the product silently rendered in
         whatever serif the machine happened to have — and on a machine with none, in whatever the
-        generic keyword resolved to. §6 forbids an external asset, so there is no webfont behind the
-        fallback to be right instead; a screenshot on this machine looks fine and the same page on a
-        phone does not.
+        generic keyword resolved to. The dead-wifi rule forbids an external asset, so there is no
+        webfont behind the fallback to be right instead; a screenshot on this machine looks fine and
+        the same page on a phone does not.
 
         **The first family in a stack, and only the first.** Everything after it is a fallback by
         definition and is *supposed* to be absent — demanding those be declared would forbid writing

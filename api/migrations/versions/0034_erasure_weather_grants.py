@@ -9,10 +9,10 @@ weather tables, unpinned rows only, one daily job.
 
 **Why this role and not `upto_ingest`.** The pipeline role already holds DELETE on both tables, and
 it is still the wrong one: the job's `UNPINNED` filter must read `weight_contribution`, and D115
-gives `upto_ingest` **nothing** there — §3.0 and D14 say the pipeline never sees a person. Widening
-it would undo the line A15 exists to draw. `upto_erasure` already holds that SELECT for D24's
-pinned-preference filter and its purpose is unchanged: delete on a schedule, skip what a round
-pinned. Only the table list moves.
+gives `upto_ingest` **nothing** there — the design principles and D14 say the pipeline never sees a
+person. Widening it would undo the line A15 exists to draw. `upto_erasure` already holds that SELECT
+for D24's pinned-preference filter and its purpose is unchanged: delete on a schedule, skip what a
+round pinned. Only the table list moves.
 
 **The grants are read from `upto.roles` and not typed here**, the same as revision 0032 — the
 migration that issues them and the test that checks their coverage import one dict, so the boundary

@@ -242,8 +242,8 @@ async def scenario(test_url: str, base_url: str) -> None:
         # or D91's fairness claim cannot be shown at all, so the blanket string test would have
         # forbidden a ruled feature.
         #
-        # **What still must never travel is who proposed what**, because that is the fact §3.0's
-        # anonymity argument is about: knowing who put 火鍋 in the pool reveals that person's
+        # **What still must never travel is who proposed what**, because that is the fact the
+        # anonymity principle is about: knowing who put 火鍋 in the pool reveals that person's
         # preference. A seat list reveals that somebody rolled, which everybody did, visibly, on
         # purpose — and it carries no link to a place at all.
         #

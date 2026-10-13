@@ -74,7 +74,8 @@ if TYPE_CHECKING:  # the runtime import stays inside the task (below): the provi
 # early as it ever did.
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
-# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+# person (the pipeline never sees a person, D14). `upto_postgres` is the owner's connection and
+# no DAG uses it.
 POSTGRES_CONNECTION = "upto_ingest_postgres"
 
 # A drop of this share or more against the previous publication fails the check. See the docstring:

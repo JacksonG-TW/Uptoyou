@@ -1,6 +1,6 @@
 """A8 — when a new place publication lands, classify what it brought, once the card is free.
 
-*Owner-ruled 2026-08-19: ① Asset, ② Sensor. Ticket `doc/issues/A8-airflow-asset-sensor.md`.*
+*Owner-ruled 2026-08-19: ① Asset, ② Sensor. Ticket A8, Airflow asset and sensor.*
 
 **No cron. This DAG is scheduled on an asset**, `place_publication`, emitted by
 `upto_place_reference_ingest` **only when its run actually stored** — a `no_change` day emits nothing
@@ -53,7 +53,8 @@ running pass, that is a lock and a different ticket.
 
 **Throughput falls across a long pass and that is not a defect** — roughly 2× over five thousand
 names, all of it inside the model server's own service time while every duration it reports stays
-flat. Read `doc/build-hazards.md` H43 before treating a slowing pass as a bug in this DAG.
+flat. Read hazard H43 (a model instance slows the longer it serves, and nothing it reports shows it)
+before treating a slowing pass as a bug in this DAG.
 """
 
 from __future__ import annotations
@@ -71,13 +72,14 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.sdk import Asset, dag, task
 
 # H46 — Airflow 3 does not put the dags folder on `sys.path` (Airflow 2 did), so a sibling import
-# inserts it. Read `doc/build-hazards.md` H46 before moving this to `PYTHONPATH`.
+# inserts it. Read hazard H46 before moving this to `PYTHONPATH`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
-# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+# person (the pipeline never sees a person, D14). `upto_postgres` is the owner's connection and
+# no DAG uses it.
 POSTGRES_CONNECTION = "upto_ingest_postgres"
 
 PLACE_PUBLICATION = Asset("place_publication")
@@ -163,7 +165,7 @@ def upto_place_classify_backfill():
 
         The production instance runs the same reference ingest, so it emits the same asset, and it
         must never classify: it cannot reach the GPU, and its categories are carried from the
-        development database by hand (runbook-classifier, «Carrying categories to the box»). This
+        development database by hand. This
         DAG arrives paused there, but «paused» is one unpause away from a twelve-hour wait that ends
         in a failure and an alert. A short circuit skips the rest — no failure, so no alert.
         `UPTO_CLASSIFY_HOST=1` is set only in the development machine's `.env`.

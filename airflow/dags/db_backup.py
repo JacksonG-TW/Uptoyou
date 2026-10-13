@@ -38,8 +38,8 @@ task instances, XComs. The DAGs are code in git, and `airflow-init` rebuilds eve
 `.env` on the next `up`. Trading every credential's blast radius for a run history is a bad trade,
 so it is not made.
 
-**Paused on arrival like every new DAG here** — `airflow dags unpause upto_db_backup` — and that
-hazard is in `CLAUDE.md`, where it has cost hours already.
+**Paused on arrival like every new DAG here** — `airflow dags unpause upto_db_backup` — a new DAG
+arrives paused and a triggered run sits queued forever, which has cost hours already.
 """
 
 from __future__ import annotations
@@ -150,8 +150,8 @@ def upto_db_backup():
         # **But a hand-triggered run has no logical day at all, and `["ds"]` killed it — measured
         # 2026-09-04, `KeyError: 'ds'` six seconds in.** In Airflow 3 a manual trigger without
         # `--logical-date` leaves `logical_date` None and `ds` absent from the context. **That is
-        # the path the runbook, A22's proof and every launch-day check use** — «trigger it once
-        # and watch it go green» — so the DAG could not be verified by the only method anybody
+        # the path the backup procedure, A22's proof and every launch-day check use** — «trigger it
+        # once and watch it go green» — so the DAG could not be verified by the only method anybody
         # would reach for, while its scheduled path was fine.
         #
         # Falls back to today in UTC and SAYS SO in the log, rather than silently: the object

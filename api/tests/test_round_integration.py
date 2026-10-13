@@ -125,7 +125,8 @@ async def scenario(test_url: str) -> None:
         {"r": other_round},
     )
 
-    # Proposals: authorship present while open, one entry per place (D70), three per member (§3.0).
+    # Proposals: authorship present while open, one entry per place (D70), three per member (the
+    # cap).
     async with Session() as session:
         for place_id in places[:3]:
             await session.execute(
@@ -144,7 +145,7 @@ async def scenario(test_url: str) -> None:
     )
     await must_reject(
         Session,
-        "a fourth proposal by one member in one round (§3.0)",
+        "a fourth proposal by one member in one round (the cap)",
         "insert into proposal (round_id, place_id, member_id) values (:r, :p, :m)",
         {"r": round_id, "p": places[3], "m": member},
     )

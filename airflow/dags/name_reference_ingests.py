@@ -36,7 +36,7 @@ were Taipei-local they landed 11:20–12:20 Taipei, in the middle of the working
 
 Like every DAG in this repository: no backfill (the endpoints serve only the current file), so
 `catchup=False`; a new DAG arrives **paused** and a triggered run sits queued forever until
-`airflow dags unpause <dag_id>` — the hazard is in CLAUDE.md and it has cost hours once already.
+`airflow dags unpause <dag_id>` — which has cost hours once already.
 """
 
 from __future__ import annotations
@@ -69,7 +69,8 @@ from _value_check import make_value_check_task
 from _alerts import send_failure_alert
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
-# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+# person (the pipeline never sees a person, D14). `upto_postgres` is the owner's connection and
+# no DAG uses it.
 POSTGRES_CONNECTION = "upto_ingest_postgres"
 
 # Item 11's exit code for "the two version signals contradict each other". Only D85's source

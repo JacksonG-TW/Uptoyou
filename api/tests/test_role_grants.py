@@ -9,8 +9,8 @@ cluster-wide, so they are the live ones; the grants are the ones revision 0032 i
 
 **The assertion that matters most is the deny half.** Checking that `upto_ingest` can write a
 publication proves the pipeline still works and nothing else. Checking that it **cannot read
-`preference`** is the ruling: §3.0 and D14 say the pipeline never sees a person, and until A15 that
-was a habit rather than a mechanism.
+`preference`** is the ruling: the design principles and D14 say the pipeline never sees a person,
+and until A15 that was a habit rather than a mechanism.
 
 **The second most important thing here is DR-8: this test is shown able to fail.** A coverage check
 that has never gone red is a check nobody has calibrated — the same rule H41's sampler and H50's
@@ -112,7 +112,7 @@ async def scenario(test_url: str) -> None:
             for privilege in ("select", "insert", "update", "delete"):
                 if await granted(connection, role_map.INGEST, table, privilege):
                     leaks.append((table, privilege))
-        check("the pipeline can do NOTHING to a table that names a person (§3.0, D14)",
+        check("the pipeline can do NOTHING to a table that names a person (D14)",
               not leaks, leaks[:6])
 
         # **The one a reader should check first.** If this line ever passes vacuously the whole

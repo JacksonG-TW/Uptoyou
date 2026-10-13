@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The dataset export's rules, host-side: no database, no pyarrow, no image.
 
-*Candidate for the dataset export, owner-ruled 2026-09-12 (option (c) of
-`idea & img/orchestrator/research/dataset-as-product.md`).*
+*Candidate for the dataset export, owner-ruled 2026-09-12 (option (c) of the
+dataset-as-product options researched).*
 
 **What is here is what does not need the world.** The column list, the generated dictionary, the
 object names, and the bucket-empty skip. The half that needs a database and a real Parquet file is
@@ -61,8 +61,8 @@ class EveryColumnHasADescription(unittest.TestCase):
             self.assertIn(expected, names)
 
     def test_nothing_about_a_member_is_in_the_column_list(self):
-        """§3.0: the dataset is the pipeline's product. A column named for a person would be the
-        quietest possible way for one to arrive."""
+        """The pipeline never sees a person, and the dataset is its product. A column named for a
+        person would be the quietest possible way for one to arrive."""
         names = " ".join(name for name, _ in export.COLUMNS)
         for forbidden in ("member", "circle", "principal", "preference", "device", "nickname",
                           "seat", "round", "weight", "proposal", "trip"):

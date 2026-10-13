@@ -11,37 +11,37 @@
 
 Two reports compare only when the sha256 above matches. A refusal or an answer outside D38's list counts as wrong and lands in the `無效` column.
 
-## Accuracy by name layer (D82: this one first)
+## Agreement with the reference label, by name layer (D82: this one first)
 
-| layer           |   n | correct | accuracy |
-|:----------------|----:|--------:|---------:|
-| sign 招牌       |  32 |      16 |    50.0% |
-| brand 品牌      |  39 |      37 |    94.9% |
-| registered 登記 | 129 |      98 |    76.0% |
+| layer           |   n | agrees | agreement |
+|:----------------|----:|-------:|----------:|
+| sign 招牌       |  32 |     16 |     50.0% |
+| brand 品牌      |  39 |     37 |     94.9% |
+| registered 登記 | 129 |     98 |     76.0% |
 
 ## Pooled (second, and never on its own)
 
-| set           |   n | correct | accuracy |
-|:--------------|----:|--------:|---------:|
-| all layers    | 200 |     151 |    75.5% |
-| of which 無效 | 200 |       3 |     1.5% |
+| set           |   n | agrees | agreement |
+|:--------------|----:|-------:|----------:|
+| all layers    | 200 |    151 |     75.5% |
+| of which 無效 | 200 |      3 |      1.5% |
 
-## Accuracy by gold label
+## Agreement by reference label
 
-| gold     |  n | correct |          accuracy |
-|:---------|---:|--------:|------------------:|
-| 麵食     | 14 |       5 |             35.7% |
-| 飯食     | 13 |       5 |             38.5% |
-| 小吃     | 26 |      22 |             84.6% |
-| 火鍋     |  5 |       4 |             80.0% |
-| 燒烤     |  3 |       2 | insufficient rows |
-| 日式     |  7 |       3 |             42.9% |
-| 西式     | 13 |       9 |             69.2% |
-| 早餐     |  8 |       7 |             87.5% |
-| 咖啡飲料 | 14 |      14 |            100.0% |
-| 便利商店 | 25 |      25 |            100.0% |
-| 其他     | 17 |      12 |             70.6% |
-| 法人     | 55 |      43 |             78.2% |
+| gold     |  n | agrees |         agreement |
+|:---------|---:|-------:|------------------:|
+| 麵食     | 14 |      5 |             35.7% |
+| 飯食     | 13 |      5 |             38.5% |
+| 小吃     | 26 |     22 |             84.6% |
+| 火鍋     |  5 |      4 |             80.0% |
+| 燒烤     |  3 |      2 | insufficient rows |
+| 日式     |  7 |      3 |             42.9% |
+| 西式     | 13 |      9 |             69.2% |
+| 早餐     |  8 |      7 |             87.5% |
+| 咖啡飲料 | 14 |     14 |            100.0% |
+| 便利商店 | 25 |     25 |            100.0% |
+| 其他     | 17 |     12 |             70.6% |
+| 法人     | 55 |     43 |             78.2% |
 
 ## Confusion — gold down, answered across
 

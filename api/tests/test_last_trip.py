@@ -48,7 +48,7 @@ class TheRecord(unittest.TestCase):
         self.assertEqual(record.reason, "上次去過（2026-08-20）")
 
     def test_it_names_nobody(self):
-        """A trip has a signer (D106) and the record must not carry them: §3.0's exposure is a
+        """A trip has a signer (D106) and the record must not carry them: the exposure is a
         person's name beside a fact, whatever the visibility column says."""
         self.assertNotIn("member", last_trip_contribution(1, 42, True, WENT).reason)
 

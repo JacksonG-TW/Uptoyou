@@ -1,6 +1,6 @@
 """A28 question 1 — value-level checks on what the ingests store, as pure rules over a few numbers.
 
-*Owner-ruled 2026-09-15 (decision-log «A28 question 1, value-level anomaly checks — the light
+*Owner-ruled 2026-09-15 (A28 question 1, value-level anomaly checks — the light
 option» and «A28's checks read through a new read-only check role»).*
 
 **What this module is.** The statements a check runs and the rules it applies, with no Airflow in

@@ -283,7 +283,7 @@ def _result_body(
 # **One helper for three readers, because three copies of this query is three chances to leak a
 # column.** The reveal payload, the SSE snapshot and the signing endpoint's own response must all
 # describe a trip identically, and what they must never carry is the signer's `member_id` — H3's
-# response-shape rule, and §3.0's reason: at five people an id is a name.
+# response-shape rule, and the silence principle's reason: at five people an id is a name.
 #
 # `nickname` and `signed_at` only. Not `member_id`, not `place_id` (the winner is read from
 # `round.winning_place_id` — D28/D57, derived and never copied), and not a note, because D38 admits
@@ -625,9 +625,9 @@ async def panel_for(session, round_id: int, weights, viewer: int | None = None) 
         # **Whose reason it is, kept out of the payload and used only to decide one field.** D13's
         # third column has three values: `table` is circle-wide, `none` is nobody's, and
         # `represented_member` is exactly one person's — so the same round renders a different
-        # sentence to different readers, and an operator is not exempted from that. §3.0: at five
-        # people, "member 3 avoids 火鍋" makes the operator the one person who can see everyone's
-        # preferences, and D14 erased the proposal authorship of this very round.
+        # sentence to different readers, and an operator is not exempted from that. The silence
+        # principle: at five people, "member 3 avoids 火鍋" makes the operator the one person who can
+        # see everyone's preferences, and D14 erased the proposal authorship of this very round.
         represented = {row.id: row.member_id for row in rows}
         panel[str(place_id)] = {
             # What the fold starts at, before any contributor — 甲's 起點 row. It is NOT a factor

@@ -2,10 +2,9 @@
 # Bootstrap — migrations and the township seed — runs in the **migrate** service, once, before
 # anything serves. Every other container sharing this image skips straight to its command.
 #
-# **§6's criterion is literally `docker compose up` and nothing else, and that still holds.** The
-# work did not move to a human; it moved to a one-shot service the stack starts for itself, which
-# `api` waits on with `service_completed_successfully` — the same shape the Airflow services already
-# use for `airflow-init`.
+# **The product's criterion is that the compose file brings the stack up, and that still holds.**
+# The work did not move to a human; it moved to a one-shot service, which the deploy runs once
+# (`docker compose run --rm migrate`) before `up`.
 #
 # **Why it moved at all (A15 / D115).** These two steps need the database **owner**: `alembic`
 # does DDL and the seed writes a reference table. Since A15 the api container connects as
@@ -17,7 +16,7 @@
 # `alembic upgrade head` is idempotent: on an already-current database it prints nothing and exits
 # 0. If it fails, the container fails, which is the point — an API serving against a schema it does
 # not expect is worse than an API that did not start. With this split, that failure now happens in
-# `migrate` and `api` never starts at all, which is the same guarantee one container earlier.
+# `migrate` and stops the deploy before `up`, which is the same guarantee one step earlier.
 set -e
 
 if [ "${UPTO_BOOTSTRAP:-}" = "1" ]; then

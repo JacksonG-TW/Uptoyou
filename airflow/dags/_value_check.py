@@ -1,7 +1,7 @@
 """A28 question 1 — the value check that follows every ingest, and the nightly freshness sweep.
 
-*Owner-ruled 2026-09-15 (decision-log «A28 question 1, value-level anomaly checks — the light
-option» and «A28's checks read through a new read-only check role»).*
+*Owner-ruled 2026-09-15 (A28 question 1, value-level anomaly checks — the light option; and
+A28's checks read through a new read-only check role).*
 
 **What a value check is.** After an ingest and its A9 publication check, one task reads a handful of
 numbers about that source — hours since its last stored publication, hours since its last run,

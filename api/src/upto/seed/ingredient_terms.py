@@ -13,7 +13,7 @@ product that no publisher stands behind.
 whole design: absence is `unknown`, never `no allergen`. The table may be added to for ever and is
 correct at every size — what it must never do is guess.
 
-**Read `doc/defences.md` D103 before adding a row.** The test to apply is not *does this food
+**Read D103 before adding a row.** The test to apply is not *does this food
 contain the allergen* — it is *does this word name it*. A row that needs the first question answered
 is a row that does not belong here.
 

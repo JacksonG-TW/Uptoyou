@@ -1,5 +1,6 @@
 #!/bin/sh
-# Pull, rebuild what changed, bring the stack up. The whole of D59's "CD pulls" on the box.
+# Pull the published commit and its published images, migrate, bring the stack up. The whole of
+# D59's "CD pulls" on the box. It builds nothing: the images come from the registry.
 #
 #     app/deploy/pull-deploy.sh            # what the timer runs
 #     app/deploy/pull-deploy.sh --once     # same thing by hand, same output
@@ -16,22 +17,20 @@
 # ---------------------------------------------------------------------------------------------
 # **Three rules this script exists to get right, each one a hazard that has already bitten here.**
 #
-# **H28 — nothing is bind-mounted, so a pull that changes source changes NOTHING until the images
-# are rebuilt AND the containers recreated.** A stale image does not announce itself: every file on
-# disk reads correct while the container serves last week's code. So this builds before it ups, and
-# ups with `--wait` so a container that will not come up is a failure here rather than a surprise
-# later.
+# **H28 — nothing is bind-mounted, so a `git pull` that changes source changes NOTHING until the
+# images for that commit are pulled AND the containers recreated.** A stale image does not announce
+# itself: every file on disk reads correct while the container serves last week's code. So this
+# pulls the images tagged with the new commit before it ups, and ups with `--wait` so a container
+# that will not come up is a failure here rather than a surprise later.
 #
-# **H64 in reverse, and this is the line somebody will "fix" — read before changing it.** The
-# operations manual says always `docker compose --profile test build`, because a plain build
-# silently skips the profile-gated `tests` image and a round then measures last week's runner.
-# **That rule is about running rounds. This box never runs one.** A plain `docker compose build`
-# builds every service that is not profile-gated — which is exactly the set this box runs — and
-# skipping `tests` here saves an image nobody will start on a 2 GB instance. **The profile must
-# also never appear on the `up`**: `tests` is the one container holding the database owner's
-# credential at rest (A15/D115), and starting it is what `split_boot_check.sh` asserts against.
+# **H64 in reverse, and this is the line somebody will "fix" — read before changing it.** No
+# profile appears on this script's `pull` or `up`. A plain `docker compose pull` fetches every
+# service that is not profile-gated — exactly the set this box runs — and leaves out `tests`, an
+# image nobody will start on a 2 GB instance. **The `test` profile must never appear on the `up`**:
+# `tests` is the one container holding the database owner's credential at rest (A15/D115), and
+# starting it is what `split_boot_check.sh` asserts against.
 #
-# **A pull that changed nothing must do nothing.** Rebuilding and recreating on a timer when HEAD
+# **A pull that changed nothing must do nothing.** Re-pulling and recreating on a timer when HEAD
 # has not moved is how a box restarts itself in the middle of somebody's round for no reason.
 # ---------------------------------------------------------------------------------------------
 
@@ -72,10 +71,10 @@ _schema_revision() {
     if [ -n "$found" ]; then echo "$found"; else echo "(could not be read)"; fi
 }
 
-# **One at a time.** A build on a small instance can outlast the timer's period; two overlapping
-# runs would fight over the image tags and the containers. `flock` is in util-linux and is on the
-# AMI; if it is ever absent this exits rather than running unguarded.
-# The hand-run form: only the check, no pull, no build, no lock (it reads, it does not deploy).
+# **One at a time.** A pull plus a migration on a small instance can outlast the timer's period;
+# two overlapping runs would fight over the image tags and the containers. `flock` is in util-linux
+# and is on the AMI; if it is ever absent this exits rather than running unguarded. The hand-run
+# form: only the check, no pull, no build, no lock (it reads, it does not deploy).
 if [ "${1:-}" = "--check-alert-channel" ]; then
     cd "$APP"
     alert_channel_check
@@ -125,7 +124,7 @@ if ! git pull --ff-only --quiet; then
     # **Single quotes, and this line has already bitten.** In double quotes the backticks around
     # the command name were COMMAND SUBSTITUTION: the failure message re-ran `git pull --ff-only`,
     # which is why the hint block printed twice the first time this path was exercised. Harmless
-    # for a pull; not harmless as a habit in a script that also builds and restarts things.
+    # for a pull; not harmless as a habit in a script that also migrates and restarts things.
     say 'REFUSED: git pull --ff-only failed. The clone has diverged or the remote is unreachable.'
     say "         Nothing was built and nothing was restarted. Look before forcing anything."
     exit 4
@@ -214,8 +213,8 @@ if ! held_diff diff --quiet; then
     exit 5
 fi
 
-# **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the research is in
-# the private repository, `idea & img/orchestrator/research/ghcr-research.md`). It built its own images until then, and on
+# **This box does not build, and that is the point** (owner 「公開」 2026-09-07; the registry research
+# preceded it). It built its own images until then, and on
 # 2026-09-05 that wedged it for twelve hours — `npm ci` and a Vite build on a swapless 2 GB instance
 # with the stack running (H76's neighbour). The images are built off the box — since
 # 2026-10-10 by this repository's own workflow (`.github/workflows/cd.yml`), on each push — and
@@ -306,8 +305,8 @@ say "  schema after:  $(_schema_revision)"
 
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
 # as the containers are created, and a container that dies on its healthcheck is discovered by a
-# member instead of by this script. The `migrate` one-shot runs here too and `api` waits on its
-# success (A15/D115), so a failed migration stops the deploy one container earlier.
+# member instead of by this script. `up` never migrates: the migration ran once, above, and a
+# failed one has already stopped this deploy before anything was recreated.
 say "starting"
 if docker compose up -d --wait; then
     say "UP at $after"

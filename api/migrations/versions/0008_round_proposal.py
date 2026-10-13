@@ -20,10 +20,10 @@ code path would all leave authorship behind, and none of them would error. D14 a
 instrument is weaker than a CHECK — a trigger mutates rather than rejects, and Alembic drops
 triggers silently on autogenerate, which is why this file is hand-written and read whole.
 
-**The 1–3 cap is enforced here too (§3.0), by a constraint trigger,** because it is the reason
-authorship exists at all before the close, and D13's standard is that a rule the application
-enforces alone is not a rule. Counting rows across a table is beyond CHECK, so it is the same
-weaker instrument as the erasure, admitted rather than glossed.
+**The 1–3 cap (a member proposes at most three places a round) is enforced here too, by a constraint
+trigger,** because it is the reason authorship exists at all before the close, and D13's standard is
+that a rule the application enforces alone is not a rule. Counting rows across a table is beyond
+CHECK, so it is the same weaker instrument as the erasure, admitted rather than glossed.
 
 **What is deliberately absent:** the weight contributions and the materialised per-place
 weights — D15's snapshot. They arrive with the engine's write half, because the write-time
@@ -132,7 +132,7 @@ def upgrade() -> None:
         """
     )
 
-    # §3.0's cap: one member proposes at most three places in a round. A count across rows is
+    # The cap: one member proposes at most three places in a round. A count across rows is
     # beyond CHECK, so it is a trigger — D13's standard held with D14's admitted instrument.
     op.execute(
         """

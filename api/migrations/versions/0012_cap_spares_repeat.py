@@ -6,12 +6,12 @@ Created: 2026-08-13
 
 Found by ticket 19's endpoint test, not by reading: a member holding three proposals who
 proposes a place **already in the pool** hit the cap trigger before the unique constraint —
-BEFORE INSERT runs first — so D70's quiet success read as a §3.0 violation. The two rules
-collided in the one case where both apply, and the cap won by execution order alone.
+BEFORE INSERT runs first — so D70's quiet success read as a violation of the three-places cap. The
+two rules collided in the one case where both apply, and the cap won by execution order alone.
 
 The fix is in the trigger, not the endpoint: when the (round, place) pair already exists,
 the trigger lets the row through to the unique constraint, which rejects it with the name
-the API maps to 200. The cap still counts only genuinely new proposals, which is what §3.0
+the API maps to 200. The cap still counts only genuinely new proposals, which is what the cap
 meant — a repeat adds nothing to anyone's share of the pool.
 """
 

@@ -95,11 +95,12 @@ class TheWorkedExample(unittest.TestCase):
     def test_the_thirty_six_outcomes(self):
         """**D71's line says 11 · 11 · 9 · 5. The shipped table gives 11 · 10 · 9 · 6, and the
         code is right.** The ruling's example apportions 36 by plain largest remainder;
-        `table.allocate` first gives every positive place one guaranteed slot (§3.0 — a place with
-        real odds rounded to 0/36 would be removed in the only sense that matters) and shares the
-        remaining 32. That floor lifts the *lightest* place, which here is the wettest one, from 5
-        to 6 — D72 admits it in as many words as "a small distortion of the heaviest places'
-        shares". The factors, which are what the ruling actually decided, match exactly.
+        `table.allocate` first gives every positive place one guaranteed slot (nothing is ever
+        removed — a place with real odds rounded to 0/36 would be removed in the only sense that
+        matters) and shares the remaining 32. That floor lifts the *lightest* place, which here is
+        the wettest one, from 5 to 6 — D72 admits it in as many words as "a small distortion of the
+        heaviest places' shares". The factors, which are what the ruling actually decided, match
+        exactly.
 
         Escalated to orchestrator 2026-08-27: the example's second half needs amending, or the
         floor needs re-ruling. This test asserts what a member would actually roll against."""
@@ -109,7 +110,8 @@ class TheWorkedExample(unittest.TestCase):
 
     def test_the_ruling_s_own_numbers_under_the_arithmetic_it_used(self):
         """The same weights by plain largest remainder do give D71's 11 · 11 · 9 · 5 — so the
-        discrepancy is §3.0's floor and nothing else. Pinned here so the next reader does not have
+        discrepancy is the guaranteed-slot floor and nothing else. Pinned here so the next reader
+        does not have
         to re-derive which of the two rules moved the number."""
         weights = weights_for([20, 20, 40, 80])
         total = sum(weights.values())

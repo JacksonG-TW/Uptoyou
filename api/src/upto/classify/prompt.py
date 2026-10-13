@@ -1,4 +1,5 @@
-"""D39's prompt, version-controlled — condition 1, and the artifact §6 asks for by name.
+"""D39's prompt, version-controlled — condition 1, and the artifact the requirements analysis asks
+for by name.
 
 **The version string is data, not decoration.** Every generated row records it (D39's
 condition 3), so a category can always be traced to the exact instruction that produced it,

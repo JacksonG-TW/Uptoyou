@@ -39,14 +39,15 @@ from airflow.hooks.base import BaseHook
 from airflow.sdk import dag, task
 
 # H46 — Airflow 3 does not put the dags folder on `sys.path` (Airflow 2 did), so a sibling import
-# inserts it. Read `doc/build-hazards.md` H46 before moving this to `PYTHONPATH`.
+# inserts it. Read hazard H46 before moving this to `PYTHONPATH`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert
 from _value_check import make_value_check_task
 
 # A15 / D115: the pipeline runs as `upto_ingest`, which can read nothing that names a
-# person (§3.0, D14). `upto_postgres` is the owner's connection and no DAG uses it.
+# person (the pipeline never sees a person, D14). `upto_postgres` is the owner's connection and
+# no DAG uses it.
 POSTGRES_CONNECTION = "upto_ingest_postgres"
 CWA_CONNECTION = "cwa_open_data"
 

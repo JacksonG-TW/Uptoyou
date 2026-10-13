@@ -34,7 +34,7 @@ import _tempdb  # noqa: E402
 TEST_DB = "upto_self_serve_check"
 PORT = 8907
 #: **No `/api` prefix, and that is not an oversight.** The proxy strips `/api/` before forwarding,
-#: so the routers must not carry it (CLAUDE.md's one-roll walkthrough paragraph). A test driving
+#: so the routers must not carry it (the one-roll walkthrough). A test driving
 #: uvicorn directly therefore uses the bare path; the same call through 8080 is `/api/circles`.
 BASE = f"http://127.0.0.1:{PORT}"
 
@@ -126,8 +126,8 @@ async def scenario(test_url: str) -> None:
 
         twin = await client.post(f"{BASE}/circles/{circle}/join",
                                  json={"ticket": ticket, "nickname": "小明"})
-        check("a duplicate nickname is legal and is not refused (§7)", twin.status_code == 201,
-              f"got {twin.status_code}")
+        check("a duplicate nickname is legal and is not refused (the self-serve ruling)",
+              twin.status_code == 201, f"got {twin.status_code}")
 
         # ---- over-length: a sentence, never pydantic's list ------------------------------------
         #
@@ -163,7 +163,7 @@ async def scenario(test_url: str) -> None:
         check("the list is nicknames in join order, duplicates kept as the server holds them",
               [m["nickname"] for m in payload["members"]] == ["小美", "小明", "小明"],
               str(payload["members"]))
-        check("and carries NO member id — §3.0, H3: an identifier a screen never needs",
+        check("and carries NO member id — H3: an identifier a screen never needs",
               all(set(m) == {"nickname", "is_host"} for m in payload["members"]), str(payload["members"]))
         check("the host is marked on its row, and only there (2026-10-09)",
               [m["is_host"] for m in payload["members"]] == [True, False, False], str(payload["members"]))

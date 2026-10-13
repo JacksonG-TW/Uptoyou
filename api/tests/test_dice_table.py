@@ -36,7 +36,8 @@ class TestAllocation(unittest.TestCase):
         self.assertEqual(counts, {1: 0, 2: 36})
 
     def test_positive_weight_keeps_at_least_one_outcome(self):
-        # 0.001 against two heavyweights rounds to zero without the floor; §3.0 forbids that.
+        # 0.001 against two heavyweights rounds to zero without the floor; nothing is ever removed,
+        # so that is forbidden.
         counts = allocate({1: Decimal("0.001"), 2: Decimal("2"), 3: Decimal("2")})
         self.assertEqual(sum(counts.values()), 36)
         self.assertGreaterEqual(counts[1], 1)

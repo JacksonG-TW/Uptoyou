@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """甲's operator picture: the panel carries every contributor, fired or not, in D46's order.
 
-*Written 2026-09-11 with candidate 16, for `spec-weights-picture-2026-09-11.md` §5.* The drawing
+*Written 2026-09-11 with candidate 16, for the operator's weights picture: one row per
+contributor.* The drawing
 has four rows always — 起點 plus one per contributor — because «上次去過 showing nothing is
 information»: it says this place was not last week's. If the payload omitted a silent contributor
-the client would infer that from an absence, which §4 of the spec forbids.
+the client would infer that from an absence, which the picture's spec forbids.
 
 **Host-side, and that is the point of where the code lives.** `engine.contributors` imports
 nothing but `decimal` and its sibling engine modules, so the rule this file asserts needs no

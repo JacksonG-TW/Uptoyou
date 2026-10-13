@@ -16,9 +16,9 @@ hand-written with the table that carries it. **A constraint that cannot be writt
 deferred; it is absent.** Ruled 2026-08-12, three tables, with `circle` as `id · name ·
 created_at`.
 
-**`circle`'s columns were chosen here, not taken from a decision entry.** `_map.md` records the
-node as "Schema 1 — identity and circles · closed — D12", but D12's body only ever describes
-`principal` and `member`; the circle appears in it as a phrase. The closure covered the
+**`circle`'s columns were chosen here, not taken from a decision entry.** The project's plan
+recorded the node as "Schema 1 — identity and circles · closed — D12", but D12's body only ever
+describes `principal` and `member`; the circle appears in it as a phrase. The closure covered the
 *split*, not the circle's shape.
 
 **This is not the baseline migration, and D12 says it is.** The build order put ingest first, so
@@ -47,13 +47,14 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # A circle is the durable unit that holds a round (`_map.md`'s room question defers to it),
+    # A circle is the durable unit that holds a round (the open room question defers to it),
     # and it is the scope of everything the product domain can see at once.
     op.create_table(
         "circle",
         sa.Column("id", sa.BigInteger, primary_key=True),
-        # What the table at the table calls itself. Personal-adjacent by §5's standard, so it is
-        # the circle's own label and there is no second name column anywhere for a person.
+        # What the table at the table calls itself. Personal-adjacent by the compliance constraints'
+        # standard, so it is the circle's own label and there is no second name column anywhere for
+        # a person.
         sa.Column("name", sa.Text, nullable=False),
         # server_default rather than an application default: H10's threat model is "I connect to
         # your database directly", and a row inserted over SQL still has to carry a creation

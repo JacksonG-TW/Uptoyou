@@ -3,7 +3,7 @@
 Revision ID: 0047
 Revises: 0046
 
-*Owner-ruled 2026-09-16 (「拆」, decision-log row 274da9d).*
+*Owner-ruled 2026-09-16 (「拆」).*
 
 **What was wrong.** D105 put the role on the credential and not on the person, which is right and
 stays. But one boolean — `device_secret.operator` — granted two unrelated powers: minting and
@@ -32,7 +32,7 @@ closed. Dropping the column destroys the distinction, and the next `upgrade head
 backfill — so down-then-up is a **widening**: every self-serve creator's credential would come back
 carrying the evidence table, and an audit-only credential would lose it. A privilege that returns
 by itself during a ten-minute rollback is exactly the defect the owner's 「拆」 ruling exists to
-remove, and a runbook sentence is read by somebody who is already in trouble.
+remove, and a sentence in a runbook is read by somebody who is already in trouble.
 
 **The rollback is not blocked, it is made deliberate.** The refusal names how many rows disagree and
 the one statement that resolves them — decide what those credentials should be, write it, then roll

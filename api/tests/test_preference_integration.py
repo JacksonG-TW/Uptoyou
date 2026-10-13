@@ -7,7 +7,7 @@ Run inside the stack:
 The test builds its own database and drops it, so it never touches the stack's data.
 
 **The assertion that matters most is an absence: nothing reaches the circle's stream when a
-preference is written.** Every other write in this application announces itself, and §3.0's rule is
+preference is written.** Every other write in this application announces itself, and the rule is
 that a preference is *silent* rather than merely anonymous — at five people the timing of an event
 is one guess from a name. A future reader adding a `publish(...)` "for consistency" would undo the
 rule, and only a test that watches the stream catches it.
@@ -214,8 +214,8 @@ async def scenario(test_url: str) -> None:
             stream.publish = original_publish
         check("a write answers 204", answer.status_code == 204, answer.status_code)
         check("with an empty body", answer.content == b"", repr(answer.content[:60]))
-        check("and publishes NOTHING to the circle's stream (§3.0)", published == [],
-              repr(published))
+        check("and publishes NOTHING to the circle's stream (preferences are silent)",
+              published == [], repr(published))
 
         # **The runtime check above passes trivially today and that is why this one exists.**
         # `preferences.py` does not import `publish` at all, so patching it proves only that
@@ -422,7 +422,8 @@ async def scenario(test_url: str) -> None:
         # appends, and nothing is ever deleted.
         check("without deleting anything — every version is still there", kept == 5, kept)
 
-        # --- nothing about anyone else, and the coverage number (H3, §3.0) -----------
+        # --- nothing about anyone else, and the coverage number (H3, preferences are silent)
+        # -----------
         check("the payload names no other member",
               "members" not in body and "circle" not in body, sorted(body))
         check("it states what an avoid can currently reach",

@@ -7,7 +7,7 @@ appears nowhere; the read is a deliberate act by the member on their own device,
 it — *「Re-confirmation shows the value, it does not ask the question again… the screen arrives with
 it filled in.」* Asking afresh every round would be the exact pressure the product exists to remove.
 
-**The write is silent, and "silent" is stronger than "anonymous" (§3.0).** `204`, empty body, and —
+**The write is silent, and "silent" is stronger than "anonymous".** `204`, empty body, and —
 the part that matters most — **nothing is published to the circle's stream.** Not a count, not an
 anonymous "someone updated a preference", nothing. At five people the *timing* of an event is one
 guess from a name, and once guessed the person must either own it or publicly correct it, which is
@@ -25,7 +25,7 @@ to keep*. A `persist=false` row is still written and still used for the round in
 by the scheduled job — so "do not remember this" is a fact with provenance rather than an absence,
 and the screen's choice is not a no-op.
 
-**No aggregate, and no other member, ever (H3, §3.0).** Both endpoints read `member_id` from the
+**No aggregate, and no other member, ever (H3).** Both endpoints read `member_id` from the
 device secret and touch nothing else. There is no circle-wide summary here and there is no column
 to build one from — `preference` has no circle column at all.
 
@@ -43,7 +43,7 @@ from sqlalchemy import text
 from .api_common import refuse_if_submitted, resolve_member
 from .db import session_factory
 
-# D38's ten and §4C-2's two bands, mirrored from revision 0022's CHECKs. **Two copies on purpose,
+# D38's ten and the two budget bands, mirrored from revision 0022's CHECKs. **Two copies on purpose,
 # and the duplication is the cheaper half:** the database refuses a bad value whatever the API
 # believes (D39's condition 2), and this list exists only so the refusal is a 400 naming the list
 # rather than a 500 carrying a constraint name. The integration test asserts they agree.
@@ -265,7 +265,7 @@ select (select count(*) from place where category is not null) as with_category,
 # **A19 made this a real query, and the literal `0` it replaced is the hazard, not a typo.** It was
 # written when no place carried ingredient data and it said so in its own comment — and it would
 # have gone on reporting zero for ever, silently, the day a source arrived. That day was 2026-08-29:
-# 4,509 of 36,499 places have published materials. The same shape CLAUDE.md warns about for
+# 4,509 of 36,499 places have published materials. The same shape as the warning about
 # `category_coverage` — *today's figure becomes false the moment a backfill runs* — except a
 # hard-coded constant cannot even drift into being wrong. It starts wrong and waits.
 #
@@ -480,8 +480,8 @@ async def record_preference(circle_id: int, body: PreferenceBody, request: Reque
 
     **The absence of a `publish(...)` call in this function is load-bearing.** Every other write
     in this application announces itself on the circle's stream; this one must not, and a future
-    reader adding one "for consistency" would undo §3.0. The integration test asserts the stream
-    stays quiet across a write.
+    reader adding one "for consistency" would undo the silence principle. The integration test
+    asserts the stream stays quiet across a write.
 
     No 409 for a repeat: a second write is not a conflict, it is the next version. That is D70's
     quiet-success shape applied to a table that appends. **The one 409 is a submitted seat**

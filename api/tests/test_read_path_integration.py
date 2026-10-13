@@ -168,7 +168,7 @@ async def scenario(test_url):
 
     # ---- two versions of one hour: the later one answers ----------------------------------
     # Measured 2026-08-11: the observation is revised in place inside its own hour. Taking the
-    # latest is an assumption flagged in _map.md, not a ruling — this test pins the current
+    # latest is an open assumption, not a ruling — this test pins the current
     # behaviour so a ruling either way is a visible change.
     async with Session() as session:
         await plant_observation(session, SEVEN, "29.9", SEVEN + timedelta(minutes=40), "d" * 64)

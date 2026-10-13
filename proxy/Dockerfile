@@ -6,8 +6,8 @@
 # build step; it is now Vite + React 19 + Tailwind 4, so something has to run `npm`. It runs
 # here rather than on a developer's machine for the reason the old single stage existed: the
 # image must be self-contained on a machine that has never seen this repository, which is the
-# scenario §6 grades. Nothing about the front end is bind-mounted, and a change under `web/`
-# is invisible to the running stack until this image is rebuilt (H28).
+# scenario the product's requirements grade. Nothing about the front end is bind-mounted, and a
+# change under `web/` is invisible to the running stack until this image is rebuilt (H28).
 
 # ---- the build stage -------------------------------------------------------------------
 #

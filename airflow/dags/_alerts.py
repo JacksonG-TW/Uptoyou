@@ -48,7 +48,8 @@ inside the container instead, which is what somebody at a keyboard actually need
 The Connection is `telegram_alerts`, written delete-then-add by `airflow/init.sh`:
 `--conn-type http --conn-host api.telegram.org --conn-login <chat_id> --conn-password <bot token>`.
 Rotating the token is `init.sh`'s job — `docker compose up airflow-init --force-recreate --no-deps`
-— the same three-places rule the CWA key carries in `CLAUDE.md`.
+— the same three-places rule the CWA key follows (the secret lives in a file, the compose env and
+the running container's Connection, and all three change together).
 
 Tested by `app/api/tests/test_alerts.py` — `compose_message()` and `scrub()` are pure and need no
 Airflow, no network and no database.

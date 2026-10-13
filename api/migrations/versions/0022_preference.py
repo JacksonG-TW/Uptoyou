@@ -72,9 +72,9 @@ depends_on = None
 # meeting. If D38's list ever changes, this constraint is part of the change.
 CATEGORIES = ("麵食", "飯食", "小吃", "火鍋", "燒烤", "日式", "西式", "早餐", "咖啡飲料", "其他")
 
-# §4C-2's two bands. Not a number: D38's *choices are picked from a fixed list, never typed* rule
-# applies to a preference as much as to a proposal, and a typed budget would need a currency, a
-# period and a model to read it.
+# The private re-confirmation's two budget bands. Not a number: D38's *choices are picked from a
+# fixed list, never typed* rule applies to a preference as much as to a proposal, and a typed budget
+# would need a currency, a period and a model to read it.
 BUDGET_BANDS = ("tight", "easy")
 
 KINDS = ("budget", "avoid_category")
@@ -180,8 +180,8 @@ def upgrade() -> None:
     # D13's third column is *who may see the reason*, and `ck_contribution_commercial_public`
     # already forces the commercial case to be public. This is the mirror the private channel
     # needed: a private reason may be `represented_member` or `none`, and **never `table`** —
-    # a preference on the reveal panel is the exposure §3.0 is built against, and at five people
-    # a channel label is guessable enough without the sentence beside it.
+    # a preference on the reveal panel is the exposure the silence principle is built against, and
+    # at five people a channel label is guessable enough without the sentence beside it.
     op.create_check_constraint(
         "ck_contribution_private_not_public", "weight_contribution",
         "channel <> 'private' or reason_visibility <> 'table'",

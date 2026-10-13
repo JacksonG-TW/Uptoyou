@@ -267,25 +267,25 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
                  "answer outside D38's list counts as wrong and lands in the `無效` column.")
     lines.append("")
 
-    lines.append("## Accuracy by name layer (D82: this one first)")
+    lines.append("## Agreement with the reference label, by name layer (D82: this one first)")
     lines.append("")
     rows = []
     for layer in LAYERS:
         got, seen = counts["per_layer"][layer]
         rows.append([LAYER_NAMES.get(layer, layer), str(seen), str(got), percent(got, seen)])
-    lines += table(["layer", "n", "correct", "accuracy"], rows)
+    lines += table(["layer", "n", "agrees", "agreement"], rows)
     lines.append("")
 
     correct, total = counts["pooled"]
     lines.append("## Pooled (second, and never on its own)")
     lines.append("")
-    lines += table(["set", "n", "correct", "accuracy"],
+    lines += table(["set", "n", "agrees", "agreement"],
                    [["all layers", str(total), str(correct), percent(correct, total)],
                     ["of which 無效", str(total), str(counts["invalid"]),
                      percent(counts["invalid"], total)]])
     lines.append("")
 
-    lines.append("## Accuracy by gold label")
+    lines.append("## Agreement by reference label")
     lines.append("")
     # **A label the set cannot measure prints «insufficient rows», never a percentage.** 素食 is
     # ~1% of the city and the frozen draw holds ONE row of it, so its accuracy is 0% or 100% and
@@ -300,7 +300,7 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
         rows.append([label, str(seen), str(got),
                      "insufficient rows" if 0 < seen < MIN_SCOREABLE_ROWS
                      else percent(got, seen)])
-    lines += table(["gold", "n", "correct", "accuracy"], rows)
+    lines += table(["gold", "n", "agrees", "agreement"], rows)
     lines.append("")
 
     lines.append("## Confusion — gold down, answered across")

@@ -1,8 +1,8 @@
 # Airflow carries the ingest code in the image rather than bind-mounting it.
 #
 # A bind mount would be faster to iterate on and would need an SELinux :z label on the
-# development machine to be readable at all. The deciding reason is the other one: §6 grades
-# `docker compose up` on a machine that has never seen this repository, and an image that
+# development machine to be readable at all. The deciding reason is the other one: the product's
+# bar is `docker compose up` on a machine that has never seen this repository, and an image that
 # already contains what it runs is the version of that which cannot half-work.
 # **3.0.6 since 2026-10-07 (owner, the combined deploy; H102).** 3.0.2 leaked one file descriptor
 # per task run in the LocalExecutor worker (fixed in 3.0.3, #51654) and could not run a task failure

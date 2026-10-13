@@ -66,7 +66,7 @@ def upgrade() -> None:
         sa.Column("rolled_at", sa.DateTime(timezone=True),
                   server_default=sa.text("now()"), nullable=False),
         # **The composite pins, not two independent references.** Without them a roll could name a
-        # member of one circle and a round of another, and every anonymity argument in §3.0 rests on
+        # member of one circle and a round of another, and every anonymity argument rests on
         # a roll belonging to exactly one circle's round. Same shape as `trip`'s (B2).
         sa.ForeignKeyConstraint(
             ["circle_id", "member_id"], ["member.circle_id", "member.id"],

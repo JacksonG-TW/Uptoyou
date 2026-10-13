@@ -16,7 +16,7 @@ The hourly weather DAG cannot be avoided by any minute and is not worth avoiding
 row-level locks in batches and commits each one.
 
 Paused on arrival like every new DAG here — `airflow dags unpause upto_weather_retention` — and a
-paused DAG queues nothing and shows no stuck run, which is the hazard `CLAUDE.md` carries.
+paused DAG queues nothing and shows no stuck run, which is the standing new-DAG hazard.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from airflow.hooks.base import BaseHook
 from airflow.sdk import dag, task
 
 # H46 — Airflow 3 does not put the dags folder on `sys.path` (Airflow 2 did), so a sibling import
-# inserts it. Read `doc/build-hazards.md` H46 before moving this to `PYTHONPATH`.
+# inserts it. Read hazard H46 before moving this to `PYTHONPATH`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert

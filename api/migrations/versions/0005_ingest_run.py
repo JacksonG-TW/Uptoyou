@@ -25,7 +25,7 @@ and which publication it landed on if any. A run is metadata about our own behav
 publication is a fact about the source.
 
 **Needs a D-number.** The requirement is the ticket's and the shape is this migration's, so
-there is no defence entry to point at yet. Recorded in `_map.md` as owed rather than left to be
+there is no defence entry to point at yet. Recorded as owed rather than left to be
 discovered.
 """
 

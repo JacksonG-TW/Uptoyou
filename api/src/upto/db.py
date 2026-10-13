@@ -131,7 +131,7 @@ def pipeline_session_factory(url: str | None = None) -> async_sessionmaker:
 
     D115: this role may not read `member`, `principal`, `preference`, `round`, `proposal`,
     `weight_contribution`, `trip`, `member_roll` or `device_secret`. **The pipeline never sees a
-    person** (§3.0, D14), and since A15 the database is what says so rather than a habit.
+    person** (D14), and since A15 the database is what says so rather than a habit.
     """
     return session_factory(url or _role_url(INGEST_URL_VAR, "the pipeline"))
 

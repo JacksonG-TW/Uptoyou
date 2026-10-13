@@ -1,6 +1,6 @@
 """A24 — self-serve circles: create one, join it by a shared link, replace that link.
 
-*Candidate 21, from the self-serve sitting of 2026-09-13 (`doc/issues/A24-self-serve-circles.md`).
+*Candidate 21, from the self-serve sitting of 2026-09-13 (ticket A24, self-serve circles).
 Until this file existed the only door into a circle was `python -m upto.issue` on an operator's
 machine — D74's own docstring said so and `SEAT_CAP`'s comment said what would land here.*
 
@@ -734,20 +734,22 @@ async def remove_member(circle_id: int, member_id: int, request: Request) -> Res
 async def circle_members(circle_id: int, request: Request) -> dict:
     """Who is at the table — the circle's name, then nicknames in the order they joined.
 
-    *Added on frontend's finding, 2026-09-13: the spec's §2c draws a seat list and two gate lines
+    *Added on frontend's finding, 2026-09-13: the frontend spec draws a seat list and two gate lines
     measure it, and before a round exists a circle's membership was unreadable — nicknames reached a
     client in exactly two places and both were round-scoped.*
 
-    **No `member_id`, by rule.** §3.0 and H3: a member id is an identifier a screen never needs and
-    a correlation somebody else might. This is the same shape `rolls[]` already sets.
+    **No `member_id`, by rule.** The silence principle and H3: a member id is an identifier a screen
+    never needs and a correlation somebody else might. This is the same shape `rolls[]` already
+    sets.
 
     **Any member of the circle, not the operator alone.** Everyone at the table can see who is at
     the table, and the alternative is a product shape nobody ruled — a joiner who cannot see who
     else is in the circle they just joined. It still needs a credential: a circle's membership is
     not public, and a bare id must not enumerate one.
 
-    **Duplicate nicknames come back as the server holds them**, because §7 rules duplicates legal
-    and the screen adds no marker. This endpoint deduplicates nothing; two 小明 are two rows.
+    **Duplicate nicknames come back as the server holds them**, because the self-serve ruling makes
+    duplicate nicknames legal and the screen adds no marker. This endpoint deduplicates nothing; two
+    小明 are two rows.
 
     **`name` since 2026-10-08 (frontend, on the evaluator's cold reader: the home never said which
     circle you were in).** It widens nothing: a stranger holding a live ticket already reads it on

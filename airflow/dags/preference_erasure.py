@@ -20,8 +20,8 @@ prevent — it landed four DAGs in the middle of the working day once. `0 21 * *
 The hourly weather DAG cannot be avoided by any choice of minute and is not worth avoiding: this
 job is a handful of deletes over a table with tens of rows.
 
-Paused on arrival like every new DAG here — `airflow dags unpause upto_preference_erasure` — and the
-hazard is in `CLAUDE.md`, where it has cost hours once already.
+Paused on arrival like every new DAG here — `airflow dags unpause upto_preference_erasure` — a new
+DAG arrives paused and a triggered run sits queued forever, which has cost hours once already.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from airflow.hooks.base import BaseHook
 from airflow.sdk import dag, task
 
 # H46 — Airflow 3 does not put the dags folder on `sys.path` (Airflow 2 did), so a sibling import
-# inserts it. Read `doc/build-hazards.md` H46 before moving this to `PYTHONPATH`.
+# inserts it. Read hazard H46 before moving this to `PYTHONPATH`.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from _alerts import send_failure_alert

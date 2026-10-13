@@ -1,10 +1,10 @@
 """The canonical list of what can weigh a place, in D46's fold order. One place, one list.
 
-*Written 2026-09-11 for 甲's operator picture (`spec-weights-picture-2026-09-11.md` §5).* The
+*Written 2026-09-11 for 甲's operator picture (the weights-picture spec).* The
 reveal panel draws one bar per contributor and **four rows always**, because «上次去過 showing
 nothing is information» — it says this place was not last week's. A row that is simply absent
-when a contributor did not fire would make the client infer silence from an absence, which §4 of
-that spec forbids and which is a guess the payload can answer instead.
+when a contributor did not fire would make the client infer silence from an absence, which that
+spec forbids and which is a guess the payload can answer instead.
 
 **Why the list lives here and not in `api_common.panel_for`.** The panel is a *view*. If the list
 of what can weigh a place lived in the view, adding a fifth contributor would mean editing a
@@ -80,11 +80,11 @@ def in_fold_order() -> tuple[tuple[str, str], ...]:
 def pad(real: list[dict]) -> list[dict]:
     """Every known contributor present, at its D46 position, un-fired ones included.
 
-    *甲's operator picture, 2026-09-11 (`spec-weights-picture-2026-09-11.md` §5).* The drawing has
+    *甲's operator picture, 2026-09-11 (the weights-picture spec).* The drawing has
     **four rows always** — 起點 plus one per contributor — because «上次去過 showing nothing is
     information»: it says this place was not last week's. Without the pad the client would have to
     read that from an *absence*, which is an inference the payload can answer instead, and which
-    §4 of the spec forbids.
+    the spec forbids.
 
     **`fired` is the field, and it is not decoration.** A padded row and a real one that measured
     no difference both read ×1: the rain factor is `1 − gap/120`, so a township with the pool's

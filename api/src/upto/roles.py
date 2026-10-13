@@ -15,8 +15,8 @@ silent hole, which is the whole reason the map is data and not prose.
 - `upto_api` — the product's own tables, and read-only on everything the pipeline publishes. It may
   not do DDL and may not `TRUNCATE`; H32's triggers stay as the second line for the owner.
 - `upto_ingest` — publications, the ledger, the reference rows and the classifier's columns. It may
-  touch **nothing** that names a person: §3.0 and D14 say the pipeline never sees one, and since
-  A15 the database says it too.
+  touch **nothing** that names a person: the design principles and D14 say the pipeline never sees
+  one, and since A15 the database says it too.
 - `upto_lineage` — SELECT on exactly what `lineage.queries.READABLE_TABLES` names. H20's boundary
   was a Python list; it is a GRANT now and the list is the second line.
 
@@ -111,7 +111,8 @@ INGEST_WRITE = REFERENCE_TABLES + ("ingest_run", "place", "example_embedding")
 INGEST_DENIED = (
     "circle",
     # A24. A join ticket names no person, but it is the door to a circle — and the pipeline's line
-    # is not «may not read people», it is «may not touch anything on the member side of §3.0».
+    # is not «may not read people», it is «may not touch anything on the member side of the silence
+    # principle».
     "join_ticket",
     "principal",
     "member",
@@ -167,9 +168,10 @@ ALEMBIC_GRANTS = {API: READ}
 # the Done line's wording plus the code rather than from the rule's sentence. One line to correct.
 # **Two weather tables added 2026-08-28 (D42's retention amendment).** The 90-day job runs as this
 # role and not as `upto_ingest`, which already holds DELETE on both — because its `UNPINNED` filter
-# must read `weight_contribution`, and D115 gives the pipeline **nothing** there: §3.0 and D14 say
-# the pipeline never sees a person. Granting that SELECT to widen the ingest role would undo the
-# exact line A15 was built to draw, so the job comes to the role that already holds it.
+# must read `weight_contribution`, and D115 gives the pipeline **nothing** there: the design
+# principles and D14 say the pipeline never sees a person. Granting that SELECT to widen the ingest
+# role would undo the exact line A15 was built to draw, so the job comes to the role that already
+# holds it.
 #
 # *Cost, recorded rather than assumed away:* this role's reach grows from one person-bearing table
 # to two pipeline tables, and a weather reading is **not re-fetchable** — CWA publishes the current
