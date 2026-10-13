@@ -95,7 +95,8 @@ be checked.
 
 **Where to read next:** [The data pipeline →](#the-data-pipeline) ·
 [The classifier →](#the-classifier-and-its-evaluation) ·
-[The draw and privacy →](#the-draw-and-privacy-in-the-database) · [Run it yourself →](#run-it-yourself)
+[The draw and privacy →](#the-draw-and-privacy-in-the-database) · [Run it yourself →](#run-it-yourself) ·
+[How it was built, with AI agents →](docs/harness.md)
 
 ## The work, in three numbers
 
@@ -103,7 +104,7 @@ be checked.
 |---|---|---|
 | **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
 | **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, and, compared name by name on the same 200, 33 names went from wrong to right against 14 the other way (McNemar p ≈ 0.008). The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
-| **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup restores into a fresh database in 9.4 s. |
+| **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup's restore is rehearsed by hand: 9.4 s on the development database. |
 
 ## The data pipeline
 
@@ -142,11 +143,16 @@ deletions run before the backup so a dump never carries a row the product has al
 - **Two data-quality checks run after each ingest.** The publication check compares a new file's
   columns with the last one's and names any that appeared or vanished, and flags a row count that
   dropped 20% or more. The value check records hours since the last publication, recent failures and
-  the row-count step, and alerts with the source's name and the hours when one goes stale.
+  the row-count step, and alerts with the source's name and the hours when one goes stale. Both
+  checks run after the rows are stored, and they alert; they do not hold a publication back, so a
+  file whose columns and row count are unchanged but whose values are wrong passes them. Two
+  sources, the brand registry and the hygiene grades, have no stale line yet: each has had one
+  publication, so there is no gap to measure against.
 - **Every attempt writes a row to the run log**, so «nothing changed» and «failed» are two recorded
   outcomes. Without that, a broken source looks healthy for a week.
-- **The nightly backup is drilled.** A 19.7 MB dump finishes in 3.7 s and restores into a fresh
-  database in 9.4 s, with every row count equal.
+- **The backup runs nightly; its restore has been rehearsed by hand.** On the 338 MB
+  development database, a 19.7 MB dump finishes in 3.7 s and restores into a fresh database in
+  9.4 s, with every row count equal.
 
 ### Content-addressed ingest
 
@@ -266,6 +272,13 @@ the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The differen
 ±8.5 band, so tuning did not inflate the score by more than 200 names can show. That set has now
 been used, so any later change needs a fresh one.
 
+Each round writes an answer sheet (every name asked, its reference label, the raw answer) and a report.
+The sheets were kept out of the public tree under one rule: they are published the day an outside reader asks
+for the rows. One did on 2026-10-13, so the sheets now sit in [`evaluation/`](evaluation/) beside the
+reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
+written before that date say «accuracy» where this page says agreement; the scorer's word was changed,
+and the older reports are kept as they were written.
+
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
 The embedder was screened the same way (nearest neighbour's label as the answer, leave-one-out):
@@ -289,11 +302,12 @@ The method is packaged as an agent skill, [`model-eval`](.claude/skills/model-ev
 The whole city, **36,014 names in 10.5 hours** on one 8 GB graphics card (about 1.05 s a name on average; the same
 box's CPU takes 12–19 s). The production server runs no model.
 
-### Where the official codes help
+### What the official codes can and cannot do
 
 The tax registry carries an industry code. A coffee chain's 245 branches register under a wholesale
-code, so codes alone would mislabel all of them. The codes decide where they are unambiguous (10.9% of
-the city) and the model takes the rest.
+code, so codes alone would mislabel all of them. The codes are stored at ingest, and nothing reads them
+yet: a mapping that would trust a code only where it is unambiguous was measured before building and
+has not been built. Today the model labels every name.
 
 ### A tool for AI agents: lineage over MCP
 
@@ -315,6 +329,13 @@ reads those rows back and recomputes nothing.
 what, in the same transaction that saves the result. A preference write emits no event at all, because
 in a small group the moment of an event is one guess away from a name. A nightly job erases unused
 preferences under a role that can touch that one table and nothing else.
+
+**What the database roles do and do not guard.** The API's own login can read every preference row;
+what a member is shown is decided in the application; the database has no row-level rule for it. The
+lineage tool's login is an allow-list of tables that leaves out preferences and contributions, and
+[`api/tests/test_role_grants.py`](api/tests/test_role_grants.py) asserts that those two reads are
+refused. A dump taken before a deletion still holds the deleted row for as long as that backup is
+kept, thirty days.
 
 ## System architecture
 
@@ -339,6 +360,13 @@ library only), **the web build with its type check and lint**, and **the compose
 clone would**. The full suite is 77 test files in two tempos: host-side tests with no network, and
 tests that build and drop their own database. Nine local checks run before every commit (among them
 secrets, what may leave app/, fonts, the server's user-facing text and status table, the README pictures' text size and numbers, and staged Python). The CD badge is the image build: GitHub Actions builds the three images for every commit to the release branches, tags them with the commit's full sha, and the server pulls exactly that sha on its timer.
+
+**Before a release.** The whole suite, the database tests included, is run by hand on the candidate
+commit, and `main` (which the server deploys from) moves only after that, on the maintainer's typed
+confirmation. This is a procedure; no check in code enforces it, and nothing in this repository blocks an untested
+commit from being pushed. One registered database test stayed red for three weeks in September 2026
+for that reason, until a full run found it. How the work is done day to day, with AI agent sessions
+and the checks around them, is in [docs/harness.md](docs/harness.md).
 
 ## Performance
 
