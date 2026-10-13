@@ -28,8 +28,8 @@ sources). The role files themselves live outside the public tree (private).
 | coordinator | keeps the written log of decisions and hazards; relays the owner's rulings; the only one that pushes | write code, judge a build |
 | backend | the API, the pipeline, the database, the tests | grade its own work |
 | frontend | the screens and the built pages | grade its own work |
-| judge | gates every build and every public text before the owner sees it | write code, edit a doc, run git that changes anything |
-| auditor | reads diffs and audits anything that enters from outside (a tool, a script, a skill) | write code, run git that changes anything |
+| judge | reads the built result: gates every build and every public page before the owner sees it | write code, edit the pages it gates, run git that changes anything |
+| auditor | reads the changes: every diff, and anything that enters from outside (a tool, a script, a skill) | write code, run git that changes anything |
 
 The one person holds four things, before any build: security, privacy, money, and deploys to
 production. An agent may recommend one option with its cost; it may not pick.
@@ -52,15 +52,16 @@ trust.
   outside it; a character the shipped fonts cannot draw; a user-facing server message or a status
   code the front end does not carry; text in a README picture below readable size, or a number in a
   picture that does not match its source file; a Python error class ruff reports; a hazard number
-  out of order or duplicated; a count written in two places that disagrees.
+  out of order or duplicated.
 - **One check runs on the commit message** (private): a message on a commit that touches `app/`
   may not carry a role name, a hazard or decision number, or a person's name, because every such
   commit is published with its message.
-- **The publish script refuses `--push`** unless the current public sha is typed on the same line
-  (private). Added on 2026-10-10, the day after an agent's shell command carried a backtick that ran
+- **The publish script refuses `--push`** unless the sha of the commit being published is typed on
+  the same line (private). Added on 2026-10-10, the day after an agent's shell command carried a backtick that ran
   the push without anyone asking for it; the guard came after that push, it did not stop it.
 - **The server refuses to start on the wrong schema.** An API process exits when the database is
-  not at its head revision or refuses its login ([`api/entrypoint.sh`](../api/entrypoint.sh)).
+  not at its head revision or refuses its login
+  ([`api/src/upto/schema_guard.py`](../api/src/upto/schema_guard.py)).
 - **Database grants are tested**, including what each login may not read
   ([`api/tests/test_role_grants.py`](../api/tests/test_role_grants.py)).
 
@@ -73,8 +74,8 @@ trust.
   it, and the builder never grades itself. This is a rule the sessions follow; no file lock
   enforces it.
 - **The log.** Every decision is written with its cost and the option rejected; every failure
-  gets a numbered hazard entry with the test that now guards it (private; 109 entries on
-  2026-10-13). The public [`docs/decisions.md`](decisions.md) holds the measured ones.
+  gets a numbered hazard entry, and where there is one, the test or check that now guards it
+  (private; 109 entries on 2026-10-13). The public [`docs/decisions.md`](decisions.md) holds the measured ones.
 
 ## Three things the process caught
 
@@ -89,14 +90,14 @@ trust.
   touched the test only; the product was unchanged.
 - **A delete path the guards did not cover.** The replay test
   ([`api/tests/test_ingest_replay.py`](../api/tests/test_ingest_replay.py), 2026-08-17) found that
-  `TRUNCATE … CASCADE` walked through the triggers that refuse a `DELETE`. Migration
+  `TRUNCATE … CASCADE` walked past the guards that refuse a `DELETE`. Migration
   [`0020_truncate_guard`](../api/migrations/versions/0020_truncate_guard.py) closed it the next day,
   and the test now asserts both refusals.
 
 ## What is not proven
 
-- **That this shape is better than one agent per task.** The guess: five standing sessions with
-  gates between them produce fewer regressions and need fewer owner interventions than one agent
+- **The guess: five standing sessions with gates between them beat one agent per task.** That is,
+  they produce fewer regressions and need fewer owner interventions than one agent
   built per ticket in its own working copy. A trial is written and pre-registered (same tasks, same
   model and effort, blind scoring, counts of regressions, interventions and cost). It would be
   refuted if the single agent scores the same or better at lower cost. It has not run (2026-10-13).

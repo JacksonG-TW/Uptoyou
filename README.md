@@ -273,8 +273,8 @@ the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The differen
 been used, so any later change needs a fresh one.
 
 Each round writes an answer sheet (every name asked, its reference label, the raw answer) and a report.
-The sheets were kept out of the public tree under one rule: they are published the day an outside reader asks
-for the rows. One did on 2026-10-13, so the sheets now sit in [`evaluation/`](evaluation/) beside the
+The sheets were kept out of the public tree under one rule: they are published the day someone outside the
+project asks for the rows. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
 reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
 written before that date say «accuracy» where this page says agreement; the scorer's word was changed,
 and the older reports are kept as they were written.
@@ -364,7 +364,7 @@ secrets, what may leave app/, fonts, the server's user-facing text and status ta
 **Before a release.** The whole suite, the database tests included, is run by hand on the candidate
 commit, and `main` (which the server deploys from) moves only after that, on the maintainer's typed
 confirmation. This is a procedure; no check in code enforces it, and nothing in this repository blocks an untested
-commit from being pushed. One registered database test stayed red for three weeks in September 2026
+commit from being pushed. One registered database test stayed red for three weeks from September 2026
 for that reason, until a full run found it. How the work is done day to day, with AI agent sessions
 and the checks around them, is in [docs/harness.md](docs/harness.md).
 
