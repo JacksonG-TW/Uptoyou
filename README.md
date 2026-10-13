@@ -274,7 +274,7 @@ the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The differen
 ±8.5 band, so tuning did not inflate the score by more than 200 names can show. That set has now
 been used, so any later change needs a fresh one.
 
-Each round writes an answer sheet (every name asked and the parsed answer; the model's raw reply where the round kept one, which most later rounds did only for failed or refused answers) and a report.
+Each round writes an answer sheet (every name asked, its reference label and the parsed answer; a model round keeps the model's raw reply only for a refused answer, and a nearest-neighbour vote round records the winning vote for every row) and a report.
 The sheets were kept out of the public tree under one rule: they are published the day someone outside the
 project asks for the rows. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
 reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
