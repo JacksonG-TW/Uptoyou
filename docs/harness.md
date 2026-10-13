@@ -30,7 +30,7 @@ sources). The role files themselves live outside the public tree (private).
 | frontend | the screens and the built pages | grade its own work |
 | judge | reads the built result: gates every build and every public page before the owner sees it | write code, edit the pages it gates, run git that changes anything |
 | auditor | reads the changes: every diff, and anything that enters from outside (a tool, a script, a skill) | write code, run git that changes anything |
-| model runner | on the machine with the graphics card: evaluation rounds, batch classification, image generation | touch this repository |
+| model runner | on the machine with the graphics card: evaluation rounds, batch classification, image generation | edit or commit in this repository; it returns files for another session to check and commit |
 | reader | on another machine: reads outside sources and reports what they say | touch this repository |
 
 The one person holds four things, before any build: security, privacy, money, and deploys to
