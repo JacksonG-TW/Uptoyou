@@ -45,8 +45,9 @@ from ..classify import examples as example_store
 from ..db import session_factory
 from .score import TESTSET_PATH, load_testset
 
-# Where a round file goes. **Never under `app/`** — D63: the report is public, the raw round file is
-# not, and `score` writes the public copy itself.
+# Where a round file goes. **Never straight under `app/`** — D63: the report is public, and `score`
+# writes the public copy itself. A raw round file is moved beside its report only after a person has
+# checked its rows for people's names (owner, 2026-10-13).
 OUTPUT_DIR = os.environ.get("UPTO_EVALUATION_DIR", "/tmp/evaluation")
 
 # **The embedder is an argument since 2026-08-31 (rung 2), not a constant.** It was `"arctic"`
