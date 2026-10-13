@@ -3,7 +3,8 @@
 *Written 2026-08-18, owner-ruled (A1). D17 gives the preference a home, D25 makes it append-only,
 D45 gives this channel its range, D43/D44 give this function its shape.*
 
-One rule: if the place's category is one this member avoids, the place's odds fold by **zero**.
+One rule: if the place's category is one this member avoids, the place's odds fold by
+**`1 − 1/N`** (N is the round's members; see `discount_for`).
 Below that — no category, or a category the member said nothing about — **nothing is returned**,
 which is D43's no-record-no-effect, so the panel shows nothing for a place the member's
 preferences left alone.
