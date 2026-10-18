@@ -313,7 +313,7 @@ async def scenario(test_url: str) -> None:
             f"/rounds/{round_id}/proposals", json={"place_id": locals_[2]}, headers=auth
         )
         assert capped.status_code == 409
-        # **The sentence, not just the status — added 2026-08-19 after it was wrong for weeks.**
+        # **The sentence, not just the status.**
         # The front end renders this `detail` verbatim and keeps no copy of its own, so this string
         # IS the surface: nothing else states the rule to a person at the moment they meet it.
         # It read 「一輪最多提三家。」 — *per round* — while revision 0008's trigger caps **per member
