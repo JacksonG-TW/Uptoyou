@@ -150,12 +150,12 @@ async def scenario(test_url: str, base_url: str) -> None:
         #
         # **The `member_id` half of this check was written before the ruling that reversed it**
         # (this test b919af2; D55's narrowing bc1c6fb; found 2026-09-07 when A17's gate made
-        # somebody run a test that is not in the test register). **D55 as narrowed: the round payload and the
-        # snapshot MAY carry the seat list — member id, nickname, counts, each pair at and after
-        # close — while the pool and the weight panel still carry no author.** That is D108's whole
-        # mechanism: every member rolls, every pair derives from the seed committed at open, and the
-        # seed is published at close so anyone can recompute the draw. Naming who rolled what is
-        # what makes it checkable; hiding it would leave the reveal unverifiable.
+        # somebody run a test that is not in the test register). **D55 as narrowed: the round
+        # payload and the snapshot MAY carry the seat list — member id, nickname, counts, each pair
+        # at and after close — while the pool and the weight panel still carry no author.** That is
+        # D108's whole mechanism: every member rolls, every pair derives from the seed committed at
+        # open, and the seed is published at close so anyone can recompute the draw. Naming who
+        # rolled what is what makes it checkable; hiding it would leave the reveal unverifiable.
         #
         # **What still holds, and is what this loop now asserts:** authorship never travels.
         for label, payload in (("the signing response", first.json()),
