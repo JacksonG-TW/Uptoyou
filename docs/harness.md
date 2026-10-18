@@ -83,8 +83,9 @@ trust.
 
 - **An assertion a ruling had reversed.** Part of
   [`api/tests/test_trip_integration.py`](../api/tests/test_trip_integration.py) asserted something
-  that a ruling, made the day the test was written, had reversed. A new gate on 2026-09-07 made a
-  test outside the register run, which found it; the test now asserts the ruling as it stands.
+  that a ruling, made the day the test was written, had reversed. A new gate on 2026-09-07 made
+  someone run a test that was not on the register, and that run found it; the test now asserts the
+  ruling as it stands.
 - **A fixture a schema change broke.** A full run of the registered tests found that a schema change
   had broken the fixture of
   [`api/tests/test_preference_integration.py`](../api/tests/test_preference_integration.py). The fix
