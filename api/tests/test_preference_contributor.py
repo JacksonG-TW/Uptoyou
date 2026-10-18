@@ -115,7 +115,7 @@ class TheTwoCategoryListsAreRelatedAndNotEqual(unittest.TestCase):
     **Added 2026-08-30, and the direction is the whole assertion.** `classify.CATEGORIES` gained
     `便利商店`; `preferences.CATEGORIES` deliberately did not, because the chip row stays at ten
     until after 09-10 and a member cannot avoid a kind of place the screen never offers. The two
-    tuples were identical strings for two weeks with **nothing anywhere asserting a relationship**
+    tuples were identical strings with **nothing anywhere asserting a relationship**
     — I looked, and there was no guard. Identical-by-accident is fine until the day they differ on
     purpose; from that day a silent divergence stops being a typo and becomes invisible.
 

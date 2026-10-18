@@ -149,7 +149,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         # ---- what the payloads may not carry (H3) -----------------------------------
         #
         # **The `member_id` half of this check was written before the ruling that reversed it**
-        # (this test b919af2; D55's narrowing bc1c6fb; found 2026-09-07 when A17's gate made
+        # (that ruling is D55's narrowing; found 2026-09-07 when A17's gate made
         # somebody run a test that is not in the test register). **D55 as narrowed: the round
         # payload and the snapshot MAY carry the seat list — member id, nickname, counts, each pair
         # at and after close — while the pool and the weight panel still carry no author.** That is
@@ -183,7 +183,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         )
         round2 = opened2.json()["round_id"]
         # **Two places, not one.** A round of one is refused — 「一輪至少要兩家店。一家店不是決定，
-        # 是通知。」 — a rule that landed in the same commit as D55's narrowing (bc1c6fb). With one place
+        # 是通知。」 — a rule that landed in the same commit as D55's narrowing. With one place
         # the roll 409s, the round never closes, and the signing below then 409s truthfully
         # («這一輪還沒擲出結果。»): two of this file's three red checks were that one missing proposal.
         for place in places[:2]:
