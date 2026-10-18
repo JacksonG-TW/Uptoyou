@@ -183,7 +183,7 @@ async def scenario(test_url: str, base_url: str) -> None:
         )
         round2 = opened2.json()["round_id"]
         # **Two places, not one.** A round of one is refused — 「一輪至少要兩家店。一家店不是決定，
-        # 是通知。」 — a rule that landed in the same 17:57 commit as D55's narrowing. With one place
+        # 是通知。」 — a rule that landed in the same commit as D55's narrowing (bc1c6fb). With one place
         # the roll 409s, the round never closes, and the signing below then 409s truthfully
         # («這一輪還沒擲出結果。»): two of this file's three red checks were that one missing proposal.
         for place in places[:2]:
