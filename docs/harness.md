@@ -81,15 +81,15 @@ trust.
 
 ## Three things the process caught
 
-- **A test that was right for eighteen hours.** Part of
-  [`api/tests/test_trip_integration.py`](../api/tests/test_trip_integration.py) was written on
-  2026-08-19, and a ruling the same day reversed what it asserted. It was red for nineteen days
-  until, on 2026-09-07, a new gate made someone run a test that was not on the register. The
-  test's comment keeps the story.
-- **A registered test, red for three weeks.** A schema change on 2026-09-16 broke the fixture of
-  [`api/tests/test_preference_integration.py`](../api/tests/test_preference_integration.py); nobody
-  ran it until 2026-10-08. The register guaranteed the test was named, not that it was run. The fix
-  touched the test only; the product was unchanged.
+- **An assertion a ruling had reversed.** Part of
+  [`api/tests/test_trip_integration.py`](../api/tests/test_trip_integration.py) asserted something
+  that a ruling, made the day the test was written, had reversed. A new gate on 2026-09-07 made a
+  test outside the register run, which found it; the test now asserts the ruling as it stands.
+- **A fixture a schema change broke.** A full run of the registered tests found that a schema change
+  had broken the fixture of
+  [`api/tests/test_preference_integration.py`](../api/tests/test_preference_integration.py). The fix
+  touched the test only; the product was unchanged. Since 2026-10-10, every database test is run by
+  hand before each release.
 - **A delete path the guards did not cover.** The replay test
   ([`api/tests/test_ingest_replay.py`](../api/tests/test_ingest_replay.py), 2026-08-17) found that
   `TRUNCATE … CASCADE` walked past the guards that refuse a `DELETE`. Migration

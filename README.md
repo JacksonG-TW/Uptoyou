@@ -366,8 +366,7 @@ secrets, what may leave app/, fonts, the server's user-facing text and status ta
 **Before a release.** The whole suite, the database tests included, is run by hand on the candidate
 commit, and `main` (which the server deploys from) moves only after that, on the maintainer's typed
 confirmation. This is a procedure; no check in code enforces it, and nothing in this repository blocks an untested
-commit from being pushed. One registered database test stayed red for three weeks from September 2026
-for that reason, until a full run found it. How the work is done day to day, with AI agent sessions
+commit from being pushed. How the work is done day to day, with AI agent sessions
 and the checks around them, is in [docs/harness.md](docs/harness.md).
 
 ## Performance

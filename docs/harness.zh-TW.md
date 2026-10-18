@@ -50,8 +50,8 @@ agent 說「做完了」或「測試全過」，那只是它的說法。放著�
 
 ## 這套流程抓到的三件事
 
-- **一個只對了十八小時的測試。** [`api/tests/test_trip_integration.py`](../api/tests/test_trip_integration.py) 的一部分在 2026-08-19 寫好，同一天的一個裁決把它斷言的東西反過來了。它紅了十九天，直到 2026-09-07 一道新的檢查逼人去跑一個不在清單上的測試。這段經過留在測試的註解裡。
-- **一個登記在案、紅了三個星期的測試。** 2026-09-16 的一次 schema 改動弄壞了 [`api/tests/test_preference_integration.py`](../api/tests/test_preference_integration.py) 的測試資料；到 2026-10-08 才有人跑它。清單只保證測試有名字，不保證有人跑。修的只有測試本身，產品沒有動。
+- **一個被裁決反轉的斷言。** [`api/tests/test_trip_integration.py`](../api/tests/test_trip_integration.py) 的一部分所斷言的東西，在測試寫好的同一天就被一個裁決反過來了。2026-09-07 新加的一道檢查，讓一個不在清單上的測試也被跑到，因此抓到這一處；測試已改成依照現行的裁決來斷言。
+- **一次 schema 改動弄壞的測試資料。** 把登記的測試整套跑一遍時，發現一次 schema 改動弄壞了 [`api/tests/test_preference_integration.py`](../api/tests/test_preference_integration.py) 的測試資料。修的只有測試本身，產品沒有動。從 2026-10-10 起，每次發布前都會人工跑全部的資料庫測試。
 - **一條守衛沒蓋到的刪除路徑。** 重播測試（[`api/tests/test_ingest_replay.py`](../api/tests/test_ingest_replay.py)，2026-08-17）發現 `TRUNCATE … CASCADE` 會繞過那些拒絕 `DELETE` 的守衛。隔天的遷移 [`0020_truncate_guard`](../api/migrations/versions/0020_truncate_guard.py) 把它補上，測試現在兩種拒絕都會確認。
 
 ## 還沒證明的事
