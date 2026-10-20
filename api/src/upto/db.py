@@ -82,7 +82,7 @@ LINEAGE_URL_VAR = "UPTO_LINEAGE_DATABASE_URL"
 
 
 def _role_url(variable: str, what: str) -> str:
-    """The URL for one role, or the owner's with a loud line saying the fallback fired.
+    """The URL for one role, or UPTO_DATABASE_URL's, with a loud line naming the role it logs in as.
 
     **The fallback exists for the build-and-drop integration tests and for nothing else.** Those
     create their own database, run as its owner and set only `UPTO_DATABASE_URL` — A15 keeps them
