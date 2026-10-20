@@ -18,6 +18,7 @@ environment variable is only the fallback the API uses.
 import os
 import sys
 from typing import Dict
+from urllib.parse import urlsplit
 
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 
@@ -113,14 +114,24 @@ def _role_url(variable: str, what: str) -> str:
             "The stack sets the role variable per container (A15/D115); a build-and-drop test "
             "sets only {}.".format(variable, DATABASE_URL_VAR, what, DATABASE_URL_VAR)
         )
-    print(
-        "db: {} is not set — {} is falling back to {}, which is the OWNER's connection. "
-        "That is correct only in a build-and-drop test; in the stack it means the role split "
-        "(D115) is not in force for this process.".format(variable, what, DATABASE_URL_VAR),
-        file=sys.stderr,
-        flush=True,
-    )
-    return database_url()
+    fallback = database_url()
+    print(fallback_line(variable, what, fallback), file=sys.stderr, flush=True)
+    return fallback
+
+
+def fallback_line(variable: str, what: str, url: str) -> str:
+    """The loud line, naming the role the fallback URL actually logs in as.
+
+    **Named from the URL, never assumed.** It used to say «the OWNER's connection», which is true
+    only in a build-and-drop test: an ingest DAG that set only `UPTO_DATABASE_URL` handed over
+    `upto_ingest`, and the line sent a reader after a breach that never happened (2026-10-20).
+    Only the user name is read; the password never reaches this text.
+    """
+    role = urlsplit(url).username or "an unnamed role"
+    return ("db: {} is not set — {} is falling back to {}, which logs in as `{}`. In a "
+            "build-and-drop test that is the database's owner and correct; in the stack, the role "
+            "split (D115) holds for this process only if `{}` is the role it should "
+            "have.".format(variable, what, DATABASE_URL_VAR, role, role))
 
 
 def pipeline_session_factory(url: str | None = None) -> async_sessionmaker:

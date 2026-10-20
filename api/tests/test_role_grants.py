@@ -30,6 +30,7 @@ from sqlalchemy import text  # noqa: E402
 from sqlalchemy.ext.asyncio import create_async_engine  # noqa: E402
 
 from upto import roles as role_map  # noqa: E402
+from upto import db as upto_db  # noqa: E402
 
 TEST_DB = "upto_role_grants_check"
 FAILURES = []
@@ -336,6 +337,18 @@ async def scenario(test_url: str) -> None:
     check("and the probe left nothing behind", still == 0, still)
 
     await engine.dispose()
+
+    # --- the fallback line names the role it logs in as, and never the password ------------
+    #
+    # It used to assert «the OWNER's connection» whatever the URL held; an ingest DAG's
+    # `upto_ingest` URL printed that line and read like a role-split breach (2026-10-20).
+    line = upto_db.fallback_line("UPTO_INGEST_DATABASE_URL", "the pipeline",
+                                 "postgresql+asyncpg://upto_ingest:s3cret-pw@db:5432/upto")
+    check("the fallback line names the role in the URL it falls back to", "`upto_ingest`" in line,
+          line)
+    check("and no longer calls every fallback the owner's", "OWNER" not in line, line)
+    check("and never carries the password", "s3cret-pw" not in line, line)
+
     if FAILURES:
         print("\n{} failing: {}".format(len(FAILURES), ", ".join(FAILURES)))
         raise SystemExit(1)
