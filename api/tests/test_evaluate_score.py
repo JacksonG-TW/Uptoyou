@@ -225,6 +225,18 @@ class TestGoldIsReadFresh(unittest.TestCase):
         _, _, _, counts = scored_counts(gold_rows=amended)
         self.assertEqual(counts["drifted"], 1)
 
+    def test_a_sheet_without_gold_is_counted_rather_than_read_as_agreeing(self):
+        """`drifted` skips a stored gold of None, so a sheet with none reads «0 drifted» — the
+        same as a sheet that agrees everywhere. The unrecorded count is what tells them apart."""
+        _, _, _, agreeing = scored_counts()
+        self.assertEqual(agreeing["gold_unrecorded"], 0)
+        bare = [dict(row) for row in ROUND_ROWS]
+        for row in bare:
+            row["gold"] = None
+        _, _, _, counts = scored_counts(round_rows=bare)
+        self.assertEqual(counts["drifted"], 0)
+        self.assertEqual(counts["gold_unrecorded"], len(bare))
+
     def test_a_renamed_row_is_stale_and_is_not_scored_either_way(self):
         amended = [dict(row) for row in TESTSET]
         amended[2]["name"] = "薔薇廳咖啡"  # a different string; the stored answer is not about it

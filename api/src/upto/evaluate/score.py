@@ -189,6 +189,10 @@ def tally(scored: list[dict], labels: tuple = LABELS, predicted: tuple = PREDICT
         "drifted": sum(
             1 for row in scored if row["gold_stored"] is not None and row["gold_stored"] != row["gold"]
         ),
+        # **Counted, because `drifted` cannot see these rows.** A sheet that recorded no gold
+        # reads «0 drifted» exactly like one that agrees on every row; the neighbour-vote screen
+        # wrote null on every row that way and nothing reported it.
+        "gold_unrecorded": sum(1 for row in scored if row["gold_stored"] is None),
     }
 
 
@@ -262,6 +266,10 @@ def render(round_doc: dict, scored: list[dict], stale: list[dict], unanswered: l
     if counts["drifted"]:
         lines.append(f"- **gold changed since the round ran**: {counts['drifted']} rows — scored "
                      "under the current label, which is the point of reading gold fresh")
+    if counts["gold_unrecorded"]:
+        lines.append(f"- **gold not recorded in the round file**: {counts['gold_unrecorded']} "
+                     "rows — scored under the current label; whether it moved since the round "
+                     "ran cannot be checked")
     lines.append("")
     lines.append("Two reports compare only when the sha256 above matches. A refusal or an "
                  "answer outside D38's list counts as wrong and lands in the `無效` column.")
