@@ -102,7 +102,7 @@ be checked.
 
 | | Before → after | What was measured |
 |---|---|---|
-| **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
+| **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) keep the production database's 35,965 Taipei restaurants current. An unchanged file is recognised by the hash of its bytes and never re-read. |
 | **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, and, compared name by name on the same 200, 33 names went from wrong to right against 14 the other way (McNemar p ≈ 0.008). The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask, through six fixed questions and without writing SQL, which government file or which nightly run a record came from. |
 | **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup's restore is rehearsed by hand: 9.4 s on the development database. |
 
@@ -271,12 +271,12 @@ are indicative. A setting chosen on a set is confirmed only on a set it never sa
 drafter, re-labelling the first set, agrees with its labels on 179 of 200. The configuration in use,
 which since September also retrieves from 288 labelled brand names (73.5% on the first set, against
 the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The difference is well inside the
-±8.5 band: on 200 names, tuning shows no measurable inflation. Its 39 brand-name rows are among the
+±8.5 band. The second set's 39 brand-name rows are among the
 288 labelled brands, so on those rows retrieval hands back the name itself: those rows measure a
 lookup of a known name. That set has now
 been used, so any later change needs a fresh one.
 
-Each round writes an answer sheet (every name asked, its reference label and the parsed answer; a model round keeps the first 200 characters of the model's raw reply, only for a refused answer, and a nearest-neighbour vote round records the winning vote for every row) and a report.
+Each round writes an answer sheet (every name asked and the parsed answer, with its reference label on a model round's sheet, while the scorer reads every label from the test set; a model round keeps the first 200 characters of the model's raw reply, only for a refused answer, and a nearest-neighbour vote round records the winning vote for every row) and a report.
 The sheets were kept out of the public tree until an outside review asked for the rows; then they were
 checked for people's names and published. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
 reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
