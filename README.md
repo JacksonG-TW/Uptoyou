@@ -103,7 +103,7 @@ be checked.
 | | Before → after | What was measured |
 |---|---|---|
 | **Data pipeline** | A night with no new data: **15.0 s → 1.6 s** | Seven government sources (six scheduled jobs: one weather job feeds two of them) refresh 35,965 Taipei restaurants every night. An unchanged file is recognised by the hash of its bytes and never re-read. |
-| **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, and, compared name by name on the same 200, 33 names went from wrong to right against 14 the other way (McNemar p ≈ 0.008). The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask where any number came from (which government file, which nightly run) without writing SQL. |
+| **AI classification** | Cuisine labels: **51.5% → 61.0% agreement** with the reference labels, by adding retrieval | A local two-billion-parameter model labels each restaurant, scored on 200 frozen names whose reference labels were drafted by one large model and cross-checked by a second. Retrieving five labelled look-alikes first gave the jump, and, compared name by name on the same 200, 33 names went from wrong to right against 14 the other way (McNemar p ≈ 0.008). The set was later re-cut to thirteen categories with 19 rows relabelled; there it reads 71.0% (a different set, so the two are not compared). An [MCP tool](#a-tool-for-ai-agents-lineage-over-mcp) lets an AI agent ask, through six fixed questions and without writing SQL, which government file or which nightly run a record came from. |
 | **Production** | The API's live link to the database is cut: `/health` reports it in **0.18 s**, reconnects in **1.23 s** | Live on one EC2 behind Cloudflare. A failed nightly job sends a phone alert; the nightly backup's restore is rehearsed by hand: 9.4 s on the development database. |
 
 ## The data pipeline
@@ -129,11 +129,11 @@ numbers they share (統編, 登錄字號), never on fuzzy name matching.
 | 05:00 | preference erasure | deletes per-meal preferences no draw used |
 | 05:40 | weather retention | deletes readings older than ninety days no draw used |
 | 06:00 | circle sweep | removes abandoned circles |
-| 06:20 | backup | `pg_dump` to S3, after both deletions; the last thirty kept |
+| 06:20 | backup | `pg_dump` to S3, after the deletions; the last thirty kept |
 | 07:00 | dataset export | a Parquet file of every place, to S3 beside the dump |
 
-The daily sources start twenty minutes apart so two never compete for the server's memory, and the
-deletions run before the backup so a dump never carries a row the product has already forgotten.
+The daily sources start twenty minutes apart to keep two from competing for the server's memory, and
+the deletions are scheduled before the backup.
 
 ### When something goes wrong
 
@@ -217,7 +217,7 @@ The production database is **490 MB**: 35,965 places, 25,031 with a generated ca
 | `business_status_row` | 419,896 | business-registration status |
 | `forecast_reading` | 970,190 | township forecast readings |
 | `observation_reading` | 136,800 | station observation readings |
-| `ingest_run` | 1,766 | one row per ingest attempt, including «no change» |
+| `ingest_run` | 1,766 | one row per ingest attempt that finishes or finds its source unavailable, «no change» included |
 
 Every weight the dice use is a stored row linked to the reading it came from, and a lineage tool
 answers «where did this number come from» for an AI agent ([below](#a-tool-for-ai-agents-lineage-over-mcp)).
@@ -271,15 +271,18 @@ are indicative. A setting chosen on a set is confirmed only on a set it never sa
 drafter, re-labelling the first set, agrees with its labels on 179 of 200. The configuration in use,
 which since September also retrieves from 288 labelled brand names (73.5% on the first set, against
 the table's 71.0% without them), has `gemma2:2b` score 75.5% on it. The difference is well inside the
-±8.5 band, so tuning did not inflate the score by more than 200 names can show. That set has now
+±8.5 band: on 200 names, tuning shows no measurable inflation. Its 39 brand-name rows are among the
+288 labelled brands, so on those rows retrieval hands back the name itself: those rows measure a
+lookup of a known name. That set has now
 been used, so any later change needs a fresh one.
 
-Each round writes an answer sheet (every name asked, its reference label and the parsed answer; a model round keeps the model's raw reply only for a refused answer, and a nearest-neighbour vote round records the winning vote for every row) and a report.
-The sheets were kept out of the public tree under one rule: they are published the day someone outside the
-project asks for the rows. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
+Each round writes an answer sheet (every name asked, its reference label and the parsed answer; a model round keeps the first 200 characters of the model's raw reply, only for a refused answer, and a nearest-neighbour vote round records the winning vote for every row) and a report.
+The sheets were kept out of the public tree until an outside review asked for the rows; then they were
+checked for people's names and published. On 2026-10-13 an AI audit the maintainer ran over the public tree asked, so the sheets now sit in [`evaluation/`](evaluation/) beside the
 reports; three files from a boot round are held back because they hold sole proprietors' names. Reports
 written before that date say «accuracy» where this page says agreement; the scorer's word was changed,
-and the older reports are kept as they were written.
+and the older reports keep their wording, except the second set's round, whose report was
+re-worded with the scorer.
 
 ![The evaluation loop: how a classifier candidate is scored](docs/diagrams/evaluation-flow.png)
 
@@ -330,7 +333,8 @@ reads those rows back and recomputes nothing.
 **Privacy is enforced in the database.** Closing a round fires a trigger that removes who proposed
 what, in the same transaction that saves the result. A preference write emits no event at all, because
 in a small group the moment of an event is one guess away from a name. A nightly job erases unused
-preferences under a role whose only deletes are that table and the expired weather readings.
+preferences under a role whose direct deletes are that table and the expired weather readings, plus one
+function that removes abandoned circles.
 
 **What the database roles do and do not guard.** The API's own login can read every preference row;
 what a member is shown is decided in the application; the database has no row-level rule for it. The

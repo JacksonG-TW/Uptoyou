@@ -59,8 +59,7 @@ trust.
   may not carry a role name, a hazard or decision number, or a person's name, because every such
   commit is published with its message.
 - **The publish script refuses `--push`** unless the sha of the commit being published is typed on
-  the same line (private). Added on 2026-10-10, the day after an agent's shell command carried a backtick that ran
-  the push without anyone asking for it; the guard came after that push, it did not stop it.
+  the same line (private).
 - **The server refuses to start on the wrong schema.** An API process exits when the database is
   not at its head revision or refuses its login
   ([`api/src/upto/schema_guard.py`](../api/src/upto/schema_guard.py)).
