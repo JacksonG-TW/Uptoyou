@@ -672,6 +672,17 @@ class TheEmbedderPrefix(unittest.TestCase):
         self.assertIn("prefix_kind", source)
         self.assertNotIn('EMBED_KEY = "arctic"', source)
 
+    def test_the_screen_copies_gold_from_the_sets_label_key(self):
+        """The test set's key is `label`; the round runner reads it and so must the screen. Reading
+        `gold` wrote null on every row of all eight committed sheets (scores were unaffected:
+        `score` takes labels from the set, not the sheet)."""
+        import pathlib
+        source = pathlib.Path(
+            os.path.dirname(os.path.abspath(__file__)), "..", "src", "upto", "evaluate",
+            "knn_vote.py").read_text(encoding="utf-8")
+        self.assertNotIn('row.get("gold")', source)
+        self.assertEqual(source.count('"gold": row.get("label")'), 2)
+
 
 class TheRoundRunnerUnloadsToo(unittest.TestCase):
     """H43 — the round runner carries the same unload as the classifier, and did not.

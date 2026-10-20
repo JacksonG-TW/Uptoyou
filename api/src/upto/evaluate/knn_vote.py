@@ -90,12 +90,12 @@ async def one_k(session, rows: list[dict], sha: str, k: int, embed_model: str,
             # No neighbour at all after the exclusion. Recorded as a refusal, which `score` counts as
             # wrong — the honest reading, since the method produced no answer.
             out.append({"i": index, "name": row["name"], "layer": row.get("layer"),
-                        "gold": row.get("gold"), "answer": None, "outcome": "refused",
+                        "gold": row.get("label"), "answer": None, "outcome": "refused",
                         "examples": [], "raw": "no neighbour after leave-one-out"})
             continue
         label, names = vote(neighbours)
         out.append({"i": index, "name": row["name"], "layer": row.get("layer"),
-                    "gold": row.get("gold"), "answer": label, "outcome": "category",
+                    "gold": row.get("label"), "answer": label, "outcome": "category",
                     "examples": names, "raw": "vote: " + ", ".join(
                         "{}={}".format(n["name"], n["label"]) for n in neighbours)})
 
