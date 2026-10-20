@@ -85,6 +85,9 @@ def _run(dataset_id: str) -> str:
     environment = dict(os.environ)
     environment["PYTHONPATH"] = source
     environment["UPTO_DATABASE_URL"] = _database_url()
+    # The pipeline reads its own role's variable first (D115); without it the CLI falls back
+    # to the one above and prints that it is the OWNER's, which on this path it is not.
+    environment["UPTO_INGEST_DATABASE_URL"] = environment["UPTO_DATABASE_URL"]
     # Ticket 09: lineage over a scheduled run and over a hand-triggered one are different
     # answers to "why does this row exist", so the runner records which it was.
     environment["UPTO_INVOKED_BY"] = "airflow"

@@ -286,6 +286,9 @@ def upto_place_classify_backfill():
         environment = dict(os.environ)
         environment["PYTHONPATH"] = source
         environment["UPTO_DATABASE_URL"] = _database_url()
+        # The pipeline reads its own role's variable first (D115); without it the CLI falls back
+        # to the one above and prints that it is the OWNER's, which on this path it is not.
+        environment["UPTO_INGEST_DATABASE_URL"] = environment["UPTO_DATABASE_URL"]
         environment["UPTO_INVOKED_BY"] = "airflow"
         environment["UPTO_MODEL_HOST"] = MODEL_HOST
         environment["UPTO_MODEL"] = MODEL

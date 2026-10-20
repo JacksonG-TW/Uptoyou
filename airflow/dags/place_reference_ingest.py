@@ -133,6 +133,9 @@ def upto_place_reference_ingest():
         environment = dict(os.environ)
         environment["PYTHONPATH"] = source
         environment["UPTO_DATABASE_URL"] = _database_url()
+        # The pipeline reads its own role's variable first (D115); without it the CLI falls back
+        # to the one above and prints that it is the OWNER's, which on this path it is not.
+        environment["UPTO_INGEST_DATABASE_URL"] = environment["UPTO_DATABASE_URL"]
         # Ticket 09, and the weather DAG has carried this line since `runlog` was written: a
         # scheduled run and a hand-triggered one are different answers to "why does this row
         # exist". Absent, every run of this DAG records itself as `cli`, which is worse than
