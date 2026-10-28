@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """H14's item-11 test, against a real PostgreSQL.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_place_ingest_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_place_ingest_integration.py </dev/null
 
 **The H14 scenario was committed unrun on purpose** — no database was reachable when it was
 written, so every assertion in it was a claim about what the code should do rather than a report

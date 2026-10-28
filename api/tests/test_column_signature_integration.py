@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """D102 / M3 — every publication table records the shape of the file it came from.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_column_signature_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_column_signature_integration.py </dev/null
 
 The test builds its own database and drops it, so it never touches the stack's data.
 

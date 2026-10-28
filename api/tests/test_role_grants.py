@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A15 / D115 — the four service roles reach exactly their boundary and no further.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_role_grants.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_role_grants.py </dev/null
 
 Builds its own database and drops it, so it never touches the stack's data. The roles are
 cluster-wide, so they are the live ones; the grants are the ones revision 0032 issues here.

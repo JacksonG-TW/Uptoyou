@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """A1's owed half — the loader's preference pass in the **plural**, against a real PostgreSQL.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_preference_load_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_preference_load_integration.py </dev/null
 
 The test builds its own database and drops it, so it never touches the stack's data.
 

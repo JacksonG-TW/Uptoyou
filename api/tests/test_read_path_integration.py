@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Ticket 07's read path, against a real PostgreSQL.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_read_path_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_read_path_integration.py </dev/null
 
 The rows are planted rather than fetched, because the cases that matter are ones the live
 data will not reliably present: an hour whose observation has not landed yet, an hour with

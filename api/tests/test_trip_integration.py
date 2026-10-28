@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """B2 / item 9 — the trip is named, the proposal never is. The ticket's Done line, end to end.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_trip_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_trip_integration.py </dev/null
 
 Builds and drops its own database, and **starts its own uvicorn on 127.0.0.1:8902** — because two of
 the things ruled about a trip are about the *stream*, and httpx's ASGI transport buffers a response

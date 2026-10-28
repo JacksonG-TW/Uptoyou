@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """The batched crib retrieval — the same prompts as before, in one request instead of 25.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_batched_retrieval_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_batched_retrieval_integration.py </dev/null
 
 The test builds its own database and drops it, so it never touches the stack's data. Real
 PostgreSQL, real pgvector, real `crib_retriever`; the embedder is stubbed, because what is under

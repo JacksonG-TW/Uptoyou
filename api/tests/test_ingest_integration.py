@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """H14's named test, against a real PostgreSQL.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_ingest_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_ingest_integration.py </dev/null
 
 H14 names this test exactly, and names the weaker one it replaced:
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """D105 — two reveal shapes, chosen by the credential that authenticated. The ticket's Done line.
 
-Run inside the stack:
-    docker compose exec api python /srv/tests/test_operator_view_integration.py
+Run in the `tests` service, which holds the owner's credential (the api container does not):
+    docker compose run --rm -T tests python /srv/tests/test_operator_view_integration.py </dev/null
 
 Builds and drops its own database and starts its own uvicorn on 127.0.0.1:8903, because two of the
 ruled behaviours are about the SSE snapshot and httpx's ASGI transport buffers a response until the
