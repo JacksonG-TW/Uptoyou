@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """M4 — **backfill and replay**, measured rather than assumed.
 
-Run inside the stack, without rebuilding anything, by bind-mounting this directory into a
-one-off container:
+Run in the `tests` service (it holds the owner's credential; the api container does not), without
+rebuilding anything, by bind-mounting this directory into a one-off container:
 
     cd app && docker compose run --rm -T \\
         -v "$PWD/api/tests:/srv/tests_m4:z" --entrypoint python \\
-        api /srv/tests_m4/test_ingest_replay.py
+        tests /srv/tests_m4/test_ingest_replay.py </dev/null
 
 It builds its own database (`upto_m4_replay`) and drops it, so it never touches the stack's data.
 
