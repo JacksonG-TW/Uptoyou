@@ -197,6 +197,27 @@ KIND_TEXT: dict[str, tuple[str, str, str]] = {
                 "請 Claude 查。"),
 }
 
+#: A value check's findings that say **nothing new was stored** rather than «what was stored looks
+#: wrong». They take `VALUE_STALE_TEXT` instead of the `value` kind's lines (2026-10-29: on 10-27
+#: the tax source's 72 h without a new version told the owner «新的一版已經存進資料庫» and sent him
+#: to look at a version that did not exist).
+STALE_METRICS = frozenset({"hours_since_last_stored", "hours_since_last_run"})
+
+VALUE_STALE_TEXT: tuple[str, str, str] = (
+    "⚠️ {name}一直沒有新的一版",
+    "沒有新的資料存進資料庫。網站照常運作，用的是上一版。",
+    "不急。請 Claude 查是資料來源沒有發布新版，還是我們這邊沒抓到。",
+)
+
+#: Both at once, which is not rare: a source that stopped after a big step keeps raising the step
+#: every night. Its own lines, because joining the two above says «stored» and «nothing stored» in
+#: one message. The wrong-numbers headline leads, as the half that may reach a screen.
+VALUE_MIXED_TEXT: tuple[str, str, str] = (
+    KIND_TEXT["value"][0],
+    "最新的一版數字看起來不對，而且之後一直沒有新的一版。如果數字真的錯了，網站可能正在用錯的資料。",
+    "請 Claude 看最新的一版是不是真的有問題，也查為什麼一直沒有新版。",
+)
+
 #: The self-test is the one message that reports success; it must never read like an outage.
 SELFTEST_TEXT = "✅ 警報測試成功\n這是一則測試訊息，代表警報管道是通的，不用處理。"
 
@@ -313,6 +334,12 @@ def compose_message(
 
     name = TASK_NAMES.get(task_id) or DAG_NAMES.get(dag_id, (dag_id, "unknown"))[0]
     headline, impact, action = KIND_TEXT.get(kind, KIND_TEXT["unknown"])
+    if kind == "value" and findings:
+        stale = [finding.get("metric") in STALE_METRICS for finding in findings]
+        if all(stale):
+            headline, impact, action = VALUE_STALE_TEXT
+        elif any(stale):
+            headline, impact, action = VALUE_MIXED_TEXT
     lines = [headline.format(name=name)]
     if findings:
         lines.extend(_finding_line(finding, now) for finding in findings)

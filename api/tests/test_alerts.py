@@ -158,6 +158,44 @@ class TheMessageSaysWhatAPhoneNeedsFirst(unittest.TestCase):
         body = self.message(task_id="value_check_forecast", findings=[finding])
         self.assertIn("的數字看起來不對", body.split("\n")[0])
         self.assertIn("天氣預報（中央氣象署）：資料筆數一次變了 42%（超過 10% 就提醒）", body)
+        self.assertIn("影響：新的一版已經存進資料庫", body)
+        self.assertIn("要做什麼：請 Claude 看這一版資料", body)
+
+    def test_a_value_check_with_nothing_new_does_not_say_a_version_was_stored(self):
+        """2026-10-27 04:40, the tax source: the publisher served one file three nights, so nothing
+        was stored. The message said a new version had been stored and sent the owner to look at it."""
+        finding = {"source": "fia-business-tax", "metric": "hours_since_last_stored", "value": 72.3,
+                   "threshold": 48.0, "interval_h": 24.0, "sentence": "…"}
+        body = self.message(dag_id="upto_business_tax_ingest", task_id="value_check", findings=[finding])
+        self.assertEqual(body.split("\n")[0], "⚠️ 財政部營業稅籍資料一直沒有新的一版")
+        self.assertIn("營業稅籍（財政部）：已經 3 天沒有新的一版", body)
+        self.assertIn("影響：沒有新的資料存進資料庫。網站照常運作，用的是上一版。", body)
+        self.assertIn("要做什麼：不急。請 Claude 查是資料來源沒有發布新版，還是我們這邊沒抓到。", body)
+        for wrong in ("已經存進資料庫", "這一版", "數字看起來不對"):
+            self.assertNotIn(wrong, body)
+
+    def test_a_value_check_whose_ingest_stopped_running_is_stale_too(self):
+        finding = {"source": "fda-97", "metric": "hours_since_last_run", "value": 60.0,
+                   "threshold": 48.0, "cadence_h": 24.0, "sentence": "…"}
+        body = self.message(dag_id="upto_place_reference_ingest", task_id="value_check", findings=[finding])
+        self.assertTrue(body.startswith("⚠️ 食藥署的餐飲業者名冊一直沒有新的一版"), body)
+        self.assertNotIn("已經存進資料庫", body)
+
+    def test_stale_and_a_wrong_number_together_say_both_without_contradicting(self):
+        """A source that stopped after a big step raises the step every night: the step compares the
+        newest two publications, and they stop changing."""
+        findings = [
+            {"source": "fia-business-tax", "metric": "hours_since_last_stored", "value": 72.3,
+             "threshold": 48.0, "interval_h": 24.0, "sentence": "…"},
+            {"source": "fia-business-tax", "metric": "row_step", "value": -0.3,
+             "threshold": 0.10, "sentence": "…"},
+        ]
+        body = self.message(dag_id="upto_business_tax_ingest", task_id="value_check", findings=findings)
+        self.assertIn("的數字看起來不對", body.split("\n")[0])
+        self.assertIn("影響：最新的一版數字看起來不對，而且之後一直沒有新的一版。", body)
+        self.assertIn("也查為什麼一直沒有新版", body)
+        self.assertNotIn("新的一版已經存進資料庫", body)
+        self.assertNotIn("沒有新的資料存進資料庫", body)
 
     def test_a_long_detail_is_clipped(self):
         body = self.message(detail="ValueError: " + "x" * 5000)
