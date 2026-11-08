@@ -7,9 +7,11 @@ Every round route refuses a token with no seat anywhere **before it reads the ro
 2026-11-08: until then no key read 404 for a missing id and 401 for a real one, so the error was a
 probe of which rounds exist). It then resolves the caller to a member of the round's circle (D67),
 and the two halves of a failed resolution — an unknown token, a circle without a seat — read
-identically. **Still a probe for a caller seated somewhere**, and a seat is free (creating a circle
-needs no key): such a caller reads 404 for a missing round and 401 for another circle's, so the
-existence of each id stays visible to anyone with one key.
+identically. **A round in a circle the caller never sat in reads as a missing one: the same 404**
+(owner 「補」, 2026-11-08), because a seat is free (creating a circle needs no key) and a 401 there
+would still show which ids exist. A seat that left that circle keeps its 401, which tells the
+screen to drop the seat. Round ids are one sequence, so a caller's own round still shows roughly
+how many exist; which ones do is no longer readable.
 
 The response shapes the entries already ruled:
 
@@ -50,6 +52,7 @@ from .api_common import (
     resolve_member,
     refuse_if_submitted,
     refuse_without_a_seat,
+    refuse_a_foreign_round,
     seats_for,
     submit_state,
     trip_for,
@@ -198,6 +201,7 @@ async def propose(round_id: int, body: ProposeBody, request: Request, response: 
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
+        await refuse_a_foreign_round(session, request, round_row.circle_id)
         member = await _resolve_member(session, request, round_row.circle_id)
         if round_row.status == "void":
             raise HTTPException(status_code=410, detail="這一輪作廢了：開始時在場的人都離開了。開新的一輪吧。")
@@ -302,7 +306,8 @@ async def result(round_id: int, request: Request) -> dict:
     forwarded link — closed the round for the whole circle. This endpoint has no write path: a
     closed round answers exactly what the roll's retry answers, and an open round answers 409 and
     leaves the round, `member_roll` and the stream untouched. No working key answers 401 whether or
-    not the round exists; a member asking for an unknown round gets 404, as `submit` does.
+    not the round exists; a seated caller gets 404 for an unknown round and for a circle it never
+    sat in, as `submit` does.
     """
     async with session_factory()() as session:
         await refuse_without_a_seat(session, request)
@@ -317,6 +322,7 @@ async def result(round_id: int, request: Request) -> dict:
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
+        await refuse_a_foreign_round(session, request, round_row.circle_id)
         member, _is_operator, sees_evidence = await _resolve_credential(
             session, request, round_row.circle_id)
         if round_row.status == "void":
@@ -496,6 +502,7 @@ async def submit(round_id: int, request: Request) -> dict:
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
+        await refuse_a_foreign_round(session, request, round_row.circle_id)
         # The role decides which reveal shape comes back, and it comes from the credential alone —
         # there is no parameter an endpoint could be talked into.
         member, _is_operator, sees_evidence = await _resolve_credential(
@@ -563,6 +570,7 @@ async def unsubmit(round_id: int, request: Request) -> dict:
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
+        await refuse_a_foreign_round(session, request, round_row.circle_id)
         member, _is_operator, _evidence = await _resolve_credential(
             session, request, round_row.circle_id)
         if round_row.status == "closed":
@@ -628,6 +636,7 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
         ).one_or_none()
         if round_row is None:
             raise HTTPException(status_code=404, detail="找不到這一輪。")
+        await refuse_a_foreign_round(session, request, round_row.circle_id)
         member = await _resolve_member(session, request, round_row.circle_id)
         if round_row.status == "void":
             # Gone, not «not yet»: the result route's sentence and status (revision 0050).

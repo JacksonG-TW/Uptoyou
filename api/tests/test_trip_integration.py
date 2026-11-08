@@ -284,22 +284,25 @@ async def scenario(test_url: str, base_url: str) -> None:
     # ---- and the ENDPOINT refuses one, before the database is asked ----------------------
     #
     # **A missing test rather than a hole** (the reviewer, 2026-09-11, correcting an alarm this file
-    # helped raise): `sign_trip` resolves the token against the round's own circle and 401s when it
-    # does not belong, and revision 0024's composite foreign keys refuse the insert as a second
-    # line. Both were there all along; nothing asserted the first over HTTP, which is why the
-    # deleted `S = {...}` header in this file read as an abandoned intention. It is exercised now.
+    # helped raise): `sign_trip` refuses a token that never sat in the round's own circle, and
+    # revision 0024's composite foreign keys refuse the insert as a second line. Both were there
+    # all along; nothing asserted the first over HTTP, which is why the deleted `S = {...}` header
+    # in this file read as an abandoned intention. It is exercised now. **404 「找不到這一輪。」 since
+    # 2026-11-08, not 401** (owner 「補」): another circle's round reads exactly as a missing one, so
+    # a key — free to anyone — cannot list which rounds exist.
     async with httpx.AsyncClient(base_url=base_url, timeout=20) as client:
         outsider = await client.post(
             "/rounds/{}/trip".format(round_id),
             headers={"Authorization": "Bearer " + stranger_token},
         )
         check("a member of another circle cannot sign this round's trip over HTTP",
-              outsider.status_code == 401, (outsider.status_code, outsider.text[:120]))
+              outsider.status_code == 404 and outsider.json() == {"detail": "找不到這一輪。"},
+              (outsider.status_code, outsider.text[:120]))
 
     # ---- the database refuses a signature from outside the circle ------------------------
     #
     # Raw SQL on purpose: the endpoint resolves the member against the round's circle and would
-    # answer 401 long before an insert, so a request could never reach the constraint. The ticket
+    # answer 404 long before an insert, so a request could never reach the constraint. The ticket
     # asks for this shown failing **at the database**, because that is what makes it true even if
     # this function is wrong.
     async with Session() as session:

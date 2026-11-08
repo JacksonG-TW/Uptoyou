@@ -564,7 +564,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/proposals",
    "status": 401,
-   "meaning": "the key holds no seat in this circle",
+   "meaning": "the key holds no seat anywhere, or its seat in this round's circle has left",
    "detail": "the token does not resolve to a member of this circle",
    "client_action": "forget_seat"
   },
@@ -572,7 +572,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/proposals",
    "status": 404,
-   "meaning": "no such round",
+   "meaning": "no such round, or the round is in a circle this key never sat in",
    "detail": "找不到這一輪。",
    "client_action": "show_detail"
   },
@@ -636,7 +636,7 @@
    "method": "GET",
    "path": "/rounds/{round_id}/result",
    "status": 401,
-   "meaning": "the key holds no seat in this circle",
+   "meaning": "the key holds no seat anywhere, or its seat in this round's circle has left",
    "detail": "the token does not resolve to a member of this circle",
    "client_action": "forget_seat"
   },
@@ -644,7 +644,7 @@
    "method": "GET",
    "path": "/rounds/{round_id}/result",
    "status": 404,
-   "meaning": "no such round",
+   "meaning": "no such round, or the round is in a circle this key never sat in",
    "detail": "找不到這一輪。",
    "client_action": "show_detail"
   },
@@ -684,7 +684,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/submit",
    "status": 401,
-   "meaning": "the key holds no seat in this circle",
+   "meaning": "the key holds no seat anywhere, or its seat in this round's circle has left",
    "detail": "the token does not resolve to a member of this circle",
    "client_action": "forget_seat"
   },
@@ -692,7 +692,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/submit",
    "status": 404,
-   "meaning": "no such round",
+   "meaning": "no such round, or the round is in a circle this key never sat in",
    "detail": "找不到這一輪。",
    "client_action": "show_detail"
   },
@@ -748,7 +748,7 @@
    "method": "DELETE",
    "path": "/rounds/{round_id}/submit",
    "status": 401,
-   "meaning": "the key holds no seat in this circle",
+   "meaning": "the key holds no seat anywhere, or its seat in this round's circle has left",
    "detail": "the token does not resolve to a member of this circle",
    "client_action": "forget_seat"
   },
@@ -756,7 +756,7 @@
    "method": "DELETE",
    "path": "/rounds/{round_id}/submit",
    "status": 404,
-   "meaning": "no such round",
+   "meaning": "no such round, or the round is in a circle this key never sat in",
    "detail": "找不到這一輪。",
    "client_action": "show_detail"
   },
@@ -804,7 +804,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/trip",
    "status": 401,
-   "meaning": "the key holds no seat in this circle",
+   "meaning": "the key holds no seat anywhere, or its seat in this round's circle has left",
    "detail": "the token does not resolve to a member of this circle",
    "client_action": "forget_seat"
   },
@@ -820,7 +820,7 @@
    "method": "POST",
    "path": "/rounds/{round_id}/trip",
    "status": 404,
-   "meaning": "no such round",
+   "meaning": "no such round, or the round is in a circle this key never sat in",
    "detail": "找不到這一輪。",
    "client_action": "show_detail"
   },

@@ -110,6 +110,30 @@ async def scenario(test_url: str) -> None:
                  "values (:p, :h, false)"),
             {"p": gone, "h": sha256(left_token.encode()).hexdigest()},
         )
+        # A key seated only in another circle — free to anyone, since creating a circle needs no key —
+        # and a key that left this circle but sits in another. The first must read a real round of this
+        # circle as missing; the second keeps its 401, which is what makes a screen drop the seat.
+        keys = {}
+        for label, left_here in (("outsider", None), ("came-back", True)):
+            holder = (
+                await session.execute(text("insert into principal default values returning id"))
+            ).scalar_one()
+            await session.execute(
+                text("insert into member (principal_id, circle_id, nickname) values (:p, :c, :n)"),
+                {"p": holder, "c": other_circle, "n": label},
+            )
+            if left_here:
+                await session.execute(
+                    text("insert into member (principal_id, circle_id, nickname, has_left) "
+                         "values (:p, :c, :n, true)"),
+                    {"p": holder, "c": circle, "n": label},
+                )
+            keys[label] = "t-" + label + "-" + sha256(token.encode()).hexdigest()[:16]
+            await session.execute(
+                text("insert into device_secret (principal_id, secret_sha256, operator) "
+                     "values (:p, :h, false)"),
+                {"p": holder, "h": sha256(keys[label].encode()).hexdigest()},
+            )
         place_pub = (
             await session.execute(
                 text(
@@ -316,6 +340,21 @@ async def scenario(test_url: str) -> None:
                 ]
                 assert [a.status_code for a in answers] == [401, 401], (method, tail, headers, answers)
                 assert answers[0].json() == answers[1].json(), (method, tail, headers)
+            # Seated elsewhere: this circle's real round reads exactly as a missing one (owner 「補」).
+            outsider = {"Authorization": "Bearer " + keys["outsider"]}
+            answers = [
+                await client.request(method, f"/rounds/{rid}/{tail}", json=body, headers=outsider)
+                for rid in (round_id, 999999999)
+            ]
+            assert [a.status_code for a in answers] == [404, 404], (method, tail, answers)
+            assert answers[0].json() == answers[1].json() == {"detail": "找不到這一輪。"}, (method, tail)
+            # Left this circle, seated in another: the real round keeps 401, the missing one is 404.
+            came_back = {"Authorization": "Bearer " + keys["came-back"]}
+            answers = [
+                await client.request(method, f"/rounds/{rid}/{tail}", json=body, headers=came_back)
+                for rid in (round_id, 999999999)
+            ]
+            assert [a.status_code for a in answers] == [401, 404], (method, tail, answers)
         async with Session() as session:
             untouched = (await session.execute(text(
                 "select (select count(*) from proposal where round_id = :r) "

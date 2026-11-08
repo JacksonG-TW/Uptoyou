@@ -77,3 +77,26 @@ async def seat_anywhere(session, token: str) -> bool:
         )
     ).one_or_none()
     return row is not None
+
+
+async def ever_seated(session, token: str, circle_id: int) -> bool:
+    """Whether this token's principal has, or once had, a seat in this circle. A left seat counts.
+
+    **The other half of the round routes' probe** (owner 「補」, 2026-11-08). A seat is free —
+    creating a circle needs no key — so a caller seated anywhere could still tell a missing round
+    (404) from another circle's (401). A circle this principal never sat in now reads as a missing
+    round. A left seat is the exception: that caller was in the circle, and its 401 is what tells
+    the screen to drop the seat.
+    """
+    digest = sha256(token.encode("utf-8")).hexdigest()
+    row = (
+        await session.execute(
+            text(
+                "select 1 from device_secret ds "
+                "join member m on m.principal_id = ds.principal_id "
+                "where ds.secret_sha256 = :digest and m.circle_id = :circle limit 1"
+            ),
+            {"digest": digest, "circle": circle_id},
+        )
+    ).one_or_none()
+    return row is not None

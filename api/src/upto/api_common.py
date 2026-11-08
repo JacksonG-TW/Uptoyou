@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import bindparam, text
 
 from .engine.table import allocate, board
-from .auth import credential_for, member_for, seat_anywhere
+from .auth import credential_for, ever_seated, member_for, seat_anywhere
 from .engine import contributors as known_contributors
 from .engine import draw
 from .engine.fold import Contribution, fold
@@ -54,6 +54,16 @@ async def refuse_without_a_seat(session, request: Request) -> None:
         raise HTTPException(
             status_code=401, detail="the token does not resolve to a member of this circle"
         )
+
+
+async def refuse_a_foreign_round(session, request: Request, circle_id: int) -> None:
+    """404 「找不到這一輪。」 when the caller never sat in the round's circle: the same answer as a
+    round that does not exist. Runs after `refuse_without_a_seat` and the round's read, before the
+    seat in this circle is resolved, so a left seat still reaches that resolve and its 401.
+    """
+    header = request.headers.get("authorization", "")
+    if not await ever_seated(session, header[7:].strip(), circle_id):
+        raise HTTPException(status_code=404, detail="找不到這一輪。")
 
 
 async def resolve_member(session, request: Request, circle_id: int) -> int:

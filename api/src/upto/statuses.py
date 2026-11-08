@@ -48,6 +48,22 @@ def _seat(method, path):
     ]
 
 
+def _round_seat(method, path):
+    """The round routes' two 401s (owner 「補」, 2026-11-08). The key is checked before the round is
+    read, and a circle the key never sat in answers the round's 404, so the second 401 is now a key
+    with no seat anywhere, or a seat in this round's circle that has left."""
+    return [
+        _row(method, path, 401, "forget_seat", "no Authorization header", NO_BEARER),
+        _row(method, path, 401, "forget_seat",
+             "the key holds no seat anywhere, or its seat in this round's circle has left", NOT_A_MEMBER),
+    ]
+
+
+#: The round routes' 404: a missing round and a round in a circle this key never sat in read the
+#: same, so neither shows which round ids exist (owner 「補」, 2026-11-08).
+NO_ROUND_MEANING = "no such round, or the round is in a circle this key never sat in"
+
+
 STATUSES = [
     # ---- circles ----------------------------------------------------------------------------
     _row("POST", "/circles", 201, "success", "the circle, the creator's key and the first join link"),
@@ -149,8 +165,8 @@ STATUSES = [
 
     _row("POST", "/rounds/{round_id}/proposals", 201, "success", "the place is in the pool"),
     _row("POST", "/rounds/{round_id}/proposals", 200, "success", "the place was already in the pool"),
-    *_seat("POST", "/rounds/{round_id}/proposals"),
-    _row("POST", "/rounds/{round_id}/proposals", 404, "show_detail", "no such round", NO_ROUND),
+    *_round_seat("POST", "/rounds/{round_id}/proposals"),
+    _row("POST", "/rounds/{round_id}/proposals", 404, "show_detail", NO_ROUND_MEANING, NO_ROUND),
     _row("POST", "/rounds/{round_id}/proposals", 404, "show_detail", "no such place", "找不到這家店。"),
     _row("POST", "/rounds/{round_id}/proposals", 409, "show_detail", "this seat already proposed three",
          "一個人最多提三家。"),
@@ -161,16 +177,16 @@ STATUSES = [
     _row("POST", "/rounds/{round_id}/proposals", 410, "void", "the round is void", VOID),
 
     _row("GET", "/rounds/{round_id}/result", 200, "success", "the closed round's result"),
-    *_seat("GET", "/rounds/{round_id}/result"),
-    _row("GET", "/rounds/{round_id}/result", 404, "show_detail", "no such round", NO_ROUND),
+    *_round_seat("GET", "/rounds/{round_id}/result"),
+    _row("GET", "/rounds/{round_id}/result", 404, "show_detail", NO_ROUND_MEANING, NO_ROUND),
     _row("GET", "/rounds/{round_id}/result", 409, "reread", "the round is still open",
          "這一輪還沒擲出結果。"),
     _row("GET", "/rounds/{round_id}/result", 410, "void", "the round is void", VOID),
 
     _row("POST", "/rounds/{round_id}/submit", 200, "success",
          "submitted; or the round had already closed and this is its result (D69)"),
-    *_seat("POST", "/rounds/{round_id}/submit"),
-    _row("POST", "/rounds/{round_id}/submit", 404, "show_detail", "no such round", NO_ROUND),
+    *_round_seat("POST", "/rounds/{round_id}/submit"),
+    _row("POST", "/rounds/{round_id}/submit", 404, "show_detail", NO_ROUND_MEANING, NO_ROUND),
     _row("POST", "/rounds/{round_id}/submit", 409, "show_detail", "the pool has one place",
          "一輪至少要兩家店。一家店不是決定，是通知。"),
     _row("POST", "/rounds/{round_id}/submit", 409, "show_detail", "this seat joined after the round opened",
@@ -180,8 +196,8 @@ STATUSES = [
     _row("POST", "/rounds/{round_id}/submit", 410, "void", "the round is void", VOID),
 
     _row("DELETE", "/rounds/{round_id}/submit", 200, "success", "the submission is taken back"),
-    *_seat("DELETE", "/rounds/{round_id}/submit"),
-    _row("DELETE", "/rounds/{round_id}/submit", 404, "show_detail", "no such round", NO_ROUND),
+    *_round_seat("DELETE", "/rounds/{round_id}/submit"),
+    _row("DELETE", "/rounds/{round_id}/submit", 404, "show_detail", NO_ROUND_MEANING, NO_ROUND),
     _row("DELETE", "/rounds/{round_id}/submit", 409, "show_detail",
          "everyone submitted; the round closed (say why the take-back failed; the close follows)",
          "大家都提交了，已經開獎，收不回來了。"),
@@ -189,10 +205,10 @@ STATUSES = [
 
     _row("POST", "/rounds/{round_id}/trip", 201, "success", "this seat signed the trip"),
     _row("POST", "/rounds/{round_id}/trip", 200, "success", "this seat had already signed it"),
-    *_seat("POST", "/rounds/{round_id}/trip"),
+    *_round_seat("POST", "/rounds/{round_id}/trip"),
     _row("POST", "/rounds/{round_id}/trip", 403, "show_detail", "the round is another circle's",
          "這一輪不屬於你的圈子。"),
-    _row("POST", "/rounds/{round_id}/trip", 404, "show_detail", "no such round", NO_ROUND),
+    _row("POST", "/rounds/{round_id}/trip", 404, "show_detail", NO_ROUND_MEANING, NO_ROUND),
     _row("POST", "/rounds/{round_id}/trip", 409, "reread",
          "someone else signed first; the sentence names who and when"),
     _row("POST", "/rounds/{round_id}/trip", 409, "reread", "the round is still open",
