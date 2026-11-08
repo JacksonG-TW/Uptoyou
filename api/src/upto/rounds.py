@@ -3,9 +3,11 @@ trip, and the one read, a round's result, which can never close a round (reviewe
 finding 4, 2026-10-07). **There is no roll route since 2026-10-09** (提交, owner): the round closes
 when the last pinned seat submits, and `close_round` is the old roll's body, run by that request.
 
-Every endpoint resolves the caller to a member of the round's circle before anything else
-(D67), and the two halves of a failed resolution — an unknown token, a circle without a seat
-— read identically, so the error is not a probe.
+Every round route refuses a token with no seat anywhere **before it reads the round** (owner 「修」,
+2026-11-08: until then no key read 404 for a missing id and 401 for a real one, so the error was a
+probe of which rounds exist). It then resolves the caller to a member of the round's circle (D67),
+and the two halves of a failed resolution — an unknown token, a circle without a seat — read
+identically, so that error is not a probe either.
 
 The response shapes the entries already ruled:
 
@@ -45,6 +47,7 @@ from .api_common import (
     resolve_credential,
     resolve_member,
     refuse_if_submitted,
+    refuse_without_a_seat,
     seats_for,
     submit_state,
     trip_for,
@@ -182,6 +185,7 @@ class ProposeBody(BaseModel):
 @router.post("/rounds/{round_id}/proposals", status_code=201)
 async def propose(round_id: int, body: ProposeBody, request: Request, response: Response) -> dict:
     async with session_factory()() as session:
+        await refuse_without_a_seat(session, request)
         round_row = (
             await session.execute(
                 # `for share` queues behind a submit's `for update`, so a proposal cannot slip in
@@ -295,10 +299,11 @@ async def result(round_id: int, request: Request) -> dict:
     roll itself on an open one, so opening `/reveal?round=<an open round>` — a typed, edited or
     forwarded link — closed the round for the whole circle. This endpoint has no write path: a
     closed round answers exactly what the roll's retry answers, and an open round answers 409 and
-    leaves the round, `member_roll` and the stream untouched. Unknown round and wrong credential
-    answer as the roll does (404, 401).
+    leaves the round, `member_roll` and the stream untouched. No working key answers 401 whether or
+    not the round exists; a member asking for an unknown round gets 404, as `submit` does.
     """
     async with session_factory()() as session:
+        await refuse_without_a_seat(session, request)
         round_row = (
             await session.execute(
                 text(
@@ -480,6 +485,7 @@ async def submit(round_id: int, request: Request) -> dict:
     the stored result (D69), so a retry gets what it missed.
     """
     async with session_factory()() as session:
+        await refuse_without_a_seat(session, request)
         # **`for update`: simultaneous submits queue on the round row** (frontend's 10-device
         # self-test, 2026-10-08). The last two submitters arriving together must not both read
         # «one missing» and both stay open — nor both close.
@@ -549,6 +555,7 @@ async def unsubmit(round_id: int, request: Request) -> dict:
     takes the row first decides, and the other reads the result.
     """
     async with session_factory()() as session:
+        await refuse_without_a_seat(session, request)
         round_row = (
             await session.execute(text(ROUND_FOR_CLOSE), {"r": round_id})
         ).one_or_none()
@@ -610,6 +617,7 @@ async def sign_trip(round_id: int, request: Request, response: Response) -> dict
     of another circle, so even a bug in this function cannot store one.
     """
     async with session_factory()() as session:
+        await refuse_without_a_seat(session, request)
         round_row = (
             await session.execute(
                 text("select circle_id, status, winning_place_id from round where id = :r"),

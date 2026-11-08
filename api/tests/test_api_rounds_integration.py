@@ -287,6 +287,26 @@ async def scenario(test_url: str) -> None:
         round_id = opened.json()["round_id"]
         assert opened.json()["target_hour_typed"] is False
 
+        # No working key answers the same for a round that exists and one that does not (owner
+        # 「修」, 2026-11-08). Until then the round was read first: 404 for a missing id, 401 for a
+        # real one, so a caller with no key could list which rounds exist.
+        for method, tail, body in (("POST", "proposals", {"place_id": rainy}), ("GET", "result", None),
+                                   ("POST", "submit", None), ("DELETE", "submit", None),
+                                   ("POST", "trip", None)):
+            for headers in ({}, {"Authorization": "Bearer wrong"}):
+                answers = [
+                    await client.request(method, f"/rounds/{rid}/{tail}", json=body, headers=headers)
+                    for rid in (round_id, 999999999)
+                ]
+                assert [a.status_code for a in answers] == [401, 401], (method, tail, headers, answers)
+                assert answers[0].json() == answers[1].json(), (method, tail, headers)
+        async with Session() as session:
+            untouched = (await session.execute(text(
+                "select (select count(*) from proposal where round_id = :r) "
+                "     + (select count(*) from member_roll where round_id = :r) "
+                "     + (select count(*) from trip where round_id = :r)"), {"r": round_id})).scalar_one()
+        assert untouched == 0, untouched
+
         # D68: the losing open gets 409 carrying the winner.
         lost = await client.post(f"/circles/{circle}/rounds", json={}, headers=auth)
         assert lost.status_code == 409

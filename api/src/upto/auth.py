@@ -55,3 +55,25 @@ async def member_for(session, token: str, circle_id: int) -> int | None:
     """The caller's member id in this circle, or None. The only crossing is the D12 join."""
     found = await credential_for(session, token, circle_id)
     return None if found is None else found[0]
+
+
+async def seat_anywhere(session, token: str) -> bool:
+    """Whether this token holds any seat at all, in any circle.
+
+    **For the round routes, which learn their circle from the round** (owner 「修」, 2026-11-08). They
+    used to read the round first, so a caller with no working key got 404 for an id that does not
+    exist and 401 for one that does: the error was a probe. Asked first, this gives such a caller
+    one answer either way. A left seat counts as none, as in `credential_for`.
+    """
+    digest = sha256(token.encode("utf-8")).hexdigest()
+    row = (
+        await session.execute(
+            text(
+                "select 1 from device_secret ds "
+                "join member m on m.principal_id = ds.principal_id "
+                "where ds.secret_sha256 = :digest and not m.has_left limit 1"
+            ),
+            {"digest": digest},
+        )
+    ).one_or_none()
+    return row is not None

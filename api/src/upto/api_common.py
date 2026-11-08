@@ -13,7 +13,7 @@ from fastapi import HTTPException, Request
 from sqlalchemy import bindparam, text
 
 from .engine.table import allocate, board
-from .auth import credential_for, member_for
+from .auth import credential_for, member_for, seat_anywhere
 from .engine import contributors as known_contributors
 from .engine import draw
 from .engine.fold import Contribution, fold
@@ -38,6 +38,22 @@ async def resolve_credential(session, request: Request, circle_id: int):
             status_code=401, detail="the token does not resolve to a member of this circle"
         )
     return found
+
+
+async def refuse_without_a_seat(session, request: Request) -> None:
+    """401 unless the bearer token holds a seat somewhere: the round routes' first step.
+
+    A round route learns its circle from the round, so this runs **before the round is read**: no
+    key and a wrong key then answer the same whether the id exists or not, in the same two sentences
+    as `resolve_credential`. The seat in the round's own circle is still checked after the read.
+    """
+    header = request.headers.get("authorization", "")
+    if not header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="a bearer token is required (D67)")
+    if not await seat_anywhere(session, header[7:].strip()):
+        raise HTTPException(
+            status_code=401, detail="the token does not resolve to a member of this circle"
+        )
 
 
 async def resolve_member(session, request: Request, circle_id: int) -> int:
