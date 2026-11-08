@@ -95,6 +95,21 @@ async def scenario(test_url: str) -> None:
                  "values (:p, :h, false)"),
             {"p": principal, "h": sha256(plain_token.encode()).hexdigest()},
         )
+        # A key whose only seat has left: leaving keeps the key, and the seat must count as none.
+        gone = (
+            await session.execute(text("insert into principal default values returning id"))
+        ).scalar_one()
+        await session.execute(
+            text("insert into member (principal_id, circle_id, nickname, has_left) "
+                 "values (:p, :c, 'Gone', true)"),
+            {"p": gone, "c": circle},
+        )
+        left_token = "t-left-" + sha256(token.encode()).hexdigest()[:16]
+        await session.execute(
+            text("insert into device_secret (principal_id, secret_sha256, operator) "
+                 "values (:p, :h, false)"),
+            {"p": gone, "h": sha256(left_token.encode()).hexdigest()},
+        )
         place_pub = (
             await session.execute(
                 text(
@@ -293,7 +308,8 @@ async def scenario(test_url: str) -> None:
         for method, tail, body in (("POST", "proposals", {"place_id": rainy}), ("GET", "result", None),
                                    ("POST", "submit", None), ("DELETE", "submit", None),
                                    ("POST", "trip", None)):
-            for headers in ({}, {"Authorization": "Bearer wrong"}):
+            for headers in ({}, {"Authorization": "Bearer wrong"},
+                            {"Authorization": "Bearer " + left_token}):
                 answers = [
                     await client.request(method, f"/rounds/{rid}/{tail}", json=body, headers=headers)
                     for rid in (round_id, 999999999)

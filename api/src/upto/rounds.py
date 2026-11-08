@@ -7,7 +7,9 @@ Every round route refuses a token with no seat anywhere **before it reads the ro
 2026-11-08: until then no key read 404 for a missing id and 401 for a real one, so the error was a
 probe of which rounds exist). It then resolves the caller to a member of the round's circle (D67),
 and the two halves of a failed resolution — an unknown token, a circle without a seat — read
-identically, so that error is not a probe either.
+identically. **Still a probe for a caller seated somewhere**, and a seat is free (creating a circle
+needs no key): such a caller reads 404 for a missing round and 401 for another circle's, so the
+existence of each id stays visible to anyone with one key.
 
 The response shapes the entries already ruled:
 
