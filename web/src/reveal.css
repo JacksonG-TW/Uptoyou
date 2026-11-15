@@ -252,7 +252,7 @@
    one by a fixture sweep of all six values, which is the check that did not exist.
 
    **`data-die-side` and not `data-side`, which was the first attempt and was wrong.** `data-side`
-   is Radix's own attribute on floating parts, and `shadcn/tailwind.css` already ships rules keyed
+   is Radix's own attribute on floating parts, and shadcn's CSS (vendored, `vendor/shadcn-tailwind.css`) already ships rules keyed
    on it (`.data-\[side\=right\]\:translate-x-1[data-side=right]` and seven siblings). Those are
    compound — class AND attribute — so they cannot reach a bare `.face`, and it would have worked.
    But the whole argument for this change is *stop living in a namespace somebody else writes to*,

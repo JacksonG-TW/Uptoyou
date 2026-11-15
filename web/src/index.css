@@ -10,7 +10,7 @@
 @import "./selfserve.css";
 @import "./switcher.css";   /* demo scaffolding — delete with the component */
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
+@import "./vendor/shadcn-tailwind.css";   /* shadcn 4.18.0, MIT: see vendor/ */
 
 /* There is no dark mode — owner-ruled 2026-08-18; design.md §1 carries the ruling and its cost.
    This line is NOT dead code. Tailwind 4 ships a built-in `dark` variant driven by
