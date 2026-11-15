@@ -67,8 +67,8 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.13"
-      # One wheel at one version, checked against its hash, with nothing else pulled in: the same
-      # ruff the commit hook runs, so the two cannot disagree about a file.
+      # One wheel at one version, checked against its hash, with nothing else pulled in. It is the
+      # version the commit hook's ruff is held to, so the two read a file the same way.
       - name: Install ruff 0.16.5
         run: |
           set -eu
@@ -142,8 +142,9 @@ jobs:
           docker compose run --rm migrate
           docker compose up -d --wait db
 
-      # Every file here builds a database of its own, uses it and drops it, so one database server
-      # serves them all and their order does not matter. A test that has nothing to check here says
+      # Each file here builds a database of its own, uses it and drops it (one, the scorer's test,
+      # needs none and runs here because it sits on the same list), so one database server serves
+      # them all and their order does not matter. A test that has nothing to check here says
       # so and exits 0; that is counted as skipped, never as passed.
       - name: Run every database test
         run: |
