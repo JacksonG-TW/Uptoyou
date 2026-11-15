@@ -1,15 +1,18 @@
 # Checks that run beside every public commit. They use only what this repository contains:
-# no secrets, no network services, read-only access to the code.
+# no stored secrets, no outside services, read-only access to the code.
 #
-# The tests that need a database run in the stack's own `tests` container (see the README's
-# Quick start); this workflow runs the ones that need nothing but Python, plus the web build
-# and a check that the compose file is valid for a fresh clone.
+# Five jobs, side by side: the tests that need nothing but Python, the lint, the tests that need a
+# database (each builds and drops its own, in the stack's `tests` container, against a database
+# this job starts and throws away), the web build, and a check that the compose file is valid for
+# a fresh clone.
 
 name: ci
 
 on:
   push:
-    branches: [main]
+    # `candidate` is where a head is published for checking before `main` moves to the same commit,
+    # so the checks have to run there as well as on `main`.
+    branches: [candidate, main]
   pull_request:
 
 permissions:
@@ -54,6 +57,128 @@ jobs:
           done
           echo "$ran test files, $failed failed"
           [ "$ran" -gt 0 ] && [ "$failed" -eq 0 ]
+
+  ruff:
+    name: Python lint (syntax errors and real faults only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      # One wheel at one version, checked against its hash, with nothing else pulled in: the same
+      # ruff the commit hook runs, so the two cannot disagree about a file.
+      - name: Install ruff 0.16.5
+        run: |
+          set -eu
+          printf '%s\n' 'ruff==0.16.5 --hash=sha256:ef0f69e191a13a3c9816f63163c88790cb12cd157bbbb384e9c44745702ab105' \
+            > "$RUNNER_TEMP/ruff-requirements.txt"
+          python -m pip install --no-deps --only-binary :all: --require-hashes \
+            -r "$RUNNER_TEMP/ruff-requirements.txt"
+      # `E9` is a file that does not parse; `F` is pyflakes: undefined names, unused imports and
+      # locals, broken `.format` calls. Each one names a defect, never a preference. The formatting
+      # family (`E`/`W`) is not selected, on purpose. `--isolated` makes this line the whole rule
+      # set: no configuration file is read, so nothing outside this line can widen or narrow it.
+      - name: ruff check, E9 and F
+        run: >-
+          ruff check --isolated --select E9,F --no-cache --output-format concise
+          api/src/upto api/tests api/migrations airflow/dags
+
+  database-tests:
+    name: Database tests (each builds and drops its own database)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # There is no `.env` in this repository, and none is stored for this job. The names come
+      # from `.env.example`; every value is generated here and lives only as long as the runner.
+      # A name with no rule below is written empty, which is the designed state for the optional
+      # ones (an absent alert token turns alerting off). Any name carrying PASSWORD gets a
+      # generated value, because the database roles refuse to be created without one.
+      - name: Generate .env from the names in .env.example
+        run: |
+          set -eu
+          python3 - <<'PY' > .env
+          import base64, re, secrets
+          def token(n=24): return secrets.token_urlsafe(n)
+          VALUES = {
+              "POSTGRES_DB": "upto",
+              "POSTGRES_USER": "upto",
+              "POSTGRES_PASSWORD": token(),
+              "UPTO_HTTP_PORT": "8080",
+              "AIRFLOW_HTTP_PORT": "8081",
+              "AIRFLOW_DB_PASSWORD": token(),
+              # Airflow refuses to start on anything that is not 32 url-safe base64 bytes.
+              "AIRFLOW_FERNET_KEY": base64.urlsafe_b64encode(secrets.token_bytes(32)).decode(),
+              "AIRFLOW_ADMIN_PASSWORD": token(),
+              "AIRFLOW_JWT_SECRET": token(48),
+          }
+          def value_for(name):
+              if name in VALUES:
+                  return VALUES[name]
+              return token() if "PASSWORD" in name else ""
+          names = [m.group(1) for m in re.finditer(r"^([A-Z_][A-Z0-9_]*)=", open(".env.example").read(), re.M)]
+          if not names:
+              raise SystemExit("read no names from .env.example; refusing to write an empty .env")
+          for name in names:
+              print("{}={}".format(name, value_for(name)))
+          PY
+          python3 - <<'PY'
+          import re
+          names = lambda p: {m.group(1) for m in re.finditer(r"^([A-Z_][A-Z0-9_]*)=", open(p).read(), re.M)}
+          missing = names(".env.example") - names(".env")
+          assert not missing, "the generated .env is missing: {}".format(sorted(missing))
+          print("the generated .env covers every name in .env.example")
+          PY
+
+      # The database and the schema, nothing else: the tests start what they need themselves.
+      # `migrate` creates the roles the product connects as, which some tests log in with.
+      - name: Build the test image, migrate, start the database
+        run: |
+          set -eu
+          docker compose --profile test --profile bootstrap build tests migrate
+          docker compose run --rm migrate
+          docker compose up -d --wait db
+
+      # Every file here builds a database of its own, uses it and drops it, so one database server
+      # serves them all and their order does not matter. A test that has nothing to check here says
+      # so and exits 0; that is counted as skipped, never as passed.
+      - name: Run every database test
+        run: |
+          set -u
+          ran=0; passed=0; skipped=0; failed=0
+          for t in api/tests/test_*.py; do
+            case "$t" in
+              *_integration.py|*/test_ingest_idempotency.py|*/test_ingest_replay.py|*/test_role_grants.py|*/test_evaluate_score.py) ;;
+              *) continue ;;
+            esac
+            name=$(basename "$t" .py)
+            ran=$((ran + 1))
+            start=$(date +%s)
+            if docker compose run --rm -T tests python "/srv/tests/$name.py" < /dev/null > /tmp/out.txt 2>&1; then
+              if grep -q 'so nothing was checked' /tmp/out.txt; then
+                echo "skip  $name ($(( $(date +%s) - start )) s)"
+                grep -m1 'so nothing was checked' /tmp/out.txt
+                skipped=$((skipped + 1))
+              else
+                echo "ok    $name ($(( $(date +%s) - start )) s)"
+                passed=$((passed + 1))
+              fi
+            else
+              echo "FAIL  $name ($(( $(date +%s) - start )) s)"
+              tail -n 40 /tmp/out.txt
+              failed=$((failed + 1))
+            fi
+          done
+          echo "$ran test files: $passed passed, $skipped skipped, $failed failed"
+          [ "$ran" -gt 0 ] && [ "$failed" -eq 0 ]
+
+      - name: Container logs, only when something failed
+        if: failure()
+        # `migrate` ran with --rm, so its output is already in its own step above.
+        run: docker compose logs --no-log-prefix db
 
   web:
     name: Web build and lint
