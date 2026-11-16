@@ -99,8 +99,8 @@ if command -v timeout >/dev/null 2>&1; then BOUND="timeout 120"; else BOUND=""; 
 # **The alert, through the Connection Airflow already alerts with (owner 「A」, 2026-11-16).** The
 # token stays where it is: inside the scheduler, read by the scheduler's own Python, used for one
 # request and never printed. Nothing about the Connection is printed either (H99): the snippet
-# prints only its own one-line outcome on stdout, and its stderr, where Airflow logs, goes to
-# /dev/null (stdout lands in the journal, so nothing else may reach it). It is
+# marks its one-line outcome, and only that line is kept: Airflow logs to stdout, so everything
+# else it prints is dropped (H110), and stderr goes to /dev/null. It is
 # self-contained on purpose. After a rollback the scheduler running is the OLDER image, which may
 # carry no helper of ours, and this has to work against it. The message is shas, revisions and
 # exit codes, nothing secret, so it travels as an environment variable. **A failed send never fails
@@ -108,27 +108,33 @@ if command -v timeout >/dev/null 2>&1; then BOUND="timeout 120"; else BOUND=""; 
 # stack is down, Airflow may be down too, so the journal line is all there is.
 send_alert() {
     say "ALERT: $1"
+    # **Only the line marked `OUTCOME` leaves the container** (measured in the dev drill,
+    # 2026-11-16): Airflow logs to stdout, so a plain capture carried its «Connection Retrieved»
+    # line into the journal and pushed the outcome off the alert line. What Airflow prints is not
+    # this script's to decide, so nothing but the marked line is kept.
     sent=$($BOUND docker compose exec -T -e "UPTO_DEPLOY_ALERT=Up to you deploy: $1" \
-        airflow-scheduler python - 2>/dev/null <<'PY'
+        airflow-scheduler python - 2>/dev/null <<'PY' | sed -n 's/^OUTCOME //p' | tail -n 1
 import json, os, sys, urllib.error, urllib.request
+def out(line):
+    print("OUTCOME " + line, flush=True)
 try:
     from airflow.hooks.base import BaseHook
     c = BaseHook.get_connection("telegram_alerts")
 except Exception as e:
-    print("not sent: no telegram_alerts Connection ({})".format(type(e).__name__)); sys.exit(2)
+    out("not sent: no telegram_alerts Connection ({})".format(type(e).__name__)); sys.exit(2)
 token, chat = (c.password or "").strip(), (c.login or "").strip()
 if not token or not chat:
-    print("not sent: the Connection lacks its token or chat id"); sys.exit(2)
+    out("not sent: the Connection lacks its token or chat id"); sys.exit(2)
 body = json.dumps({"chat_id": chat, "text": os.environ.get("UPTO_DEPLOY_ALERT", "")}).encode()
 req = urllib.request.Request("https://api.telegram.org/bot{}/sendMessage".format(token), data=body,
                              headers={"Content-Type": "application/json"}, method="POST")
 try:
     with urllib.request.urlopen(req, timeout=20) as r:
-        print("sent (HTTP {})".format(r.status))
+        out("sent (HTTP {})".format(r.status))
 except urllib.error.HTTPError as e:
-    print("not sent: Telegram refused it (HTTP {})".format(e.code)); sys.exit(3)
+    out("not sent: Telegram refused it (HTTP {})".format(e.code)); sys.exit(3)
 except Exception as e:
-    print("not sent: {}".format(type(e).__name__)); sys.exit(3)
+    out("not sent: {}".format(type(e).__name__)); sys.exit(3)
 PY
     ) || true
     say "  alert: ${sent:-not sent: the scheduler could not be asked}"
