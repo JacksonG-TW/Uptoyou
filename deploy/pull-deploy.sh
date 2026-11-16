@@ -99,7 +99,8 @@ if command -v timeout >/dev/null 2>&1; then BOUND="timeout 120"; else BOUND=""; 
 # **The alert, through the Connection Airflow already alerts with (owner 「A」, 2026-11-16).** The
 # token stays where it is: inside the scheduler, read by the scheduler's own Python, used for one
 # request and never printed. Nothing about the Connection is printed either (H99): the snippet
-# prints only its own one-line outcome, and Airflow's logging goes to /dev/null. It is
+# prints only its own one-line outcome on stdout, and its stderr, where Airflow logs, goes to
+# /dev/null (stdout lands in the journal, so nothing else may reach it). It is
 # self-contained on purpose. After a rollback the scheduler running is the OLDER image, which may
 # carry no helper of ours, and this has to work against it. The message is shas, revisions and
 # exit codes, nothing secret, so it travels as an environment variable. **A failed send never fails
@@ -178,8 +179,12 @@ compose_flags_ok() {
 # **`.deployed-history`: one line per deploy that passed, never rewritten (owner 「A」, 2026-11-16).**
 # `<UTC time> <full sha> <schema revision> <how>`, where <how> is `deploy` (a tick), `rollback`
 # (this script went back by itself), `hand-rollback` or `hand` (a person's `--rollback`/`--record`).
+# A schema that could not be read is written as one word, so every line keeps its four fields
+# (the reviewer, 2026-11-16). It can never equal a real revision, so `--rollback` refuses it.
 history_append() {
-    printf '%s %s %s %s\n' "$(date -u +%FT%TZ)" "$1" "$2" "$3" >> "$HISTORY"
+    schema=$2
+    [ "$schema" != "$UNREAD" ] || schema=unread
+    printf '%s %s %s %s\n' "$(date -u +%FT%TZ)" "$1" "$schema" "$3" >> "$HISTORY"
 }
 
 # The brake, with its reason in it, so `cat .deploy-hold` says why the box is standing still.
@@ -277,6 +282,10 @@ fi
 # schema the database is at now.
 if [ "$MODE" = rollback ]; then
     [ -s "$STATE" ] || { say "REFUSING: $STATE is missing — what is serving is not recorded."; exit 7; }
+    # Asked here as on a tick (the reviewer, 2026-11-16): without it, an old Compose would get the
+    # hold written, refuse the flag at the `up`, and the alert would say «not serving» while the old
+    # stack still served.
+    compose_flags_ok || exit 15
     deployed=$(tr -d ' \r\n' < "$STATE")
     [ -s "$HISTORY" ] || { say "REFUSING: $HISTORY is empty — no earlier deploy is recorded to go back to."; exit 14; }
     if [ -z "$TARGET" ]; then
@@ -327,7 +336,7 @@ fi
 # «whatever HEAD is» could be deploying nothing new or skipping a migration. A person records it once.
 if [ ! -s "$STATE" ]; then
     say "REFUSING: $STATE is missing — what is serving is not recorded."
-    say "          If the stack runs exactly this clone's HEAD, record it:  git rev-parse HEAD > $STATE"
+    say "          If the stack runs exactly this clone's HEAD, record it:  $HERE/pull-deploy.sh --record"
     exit 7
 fi
 deployed=$(tr -d ' \r\n' < "$STATE")
@@ -507,8 +516,8 @@ docker compose pull --quiet
 # **The schema, once per version, before anything starts on the new code** (owner 「一次」,
 # 2026-09-11). It used to be a service every instance ran at boot; with more than one instance that
 # is N migrations racing one database. `run --rm` on the `bootstrap` profile is one container that
-# exits, and `set -e` means a failed migration stops this deploy here — nothing is recreated, and
-# the box keeps serving the version it has. `alembic upgrade head` is idempotent, so on a deploy
+# exits, and a failed migration stops this deploy here: it holds and alerts (below), nothing is
+# recreated, and the box keeps serving the version it has. `alembic upgrade head` is idempotent, so on a deploy
 # that changed no schema this prints its two lines and costs a few seconds.
 # **The revision is said out loud, before and after.** It scrolled out of the log during the
 # 2026-09-11 incident and the one question nobody could answer from the tail was «did the schema

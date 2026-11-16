@@ -15,4 +15,8 @@ ExecStart=/home/ec2-user/upto/deploy/pull-deploy.sh
 User=ec2-user
 # **Not root.** The user is in the `docker` group, which is the only privilege this needs. A deploy
 # timer running as root is a way for a repository to become a shell on the box.
-TimeoutStartSec=1800
+# **3600, so systemd never kills a bad deploy before its alert** (the reviewer, 2026-11-16). The
+# longest path is pull + migrate + `up --wait-timeout 900` + the way back, another up of at most 900
+# + the alert (bounded at 120 s). 1800 could end it between the failed return and the alert, and the
+# box would stand broken and silent, which is what the hold and the alert exist to prevent.
+TimeoutStartSec=3600

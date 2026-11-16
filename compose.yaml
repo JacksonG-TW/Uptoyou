@@ -407,8 +407,9 @@ services:
     # PROJECT, which isolates image names ONLY while compose derives them from the project. With a
     # literal tag its throwaway build would overwrite the real one under the same name, silently. So
     # the default reproduces `upto-<service>:latest`, split-boot sets `upto-splitcheck-`, and the
-    # box sets `ghcr.io/jacksong-tw/upto-`. `UPTO_IMAGE_TAG` is how a rollback is spelled there: a
-    # previous extract sha, `docker compose pull`, `up -d --wait`.
+    # box sets `ghcr.io/jacksong-tw/upto-`. `UPTO_IMAGE_TAG` is set there by `deploy/pull-deploy.sh`,
+    # one extract sha per deploy. Going back is `deploy/pull-deploy.sh --rollback`, which also holds
+    # the timer: a tag set by hand without `touch .deploy-hold` is deployed over by the next tick.
     #
     # **The default falls back to the PROJECT name, so isolation survives a session that forgets**
     # (the reviewer, 2026-09-07). Before this field existed, `-p <anything>` isolated image names by
