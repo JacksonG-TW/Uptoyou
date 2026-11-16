@@ -2,8 +2,29 @@
 # Pull the published commit and its published images, migrate, bring the stack up. The whole of
 # D59's "CD pulls" on the box. It builds nothing: the images come from the registry.
 #
-#     app/deploy/pull-deploy.sh            # what the timer runs
-#     app/deploy/pull-deploy.sh --once     # same thing by hand, same output
+#     app/deploy/pull-deploy.sh                    # what the timer runs
+#     app/deploy/pull-deploy.sh --once             # same thing by hand, same output
+#     app/deploy/pull-deploy.sh --rollback [<sha>] # by hand: back to an earlier recorded deploy
+#     app/deploy/pull-deploy.sh --record           # by hand: record a hand-run deploy of HEAD
+#     app/deploy/pull-deploy.sh --check-alert-channel
+#
+# **A bad deploy goes back by itself, within one schema (2026-11-16).** A deploy is bad when
+# `up --wait` fails or times out (900 s), when /health through the proxy is not ok right after, or
+# when the migration fails. On a bad deploy this script touches `.deploy-hold` first, so the next tick
+# cannot retry the same commit, and then:
+#   - the migration failed: nothing to undo (the whole upgrade is one transaction), so it alerts;
+#   - the schema did not move: it returns to `.deployed-sha` without pulling, and alerts;
+#   - the schema moved: it does NOT return, because the older api refuses a newer schema (exit 3),
+#     and it alerts. The fix goes forward. Down-migrations are never run by any path here.
+# The alert goes out through the `telegram_alerts` Connection inside the scheduler container. This
+# script never reads the bot token.
+#
+# Exit codes: 0 deployed, or nothing to do · 2 unknown argument · 3 no flock · 4 git pull refused ·
+# 5 the deploy changes the deploy (first run by hand) · 6 no alert channel · 7 no `.deployed-sha` ·
+# 8 no image tagged with HEAD · 9 images never arrived · 10 `.deployed-sha` names an unknown commit ·
+# 11 the migration failed, held, old version still serving · 12 bad deploy, rolled back, held ·
+# 13 bad deploy, NOT rolled back, held · 14 `--rollback` or `--record` refused, nothing moved ·
+# 15 this Docker Compose lacks `up --wait-timeout` or `up --pull`, nothing moved.
 #
 # **D59 says «CD pulls; nothing reaches into this VM». Until 2026-09-04 that was a stance with no
 # mechanism** — there was no deploy script anywhere in the tree and nothing ran `git pull`. This is
@@ -71,6 +92,120 @@ _schema_revision() {
     if [ -n "$found" ]; then echo "$found"; else echo "(could not be read)"; fi
 }
 
+UNREAD="(could not be read)"
+WAIT_TIMEOUT=${DEPLOY_WAIT_TIMEOUT:-900}
+if command -v timeout >/dev/null 2>&1; then BOUND="timeout 120"; else BOUND=""; fi
+
+# **The alert, through the Connection Airflow already alerts with (owner 「A」, 2026-11-16).** The
+# token stays where it is: inside the scheduler, read by the scheduler's own Python, used for one
+# request and never printed. Nothing about the Connection is printed either (H99): the snippet
+# prints only its own one-line outcome, and Airflow's logging goes to /dev/null. It is
+# self-contained on purpose. After a rollback the scheduler running is the OLDER image, which may
+# carry no helper of ours, and this has to work against it. The message is shas, revisions and
+# exit codes, nothing secret, so it travels as an environment variable. **A failed send never fails
+# the deploy path**: the journal line above it is the record that always exists, and when the
+# stack is down, Airflow may be down too, so the journal line is all there is.
+send_alert() {
+    say "ALERT: $1"
+    sent=$($BOUND docker compose exec -T -e "UPTO_DEPLOY_ALERT=Up to you deploy: $1" \
+        airflow-scheduler python - 2>/dev/null <<'PY'
+import json, os, sys, urllib.error, urllib.request
+try:
+    from airflow.hooks.base import BaseHook
+    c = BaseHook.get_connection("telegram_alerts")
+except Exception as e:
+    print("not sent: no telegram_alerts Connection ({})".format(type(e).__name__)); sys.exit(2)
+token, chat = (c.password or "").strip(), (c.login or "").strip()
+if not token or not chat:
+    print("not sent: the Connection lacks its token or chat id"); sys.exit(2)
+body = json.dumps({"chat_id": chat, "text": os.environ.get("UPTO_DEPLOY_ALERT", "")}).encode()
+req = urllib.request.Request("https://api.telegram.org/bot{}/sendMessage".format(token), data=body,
+                             headers={"Content-Type": "application/json"}, method="POST")
+try:
+    with urllib.request.urlopen(req, timeout=20) as r:
+        print("sent (HTTP {})".format(r.status))
+except urllib.error.HTTPError as e:
+    print("not sent: Telegram refused it (HTTP {})".format(e.code)); sys.exit(3)
+except Exception as e:
+    print("not sent: {}".format(type(e).__name__)); sys.exit(3)
+PY
+    ) || true
+    say "  alert: ${sent:-not sent: the scheduler could not be asked}"
+}
+
+# **/health through the proxy, as a member reaches it** (Q1's second half). Asked inside the proxy
+# container on its own listener, so the check is the same on the box, a dev VM and the drill
+# whatever ports they publish. Three tries, five seconds apart: `--wait` has just seen every
+# healthcheck pass, so this is a confirmation, not a second clock.
+proxy_health_ok() {
+    for try in 1 2 3; do
+        answer=$(docker compose exec -T proxy wget -q -O - http://127.0.0.1:8080/health 2>/dev/null) || answer=""
+        case "$answer" in *'"status":"ok"'*) say "health through the proxy: ok"; return 0 ;; esac
+        [ "$try" = 3 ] || sleep "${DEPLOY_HEALTH_PAUSE:-5}"
+    done
+    say "health through the proxy: ${answer:-no answer}"
+    return 1
+}
+
+# Every image the compose file names at tag $1 is on this disk. Sets `absent` for the message.
+images_on_disk() {
+    absent=""
+    refs=$(UPTO_IMAGE_TAG="$1" docker compose config --images 2>/dev/null | grep ":$1\$" | sort -u) || refs=""
+    [ -n "$refs" ] || { absent=" (no image in the compose file is tagged $1)"; return 1; }
+    for ref in $refs; do
+        docker image inspect "$ref" >/dev/null 2>&1 || absent="$absent $ref"
+    done
+    [ -z "$absent" ]
+}
+
+# **The two flags the rollback stands on, asked for before anything moves.** The box ran Compose
+# v2.29.7 on 2026-11-16, and both flags are in that version's own source (`cmd/compose/up.go`:
+# `--pull` at line 144, `--wait-timeout` at line 165, in seconds at line 294; read 2026-11-16 at
+# github.com/docker/compose, tag v2.29.7). An older Compose would reject the flag only at the `up`,
+# halfway through a deploy, and then reject it again on the way back. So a Compose without them is
+# refused here, with nothing pulled and nothing restarted.
+compose_flags_ok() {
+    help=$(docker compose up --help 2>/dev/null) || help=""
+    for flag in --wait-timeout --pull; do
+        case "$help" in *"$flag"*) ;; *)
+            say "REFUSING: this Docker Compose has no \`up $flag\`, which the rollback needs. Nothing was pulled or restarted."
+            say "          Upgrade docker-compose-plugin (v2.29.7 has both), then the next tick deploys."
+            return 1 ;;
+        esac
+    done
+}
+
+# **`.deployed-history`: one line per deploy that passed, never rewritten (owner 「A」, 2026-11-16).**
+# `<UTC time> <full sha> <schema revision> <how>`, where <how> is `deploy` (a tick), `rollback`
+# (this script went back by itself), `hand-rollback` or `hand` (a person's `--rollback`/`--record`).
+history_append() {
+    printf '%s %s %s %s\n' "$(date -u +%FT%TZ)" "$1" "$2" "$3" >> "$HISTORY"
+}
+
+# The brake, with its reason in it, so `cat .deploy-hold` says why the box is standing still.
+hold_because() {
+    printf '%s %s\n' "$(date -u +%FT%TZ)" "$1" > "$HOLD"
+    say "HELD: wrote $HOLD ($1). Every tick does nothing until a person removes it."
+}
+
+# Up at tag $1 without pulling, then /health through the proxy. The return path of both the
+# automatic rollback and `--rollback`. `--pull never` (Q4): a pull during an outage on a nearly full
+# disk is a second failure, so the caller has already checked that the images are on disk.
+return_to() {
+    UPTO_IMAGE_TAG="$1"
+    export UPTO_IMAGE_TAG
+    say "returning to $1 (up --wait --wait-timeout $WAIT_TIMEOUT --pull never)"
+    t0=$(date +%s)
+    if docker compose up -d --wait --wait-timeout "$WAIT_TIMEOUT" --pull never && proxy_health_ok; then
+        say "back at $1 after $(( $(date +%s) - t0 ))s"
+        return 0
+    fi
+    say "the return to $1 FAILED after $(( $(date +%s) - t0 ))s"
+    return 1
+}
+
+short() { printf '%.12s' "$1"; }
+
 # **One at a time.** A pull plus a migration on a small instance can outlast the timer's period;
 # two overlapping runs would fight over the image tags and the containers. `flock` is in util-linux
 # and is on the AMI; if it is ever absent this exits rather than running unguarded. The hand-run
@@ -80,6 +215,14 @@ if [ "${1:-}" = "--check-alert-channel" ]; then
     alert_channel_check
     exit $?
 fi
+MODE=tick
+TARGET=""
+case "${1:-}" in
+    ""|--once) ;;
+    --rollback) MODE=rollback; TARGET=${2:-} ;;
+    --record) MODE=record ;;
+    *) say "unknown argument: $1 (see the usage at the top of $0)"; exit 2 ;;
+esac
 
 if command -v flock >/dev/null 2>&1; then
     exec 9>"$LOCK"
@@ -100,6 +243,78 @@ cd "$APP"
 # tick compares HEAD against it. Anything that stops short leaves it alone, so the next tick retries.
 STATE="$APP/.deployed-sha"
 HOLD="$APP/.deploy-hold"
+HISTORY="$APP/.deployed-history"
+
+# **`--record`: the last step of a hand-run deploy (H85's exit 5).** Only this script writes
+# `.deployed-history`, so a person's deploy is recorded through it too. It records HEAD only after
+# checking that what runs IS HEAD (every service's image carries HEAD's tag, H28), that /health
+# through the proxy is ok, and that the alert channel exists, the same bar a tick's deploy meets.
+if [ "$MODE" = record ]; then
+    head=$(git rev-parse HEAD)
+    for svc in api proxy airflow-scheduler; do
+        cid=$(docker compose ps -q "$svc" 2>/dev/null) || cid=""
+        image=""
+        [ -z "$cid" ] || image=$(docker inspect --format '{{.Config.Image}}' "$cid" 2>/dev/null) || image=""
+        case "$image" in *":$head") ;; *)
+            say "REFUSING to record: $svc runs '${image:-nothing}', not HEAD $head. Nothing was written."
+            exit 14 ;;
+        esac
+    done
+    proxy_health_ok || { say "REFUSING to record: the stack is not serving. Nothing was written."; exit 14; }
+    alert_channel_check || exit $?
+    printf '%s\n' "$head" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+    history_append "$head" "$(_schema_revision)" hand
+    say "recorded $head in $STATE and $HISTORY"
+    exit 0
+fi
+
+# **`--rollback [<sha>]`: a person going back on 「跑」** (owner 「A」, 2026-11-16). The same return
+# path the automatic rollback takes. Without a sha it goes to the newest line in `.deployed-history`
+# that is not what serves now. Every refusal below moves nothing (exit 14). It holds the timer
+# first, because otherwise the next tick would deploy HEAD straight back; a person removes the hold
+# to roll forward. It goes back only to a recorded deploy, only where the compose file and
+# `airflow/init.sh` are the same as HEAD's (this compose file is what will run), and only at the
+# schema the database is at now.
+if [ "$MODE" = rollback ]; then
+    [ -s "$STATE" ] || { say "REFUSING: $STATE is missing — what is serving is not recorded."; exit 7; }
+    deployed=$(tr -d ' \r\n' < "$STATE")
+    [ -s "$HISTORY" ] || { say "REFUSING: $HISTORY is empty — no earlier deploy is recorded to go back to."; exit 14; }
+    if [ -z "$TARGET" ]; then
+        TARGET=$(awk -v now="$deployed" '$2 != now { t = $2 } END { print t }' "$HISTORY")
+        [ -n "$TARGET" ] || { say "REFUSING: $HISTORY records no deploy other than $deployed."; exit 14; }
+    fi
+    line=$(awk -v t="$TARGET" '$2 == t { l = $0 } END { print l }' "$HISTORY")
+    [ -n "$line" ] || { say "REFUSING: $TARGET is not in $HISTORY — only a recorded deploy is gone back to (a full sha)."; exit 14; }
+    # The target may be `.deployed-sha` itself, on purpose: after an exit 13 the record still names
+    # the last good sha while a broken one runs, and bringing the recorded one back up is the repair.
+    git cat-file -e "$TARGET^{commit}" 2>/dev/null || { say "REFUSING: this clone does not have $TARGET."; exit 14; }
+    if ! git diff --quiet "$TARGET" HEAD -- compose.yaml airflow/init.sh; then
+        say "REFUSING: compose.yaml or airflow/init.sh differs between $TARGET and HEAD, so going back"
+        say "          with this clone's files would run a mix that no commit describes."
+        exit 14
+    fi
+    then_schema=$(printf '%s\n' "$line" | awk '{ print $3 }')
+    now_schema=$(_schema_revision)
+    if [ "$now_schema" = "$UNREAD" ] || [ "$then_schema" != "$now_schema" ]; then
+        say "REFUSING: $TARGET ran at schema $then_schema and the database is at $now_schema; the older api"
+        say "          refuses a schema that is not its own (exit 3). Fix forward instead."
+        exit 14
+    fi
+    if ! images_on_disk "$TARGET"; then
+        say "REFUSING: images for $TARGET are not on this disk:$absent"
+        say "          Nothing was pulled. A person may pull them first, then run this again."
+        exit 14
+    fi
+    hold_because "hand rollback from $deployed to $TARGET"
+    if return_to "$TARGET"; then
+        printf '%s\n' "$TARGET" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
+        history_append "$TARGET" "$now_schema" hand-rollback
+        send_alert "rolled back by hand from $(short "$deployed") to $(short "$TARGET"), schema $now_schema. Timer held: remove $HOLD to roll forward."
+        exit 0
+    fi
+    send_alert "the hand rollback from $(short "$deployed") to $(short "$TARGET") FAILED: not serving. Timer held."
+    exit 13
+fi
 
 # **The brake.** A person rolling back by hand, or holding the box still for any reason, touches this
 # file; the timer then does nothing — not even a fetch — until it is removed.
@@ -208,8 +423,8 @@ if ! held_diff diff --quiet; then
     say "         and every tick will say this until a person runs the new file's steps (H85):"
     say "             cd $APP && export UPTO_IMAGE_TAG=$after \\"
     say "               && docker compose pull --quiet && docker compose run --rm migrate \\"
-    say "               && docker compose up -d --wait && $HERE/pull-deploy.sh --check-alert-channel \\"
-    say "               && git rev-parse HEAD > $STATE"
+    say "               && docker compose up -d --wait --wait-timeout $WAIT_TIMEOUT \\"
+    say "               && $HERE/pull-deploy.sh --record"
     exit 5
 fi
 
@@ -225,11 +440,10 @@ fi
 # **A pull is I/O, not memory**, so the failure this replaces is gone rather than mitigated, and the
 # stack keeps serving until the recreate — the outage window is a container restart instead of a
 # frontend build. `.env` carries `UPTO_IMAGE_PREFIX=ghcr.io/jacksong-tw/upto-`; the tag is derived
-# below from the commit this clone just moved to. **A rollback is not this script's job** — the
-# next tick would pull main again. Touch `.deploy-hold` first, then deploy an earlier extract by
-# hand (`export UPTO_IMAGE_TAG=<earlier full sha>`, pull, `up -d --wait`), only within one schema:
-# migrations are forward-only and an older api refuses a newer schema. Or revert on main and
-# publish, and the timer deploys the revert.
+# below from the commit this clone just moved to. **A rollback holds the timer first**, or the
+# next tick would pull main again: the automatic one below and `--rollback` both do. Either goes
+# back only within one schema, because migrations are forward-only and an older api refuses a newer
+# schema. Across a migration the fix goes forward: revert or fix on main, publish, remove the hold.
 # **The tag IS the commit this clone just moved to, and that dissolves a trade** (ruled
 # 2026-09-07). The alternative shapes were: follow `:latest` and inherit H28 one layer up — a tag
 # that resolves to something different each day is the stale image that does not announce itself —
@@ -285,6 +499,8 @@ if [ -n "$missing" ]; then
 fi
 rm -f "$WAITING"
 
+compose_flags_ok || exit 15
+
 say "pulling images at $after"
 docker compose pull --quiet
 
@@ -298,30 +514,75 @@ docker compose pull --quiet
 # 2026-09-11 incident and the one question nobody could answer from the tail was «did the schema
 # move». A deploy log that does not name the revision cannot tell a migration that ran from one
 # that was never started.
+#
+# **A failed migration holds (owner 「A」, 2026-11-16).** It used to stop here and leave the next
+# tick to retry it every five minutes, with nobody told. `env.py` runs the whole upgrade inside one
+# transaction and Postgres DDL is transactional, so a failed migrate changes nothing and the old
+# stack keeps serving: there is nothing to roll back, only a person to tell. The revision is read
+# again rather than assumed, so a migration that left the schema moved anyway is named as that.
 say "applying migrations (once, before the stack moves)"
-say "  schema before: $(_schema_revision)"
-docker compose run --rm migrate
-say "  schema after:  $(_schema_revision)"
+schema_before=$(_schema_revision)
+say "  schema before: $schema_before"
+if ! docker compose run --rm migrate; then
+    schema_now=$(_schema_revision)
+    say "  schema after the failed migration: $schema_now"
+    hold_because "the migration to $after failed"
+    if [ "$schema_now" = "$schema_before" ] && [ "$schema_now" != "$UNREAD" ]; then
+        send_alert "the migration to $(short "$after") failed and the database undid it (schema $schema_before unchanged). Still serving $(short "$deployed"); nothing was restarted. Timer held: remove $HOLD after the fix."
+    else
+        send_alert "the migration to $(short "$after") failed and the schema reads $schema_now (was $schema_before). Read the migrate log before anything else. Nothing was restarted. Timer held."
+    fi
+    exit 11
+fi
+schema_after=$(_schema_revision)
+say "  schema after:  $schema_after"
 
 # **`--wait` is the difference between deploying and hoping.** Without it `up -d` returns as soon
 # as the containers are created, and a container that dies on its healthcheck is discovered by a
-# member instead of by this script. `up` never migrates: the migration ran once, above, and a
-# failed one has already stopped this deploy before anything was recreated.
+# member instead of by this script. `up` never migrates: the migration ran once, above.
+# **Bounded at 900 s (owner, 2026-11-15):** about twice the slowest deploy measured on the box
+# (421–459 s for this step), so a deploy that hangs is called bad instead of waited on for ever.
 say "starting"
-if docker compose up -d --wait; then
-    say "UP at $after"
+t0=$(date +%s)
+if docker compose up -d --wait --wait-timeout "$WAIT_TIMEOUT" && proxy_health_ok; then
+    say "UP at $after after $(( $(date +%s) - t0 ))s"
     # The stack is serving; a missing alert channel is still a failed deploy (H100, exit 6).
     alert_channel_check || exit $?
     # **Only now is it deployed.** Written last and atomically, so a run that stops anywhere above
     # leaves the old record and the next tick tries again.
     printf '%s\n' "$after" > "$STATE.tmp" && mv "$STATE.tmp" "$STATE"
-    say "recorded $after in $STATE"
-else
-    status=$?
-    say "FAILED to come up at $after (exit $status)"
-    say "the one-shots are where a bootstrap failure lives and they have already exited — read"
-    say "them explicitly, they do not appear in a plain \`ps\` (H65):"
-    say "    docker compose ps -a"
-    say "    docker compose logs migrate airflow-init"
-    exit "$status"
+    history_append "$after" "$schema_after" deploy
+    say "recorded $after in $STATE and $HISTORY"
+    exit 0
 fi
+say "FAILED to come up at $after after $(( $(date +%s) - t0 ))s"
+say "the one-shots are where a bootstrap failure lives and they have already exited — read"
+say "them explicitly, they do not appear in a plain \`ps\` (H65):"
+say "    docker compose ps -a"
+say "    docker compose logs migrate airflow-init"
+
+# **A bad deploy: hold first, then go back if going back can work (owner 「A」, 2026-11-16).**
+# Before this, the next tick saw HEAD ahead of `.deployed-sha` and retried the same commit every
+# five minutes, recreating the whole stack each time, with nobody told.
+hold_because "the deploy of $after failed"
+why="up --wait or /health failed"
+# **Across a migration there is no way back, so none is tried.** The api's startup guard demands the
+# exact revision it ships against, and the older code exited 3 against a newer schema when this was
+# measured on a dev stack. An unreadable revision counts as moved: «the same» has to be shown.
+if [ "$schema_before" = "$UNREAD" ] || [ "$schema_after" = "$UNREAD" ] || [ "$schema_before" != "$schema_after" ]; then
+    send_alert "the deploy of $(short "$after") failed ($why) after migration $schema_before -> $schema_after. NOT rolled back: the older code refuses the newer schema. Site down. Timer held. Fix forward: publish a fix, then remove $HOLD."
+    exit 13
+fi
+# **No pull on the way back (Q4):** the box's disk is the constraint, and a pull during an outage
+# that fills it is a second failure. Whatever prunes images must keep `.deployed-sha`'s.
+if ! images_on_disk "$deployed"; then
+    send_alert "the deploy of $(short "$after") failed ($why). NOT rolled back: the images for $(short "$deployed") are not on disk, and nothing was pulled. Timer held."
+    exit 13
+fi
+if return_to "$deployed"; then
+    history_append "$deployed" "$schema_after" rollback
+    send_alert "the deploy of $(short "$after") failed ($why). Rolled back to $(short "$deployed"), schema $schema_after unchanged, serving again. Timer held: remove $HOLD after the fix."
+    exit 12
+fi
+send_alert "the deploy of $(short "$after") failed ($why), and the return to $(short "$deployed") failed too. NOT serving. Timer held."
+exit 13
